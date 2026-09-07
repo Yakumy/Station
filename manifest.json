@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "yakumy.station",
+  "name": "Station",
+  "version": "1.0.0",
+  "author": "Yakumy",
+  "license": "Apache-2.0",
+  "description": "Create linked dual-monitor workstations from Hyprland workspaces.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "station-indicator.qml"
+  },
+  "barWidget": {
+    "displayName": "Station",
+    "category": "Workflow",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

@@ -1,0 +1,11 @@
+# Compiled Bun binary — opaque, never diff/merge as text.
+bin/station binary -diff -merge
+
+# Force LF regardless of a contributor's platform — install.sh is POSIX
+# sh and must never pick up CRLF line endings.
+*.sh  text eol=lf
+*.js  text eol=lf
+*.lua text eol=lf
+*.conf text eol=lf
+*.json text eol=lf
+*.md  text eol=lf
