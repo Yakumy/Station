@@ -324,3 +324,5 @@ echo "  station status"
 echo
 echo "Then activate Station with:"
 echo "  station init"
+
+# just in order to make a commit, I wrote this line, I fixe the Premision denied error while installing the plugin by running chmod +x install.sh  and now it changed to-rwxr-xr-x from -rw-r--r-- .
