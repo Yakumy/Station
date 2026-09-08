@@ -21,6 +21,64 @@ REQUIRED_HYPRLAND_MAJOR="0"
 REQUIRED_HYPRLAND_MINOR="56"
 REQUIRED_OMARCHY_MAJOR="4"
 
+RELEASE_BASE_URL="https://github.com/Yakumy/Station/releases/download"
+
+fetch_binary() {
+  VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_DIR/manifest.json" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+
+  if [ -z "$VERSION" ]; then
+    echo "Station: could not read version from manifest.json." >&2
+    exit 1
+  fi
+
+  VERSION_MARKER="$PLUGIN_DIR/bin/.station-version"
+
+  if [ -x "$PLUGIN_BIN" ] && [ -f "$VERSION_MARKER" ] && [ "$(cat "$VERSION_MARKER")" = "$VERSION" ]; then
+    echo "  Binary: already up to date (v$VERSION)"
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "Station: 'curl' not found; cannot download the prebuilt binary." >&2
+    echo "  Install curl, or download manually:" >&2
+    echo "    ${RELEASE_BASE_URL}/v${VERSION}/station" >&2
+    exit 1
+  fi
+
+  echo "  Downloading Station v$VERSION binary..."
+  mkdir -p "$PLUGIN_DIR/bin"
+
+  if ! curl -fsSL -o "$PLUGIN_BIN" "${RELEASE_BASE_URL}/v${VERSION}/station"; then
+    echo "Station: failed to download binary from:" >&2
+    echo "  ${RELEASE_BASE_URL}/v${VERSION}/station" >&2
+    exit 1
+  fi
+
+  if ! curl -fsSL -o "$PLUGIN_BIN.sha256" "${RELEASE_BASE_URL}/v${VERSION}/station.sha256"; then
+    echo "Station: failed to download checksum from:" >&2
+    echo "  ${RELEASE_BASE_URL}/v${VERSION}/station.sha256" >&2
+    rm -f "$PLUGIN_BIN"
+    exit 1
+  fi
+
+  EXPECTED_SUM=$(awk '{print $1}' "$PLUGIN_BIN.sha256")
+  ACTUAL_SUM=$(sha256sum "$PLUGIN_BIN" | awk '{print $1}')
+
+  if [ "$EXPECTED_SUM" != "$ACTUAL_SUM" ]; then
+    echo "Station: checksum verification failed for the downloaded binary." >&2
+    echo "  Expected: $EXPECTED_SUM" >&2
+    echo "  Actual:   $ACTUAL_SUM" >&2
+    rm -f "$PLUGIN_BIN" "$PLUGIN_BIN.sha256"
+    exit 1
+  fi
+
+  rm -f "$PLUGIN_BIN.sha256"
+  chmod +x "$PLUGIN_BIN"
+  printf '%s' "$VERSION" > "$VERSION_MARKER"
+
+  echo "  Binary: downloaded and verified (v$VERSION)"
+}
+
 echo "Station installer"
 echo "-----------------"
 
@@ -119,10 +177,10 @@ fi
 #
 # Two modes:
 #   production — install.sh is already running from inside the live plugin
-#     directory (cloned there by `omarchy plugin add`). Files are already
-#     in place; nothing to copy.
+#     directory (cloned there by `omarchy plugin add`). The binary is
+#     downloaded from the matching GitHub Release, not committed to git.
 #   dev — install.sh is running from a standalone local checkout. Copy
-#     files into the real plugin directory, same as before.
+#     files into the real plugin directory, using the locally built binary.
 # ---------------------------------------------------------------------------
 
 echo
@@ -132,13 +190,7 @@ if [ "$SOURCE_DIR" = "$PLUGIN_DIR" ]; then
   MODE="production"
   echo "  Mode: production (running in place)"
 
-  if [ ! -x "$PLUGIN_BIN" ]; then
-    echo "Station: bin/station is missing or not executable in this checkout." >&2
-    echo "  This indicates a broken release — please report this issue." >&2
-    exit 1
-  fi
-
-  chmod +x "$PLUGIN_BIN"
+  fetch_binary
 else
   MODE="dev"
   echo "  Mode: dev (copying into $PLUGIN_DIR)"
