@@ -22,6 +22,7 @@ REQUIRED_HYPRLAND_MINOR="56"
 REQUIRED_OMARCHY_MAJOR="4"
 
 RELEASE_BASE_URL="https://github.com/Yakumy/Station/releases/download"
+EXPECTED_SHA256="9ccd010d122295a39d12910103c7d3f0c6c7594726262d1f0caf654b832d7efe"
 
 fetch_binary() {
   VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_DIR/manifest.json" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
@@ -40,8 +41,6 @@ fetch_binary() {
 
   if ! command -v curl >/dev/null 2>&1; then
     echo "Station: 'curl' not found; cannot download the prebuilt binary." >&2
-    echo "  Install curl, or download manually:" >&2
-    echo "    ${RELEASE_BASE_URL}/v${VERSION}/station" >&2
     exit 1
   fi
 
@@ -54,25 +53,18 @@ fetch_binary() {
     exit 1
   fi
 
-  if ! curl -fsSL -o "$PLUGIN_BIN.sha256" "${RELEASE_BASE_URL}/v${VERSION}/station.sha256"; then
-    echo "Station: failed to download checksum from:" >&2
-    echo "  ${RELEASE_BASE_URL}/v${VERSION}/station.sha256" >&2
+  ACTUAL_SUM=$(sha256sum "$PLUGIN_BIN" | awk '{print $1}')
+
+  if [ "$ACTUAL_SUM" != "$EXPECTED_SHA256" ]; then
+    echo "Station: checksum verification failed for the downloaded binary." >&2
+    echo "  Expected (pinned in this reviewed commit): $EXPECTED_SHA256" >&2
+    echo "  Actual (downloaded):                       $ACTUAL_SUM" >&2
+    echo "  Refusing to install a binary that doesn't match what this" >&2
+    echo "  version of Station was reviewed against." >&2
     rm -f "$PLUGIN_BIN"
     exit 1
   fi
 
-  EXPECTED_SUM=$(awk '{print $1}' "$PLUGIN_BIN.sha256")
-  ACTUAL_SUM=$(sha256sum "$PLUGIN_BIN" | awk '{print $1}')
-
-  if [ "$EXPECTED_SUM" != "$ACTUAL_SUM" ]; then
-    echo "Station: checksum verification failed for the downloaded binary." >&2
-    echo "  Expected: $EXPECTED_SUM" >&2
-    echo "  Actual:   $ACTUAL_SUM" >&2
-    rm -f "$PLUGIN_BIN" "$PLUGIN_BIN.sha256"
-    exit 1
-  fi
-
-  rm -f "$PLUGIN_BIN.sha256"
   chmod +x "$PLUGIN_BIN"
   printf '%s' "$VERSION" > "$VERSION_MARKER"
 
