@@ -1,5 +1,3 @@
-<div align="center">
-
 <img src="./docs/assets/station-banner.png" alt="Station" width="100%">
 
 # Station
