@@ -44,14 +44,19 @@ const STATION_LUA = join(CONFIG_HYPR, "station-bindings.lua");
 const LOCAL_BIN = join(HOME, ".local", "bin");
 const STATION_LINK = join(LOCAL_BIN, "station");
 const ENTRY_FILE = (() => {
-  const metaPath = fileURLToPath(import.meta.url);
-  if (metaPath.startsWith("/$bunfs/")) {
-    // Compiled standalone binary — import.meta.url reports a virtual
-    // bunfs path that doesn't exist on the real filesystem. Resolve the
-    // actual on-disk binary via /proc/self/exe instead.
-    return realpathSync("/proc/self/exe");
-  }
-  return metaPath;
+  try {
+    const real = realpathSync("/proc/self/exe");
+    if (!real.endsWith("/bun")) {
+      // We're running as our own compiled binary — trust this
+      // unconditionally, regardless of what import.meta.url reports
+      // (plain --compile and --bytecode apparently resolve it
+      // differently, and neither is reliable here).
+      return real;
+    }
+  } catch {}
+  // Running under `bun run index.js` directly — /proc/self/exe points
+  // at the bun interpreter, not useful. Fall back to the source path.
+  return fileURLToPath(import.meta.url);
 })();
 const PLUGIN_DIR = dirname(dirname(realpathSync(ENTRY_FILE)));
 const MANIFEST_PATH = join(PLUGIN_DIR, "manifest.json");
