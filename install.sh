@@ -47,30 +47,31 @@ fetch_binary() {
   echo "  Downloading Station v$VERSION binary..."
   mkdir -p "$PLUGIN_DIR/bin"
 
-  if ! curl -fsSL -o "$PLUGIN_BIN" "${RELEASE_BASE_URL}/v${VERSION}/station"; then
+  TMP_BIN="$PLUGIN_BIN.new.$$"
+
+  if ! curl -fsSL -o "$TMP_BIN" "${RELEASE_BASE_URL}/v${VERSION}/station"; then
     echo "Station: failed to download binary from:" >&2
     echo "  ${RELEASE_BASE_URL}/v${VERSION}/station" >&2
+    rm -f "$TMP_BIN"
     exit 1
   fi
 
-  ACTUAL_SUM=$(sha256sum "$PLUGIN_BIN" | awk '{print $1}')
+  ACTUAL_SUM=$(sha256sum "$TMP_BIN" | awk '{print $1}')
 
   if [ "$ACTUAL_SUM" != "$EXPECTED_SHA256" ]; then
     echo "Station: checksum verification failed for the downloaded binary." >&2
     echo "  Expected (pinned in this reviewed commit): $EXPECTED_SHA256" >&2
     echo "  Actual (downloaded):                       $ACTUAL_SUM" >&2
-    echo "  Refusing to install a binary that doesn't match what this" >&2
-    echo "  version of Station was reviewed against." >&2
-    rm -f "$PLUGIN_BIN"
+    rm -f "$TMP_BIN"
     exit 1
   fi
 
-  chmod +x "$PLUGIN_BIN"
+  chmod +x "$TMP_BIN"
+  mv -f "$TMP_BIN" "$PLUGIN_BIN"
   printf '%s' "$VERSION" > "$VERSION_MARKER"
 
   echo "  Binary: downloaded and verified (v$VERSION)"
 }
-
 echo "Station installer"
 echo "-----------------"
 
@@ -203,9 +204,9 @@ else
   cp "$SOURCE_DIR/manifest.json" "$PLUGIN_DIR/manifest.json"
   cp "$SOURCE_DIR/station-indicator.qml" "$PLUGIN_DIR/station-indicator.qml"
   cp "$SOURCE_DIR/station-bindings.lua" "$PLUGIN_DIR/station-bindings.lua"
-  cp "$SOURCE_BIN" "$PLUGIN_BIN"
-
-  chmod +x "$PLUGIN_BIN"
+  cp "$SOURCE_BIN" "$PLUGIN_BIN.new.$$"
+  chmod +x "$PLUGIN_BIN.new.$$"
+  mv -f "$PLUGIN_BIN.new.$$" "$PLUGIN_BIN"
 fi
 
 echo "  Plugin: $PLUGIN_DIR"
