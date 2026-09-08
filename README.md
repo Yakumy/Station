@@ -1,9 +1,20 @@
+<div align="center">
+
+<img src="./docs/assets/station-banner.png" alt="Station" width="100%">
+
 # Station
 
-Station turns two Hyprland monitors into one logical workspace: five paired
-"stations," keyboard-driven switching and window movement across them, a
-Quattro bar indicator, and automatic fallback to a single-monitor layout when
-you unplug — with your place preserved either way.
+Station is an Omarchy plugin for intelligent multi-monitor management that:
+
+- **Creates logical workstations** by syncing Hyprland workspaces across your monitors into an abstraction we call a **station**.
+- **Switches and moves windows across monitors** with fast, keyboard-driven controls.
+- **Handles monitor hot-plugging automatically**, adapting between dual- and single-monitor layouts.
+- **Preserves your workspace state and position** when monitors are disconnected or reconnected.
+- **Integrates natively with Omarchy**, including the Quattro bar and Hyprland configuration.
+- **Provides a powerful CLI** for configuring, controlling, and monitoring your stations directly from the terminal.
+
+> [!INFO]
+> v1.0 only supports dual/single monitor setups for now.
 
 ## What it does
 
@@ -24,6 +35,8 @@ station.
 The bar indicator (`[S1]`–`[S5]`) shows your current station, styled to
 match your active theme. It's only shown in dual-monitor mode — in single
 mode there's nothing to disambiguate, so it stays out of the way.
+
+<img src="./docs/assets/station-indicator.png" alt="Station" width="100%">
 
 ## Requirements
 
@@ -88,12 +101,12 @@ connected. By default Station picks whichever monitor is positioned at
 
 ## Keybindings reference
 
-| Keys | Action |
-|---|---|
-| `Ctrl + Super + F1`–`F5` | Switch to station 1–5 |
-| `Shift + Ctrl + Super + F1`–`F5` | Move the active window to station 1–5, and follow it |
-| `Shift + Super + Alt + F1`–`F5` | Move the active window to station 1–5, without following |
-| `Ctrl + Super + Left / Right` | Switch to the previous/next station (direction-aware) |
+| Keys                                              | Action                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------- |
+| `Ctrl + Super + F1`–`F5`                          | Switch to station 1–5                                       |
+| `Shift + Ctrl + Super + F1`–`F5`                  | Move the active window to station 1–5, and follow it        |
+| `Shift + Super + Alt + F1`–`F5`                   | Move the active window to station 1–5, without following    |
+| `Ctrl + Super + Left / Right`                     | Switch to the previous/next station (direction-aware)       |
 | `Shift + Ctrl + Super + Left / Right / Up / Down` | Move the active window across a station or monitor boundary |
 
 All of these remain active and functional in single-monitor mode — with
@@ -128,10 +141,12 @@ automatically. If it doesn't seem to have triggered, run
 connected monitors.
 
 **You want to start completely over without reinstalling.**
+
 ```
 station stop
 station init
 ```
+
 `station stop` disables Station without removing it; `station init` picks
 primary/secondary fresh (or respects a previously saved explicit choice via
 `station set monitor`).
