@@ -36,6 +36,8 @@ mode there's nothing to disambiguate, so it stays out of the way.
 
 <img src="./docs/assets/station-indicator.png" alt="Station" width="100%">
 
+<video src="./docs/assets/station-showcase.mp4" controls></video>
+
 ## Requirements
 
 - Hyprland 0.56.x
