@@ -36,7 +36,13 @@ mode there's nothing to disambiguate, so it stays out of the way.
 
 <img src="./docs/assets/station-indicator.png" alt="Station" width="100%">
 
-<video src="./docs/assets/station-showcase.mp4" controls></video>
+<div align="center" width="100%">
+  <video
+    src="https://github.com/user-attachments/assets/f74d1c0c-f4ea-4b0b-a396-f4c87e75d474"
+    width="100%"
+    controls>
+  </video>
+</div>
 
 ## Requirements
 
