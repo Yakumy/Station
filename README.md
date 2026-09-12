@@ -1,4 +1,4 @@
-<img src="./docs/assets/station-banner.png" alt="Station" width="100%">
+<img src="./preview.png" alt="Station" width="100%">
 
 # Station
 
@@ -38,12 +38,12 @@ The bar indicator (`[S1]`–`[S5]`) shows your current station and follows your 
 
 Station targets **Omarchy Quattro (Omarchy 4.x+)** and **Hyprland 0.56.x**.
 
-The installer supports two binary installation methods. You only need the dependencies for the method you choose:
+The installer supports two installation methods. You only need the dependencies for the method you choose:
 
-| Method                     | Required tools               | What happens                                                                              |
-| -------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| **Prebuilt + attestation** | `gh` (GitHub CLI) and `curl` | Downloads the release binary and verifies its GitHub build provenance before installation |
-| **Build from source**      | `bun`                        | Builds the binary locally from the source checkout; no downloaded binary is trusted       |
+| Method                     | Required tools               | What happens                                                                          |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
+| **Prebuilt + attestation** | `gh` (GitHub CLI) and `curl` | Downloads the release binary and verifies its CI build provenance before installation |
+| **Build from source**      | `bun`                        | Builds the binary locally from the source checkout; no downloaded binary is trusted   |
 
 Additional requirement:
 
@@ -75,11 +75,11 @@ station init
 
 ## Installation methods
 
-### 1. Prebuilt binary with verified CI provenance
+### Prebuilt binary with verified CI provenance
 
 This is the recommended installation method when GitHub CLI is available.
 
-When `gh` is installed, `install.sh`:
+When using the prebuilt path, `install.sh`:
 
 1. Reads the Station version from `manifest.json`.
 2. Downloads the matching release binary from the `Yakumy/Station` GitHub release.
@@ -93,7 +93,7 @@ When `gh` is installed, `install.sh`:
 
 5. Installs the binary only after verification succeeds.
 
-The exact provenance check is equivalent to:
+The installer uses a verification policy equivalent to:
 
 ```bash
 gh attestation verify <binary> \
@@ -102,31 +102,31 @@ gh attestation verify <binary> \
   --signer-workflow Yakumy/Station/.github/workflows/release.yml
 ```
 
-A binary with valid provenance from another Station release is not sufficient; the installer requires provenance for the exact release tag it is installing.
+A valid attestation from another Station release is not sufficient. The source reference must match the exact release version being installed.
 
-The release workflow builds Station using:
-
-```bash
-bun build --compile --minify --bytecode index.js --outfile bin/station
-```
-
-with Bun `1.4.2`.
-
-The workflow actions are pinned to immutable commit SHAs in `.github/workflows/release.yml`, and the resulting binary receives a GitHub build-provenance attestation before it is published as a release asset.
-
-GitHub CLI authentication is **not required for public Station attestations**. Public users can verify the release artifact without logging into GitHub.
-
-### 2. Build Station locally from source
-
-When `gh` is not available, you can build Station directly from the source checkout with Bun.
-
-The installer uses the same build command as CI:
+The release workflow builds Station with:
 
 ```bash
 bun build --compile --minify --bytecode index.js --outfile bin/station
 ```
 
-This means the installed binary is compiled locally from the source that was cloned from the repository. No prebuilt release binary is downloaded or trusted in this mode.
+using Bun `1.4.2`.
+
+The workflow actions are pinned to immutable commit SHAs in `.github/workflows/release.yml`. CI calculates a SHA-256 checksum for the generated binary and creates a GitHub artifact build-provenance attestation before publishing the release assets.
+
+GitHub CLI authentication is not required to verify public Station attestations.
+
+### Build from source
+
+Station can also be built locally from the checked-out source with Bun.
+
+The installer uses the same build command as the release workflow:
+
+```bash
+bun build --compile --minify --bytecode index.js --outfile bin/station
+```
+
+The locally generated binary is compiled from the source checkout itself. No prebuilt release binary is downloaded or trusted in this mode.
 
 To explicitly select this method:
 
@@ -134,7 +134,7 @@ To explicitly select this method:
 STATION_INSTALL_METHOD=source ./install.sh
 ```
 
-Bun `1.4.2` is the version used by the project's release CI. A local source build requires Bun to be installed on the system.
+Bun `1.4.2` is the version used by the project's release workflow.
 
 ### Automatic method selection
 
@@ -155,67 +155,87 @@ STATION_INSTALL_METHOD=source ./install.sh
 
 ## Build and release provenance
 
-Station's prebuilt release binary is not committed to the repository.
+Station's prebuilt release binary is intentionally not committed to the repository.
 
-Instead, releases are produced by `.github/workflows/release.yml`.
-
-For each release tag:
-
-1. GitHub Actions checks out the tagged source.
-2. Bun `1.4.2` builds `index.js`.
-3. CI calculates the SHA-256 checksum of the resulting binary.
-4. GitHub creates an artifact build-provenance attestation for the binary.
-5. The binary and checksum are published as GitHub release assets.
-
-The installer then verifies the downloaded binary's attestation before installing it.
-
-This provides a verifiable link between:
+Release binaries are produced by:
 
 ```text
-reviewed source
+.github/workflows/release.yml
+```
+
+For each release tag, the workflow:
+
+1. Checks out the tagged source.
+2. Installs Bun `1.4.2`.
+3. Builds `index.js` into the `station` executable.
+4. Calculates the binary's SHA-256 checksum.
+5. Creates a GitHub artifact build-provenance attestation.
+6. Publishes the binary and checksum as release assets.
+
+The installer verifies the downloaded binary's provenance before replacing the installed binary.
+
+The resulting trust chain is:
+
+```text
+source commit
     ↓
-Git tag
+release tag
     ↓
-GitHub Actions release workflow
+GitHub Actions workflow
     ↓
 compiled binary
     ↓
-artifact provenance attestation
+SHA-256 checksum
+    ↓
+artifact build-provenance attestation
     ↓
 installer verification
+    ↓
+installation
 ```
 
-The source-build path is available as an independent alternative for users who prefer to compile locally rather than install a CI-produced binary.
+The source-build path is an independent alternative for users who prefer to compile locally rather than use a CI-produced binary.
 
-### Reviewer verification
+## Reviewer verification
 
-The current release is `v1.1.1`.
+The release version is maintained in `manifest.json`. To determine it without hardcoding a version number:
 
-A reviewer can independently inspect the source and release:
+```bash
+VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' manifest.json \
+  | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+
+echo "$VERSION"
+```
+
+Review the source corresponding to the release:
 
 ```bash
 git clone https://github.com/Yakumy/Station.git
 cd Station
-git checkout v1.1.1
+
+VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' manifest.json \
+  | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+
+git checkout "v$VERSION"
 ```
 
-Inspect the pinned release workflow:
+Inspect the release workflow and confirm that its actions are pinned:
 
 ```bash
 sed -n '1,200p' .github/workflows/release.yml
 ```
 
-Build the binary from source:
+Confirm the expected Bun version and source build:
 
 ```bash
 bun --version
 bun build --compile --minify --bytecode index.js --outfile bin/station
 ```
 
-Verify the public release artifact's provenance:
+Verify the public release artifact using the same provenance policy enforced by the installer:
 
 ```bash
-gh release download v1.1.1 \
+gh release download "v$VERSION" \
   --repo Yakumy/Station \
   --pattern station \
   --output /tmp/station \
@@ -223,11 +243,11 @@ gh release download v1.1.1 \
 
 gh attestation verify /tmp/station \
   --repo Yakumy/Station \
-  --source-ref refs/tags/v1.1.1 \
+  --source-ref "refs/tags/v$VERSION" \
   --signer-workflow Yakumy/Station/.github/workflows/release.yml
 ```
 
-The repository's installer performs the same provenance policy check automatically before installing the prebuilt binary.
+The installer performs the same exact-release provenance check automatically before installing a prebuilt binary.
 
 ## Update
 
@@ -235,7 +255,7 @@ The repository's installer performs the same provenance policy check automatical
 station update
 ```
 
-This checks whether a newer version is available, shows the version change, asks for confirmation, then downloads and verifies the new binary using the same installation policy before replacing the installed version.
+This checks whether a newer version is available, shows the version change, asks for confirmation, then downloads and verifies the new binary using the same provenance policy before replacing the installed version.
 
 Your Station configuration — including primary/secondary monitor selection, direction, and current mode — is stored outside the plugin directory and is not replaced by a normal update.
 
