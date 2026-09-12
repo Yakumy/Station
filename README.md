@@ -49,8 +49,9 @@ mode there's nothing to disambiguate, so it stays out of the way.
 - Hyprland 0.56.x
 - Omarchy 4.x or newer (Quattro)
 - Exactly 2 monitors connected to run `station init`
+- Either `gh` (GitHub CLI) or `bun` — see Install below for what each is used for
 
-`install.sh` checks all three before touching anything on your system, and
+`install.sh` checks all of these before touching anything on your system, and
 refuses cleanly if they're not met.
 
 ## Install
@@ -63,11 +64,33 @@ station init
 ```
 
 `omarchy plugin add` clones the plugin into place and registers the bar
-widget. `install.sh` verifies your environment, installs the `station`
-command to `~/.local/bin`, wires the Hyprland keybindings in, and positions
-the indicator in the bar. `station init` is the one step that's deliberately
-separate — it's the moment Station actually starts managing your
-workspaces, so it's never run automatically on your behalf.
+widget. `install.sh` verifies your environment, installs Station's binary,
+wires the Hyprland keybindings in, and positions the indicator in the bar.
+`station init` is the one step that's deliberately separate — it's the
+moment Station actually starts managing your workspaces, so it's never run
+automatically on your behalf.
+
+`install.sh` installs the binary one of two ways:
+
+**Prebuilt, attested binary** (used automatically if `gh` is installed) —
+downloads the release binary matching the version in `manifest.json`, then
+verifies it with `gh attestation verify` against a signed build-provenance
+attestation: cryptographic proof it was built by Station's own CI directly
+from the exact reviewed source commit, not something that could be swapped
+in independently. This is the recommended path.
+
+**Build from source** (used automatically if `gh` isn't available, but
+`bun` is) — compiles the binary locally from the exact source in this
+checkout. No attestation needed, since you built it yourself rather than
+trusting a downloaded artifact.
+
+You can force either path explicitly instead of relying on auto-detection:
+
+STATION_INSTALL_METHOD=prebuilt ./install.sh # require gh + attestation
+STATION_INSTALL_METHOD=source ./install.sh # always build locally
+
+If neither `gh` nor `bun` is available, `install.sh` refuses rather than
+installing something it can't verify.
 
 ## Update
 

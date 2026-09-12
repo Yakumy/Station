@@ -22,7 +22,6 @@ REQUIRED_HYPRLAND_MINOR="56"
 REQUIRED_OMARCHY_MAJOR="4"
 
 RELEASE_BASE_URL="https://github.com/Yakumy/Station/releases/download"
-EXPECTED_SHA256="9ccd010d122295a39d12910103c7d3f0c6c7594726262d1f0caf654b832d7efe"
 
 fetch_binary() {
   VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_DIR/manifest.json" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
@@ -56,12 +55,12 @@ fetch_binary() {
     exit 1
   fi
 
-  ACTUAL_SUM=$(sha256sum "$TMP_BIN" | awk '{print $1}')
+  echo "  Verifying build provenance..."
 
-  if [ "$ACTUAL_SUM" != "$EXPECTED_SHA256" ]; then
-    echo "Station: checksum verification failed for the downloaded binary." >&2
-    echo "  Expected (pinned in this reviewed commit): $EXPECTED_SHA256" >&2
-    echo "  Actual (downloaded):                       $ACTUAL_SUM" >&2
+  if ! gh attestation verify "$TMP_BIN" --repo Yakumy/Station >/dev/null 2>&1; then
+    echo "Station: build provenance verification failed." >&2
+    echo "  This binary does not match a verified CI build from the" >&2
+    echo "  Yakumy/Station repository. Refusing to install it." >&2
     rm -f "$TMP_BIN"
     exit 1
   fi
@@ -180,12 +179,28 @@ echo
 echo "Station: installing plugin files..."
 
 if [ "$SOURCE_DIR" = "$PLUGIN_DIR" ]; then
-  MODE="production"
-  echo "  Mode: production (running in place)"
+    MODE="production"
+    echo "  Mode: production (running in place)"
 
-  fetch_binary
-else
-  MODE="dev"
+    INSTALL_METHOD="${STATION_INSTALL_METHOD:-}"
+
+    if [ "$INSTALL_METHOD" = "source" ]; then
+      build_from_source
+    elif command -v gh >/dev/null 2>&1; then
+      fetch_binary
+    elif command -v bun >/dev/null 2>&1; then
+      echo "  'gh' not found — building from source instead of using the"
+      echo "  prebuilt release. (Install 'gh' to use the attested binary"
+      echo "  instead, or set STATION_INSTALL_METHOD=prebuilt to require it.)"
+      build_from_source
+    else
+      echo "Station: neither 'gh' nor 'bun' is available." >&2
+      echo "  Install 'gh' to use the prebuilt, attested release binary, or" >&2
+      echo "  install Bun (https://bun.sh) to build Station from source." >&2
+      exit 1
+    fi
+  else
+    MODE="dev"
   echo "  Mode: dev (copying into $PLUGIN_DIR)"
 
   SOURCE_BIN="$SOURCE_DIR/bin/station"
