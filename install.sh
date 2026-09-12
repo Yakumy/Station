@@ -23,6 +23,56 @@ REQUIRED_OMARCHY_MAJOR="4"
 
 RELEASE_BASE_URL="https://github.com/Yakumy/Station/releases/download"
 
+build_from_source() {
+  VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_DIR/manifest.json" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+
+  if [ -z "$VERSION" ]; then
+    echo "Station: could not read version from manifest.json." >&2
+    exit 1
+  fi
+
+  VERSION_MARKER="$PLUGIN_DIR/bin/.station-version"
+
+  if [ -x "$PLUGIN_BIN" ] && [ -f "$VERSION_MARKER" ] && [ "$(cat "$VERSION_MARKER")" = "$VERSION" ]; then
+    echo "  Binary: already up to date (v$VERSION)"
+    return 0
+  fi
+
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "Station: 'bun' not found; cannot build Station from source." >&2
+    exit 1
+  fi
+
+  echo "  Building Station v$VERSION from source..."
+  mkdir -p "$PLUGIN_DIR/bin"
+
+  TMP_BIN="$PLUGIN_BIN.new.$$"
+
+  if ! bun build \
+    --compile \
+    --minify \
+    --bytecode \
+    "$SOURCE_DIR/index.js" \
+    --outfile "$TMP_BIN"; then
+    echo "Station: source build failed." >&2
+    rm -f "$TMP_BIN"
+    exit 1
+  fi
+
+  if [ ! -x "$TMP_BIN" ]; then
+    echo "Station: source build did not produce an executable binary." >&2
+    rm -f "$TMP_BIN"
+    exit 1
+  fi
+
+  chmod +x "$TMP_BIN"
+  mv -f "$TMP_BIN" "$PLUGIN_BIN"
+  printf '%s' "$VERSION" > "$VERSION_MARKER"
+
+  echo "  Binary: built from source (v$VERSION)"
+}
+
+
 fetch_binary() {
   VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_DIR/manifest.json" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
 
