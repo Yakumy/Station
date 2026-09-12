@@ -53,7 +53,7 @@ export function chooseMonitors(monitors, parsedRules = []) {
     if (primary) {
       const secondary = monitors.find((m) => m.name !== primary.name);
       return {
-        primary: primaryByRule,
+        primary,
         secondary,
         primarySource: "default",
       };
