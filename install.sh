@@ -93,6 +93,12 @@ fetch_binary() {
     exit 1
   fi
 
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "Station: 'gh' not found; cannot verify the prebuilt binary." >&2
+    echo "  Install GitHub CLI or use STATION_INSTALL_METHOD=source." >&2
+    exit 1
+  fi
+
   echo "  Downloading Station v$VERSION binary..."
   mkdir -p "$PLUGIN_DIR/bin"
 
@@ -107,10 +113,15 @@ fetch_binary() {
 
   echo "  Verifying build provenance..."
 
-  if ! gh attestation verify "$TMP_BIN" --repo Yakumy/Station >/dev/null 2>&1; then
+  if ! gh attestation verify \
+    "$TMP_BIN" \
+    --repo Yakumy/Station \
+    --source-ref "refs/tags/v${VERSION}" \
+    --signer-workflow "Yakumy/Station/.github/workflows/release.yml" \
+    >/dev/null 2>&1; then
     echo "Station: build provenance verification failed." >&2
-    echo "  This binary does not match a verified CI build from the" >&2
-    echo "  Yakumy/Station repository. Refusing to install it." >&2
+    echo "  This binary does not match a verified CI build for" >&2
+    echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
     rm -f "$TMP_BIN"
     exit 1
   fi
