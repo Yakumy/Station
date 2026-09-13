@@ -148,12 +148,22 @@ resolve_trusted_tool() {
 
       validate_trusted_path "$mise_path" || return 1
 
-      tool_real="$(
+      mise_target="$(
         env -i \
           HOME="$HOME_DIR" \
           PATH="$TRUSTED_PATH" \
           "$mise_path" which "$tool_name" 2>/dev/null
       )" || return 1
+
+      # mise resolves into version directories through a "latest" (or
+      # similarly named) symlink. A symlink's own permission bits are
+      # fixed at rwxrwxrwx by the kernel and carry no meaning — the
+      # security-relevant check is on the directory that contains the
+      # symlink (covered below once it's part of the walked chain) and
+      # on the real target it points to. Canonicalize away the symlink
+      # itself so validate_trusted_path walks only real directories,
+      # exactly as it does for the non-mise case below.
+      tool_real="$(readlink -f -- "$mise_target" 2>/dev/null || true)"
       ;;
     *)
       tool_real="$(readlink -f -- "$tool_path" 2>/dev/null || true)"

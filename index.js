@@ -241,8 +241,9 @@ function die(message, code = 1) {
 
 function commandExists(name) {
   return (
-    spawnSync("sh", ["-lc", `command -v ${name}`], { stdio: "ignore" })
-      .status === 0
+    spawnSync("sh", ["-lc", 'command -v -- "$1"', "sh", name], {
+      stdio: "ignore",
+    }).status === 0
   );
 }
 
