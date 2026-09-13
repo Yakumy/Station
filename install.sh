@@ -80,10 +80,54 @@ run_trusted() {
     "$@"
 }
 
-# Resolve a tool to a single absolute path and verify that neither the
-# resolved path nor its canonical target is reachable through a directory
-# owned by another user or writable by group/other. Prints the resolved path
-# (which may be a version-manager shim) on success and fails closed otherwise.
+# Validate a path and every parent directory.
+#
+# Every component must be owned by root or by the current user, and neither
+# group nor other may have write permission.
+validate_trusted_path() {
+  check_path="$1"
+  current_uid="$(id -u)"
+
+  while [ "$check_path" != "/" ]; do
+    owner_uid="$(stat -c '%u' -- "$check_path" 2>/dev/null || true)"
+    mode="$(stat -c '%a' -- "$check_path" 2>/dev/null || true)"
+
+    if [ -z "$owner_uid" ] || [ -z "$mode" ]; then
+      return 1
+    fi
+
+    if [ "$owner_uid" != "0" ] && [ "$owner_uid" != "$current_uid" ]; then
+      return 1
+    fi
+
+    # Normalize stat's permission output to the final three permission
+    # digits. `%a` may include a leading special-mode digit.
+    case ${#mode} in
+      1) mode="00$mode" ;;
+      2) mode="0$mode" ;;
+      3) ;;
+      4) mode="${mode#?}" ;;
+      *) return 1 ;;
+    esac
+
+    group_other="${mode#?}"
+
+    # Reject group-write and other-write.
+    case "$group_other" in
+      [2367][0-7]|[0-7][2367])
+        return 1
+        ;;
+    esac
+
+    check_path="$(dirname -- "$check_path")"
+  done
+}
+
+# Resolve a tool to the actual executable that will be invoked.
+#
+# Most tools resolve directly through PATH. mise-managed tools are special:
+# the PATH entry is a mise shim which points to /usr/bin/mise. In that case,
+# the trusted system mise binary resolves the actual managed executable.
 resolve_trusted_tool() {
   tool_name="$1"
 
@@ -93,61 +137,45 @@ resolve_trusted_tool() {
     *) return 1 ;;
   esac
 
-  tool_real="$(readlink -f -- "$tool_path" 2>/dev/null || true)"
-  if [ -z "$tool_real" ] || [ ! -f "$tool_real" ] || [ ! -x "$tool_real" ]; then
-    return 1
-  fi
+  tool_real=""
 
-  current_uid="$(id -u)"
+  case "$tool_path" in
+    "$HOME_DIR/.local/share/mise/shims/"*)
+      mise_path="/usr/bin/mise"
 
-  for tool_check in "$tool_path" "$tool_real"; do
-    check_path="$tool_check"
-    while [ "$check_path" != "/" ]; do
-      owner_uid="$(stat -c '%u' -- "$check_path" 2>/dev/null || true)"
-      mode="$(stat -c '%a' -- "$check_path" 2>/dev/null || true)"
+      [ -x "$mise_path" ] || return 1
+      [ ! -L "$mise_path" ] || return 1
 
-      if [ -z "$owner_uid" ] || [ -z "$mode" ]; then
-        return 1
-      fi
+      validate_trusted_path "$mise_path" || return 1
 
-      if [ "$owner_uid" != "0" ] && [ "$owner_uid" != "$current_uid" ]; then
-        return 1
-      fi
+      tool_real="$(
+        env -i \
+          HOME="$HOME_DIR" \
+          PATH="$TRUSTED_PATH" \
+          "$mise_path" which "$tool_name" 2>/dev/null
+      )" || return 1
+      ;;
+    *)
+      tool_real="$(readlink -f -- "$tool_path" 2>/dev/null || true)"
+      ;;
+  esac
 
-      # `stat -c '%a'` is variable-width: it strips leading zeros (mode 007
-      # prints as "7", mode 0750 as "750") and gains an extra leading digit
-      # when setuid/setgid/sticky is set (mode 1777 prints as "1777"). Pad
-      # to at least 3 digits and always take the *last two* characters, so
-      # the group/other write bits are read from the correct position
-      # regardless of which of those shapes stat produced. A fixed-offset
-      # read (e.g. always character 2 and 3) misreads a 4-digit mode and
-      # can silently accept a genuinely world-writable directory.
-      case ${#mode} in
-        1) mode="00$mode" ;;
-        2) mode="0$mode" ;;
-      esac
-      mode_prefix="${mode%??}"
-      last_two="${mode#"$mode_prefix"}"
-      group_bit="${last_two%?}"
-      other_bit="${last_two#?}"
+  case "$tool_real" in
+    /*) ;;
+    *) return 1 ;;
+  esac
 
-      case "$group_bit" in
-        2|3|6|7) return 1 ;;
-      esac
-      case "$other_bit" in
-        2|3|6|7) return 1 ;;
-      esac
+  [ -f "$tool_real" ] || return 1
+  [ -x "$tool_real" ] || return 1
 
-      check_path="$(dirname -- "$check_path")"
-    done
-  done
+  validate_trusted_path "$tool_real" || return 1
 
-  printf '%s\n' "$tool_path"
+  printf '%s\n' "$tool_real"
 }
 
 # Resolve a tool via resolve_trusted_tool and, on success, immediately open a
 # read-only file descriptor on its canonical target, then set
-# $OPENED_TOOL_PATH to "/proc/self/fd/<fd_num>" (or "" on any failure).
+# $OPENED_TOOL_PATH to "/proc/self/fd/<n>" (or "" on any failure).
 #
 # This must be called directly — never as "$(open_validated_tool ...)" —
 # because command substitution runs the call in a subshell, and an `exec`
@@ -170,10 +198,10 @@ open_validated_tool() {
   [ -n "$tool_real" ] || return 1
 
   case "$fd_num" in
-      4) exec 4<"$tool_real" || return 1 ;;
-      5) exec 5<"$tool_real" || return 1 ;;
-      6) exec 6<"$tool_real" || return 1 ;;
-      *) return 1 ;;
+    4) exec 4<"$tool_real" || return 1 ;;
+    5) exec 5<"$tool_real" || return 1 ;;
+    6) exec 6<"$tool_real" || return 1 ;;
+    *) return 1 ;;
   esac
 
   [ -r "/proc/self/fd/$fd_num" ] || return 1
@@ -209,6 +237,7 @@ cleanup() {
   exec 5<&- 2>/dev/null || true
   exec 6<&- 2>/dev/null || true
 }
+
 trap cleanup 0
 
 new_temp_dir() {
