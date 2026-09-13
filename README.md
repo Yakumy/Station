@@ -71,6 +71,8 @@ station init
 
 `install.sh` verifies the environment, installs the Station binary, installs the Hyprland integration, configures the Omarchy bar widget, and reloads the required components.
 
+If `~/.local/bin/station` or `~/.config/hypr/station-bindings.lua` already exists without being a Station-managed symlink, the installer stops rather than replacing it. See [Security](#security).
+
 `station init` is intentionally separate from installation. Installation does not automatically take control of your workspaces.
 
 ## Installation methods
@@ -386,6 +388,18 @@ cd ~/.config/omarchy/plugins/yakumy.station
 ./install.sh
 station init
 ```
+
+## Security
+
+Because the prebuilt installation is only as trustworthy as the tools that verify it, the installer treats tool resolution and shared paths as security boundaries.
+
+**Trusted tool resolution.** `install.sh` does not inherit your `PATH` or environment. It resolves `curl`, `gh`, and `bun` from a fixed, non-ambient search path, and rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifier run with a minimal environment, so environment variables cannot redirect or disable provenance verification.
+
+**Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. It is verified with `gh attestation verify` _before_ it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind.
+
+**Shared paths are never clobbered blindly.** `~/.local/bin/station` and `~/.config/hypr/station-bindings.lua` are only replaced when they are symlinks that point exactly at the installed plugin files. If either path exists as an unrelated file or symlink, the installer stops and explains what it found instead of overwriting it. `hyprland.lua` is only modified when it is a regular file, and any change is written atomically.
+
+**Ambient `PATH` shadows are ignored.** A `curl`, `gh`, or `bun` placed earlier in your shell `PATH` is not consulted; only the resolved system and per-user tool locations are used.
 
 ## License
 

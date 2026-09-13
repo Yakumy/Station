@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "yakumy.station",
   "name": "Station",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "author": "Yakumy",
   "license": "Apache-2.0",
   "description": "Create linked dual-monitor workstations from Hyprland workspaces.",
