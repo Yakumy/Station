@@ -170,10 +170,10 @@ open_validated_tool() {
   [ -n "$tool_real" ] || return 1
 
   case "$fd_num" in
-    4) exec 4<"$tool_real" 2>/dev/null || return 1 ;;
-    5) exec 5<"$tool_real" 2>/dev/null || return 1 ;;
-    6) exec 6<"$tool_real" 2>/dev/null || return 1 ;;
-    *) return 1 ;;
+      4) exec 4<"$tool_real" || return 1 ;;
+      5) exec 5<"$tool_real" || return 1 ;;
+      6) exec 6<"$tool_real" || return 1 ;;
+      *) return 1 ;;
   esac
 
   [ -r "/proc/self/fd/$fd_num" ] || return 1
