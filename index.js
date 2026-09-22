@@ -705,9 +705,6 @@ async function setDirection(value) {
 }
 
 async function deleteStation() {
-  const state = loadStateOrDefault();
-  if (!state) die("Station is not initialized.");
-
   const bindingsSource = join(PLUGIN_DIR, "station-bindings.lua");
   const binarySource = join(PLUGIN_DIR, "bin", "station");
   assertOwnedSymlinkOrAbsent(STATION_LUA, bindingsSource);

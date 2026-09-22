@@ -4,17 +4,18 @@ set -eu
 # ---------------------------------------------------------------------------
 # Station installer — security model
 #
-# The prebuilt path's trust rests on two tools: the downloader (curl) and the
-# provenance verifier (gh). The source path depends on the builder (bun). If
-# any of those can be substituted, the provenance gate can be defeated (a fake
-# gh can simply report success). To prevent that, this installer:
+# The prebuilt path's trust rests on the downloader (curl), the digest verifier
+# (sha256sum), and the reviewed checksum committed with this source. Optional
+# GitHub attestation verification additionally uses gh. The source path depends
+# on the builder (bun). To prevent tool substitution, this installer:
 #
 #   1. Discards the caller's PATH and resolves every command from a fixed,
 #      non-ambient search path (system locations first, then the usual
 #      per-user tool locations).
-#   2. Resolves curl, gh, and bun exactly once, validates that neither the
-#      resolved path nor its canonical target is reachable through a
-#      directory owned by another user or writable by group/other, and then
+#   2. Resolves curl, sha256sum, optional gh, and bun exactly once, then
+#      validates that neither the resolved path nor its canonical target is
+#      reachable through a directory owned by another user or writable by
+#      group/other, and then
 #      immediately opens a read-only file descriptor on the validated
 #      canonical file. From that point on the tool is invoked exclusively
 #      through /proc/self/fd/<n>, which execs the exact inode captured at
@@ -22,9 +23,10 @@ set -eu
 #      its resolution chain) cannot substitute a different binary for the
 #      one that was actually checked. This closes the gap between
 #      "we checked this path" and "we ran this path".
-#   3. Runs those three tools with a minimal environment and an empty temporary
-#      home/config directory. GitHub authentication is reduced to a single
-#      token obtained through the already validated gh executable.
+#   3. Runs those tools with a minimal environment and an empty temporary
+#      home/config directory. The default prebuilt path requires no credentials.
+#      Optional GitHub verification reduces authentication to a single token
+#      obtained through the already validated gh executable.
 #   4. Stages downloaded/built binaries in a freshly created, randomly named,
 #      owner-only directory — never at a predictable pathname — and installs
 #      them with an atomic rename.
@@ -76,16 +78,15 @@ die() {
 }
 
 # Run a security-sensitive tool with a minimal environment and an empty,
-# installer-owned home/config directory. This prevents curl, gh, or Bun from
-# loading user configuration while acquiring or building the binary.
+# installer-owned home/config directory. This prevents curl, sha256sum, gh, or
+# Bun from loading user configuration while acquiring or building the binary.
 run_trusted() {
   [ -n "${TMP_DIR:-}" ] || die "trusted tool invoked without a temporary workspace."
-  mkdir -p -- "$TMP_DIR/home" "$TMP_DIR/config/gh"
+  mkdir -p -- "$TMP_DIR/home" "$TMP_DIR/config"
 
   env -i \
     HOME="$TMP_DIR/home" \
     XDG_CONFIG_HOME="$TMP_DIR/config" \
-    GH_CONFIG_DIR="$TMP_DIR/config/gh" \
     PATH="$SYSTEM_TOOL_PATH" \
     "$@"
 }
@@ -255,7 +256,7 @@ resolve_trusted_tool() {
 # because command substitution runs the call in a subshell, and an `exec`
 # done inside a subshell does not survive back into the parent shell. The
 # internal call to resolve_trusted_tool below is fine to run via command
-# substitution, since resolving a path never touches file descriptors 4-6.
+# substitution, since resolving a path never touches file descriptors 4-7.
 #
 # Binding to a file descriptor rather than re-using the checked path closes
 # the gap between validation and use: even if the path (or a directory in
@@ -275,6 +276,7 @@ open_validated_tool() {
     4) exec 4<"$tool_real" || return 1 ;;
     5) exec 5<"$tool_real" || return 1 ;;
     6) exec 6<"$tool_real" || return 1 ;;
+    7) exec 7<"$tool_real" || return 1 ;;
     *) return 1 ;;
   esac
 
@@ -288,11 +290,15 @@ open_validated_tool() {
 open_validated_tool curl 4 || true
 CURL_BIN="$OPENED_TOOL_PATH"
 
-open_validated_tool gh 5 || true
-GH_BIN="$OPENED_TOOL_PATH"
+# GitHub CLI is optional and is resolved lazily only when the user explicitly
+# requests attestation verification.
+GH_BIN=""
 
 open_validated_tool bun 6 || true
 BUN_BIN="$OPENED_TOOL_PATH"
+
+open_validated_tool sha256sum 7 || true
+SHA256_BIN="$OPENED_TOOL_PATH"
 
 # ---------------------------------------------------------------------------
 # Secure temporary workspace
@@ -312,6 +318,7 @@ cleanup() {
   exec 4<&- 2>/dev/null || true
   exec 5<&- 2>/dev/null || true
   exec 6<&- 2>/dev/null || true
+  exec 7<&- 2>/dev/null || true
 }
 
 trap cleanup 0
@@ -467,27 +474,113 @@ build_from_source() {
   echo "  Binary: built from source (v$VERSION)"
 }
 
+read_release_checksum() {
+  checksum_file="$SOURCE_DIR/release/checksums/v${VERSION}-linux-x64.sha256"
+
+  if [ ! -f "$checksum_file" ] || [ -L "$checksum_file" ]; then
+    die "reviewed checksum is missing or is not a regular file: $checksum_file"
+  fi
+
+  checksum_line=""
+  checksum_line_count=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    checksum_line_count=$((checksum_line_count + 1))
+    checksum_line="$line"
+  done < "$checksum_file"
+
+  [ "$checksum_line_count" -eq 1 ] || die "reviewed checksum file must contain exactly one line."
+
+  EXPECTED_BINARY_SHA256="${checksum_line%% *}"
+  checksum_suffix="${checksum_line#"$EXPECTED_BINARY_SHA256"}"
+
+  [ "${#EXPECTED_BINARY_SHA256}" -eq 64 ] || die "reviewed checksum has an invalid SHA-256 digest."
+  case "$EXPECTED_BINARY_SHA256" in
+    *[!0-9a-f]*) die "reviewed checksum has an invalid SHA-256 digest." ;;
+  esac
+  [ "$checksum_suffix" = "  station" ] || die "reviewed checksum has an invalid filename."
+}
+
+verify_binary_checksum() {
+  staged="$1"
+  read_release_checksum
+
+  actual_line="$(run_trusted "$SHA256_BIN" "$staged")" || die "could not calculate the downloaded binary checksum."
+  actual_checksum="${actual_line%% *}"
+
+  [ "${#actual_checksum}" -eq 64 ] || die "sha256sum returned an invalid digest."
+  case "$actual_checksum" in
+    *[!0-9a-f]*) die "sha256sum returned an invalid digest." ;;
+  esac
+
+  if [ "$actual_checksum" != "$EXPECTED_BINARY_SHA256" ]; then
+    echo "Station: downloaded binary checksum verification failed." >&2
+    echo "  Expected: $EXPECTED_BINARY_SHA256" >&2
+    echo "  Actual:   $actual_checksum" >&2
+    echo "  Refusing to install the binary." >&2
+    exit 1
+  fi
+}
+
+verify_github_attestations() {
+  staged="$1"
+
+  open_validated_tool gh 5 || true
+  GH_BIN="$OPENED_TOOL_PATH"
+
+  if [ -z "$GH_BIN" ]; then
+    echo "Station: optional GitHub attestation verification requires 'gh'." >&2
+    echo "  Install and authenticate GitHub CLI, or use STATION_INSTALL_METHOD=prebuilt." >&2
+    exit 1
+  fi
+
+  if ! load_github_auth_token; then
+    echo "Station: optional GitHub attestation verification requires authentication." >&2
+    echo "  Run 'gh auth login' and retry, or use STATION_INSTALL_METHOD=prebuilt." >&2
+    exit 1
+  fi
+
+  echo "  Verifying immutable release asset..."
+  release_verification_error="$TMP_DIR/release-verification.err"
+
+  if ! run_trusted_gh "$GH_BIN" release verify-asset \
+    "v${VERSION}" \
+    "$staged" \
+    --repo Yakumy/Station \
+    >/dev/null 2>"$release_verification_error"; then
+    echo "Station: immutable release verification failed." >&2
+    print_verification_error "$release_verification_error"
+    exit 1
+  fi
+
+  echo "  Verifying build provenance..."
+  provenance_verification_error="$TMP_DIR/provenance-verification.err"
+
+  if ! run_trusted_gh "$GH_BIN" attestation verify \
+    "$staged" \
+    --repo Yakumy/Station \
+    --source-ref "refs/tags/v${VERSION}" \
+    --signer-workflow "Yakumy/Station/.github/workflows/release.yml" \
+    --deny-self-hosted-runners \
+    >/dev/null 2>"$provenance_verification_error"; then
+    echo "Station: build provenance verification failed." >&2
+    print_verification_error "$provenance_verification_error"
+    exit 1
+  fi
+}
+
 fetch_binary() {
+  require_attestation="${1:-0}"
   read_version
 
   if [ -z "$CURL_BIN" ]; then
     die "'curl' not found or failed trusted-tool validation; cannot download the prebuilt binary."
   fi
-
-  if [ -z "$GH_BIN" ]; then
-    echo "Station: 'gh' not found or failed trusted-tool validation; cannot verify the prebuilt binary." >&2
-    echo "  Install GitHub CLI or use STATION_INSTALL_METHOD=source." >&2
-    exit 1
+  if [ -z "$SHA256_BIN" ]; then
+    die "'sha256sum' not found or failed trusted-tool validation; cannot verify the prebuilt binary."
   fi
 
   echo "  Downloading Station v$VERSION binary..."
   new_temp_dir
-
-  if ! load_github_auth_token; then
-    echo "Station: GitHub CLI authentication is required to verify release assets." >&2
-    echo "  Run 'gh auth login' and retry, or use STATION_INSTALL_METHOD=source." >&2
-    exit 1
-  fi
 
   staged="$TMP_DIR/station"
   release_url="${RELEASE_BASE_URL}/v${VERSION}/station"
@@ -503,44 +596,21 @@ fetch_binary() {
   fi
   exec 3>&-
 
-  echo "  Verifying immutable release asset..."
+  echo "  Verifying reviewed SHA-256 checksum..."
+  verify_binary_checksum "$staged"
 
-  release_verification_error="$TMP_DIR/release-verification.err"
-
-  if ! run_trusted_gh "$GH_BIN" release verify-asset \
-    "v${VERSION}" \
-    "$staged" \
-    --repo Yakumy/Station \
-    >/dev/null 2>"$release_verification_error"; then
-    echo "Station: immutable release verification failed." >&2
-    echo "  The downloaded binary is not bound to the immutable" >&2
-    echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
-    print_verification_error "$release_verification_error"
-    exit 1
-  fi
-
-  echo "  Verifying build provenance..."
-
-  provenance_verification_error="$TMP_DIR/provenance-verification.err"
-
-  if ! run_trusted_gh "$GH_BIN" attestation verify \
-    "$staged" \
-    --repo Yakumy/Station \
-    --source-ref "refs/tags/v${VERSION}" \
-    --signer-workflow "Yakumy/Station/.github/workflows/release.yml" \
-    --deny-self-hosted-runners \
-    >/dev/null 2>"$provenance_verification_error"; then
-    echo "Station: build provenance verification failed." >&2
-    echo "  This binary does not match a verified CI build for" >&2
-    echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
-    print_verification_error "$provenance_verification_error"
-    exit 1
+  if [ "$require_attestation" = "1" ]; then
+    verify_github_attestations "$staged"
   fi
 
   install_binary "$staged" || die "could not install the verified binary."
   write_version_marker || die "could not record the installed version."
 
-  echo "  Binary: downloaded and verified (v$VERSION)"
+  if [ "$require_attestation" = "1" ]; then
+    echo "  Binary: checksum and provenance verified (v$VERSION)"
+  else
+    echo "  Binary: checksum verified (v$VERSION)"
+  fi
 }
 
 # Allow the security test suite to source the helpers above without running
@@ -667,25 +737,26 @@ if [ "$SOURCE_DIR" = "$PLUGIN_DIR" ]; then
       build_from_source
       ;;
     prebuilt)
-      fetch_binary
+      fetch_binary 0
+      ;;
+    attested)
+      fetch_binary 1
       ;;
     "")
-      if [ -n "$GH_BIN" ]; then
-        fetch_binary
+      if [ -n "$CURL_BIN" ] && [ -n "$SHA256_BIN" ]; then
+        fetch_binary 0
       elif [ -n "$BUN_BIN" ]; then
-        echo "  'gh' not found — building from source instead of using the"
-        echo "  prebuilt release. (Install 'gh' to use the attested binary"
-        echo "  instead, or set STATION_INSTALL_METHOD=prebuilt to require it.)"
+        echo "  'curl' or 'sha256sum' unavailable — building from source."
         build_from_source
       else
-        echo "Station: neither 'gh' nor 'bun' is available." >&2
-        echo "  Install 'gh' to use the prebuilt, attested release binary, or" >&2
+        echo "Station: prebuilt verification tools and Bun are unavailable." >&2
+        echo "  Install curl and sha256sum for the verified prebuilt binary, or" >&2
         echo "  install Bun (https://bun.sh) to build Station from source." >&2
         exit 1
       fi
       ;;
     *)
-      die "unknown STATION_INSTALL_METHOD '$INSTALL_METHOD' (use 'prebuilt' or 'source')."
+      die "unknown STATION_INSTALL_METHOD '$INSTALL_METHOD' (use 'prebuilt', 'attested', or 'source')."
       ;;
   esac
 else

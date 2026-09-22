@@ -38,12 +38,13 @@ The bar indicator (`[S1]`–`[S5]`) shows your current station and follows your 
 
 Station targets **Omarchy Quattro (Omarchy 4.x+)** and **Hyprland 0.56.x**.
 
-The installer supports two installation methods. You only need the dependencies for the method you choose:
+The installer supports three installation methods. You only need the dependencies for the method you choose:
 
-| Method                     | Required tools               | What happens                                                                          |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
-| **Prebuilt + attestation** | Authenticated `gh` (GitHub CLI) and `curl` | Downloads the release binary and verifies its immutable release identity and CI build provenance before installation |
-| **Build from source**      | `bun`                        | Builds the binary locally from the source checkout; no downloaded binary is trusted   |
+| Method                    | Required tools                         | What happens                                                                                  |
+| ------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Verified prebuilt**     | `curl` and `sha256sum`                  | Downloads the public release binary and verifies it against the checksum committed in source  |
+| **Attested prebuilt**     | Authenticated `gh`, `curl`, `sha256sum` | Performs checksum verification plus GitHub release and build-provenance verification          |
+| **Build from source**     | `bun`                                  | Builds the binary locally from the source checkout; no downloaded binary is trusted           |
 
 Additional requirement:
 
@@ -77,29 +78,37 @@ If `~/.local/bin/station` or `~/.config/hypr/station-bindings.lua` already exist
 
 ## Installation methods
 
-### Prebuilt binary with verified CI provenance
+### Prebuilt binary with reviewed checksum
 
-This is the recommended installation method when GitHub CLI (`gh`) is installed
-and authenticated with `gh auth login`. The prebuilt path cannot verify or
-install the release binary without authenticated `gh` access.
+This is the default and recommended installation method. It does not require a
+GitHub account, GitHub CLI, or authentication.
 
 When using the prebuilt path, `install.sh`:
 
 1. Reads the Station version from `manifest.json`.
 2. Downloads the matching release binary from the `Yakumy/Station` GitHub release.
-3. Verifies the binary with GitHub artifact attestation verification.
-4. Requires the attestation to:
+3. Reads the version-specific checksum committed under `release/checksums/`.
+4. Calculates the binary digest with a validated, file-descriptor-pinned
+   `sha256sum` executable.
+5. Installs the binary only when its digest exactly matches the reviewed
+   checksum.
 
-   - use the SLSA provenance predicate;
-   - belong to the `Yakumy/Station` repository;
-   - reference the exact release tag being installed;
-   - be signed by `Yakumy/Station/.github/workflows/release.yml`.
-5. Requires the binary to match the asset recorded by the immutable GitHub
-   release for that exact tag.
+The release workflow cannot attest or publish a binary unless it matches that
+same checksum. A missing, malformed, or mismatched checksum causes the installer
+to fail closed.
 
-6. Installs the binary only after verification succeeds.
+### Optional GitHub attestation verification
 
-The installer uses a verification policy equivalent to:
+Users who want GitHub release-identity and build-provenance verification in
+addition to the mandatory checksum check can explicitly select the attested
+method:
+
+```bash
+STATION_INSTALL_METHOD=attested ./install.sh
+```
+
+This optional mode requires an authenticated GitHub CLI. Run `gh auth login`
+first. The additional verification policy is equivalent to:
 
 ```bash
 gh release verify-asset "v<VERSION>" <binary> \
@@ -136,10 +145,9 @@ repository write permission; only the separate draft-publication job receives
 `contents: write` after the binary has passed digest verification and received
 a build-provenance attestation.
 
-The GitHub verification APIs require GitHub CLI authentication. Run `gh auth
-login` before using the prebuilt installation method. The installer extracts
-only the resulting token and passes it into an otherwise isolated GitHub CLI
-environment.
+The default prebuilt method does not read or require GitHub credentials. In the
+optional attested method, the installer extracts only the resulting token and
+passes it into an otherwise isolated GitHub CLI environment.
 
 ### Build from source
 
@@ -168,20 +176,21 @@ Bun `1.4.2` is the version used by the project's release workflow.
 
 When no method is forced, `install.sh` uses:
 
-- `gh` available → **prebuilt binary + provenance verification**
-- otherwise `bun` available → **local source build**
+- `curl` and `sha256sum` available → **checksum-verified prebuilt binary**
+- otherwise, `bun` available → **local source build**
 - neither available → installation stops
 
-You can explicitly select either path:
+You can explicitly select any path:
 
 ```bash
 STATION_INSTALL_METHOD=prebuilt ./install.sh
+STATION_INSTALL_METHOD=attested ./install.sh
 STATION_INSTALL_METHOD=source ./install.sh
 ```
 
-`STATION_INSTALL_METHOD=prebuilt` requires an authenticated GitHub CLI because
-immutable-release and provenance verification are mandatory for that path. The
-installer will not silently install an unverified prebuilt binary.
+`STATION_INSTALL_METHOD=prebuilt` never requires GitHub authentication. The
+installer will not install a prebuilt binary that fails the committed-checksum
+verification.
 
 ## Build and release provenance
 
@@ -211,10 +220,12 @@ For each release tag, the workflow:
    policy.
 
 Before publishing any release, enable **Release immutability** in the repository's
-GitHub settings. The prebuilt installer fails closed if GitHub cannot verify the
-download against an immutable release.
+GitHub settings. The release workflow also refuses to publish bytes that differ
+from the checksum already committed in the tagged source.
 
-The installer verifies the downloaded binary's provenance before replacing the installed binary.
+The installer verifies the downloaded binary against that reviewed checksum
+before replacing the installed binary. GitHub provenance verification remains
+available through the explicit `attested` installation method.
 
 The resulting trust chain is:
 
@@ -231,12 +242,15 @@ compiled binary
     ↓
 reviewed binary SHA-256 checksum
     ↓
-artifact build-provenance attestation
+published release binary
     ↓
-installer verification
+installer SHA-256 verification
     ↓
 installation
 ```
+
+CI also publishes an artifact build-provenance attestation for users who select
+the optional attested installation method.
 
 The source-build path is an independent alternative for users who prefer to compile locally rather than use a CI-produced binary.
 
@@ -298,26 +312,37 @@ docker run --rm --platform linux/amd64 \
   '
 ```
 
-Verify the public release artifact using the same provenance policy enforced by the installer:
+Verify the public release artifact using the default authentication-free policy:
 
 ```bash
-gh release download "v$VERSION" \
-  --repo Yakumy/Station \
-  --pattern station \
-  --output /tmp/station \
-  --clobber
+VERIFY_DIR=$(mktemp -d)
+trap 'rm -rf -- "$VERIFY_DIR"' EXIT
 
-gh release verify-asset "v$VERSION" /tmp/station \
+curl --fail --location --silent --show-error \
+  "https://github.com/Yakumy/Station/releases/download/v$VERSION/station" \
+  --output "$VERIFY_DIR/station"
+
+cp "release/checksums/v${VERSION}-linux-x64.sha256" "$VERIFY_DIR/station.sha256"
+(cd "$VERIFY_DIR" && sha256sum --check station.sha256)
+```
+
+Optionally verify GitHub release identity and build provenance as well:
+
+```bash
+gh auth status --hostname github.com
+
+gh release verify-asset "v$VERSION" "$VERIFY_DIR/station" \
   --repo Yakumy/Station
 
-gh attestation verify /tmp/station \
+gh attestation verify "$VERIFY_DIR/station" \
   --repo Yakumy/Station \
   --source-ref "refs/tags/v$VERSION" \
   --signer-workflow Yakumy/Station/.github/workflows/release.yml \
   --deny-self-hosted-runners
 ```
 
-The installer performs the same exact-release provenance check automatically before installing a prebuilt binary.
+The installer always performs the SHA-256 check. The exact-release provenance
+checks are added when `STATION_INSTALL_METHOD=attested` is selected.
 
 ## Update
 
@@ -342,6 +367,9 @@ station delete
 ```
 
 This removes the `station` command, saved Station configuration, Hyprland integration, the bar indicator entry, and the plugin itself.
+
+Deletion is also available immediately after installation. You can run
+`station delete` even if `station init` has never been run.
 
 If any step cannot be completed automatically, Station prints the exact manual command needed to finish the cleanup.
 
@@ -467,9 +495,9 @@ station init
 
 Because the prebuilt installation is only as trustworthy as the tools that verify it, the installer treats tool resolution and shared paths as security boundaries.
 
-**Trusted tool resolution.** `install.sh` discards the caller's `PATH` and resolves `curl`, `gh`, and `bun` from a fixed, non-ambient search path. It rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifier run with a minimal environment, so environment variables cannot redirect or disable provenance verification.
+**Trusted tool resolution.** `install.sh` discards the caller's `PATH` and resolves `curl`, `sha256sum`, optional `gh`, and `bun` from a fixed, non-ambient search path. It rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifiers run with a minimal environment, so environment variables cannot redirect or disable verification.
 
-**Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. It is verified against both the immutable release and its build attestation _before_ it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind. GitHub authentication is reduced to a token obtained through the already validated `gh` executable; user configuration is not loaded during verification.
+**Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. Its SHA-256 digest must exactly match the version-specific checksum committed in the reviewed source before it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind. The default path requires no credentials. Optional GitHub verification reduces authentication to a token obtained through the already validated `gh` executable; user configuration is not loaded during verification.
 
 **Immutable build inputs.** Release compilation runs in an architecture-specific Bun container pinned by OCI digest. CI separately verifies the Bun executable digest and requires the compiled output to match a checksum already present in the reviewed source commit. Compilation has no repository write token; publication occurs in a separate job only after verification and attestation.
 
@@ -477,7 +505,7 @@ Because the prebuilt installation is only as trustworthy as the tools that verif
 
 **Shared paths are never clobbered blindly.** `~/.local/bin/station` and `~/.config/hypr/station-bindings.lua` are only replaced when they are symlinks that point exactly at the installed plugin files. If either path exists as an unrelated file or symlink, the installer stops and explains what it found instead of overwriting it. `hyprland.lua` is only modified when it is a regular file, and any change is written atomically.
 
-**Ambient execution state is constrained.** A `curl`, `gh`, `bun`, `hyprctl`, or `omarchy` placed earlier in your shell `PATH` is not consulted. Installer trust tools run with an empty temporary home and configuration directory; runtime tools receive only the small environment allowlist needed to communicate with Hyprland and Omarchy. Omarchy receives the fixed, validated `/usr/share/omarchy` installation root rather than an inherited `OMARCHY_PATH`.
+**Ambient execution state is constrained.** A `curl`, `sha256sum`, `gh`, `bun`, `hyprctl`, or `omarchy` placed earlier in your shell `PATH` is not consulted. Installer trust tools run with an empty temporary home and configuration directory; runtime tools receive only the small environment allowlist needed to communicate with Hyprland and Omarchy. Omarchy receives the fixed, validated `/usr/share/omarchy` installation root rather than an inherited `OMARCHY_PATH`.
 
 ## License
 
