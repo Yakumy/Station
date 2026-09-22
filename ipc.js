@@ -2,20 +2,51 @@ import net from "node:net";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
+import {
+  resolveTrustedSystemTool,
+  trustedToolEnvironment,
+} from "./tools.js";
 
 const HOME = homedir();
 
+function runHyprctl(args) {
+  const hyprctl = resolveTrustedSystemTool("hyprctl");
+  if (!hyprctl) {
+    throw new Error("hyprctl is not available from a trusted system path.");
+  }
+
+  return spawnSync(hyprctl, args, {
+    encoding: "utf8",
+    env: trustedToolEnvironment(),
+  });
+}
+
 function runtimeDir() {
-  if (process.env.XDG_RUNTIME_DIR) return process.env.XDG_RUNTIME_DIR;
-  return `/run/user/${process.getuid?.() ?? 1000}`;
+  const candidate =
+    process.env.XDG_RUNTIME_DIR || `/run/user/${process.getuid?.() ?? 1000}`;
+  if (!isAbsolute(candidate)) {
+    throw new Error("XDG_RUNTIME_DIR must be an absolute path.");
+  }
+  return resolve(candidate);
+}
+
+function validInstanceSignature(value) {
+  return typeof value === "string" && /^[A-Za-z0-9._-]+$/.test(value);
 }
 
 function instanceSignature() {
-  if (process.env.HYPRLAND_INSTANCE_SIGNATURE) return process.env.HYPRLAND_INSTANCE_SIGNATURE;
+  if (process.env.HYPRLAND_INSTANCE_SIGNATURE) {
+    if (!validInstanceSignature(process.env.HYPRLAND_INSTANCE_SIGNATURE)) {
+      throw new Error("HYPRLAND_INSTANCE_SIGNATURE contains invalid characters.");
+    }
+    return process.env.HYPRLAND_INSTANCE_SIGNATURE;
+  }
   const root = join(runtimeDir(), "hypr");
   if (!existsSync(root)) return null;
-  const dirs = readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory());
+  const dirs = readdirSync(root, { withFileTypes: true }).filter(
+    (entry) => entry.isDirectory() && validInstanceSignature(entry.name),
+  );
   return dirs[0]?.name ?? null;
 }
 
@@ -48,7 +79,7 @@ export function hyprControl(message, timeoutMs = 3000) {
 }
 
 export function hyprJson(command) {
-  const output = spawnSync("hyprctl", ["-j", command], { encoding: "utf8" });
+  const output = runHyprctl(["-j", command]);
   if (output.status !== 0) throw new Error(`hyprctl -j ${command} failed: ${output.stderr?.trim()}`);
   const text = output.stdout?.trim() || "null";
   try { return JSON.parse(text); }
@@ -56,13 +87,13 @@ export function hyprJson(command) {
 }
 
 export function hyprEval(lua) {
-  const output = spawnSync("hyprctl", ["eval", lua], { encoding: "utf8" });
+  const output = runHyprctl(["eval", lua]);
   if (output.status !== 0) throw new Error(`hyprctl eval failed: ${output.stderr?.trim() || output.stdout?.trim()}`);
   return output.stdout?.trim() || "";
 }
 
 export function hyprVersion() {
-  const output = spawnSync("hyprctl", ["version"], { encoding: "utf8" });
+  const output = runHyprctl(["version"]);
   if (output.status !== 0) throw new Error(`hyprctl version failed: ${output.stderr?.trim()}`);
   return output.stdout.match(/Hyprland\s+(\d+\.\d+\.\d+)/)?.[1] ?? "0.0.0";
 }

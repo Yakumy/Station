@@ -22,9 +22,9 @@ set -eu
 #      its resolution chain) cannot substitute a different binary for the
 #      one that was actually checked. This closes the gap between
 #      "we checked this path" and "we ran this path".
-#   3. Runs those three tools with a minimal environment (HOME + trusted PATH
-#      only), so loader variables, proxies, or tool-specific configuration
-#      cannot redirect or alter their behaviour.
+#   3. Runs those three tools with a minimal environment and an empty temporary
+#      home/config directory, so loader variables, proxies, or tool-specific
+#      configuration cannot redirect or alter their behaviour.
 #   4. Stages downloaded/built binaries in a freshly created, randomly named,
 #      owner-only directory — never at a predictable pathname — and installs
 #      them with an atomic rename.
@@ -63,6 +63,7 @@ USER_TOOL_PATH="$HOME_DIR/.local/bin:$HOME_DIR/.bun/bin:$HOME_DIR/.cargo/bin:$HO
 TRUSTED_PATH="$SYSTEM_TOOL_PATH:$USER_TOOL_PATH"
 PATH="$TRUSTED_PATH"
 export PATH
+SYSTEM_OWNER_UID="$(stat -c '%u' -- / 2>/dev/null)" || exit 1
 
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 
@@ -71,19 +72,27 @@ die() {
   exit 1
 }
 
-# Run a security-sensitive tool with a minimal environment. The caller's
-# environment is discarded entirely: only HOME and the trusted PATH survive.
+# Run a security-sensitive tool with a minimal environment and an empty,
+# installer-owned home/config directory. This prevents curl, gh, or Bun from
+# loading user configuration while acquiring or building the binary.
 run_trusted() {
+  [ -n "${TMP_DIR:-}" ] || die "trusted tool invoked without a temporary workspace."
+  mkdir -p -- "$TMP_DIR/home" "$TMP_DIR/config/gh"
+
   env -i \
-    HOME="$HOME_DIR" \
-    PATH="$TRUSTED_PATH" \
+    HOME="$TMP_DIR/home" \
+    XDG_CONFIG_HOME="$TMP_DIR/config" \
+    GH_CONFIG_DIR="$TMP_DIR/config/gh" \
+    PATH="$SYSTEM_TOOL_PATH" \
     "$@"
 }
 
 # Validate a path and every parent directory.
 #
-# Every component must be owned by root or by the current user, and neither
-# group nor other may have write permission.
+# Every component must be owned by the system filesystem owner or by the
+# current user, and neither group nor other may have write permission. The
+# filesystem-root owner is normally uid 0; deriving it also supports verified
+# read-only system trees mounted with remapped ownership.
 validate_trusted_path() {
   check_path="$1"
   current_uid="$(id -u)"
@@ -96,7 +105,7 @@ validate_trusted_path() {
       return 1
     fi
 
-    if [ "$owner_uid" != "0" ] && [ "$owner_uid" != "$current_uid" ]; then
+    if [ "$owner_uid" != "$SYSTEM_OWNER_UID" ] && [ "$owner_uid" != "$current_uid" ]; then
       return 1
     fi
 
@@ -368,21 +377,8 @@ read_version() {
   [ -n "$VERSION" ] || die "could not read version from manifest.json."
 }
 
-binary_up_to_date() {
-  [ -x "$PLUGIN_BIN" ] &&
-    [ ! -L "$PLUGIN_BIN" ] &&
-    [ -f "$VERSION_MARKER" ] &&
-    [ ! -L "$VERSION_MARKER" ] &&
-    [ "$(cat "$VERSION_MARKER")" = "$VERSION" ]
-}
-
 build_from_source() {
   read_version
-
-  if binary_up_to_date; then
-    echo "  Binary: already up to date (v$VERSION)"
-    return 0
-  fi
 
   if [ -z "$BUN_BIN" ]; then
     die "'bun' not found or failed trusted-tool validation; cannot build Station from source."
@@ -397,6 +393,8 @@ build_from_source() {
     --compile \
     --minify \
     --bytecode \
+    --no-compile-autoload-dotenv \
+    --no-compile-autoload-bunfig \
     "$SOURCE_DIR/index.js" \
     --outfile "$staged"; then
     die "source build failed."
@@ -414,11 +412,6 @@ build_from_source() {
 
 fetch_binary() {
   read_version
-
-  if binary_up_to_date; then
-    echo "  Binary: already up to date (v$VERSION)"
-    return 0
-  fi
 
   if [ -z "$CURL_BIN" ]; then
     die "'curl' not found or failed trusted-tool validation; cannot download the prebuilt binary."
@@ -439,13 +432,26 @@ fetch_binary() {
   # Retain an open descriptor on the staged file and route curl's output
   # through it, so the download cannot be redirected by swapping the path.
   exec 3>"$staged" || die "could not open the staged binary for writing."
-  if ! run_trusted "$CURL_BIN" -fsSL "$release_url" >&3; then
+  if ! run_trusted "$CURL_BIN" --disable -fsSL "$release_url" >&3; then
     exec 3>&-
     echo "Station: failed to download binary from:" >&2
     echo "  $release_url" >&2
     exit 1
   fi
   exec 3>&-
+
+  echo "  Verifying immutable release asset..."
+
+  if ! run_trusted "$GH_BIN" release verify-asset \
+    "v${VERSION}" \
+    "$staged" \
+    --repo Yakumy/Station \
+    >/dev/null 2>&1; then
+    echo "Station: immutable release verification failed." >&2
+    echo "  The downloaded binary is not bound to the immutable" >&2
+    echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
+    exit 1
+  fi
 
   echo "  Verifying build provenance..."
 
@@ -454,6 +460,7 @@ fetch_binary() {
     --repo Yakumy/Station \
     --source-ref "refs/tags/v${VERSION}" \
     --signer-workflow "Yakumy/Station/.github/workflows/release.yml" \
+    --deny-self-hosted-runners \
     >/dev/null 2>&1; then
     echo "Station: build provenance verification failed." >&2
     echo "  This binary does not match a verified CI build for" >&2
@@ -623,7 +630,7 @@ else
     echo "  $SOURCE_BIN" >&2
     echo >&2
     echo "Build it first with:" >&2
-    echo "  bun build --compile --minify --bytecode index.js --outfile bin/station" >&2
+    echo "  bun build --compile --minify --bytecode --no-compile-autoload-dotenv --no-compile-autoload-bunfig index.js --outfile bin/station" >&2
     exit 1
   fi
 
@@ -634,6 +641,8 @@ else
   new_temp_dir
   cp -- "$SOURCE_BIN" "$TMP_DIR/station" || die "could not stage the local binary."
   install_binary "$TMP_DIR/station" || die "could not install the local binary."
+  read_version
+  write_version_marker || die "could not record the installed version."
 fi
 
 echo "  Plugin: $PLUGIN_DIR"

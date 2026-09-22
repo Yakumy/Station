@@ -92,16 +92,22 @@ When using the prebuilt path, `install.sh`:
    - belong to the `Yakumy/Station` repository;
    - reference the exact release tag being installed;
    - be signed by `Yakumy/Station/.github/workflows/release.yml`.
+5. Requires the binary to match the asset recorded by the immutable GitHub
+   release for that exact tag.
 
-5. Installs the binary only after verification succeeds.
+6. Installs the binary only after verification succeeds.
 
 The installer uses a verification policy equivalent to:
 
 ```bash
+gh release verify-asset "v<VERSION>" <binary> \
+  --repo Yakumy/Station
+
 gh attestation verify <binary> \
   --repo Yakumy/Station \
   --source-ref refs/tags/v<VERSION> \
-  --signer-workflow Yakumy/Station/.github/workflows/release.yml
+  --signer-workflow Yakumy/Station/.github/workflows/release.yml \
+  --deny-self-hosted-runners
 ```
 
 A valid attestation from another Station release is not sufficient. The source reference must match the exact release version being installed.
@@ -109,7 +115,10 @@ A valid attestation from another Station release is not sufficient. The source r
 The release workflow builds Station with:
 
 ```bash
-bun build --compile --minify --bytecode index.js --outfile bin/station
+bun build --compile --minify --bytecode \
+  --no-compile-autoload-dotenv \
+  --no-compile-autoload-bunfig \
+  index.js --outfile bin/station
 ```
 
 using Bun `1.4.2`.
@@ -125,7 +134,10 @@ Station can also be built locally from the checked-out source with Bun.
 The installer uses the same build command as the release workflow:
 
 ```bash
-bun build --compile --minify --bytecode index.js --outfile bin/station
+bun build --compile --minify --bytecode \
+  --no-compile-autoload-dotenv \
+  --no-compile-autoload-bunfig \
+  index.js --outfile bin/station
 ```
 
 The locally generated binary is compiled from the source checkout itself. No prebuilt release binary is downloaded or trusted in this mode.
@@ -172,7 +184,14 @@ For each release tag, the workflow:
 3. Builds `index.js` into the `station` executable.
 4. Calculates the binary's SHA-256 checksum.
 5. Creates a GitHub artifact build-provenance attestation.
-6. Publishes the binary and checksum as release assets.
+6. Uploads the binary and checksum to a draft release.
+7. The maintainer publishes the completed draft after reviewing its assets;
+   GitHub then locks its tag and assets under the repository's immutable-release
+   policy.
+
+Before publishing any release, enable **Release immutability** in the repository's
+GitHub settings. The prebuilt installer fails closed if GitHub cannot verify the
+download against an immutable release.
 
 The installer verifies the downloaded binary's provenance before replacing the installed binary.
 
@@ -231,7 +250,10 @@ Confirm the expected Bun version and source build:
 
 ```bash
 bun --version
-bun build --compile --minify --bytecode index.js --outfile bin/station
+bun build --compile --minify --bytecode \
+  --no-compile-autoload-dotenv \
+  --no-compile-autoload-bunfig \
+  index.js --outfile bin/station
 ```
 
 Verify the public release artifact using the same provenance policy enforced by the installer:
@@ -243,21 +265,31 @@ gh release download "v$VERSION" \
   --output /tmp/station \
   --clobber
 
+gh release verify-asset "v$VERSION" /tmp/station \
+  --repo Yakumy/Station
+
 gh attestation verify /tmp/station \
   --repo Yakumy/Station \
   --source-ref "refs/tags/v$VERSION" \
-  --signer-workflow Yakumy/Station/.github/workflows/release.yml
+  --signer-workflow Yakumy/Station/.github/workflows/release.yml \
+  --deny-self-hosted-runners
 ```
 
 The installer performs the same exact-release provenance check automatically before installing a prebuilt binary.
 
 ## Update
 
+Station does not include a self-updater. Update the plugin through Omarchy,
+then rerun its installer to install the matching verified binary:
+
 ```bash
-station update
+omarchy plugin update yakumy.station
+cd ~/.config/omarchy/plugins/yakumy.station
+./install.sh
 ```
 
-This checks whether a newer version is available, shows the version change, asks for confirmation, then downloads and verifies the new binary using the same provenance policy before replacing the installed version.
+The installer verifies the release binary against the updated plugin version
+before replacing the installed binary.
 
 Your Station configuration — including primary/secondary monitor selection, direction, and current mode — is stored outside the plugin directory and is not replaced by a normal update.
 
@@ -393,13 +425,15 @@ station init
 
 Because the prebuilt installation is only as trustworthy as the tools that verify it, the installer treats tool resolution and shared paths as security boundaries.
 
-**Trusted tool resolution.** `install.sh` does not inherit your `PATH` or environment. It resolves `curl`, `gh`, and `bun` from a fixed, non-ambient search path, and rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifier run with a minimal environment, so environment variables cannot redirect or disable provenance verification.
+**Trusted tool resolution.** `install.sh` discards the caller's `PATH` and resolves `curl`, `gh`, and `bun` from a fixed, non-ambient search path. It rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifier run with a minimal environment, so environment variables cannot redirect or disable provenance verification.
 
 **Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. It is verified with `gh attestation verify` _before_ it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind.
 
+**Deterministic runtime configuration.** Release and source builds disable Bun's compiled-executable loading of `.env` and `bunfig.toml`, so running Station from an untrusted working directory cannot inject environment settings or preload JavaScript into the Station process.
+
 **Shared paths are never clobbered blindly.** `~/.local/bin/station` and `~/.config/hypr/station-bindings.lua` are only replaced when they are symlinks that point exactly at the installed plugin files. If either path exists as an unrelated file or symlink, the installer stops and explains what it found instead of overwriting it. `hyprland.lua` is only modified when it is a regular file, and any change is written atomically.
 
-**Ambient `PATH` shadows are ignored.** A `curl`, `gh`, or `bun` placed earlier in your shell `PATH` is not consulted; only the resolved system and per-user tool locations are used.
+**Ambient execution state is constrained.** A `curl`, `gh`, `bun`, `hyprctl`, or `omarchy` placed earlier in your shell `PATH` is not consulted. Installer trust tools run with an empty temporary home and configuration directory; runtime tools receive only the small environment allowlist needed to communicate with Hyprland and Omarchy.
 
 ## License
 

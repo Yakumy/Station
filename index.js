@@ -2,31 +2,26 @@
 
 import {
   chmodSync,
-  existsSync,
+  lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
-  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { homedir, tmpdir, arch, platform } from "node:os";
-import { spawnSync, execSync } from "node:child_process";
+import { homedir } from "node:os";
+import { spawnSync } from "node:child_process";
 
-import { hyprControl, hyprEval, hyprJson, hyprVersion, sleep } from "./ipc.js";
-import {
-  chooseMonitors,
-  parseMonitorsLua,
-  resolveOutputSelector,
-} from "./parser.js";
+import { hyprEval, hyprJson, hyprVersion, sleep } from "./ipc.js";
+import { chooseMonitors, parseMonitorsLua } from "./parser.js";
 import { readState, writeState, withStateLock, STATE_PATH } from "./state.js";
 import {
-  dualWorkspace,
-  singleWorkspace,
   activeStation,
   ensureDualAssignment,
   showStation,
@@ -36,6 +31,11 @@ import {
   stationDelta,
 } from "./workstation.js";
 import { dualToSingle, singleToDual } from "./migration.js";
+import manifest from "./manifest.json";
+import {
+  resolveTrustedSystemTool,
+  trustedToolEnvironment,
+} from "./tools.js";
 
 const HOME = homedir();
 const CONFIG_HYPR = join(HOME, ".config", "hypr");
@@ -59,179 +59,34 @@ const ENTRY_FILE = (() => {
   return fileURLToPath(import.meta.url);
 })();
 const PLUGIN_DIR = dirname(dirname(realpathSync(ENTRY_FILE)));
-const MANIFEST_PATH = join(PLUGIN_DIR, "manifest.json");
 const INSTALLED_STATE_DIR = join(HOME, ".local", "state", "station");
 const LOG_PATH = join(INSTALLED_STATE_DIR, "station.log");
-const STATION_HYPR_BINDINGS = join(CONFIG_HYPR, "station-bindings.lua");
-const SHELL_JSON = join(HOME, ".config/omarchy/shell.json");
-const TARGET = join(HOME, ".local/bin/station");
-const STATE_DIR = join(HOME, ".local/state/station");
-const STATION_PLUGIN_DIR = join(HOME, ".config/omarchy/plugins/yakumy.station");
 
-function removeStationRequire() {
-  if (!existsSync(HYPRLAND_LUA)) return false;
-
-  const original = readFileSync(HYPRLAND_LUA, "utf8");
-
-  const updated = original
-    .split("\n")
-    .filter((line) => line.trim() !== 'require("station-bindings")')
-    .join("\n");
-
-  if (updated === original) {
-    return false;
-  }
-
-  writeFileSync(HYPRLAND_LUA, updated);
-  return true;
-}
-
-function removeStationBarWidget() {
-  if (!existsSync(SHELL_JSON)) return false;
-
-  const original = readFileSync(SHELL_JSON, "utf8");
-
-  let shell;
-
-  try {
-    shell = JSON.parse(original);
-  } catch (error) {
-    throw new Error(`Could not parse ${SHELL_JSON}: ${error.message}`);
-  }
-
-  if (!shell.layout) {
-    return false;
-  }
-
-  let removed = false;
-
-  for (const section of ["left", "center", "right"]) {
-    if (!Array.isArray(shell.layout[section])) continue;
-
-    const before = shell.layout[section].length;
-
-    shell.layout[section] = shell.layout[section].filter(
-      (item) => item?.id !== "yakumy.station",
-    );
-
-    if (shell.layout[section].length !== before) {
-      removed = true;
-    }
-  }
-
-  if (!removed) {
-    return false;
-  }
-
-  writeFileSync(SHELL_JSON, JSON.stringify(shell, null, 2) + "\n");
-
-  return true;
-}
-
-function deleteStation() {
-  console.log("Station: removing installation...");
-
-  // Stop Station first if it is active.
-  try {
-    if (loadStateOrDefault()) {
-      stopStation();
-    }
-  } catch (error) {
-    console.warn(`Station: stop encountered an issue: ${error.message}`);
-  }
-
-  let changed = false;
-
-  // Remove executable.
-  if (existsSync(TARGET)) {
-    rmSync(TARGET, { force: true });
-    console.log(`  removed ${TARGET}`);
-    changed = true;
-  }
-
-  // Remove Station state.
-  if (existsSync(STATE_DIR)) {
-    rmSync(STATE_DIR, {
-      recursive: true,
-      force: true,
-    });
-
-    console.log(`  removed ${STATE_DIR}`);
-    changed = true;
-  }
-
-  // Remove Station's Hyprland module symlink/file.
-  if (existsSync(STATION_HYPR_BINDINGS)) {
-    rmSync(STATION_HYPR_BINDINGS, {
-      force: true,
-    });
-
-    console.log(`  removed ${STATION_HYPR_BINDINGS}`);
-    changed = true;
-  }
-
-  // Remove exactly our require line from hyprland.lua.
-  if (removeStationRequire()) {
-    console.log(`  removed Station from ${HYPRLAND_LUA}`);
-    changed = true;
-  }
-
-  // Remove exactly our bar-widget entry.
-  if (removeStationBarWidget()) {
-    console.log(`  removed Station from ${SHELL_JSON}`);
-    changed = true;
-  }
-
-  // Remove the installed plugin copy.
-  if (existsSync(STATION_PLUGIN_DIR)) {
-    rmSync(STATION_PLUGIN_DIR, {
-      recursive: true,
-      force: true,
-    });
-
-    console.log(`  removed ${STATION_PLUGIN_DIR}`);
-    changed = true;
-  }
-
-  try {
-    execSync("hyprctl reload", {
-      stdio: "ignore",
-    });
-
-    console.log("  Hyprland configuration reloaded.");
-  } catch {
-    console.warn("  Could not reload Hyprland automatically.");
-  }
-
-  try {
-    execSync("omarchy-restart-shell", {
-      stdio: "ignore",
-    });
-
-    console.log("  Omarchy shell restarted.");
-  } catch {
-    console.warn("  Could not restart the Omarchy shell automatically.");
-  }
-
-  console.log();
-
-  if (changed) {
-    console.log("Station has been completely removed.");
-  } else {
-    console.log("Station was already removed.");
-  }
-}
-
-const VERSION = JSON.parse(readFileSync(MANIFEST_PATH, "utf8")).version;
+const VERSION = manifest.version;
+const PLUGIN_ID = manifest.id;
 const MAX_STATIONS = 5;
 const REQUIRED_HYPRLAND_MAJOR = 0;
 const REQUIRED_HYPRLAND_MINOR = 56;
 
 function log(message) {
-  mkdirSync(INSTALLED_STATE_DIR, { recursive: true });
-  writeFileSync(LOG_PATH, `${new Date().toISOString()} ${message}\n`, {
-    flag: "a",
-  });
+  try {
+    mkdirSync(INSTALLED_STATE_DIR, { recursive: true, mode: 0o700 });
+    const directoryMetadata = lstatOrNull(INSTALLED_STATE_DIR);
+    if (
+      !directoryMetadata?.isDirectory() ||
+      directoryMetadata.isSymbolicLink()
+    ) {
+      return;
+    }
+    const metadata = lstatOrNull(LOG_PATH);
+    if (metadata && (!metadata.isFile() || metadata.isSymbolicLink())) return;
+    writeFileSync(LOG_PATH, `${new Date().toISOString()} ${message}\n`, {
+      flag: "a",
+      mode: 0o600,
+    });
+  } catch {
+    // Logging must never hide the original command failure.
+  }
 }
 
 function die(message, code = 1) {
@@ -240,19 +95,21 @@ function die(message, code = 1) {
 }
 
 function commandExists(name) {
-  return (
-    spawnSync("sh", ["-lc", 'command -v -- "$1"', "sh", name], {
-      stdio: "ignore",
-    }).status === 0
-  );
+  return resolveTrustedSystemTool(name) !== null;
 }
 
 function run(name, args, options = {}) {
-  const result = spawnSync(name, args, {
+  const tool = resolveTrustedSystemTool(name);
+  if (!tool) {
+    throw new Error(`${name} is not available from a trusted system path`);
+  }
+
+  const result = spawnSync(tool, args, {
     encoding: "utf8",
     stdio: options.stdio ?? ["ignore", "pipe", "pipe"],
-    env: process.env,
+    env: trustedToolEnvironment(),
   });
+  if (result.error) throw result.error;
   if (result.status !== 0 && options.allowFailure !== true) {
     const stderr = String(result.stderr || "").trim();
     throw new Error(`${name} failed${stderr ? `: ${stderr}` : ""}`);
@@ -272,62 +129,178 @@ function isSupportedHyprlandVersion(current) {
   );
 }
 
-function detectPluginDir() {
-  const candidate = PLUGIN_DIR;
-  if (existsSync(join(candidate, "manifest.json"))) return candidate;
-  return null;
+function lstatOrNull(path) {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function ownedSymlinkMatches(path, expected) {
+  const metadata = lstatOrNull(path);
+  if (!metadata?.isSymbolicLink()) return false;
+
+  const target = readlinkSync(path);
+  if (target === expected) return true;
+
+  try {
+    return realpathSync(path) === realpathSync(expected);
+  } catch {
+    return resolve(dirname(path), target) === resolve(expected);
+  }
+}
+
+function assertOwnedSymlinkOrAbsent(path, expected) {
+  const metadata = lstatOrNull(path);
+  if (!metadata) return;
+  if (ownedSymlinkMatches(path, expected)) return;
+
+  throw new Error(
+    `refusing to replace ${path}; it is not a Station-managed symlink`,
+  );
+}
+
+function installOwnedSymlink(source, destination) {
+  const sourceMetadata = lstatOrNull(source);
+  if (!sourceMetadata?.isFile() || sourceMetadata.isSymbolicLink()) {
+    throw new Error(`refusing to link to a non-regular Station file: ${source}`);
+  }
+
+  mkdirSync(dirname(destination), { recursive: true });
+  assertOwnedSymlinkOrAbsent(destination, source);
+
+  const stagingDirectory = mkdtempSync(
+    join(dirname(destination), ".station-link-"),
+  );
+  const stagedLink = join(stagingDirectory, "link");
+
+  try {
+    symlinkSync(source, stagedLink);
+    assertOwnedSymlinkOrAbsent(destination, source);
+    renameSync(stagedLink, destination);
+  } finally {
+    rmSync(stagingDirectory, { recursive: true, force: true });
+  }
+}
+
+function removeOwnedSymlink(path, expected) {
+  const metadata = lstatOrNull(path);
+  if (!metadata) return;
+  assertOwnedSymlinkOrAbsent(path, expected);
+  rmSync(path, { force: true });
+}
+
+function readRegularFileSnapshot(path) {
+  const metadata = lstatOrNull(path);
+  if (!metadata?.isFile() || metadata.isSymbolicLink()) {
+    throw new Error(`refusing to modify non-regular file: ${path}`);
+  }
+
+  return {
+    contents: readFileSync(path, "utf8"),
+    dev: metadata.dev,
+    ino: metadata.ino,
+    mode: metadata.mode & 0o777,
+  };
+}
+
+function atomicWriteFile(path, contents, snapshot = null, mode = 0o600) {
+  mkdirSync(dirname(path), { recursive: true });
+  const stagingDirectory = mkdtempSync(join(dirname(path), ".station-file-"));
+  const stagedFile = join(stagingDirectory, "file");
+
+  try {
+    writeFileSync(stagedFile, contents, {
+      encoding: "utf8",
+      flag: "wx",
+      mode,
+    });
+
+    const current = lstatOrNull(path);
+    if (snapshot) {
+      if (
+        !current?.isFile() ||
+        current.isSymbolicLink() ||
+        current.dev !== snapshot.dev ||
+        current.ino !== snapshot.ino
+      ) {
+        throw new Error(`refusing to replace changed file: ${path}`);
+      }
+    } else if (current) {
+      throw new Error(`refusing to replace unexpected path: ${path}`);
+    }
+
+    renameSync(stagedFile, path);
+  } finally {
+    rmSync(stagingDirectory, { recursive: true, force: true });
+  }
 }
 
 function ensureHyprlandConfigIntegration() {
   mkdirSync(CONFIG_HYPR, { recursive: true });
   const marker = 'require("station-bindings")';
-  if (!existsSync(HYPRLAND_LUA)) {
-    writeFileSync(HYPRLAND_LUA, `-- Station integration\n${marker}\n`, "utf8");
+  const metadata = lstatOrNull(HYPRLAND_LUA);
+  if (!metadata) {
+    atomicWriteFile(
+      HYPRLAND_LUA,
+      `-- Station integration\n${marker}\n`,
+      null,
+      0o600,
+    );
     return;
   }
-  const original = readFileSync(HYPRLAND_LUA, "utf8");
-  if (original.includes(marker)) return;
-  const backup = `${HYPRLAND_LUA}.bak.station-${Date.now()}`;
-  writeFileSync(backup, original, "utf8");
-  writeFileSync(
+
+  const snapshot = readRegularFileSnapshot(HYPRLAND_LUA);
+  if (snapshot.contents.split("\n").some((line) => line.trim() === marker)) {
+    return;
+  }
+
+  const backup = `${HYPRLAND_LUA}.bak.station-${Date.now()}-${process.pid}`;
+  atomicWriteFile(backup, snapshot.contents, null, snapshot.mode);
+  atomicWriteFile(
     HYPRLAND_LUA,
-    `${original.trimEnd()}\n\n-- Station plugin\n${marker}\n`,
-    "utf8",
+    `${snapshot.contents.trimEnd()}\n\n-- Station plugin\n${marker}\n`,
+    snapshot,
+    snapshot.mode,
   );
 }
 
 function removeHyprlandConfigIntegration() {
-  if (!existsSync(HYPRLAND_LUA)) return;
+  if (!lstatOrNull(HYPRLAND_LUA)) return;
   const marker = 'require("station-bindings")';
-  const text = readFileSync(HYPRLAND_LUA, "utf8");
-  const next = text
+  const snapshot = readRegularFileSnapshot(HYPRLAND_LUA);
+  const next = snapshot.contents
     .split("\n")
-    .filter(
-      (line) =>
-        !line.includes(marker) && !line.trim().includes("-- Station plugin"),
-    )
+    .filter((line) => {
+      const trimmed = line.trim();
+      return trimmed !== marker && trimmed !== "-- Station plugin";
+    })
     .join("\n")
     .replace(/\n{3,}$/g, "\n\n");
-  writeFileSync(HYPRLAND_LUA, next, "utf8");
+
+  if (next !== snapshot.contents) {
+    atomicWriteFile(HYPRLAND_LUA, next, snapshot, snapshot.mode);
+  }
 }
 
 function ensureBindingsFile() {
   const source = join(PLUGIN_DIR, "station-bindings.lua");
-  rmSync(STATION_LUA, { force: true });
-  symlinkSync(source, STATION_LUA);
+  installOwnedSymlink(source, STATION_LUA);
 }
 
 function installLauncher() {
   mkdirSync(LOCAL_BIN, { recursive: true });
   const sourceBinary = join(PLUGIN_DIR, "bin", "station");
-  if (!existsSync(sourceBinary)) {
+  const sourceMetadata = lstatOrNull(sourceBinary);
+  if (!sourceMetadata?.isFile() || sourceMetadata.isSymbolicLink()) {
     die(
-      `compiled binary not found at ${sourceBinary}. Build it first with Bun.`,
+      `regular compiled binary not found at ${sourceBinary}. Build it first with Bun.`,
     );
   }
   chmodSync(sourceBinary, 0o755);
-  rmSync(STATION_LINK, { force: true });
-  symlinkSync(sourceBinary, STATION_LINK);
+  installOwnedSymlink(sourceBinary, STATION_LINK);
 }
 
 function loadStateOrDefault() {
@@ -380,14 +353,6 @@ function printMonitors() {
         `${role}`,
     );
   }
-}
-
-function stateRole(name) {
-  const state = readState({ fallback: null });
-  if (!state) return null;
-  if (state.primary === name) return "PRIMARY";
-  if (state.secondary === name) return "SECONDARY";
-  return null;
 }
 
 async function initStation() {
@@ -685,7 +650,7 @@ function status(json = false) {
 function printHelp() {
   console.log(
     `Station ${VERSION}\n\n` +
-      `Usage:\n  station init\n  station stop\n  station status [--json]\n  station monitors\n  station set monitor <name> <primary|secondary>\n  station mode single <primary|secondary>\n  station mode dual\n  station direction [left2right|right2left]\n  station switch <1-5|prev|next>\n  station move <1-5>\n  station move-silent <1-5>\n  station move-dir <left|right|up|down>\n  station version\n  station update\n  station delete\n  station help\n\n` +
+      `Usage:\n  station init\n  station stop\n  station status [--json]\n  station monitors\n  station set monitor <name> <primary|secondary>\n  station mode single <primary|secondary>\n  station mode dual\n  station direction [left2right|right2left]\n  station switch <1-5|prev|next>\n  station move <1-5>\n  station move-silent <1-5>\n  station move-dir <left|right|up|down>\n  station version\n  station delete\n  station help\n\n` +
       `V1.0.0 is intentionally limited to two monitors and five stations (workspaces 1..10).`,
   );
 }
@@ -739,64 +704,31 @@ async function setDirection(value) {
   console.log(`Direction: ${value}`);
 }
 
-async function update() {
-  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
-  const remote = run("git", ["-C", PLUGIN_DIR, "remote", "get-url", "origin"], {
-    allowFailure: true,
-  });
-  if (!remote)
-    die(
-      "Station was not installed from a git checkout; cannot determine update source.",
-    );
-  run("git", ["-C", PLUGIN_DIR, "fetch", "--quiet", "origin"]);
-  const branch = run(
-    "git",
-    ["-C", PLUGIN_DIR, "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
-    { allowFailure: true },
-  );
-  const ref = branch || "origin/main";
-  const remoteManifest = run(
-    "git",
-    ["-C", PLUGIN_DIR, "show", `${ref}:manifest.json`],
-    { allowFailure: true },
-  );
-  if (!remoteManifest)
-    die("Could not read manifest.json from the remote branch.");
-  const next = JSON.parse(remoteManifest);
-  console.log(`Current version:   ${manifest.version}`);
-  console.log(`Available version: ${next.version}`);
-  if (manifest.version === next.version) {
-    console.log("Already up to date.");
-    return;
-  }
-  process.stdout.write("Update Station now? [y/N] ");
-  const answer = await new Promise((resolveAnswer) => {
-    process.stdin.setEncoding("utf8");
-    process.stdin.once("data", (data) =>
-      resolveAnswer(String(data).trim().toLowerCase()),
-    );
-  });
-  if (answer !== "y" && answer !== "yes") {
-    console.log("Update cancelled.");
-    return;
-  }
-  run("omarchy", ["plugin", "update", manifest.id, "--yes"]);
-  console.log("Reapplying installation steps...");
-  run("sh", [join(PLUGIN_DIR, "install.sh")]);
-  console.log("Station updated. Existing configuration was preserved.");
-}
-
 async function deleteStation() {
   const state = loadStateOrDefault();
   if (!state) die("Station is not initialized.");
+
+  const bindingsSource = join(PLUGIN_DIR, "station-bindings.lua");
+  const binarySource = join(PLUGIN_DIR, "bin", "station");
+  assertOwnedSymlinkOrAbsent(STATION_LUA, bindingsSource);
+  assertOwnedSymlinkOrAbsent(STATION_LINK, binarySource);
+
+  const stateMetadata = lstatOrNull(STATE_PATH);
+  if (
+    stateMetadata &&
+    (!stateMetadata.isFile() || stateMetadata.isSymbolicLink())
+  ) {
+    throw new Error(`refusing to remove non-regular state file: ${STATE_PATH}`);
+  }
+
   for (const bind of stationBindNames()) {
     try {
       hyprEval(`hl.unbind(${JSON.stringify(bind)})`);
     } catch {}
   }
   removeHyprlandConfigIntegration();
-  rmSync(STATION_LUA, { force: true });
-  rmSync(STATION_LINK, { force: true });
+  removeOwnedSymlink(STATION_LUA, bindingsSource);
+  removeOwnedSymlink(STATION_LINK, binarySource);
   rmSync(STATE_PATH, { force: true });
   try {
     run("hyprctl", ["reload"]);
@@ -807,7 +739,7 @@ async function deleteStation() {
       run("omarchy", [
         "plugin",
         "remove",
-        JSON.parse(readFileSync(MANIFEST_PATH, "utf8")).id,
+        PLUGIN_ID,
         "--yes",
       ]);
       console.log("Station plugin removed from Omarchy.");
@@ -866,8 +798,6 @@ async function main() {
       case "version":
         console.log(VERSION);
         return;
-      case "update":
-        return await update();
       case "delete":
         return deleteStation();
       case "help":

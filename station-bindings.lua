@@ -10,8 +10,14 @@ local HOME = os.getenv("HOME")
 local STATION = HOME .. "/.local/bin/station"
 local STATE = HOME .. "/.local/state/station/state.json"
 
+local function shell_quote(value)
+  return "'" .. value:gsub("'", "'\\''") .. "'"
+end
+
+local STATION_COMMAND = shell_quote(STATION)
+
 local function exec(command)
-  hl.dispatch(hl.dsp.exec_cmd(STATION .. " " .. command))
+  hl.dispatch(hl.dsp.exec_cmd(STATION_COMMAND .. " " .. command))
 end
 
 local function read_text(path)
@@ -81,7 +87,7 @@ end
 local function bind(key, command, description)
   hl.bind(
     key,
-    hl.dsp.exec_cmd(STATION .. " " .. command),
+    hl.dsp.exec_cmd(STATION_COMMAND .. " " .. command),
     {
       description = description,
     }
