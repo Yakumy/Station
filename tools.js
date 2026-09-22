@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 
 export const TRUSTED_SYSTEM_PATH =
   "/usr/share/omarchy/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin";
+export const TRUSTED_OMARCHY_PATH = "/usr/share/omarchy";
 
 const TRUSTED_SYSTEM_DIRS = TRUSTED_SYSTEM_PATH.split(":");
 const SYSTEM_OWNER_UID = statSync("/").uid;
@@ -63,6 +64,18 @@ export function trustedToolEnvironment() {
 
   for (const key of RUNTIME_ENVIRONMENT_KEYS) {
     if (process.env[key] !== undefined) environment[key] = process.env[key];
+  }
+
+  try {
+    const metadata = statSync(TRUSTED_OMARCHY_PATH);
+    if (
+      metadata.isDirectory() &&
+      isSystemOwnedAndNotWritableByOthers(TRUSTED_OMARCHY_PATH)
+    ) {
+      environment.OMARCHY_PATH = TRUSTED_OMARCHY_PATH;
+    }
+  } catch {
+    // Omarchy commands fail closed when the trusted installation is absent.
   }
 
   return environment;

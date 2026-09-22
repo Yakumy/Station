@@ -42,7 +42,7 @@ The installer supports two installation methods. You only need the dependencies 
 
 | Method                     | Required tools               | What happens                                                                          |
 | -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
-| **Prebuilt + attestation** | `gh` (GitHub CLI) and `curl` | Downloads the release binary and verifies its CI build provenance before installation |
+| **Prebuilt + attestation** | Authenticated `gh` (GitHub CLI) and `curl` | Downloads the release binary and verifies its immutable release identity and CI build provenance before installation |
 | **Build from source**      | `bun`                        | Builds the binary locally from the source checkout; no downloaded binary is trusted   |
 
 Additional requirement:
@@ -79,7 +79,9 @@ If `~/.local/bin/station` or `~/.config/hypr/station-bindings.lua` already exist
 
 ### Prebuilt binary with verified CI provenance
 
-This is the recommended installation method when GitHub CLI is available.
+This is the recommended installation method when GitHub CLI (`gh`) is installed
+and authenticated with `gh auth login`. The prebuilt path cannot verify or
+install the release binary without authenticated `gh` access.
 
 When using the prebuilt path, `install.sh`:
 
@@ -123,9 +125,21 @@ bun build --compile --minify --bytecode \
 
 using Bun `1.4.2`.
 
-The workflow actions are pinned to immutable commit SHAs in `.github/workflows/release.yml`. CI calculates a SHA-256 checksum for the generated binary and creates a GitHub artifact build-provenance attestation before publishing the release assets.
+Compilation runs inside the official Bun Linux/amd64 container pinned to the
+architecture-specific OCI digest recorded in `.github/workflows/release.yml`.
+The workflow verifies the Bun executable against its reviewed SHA-256 digest,
+builds in a fixed location and minimal environment, and requires the output to
+match the release checksum committed under `release/checksums/`.
 
-GitHub CLI authentication is not required to verify public Station attestations.
+All workflow actions are pinned to immutable commit SHAs. The build job has no
+repository write permission; only the separate draft-publication job receives
+`contents: write` after the binary has passed digest verification and received
+a build-provenance attestation.
+
+The GitHub verification APIs require GitHub CLI authentication. Run `gh auth
+login` before using the prebuilt installation method. The installer extracts
+only the resulting token and passes it into an otherwise isolated GitHub CLI
+environment.
 
 ### Build from source
 
@@ -165,7 +179,9 @@ STATION_INSTALL_METHOD=prebuilt ./install.sh
 STATION_INSTALL_METHOD=source ./install.sh
 ```
 
-`STATION_INSTALL_METHOD=prebuilt` requires GitHub CLI because provenance verification is mandatory for that path. The installer will not silently install an unverified prebuilt binary.
+`STATION_INSTALL_METHOD=prebuilt` requires an authenticated GitHub CLI because
+immutable-release and provenance verification are mandatory for that path. The
+installer will not silently install an unverified prebuilt binary.
 
 ## Build and release provenance
 
@@ -179,13 +195,18 @@ Release binaries are produced by:
 
 For each release tag, the workflow:
 
-1. Checks out the tagged source.
-2. Installs Bun `1.4.2`.
-3. Builds `index.js` into the `station` executable.
-4. Calculates the binary's SHA-256 checksum.
-5. Creates a GitHub artifact build-provenance attestation.
-6. Uploads the binary and checksum to a draft release.
-7. The maintainer publishes the completed draft after reviewing its assets;
+1. Checks out the exact tagged source without persisting GitHub credentials.
+2. Runs inside the official Bun `1.4.2` Linux/amd64 container pinned by OCI
+   digest.
+3. Verifies the Bun executable's SHA-256 digest and architecture.
+4. Builds in a fixed path with a minimal environment.
+5. Requires the binary to match the reviewed checksum committed for the tag.
+6. Creates a GitHub artifact build-provenance attestation.
+7. Transfers the binary to a separate publication job, compares its checksum
+   file with the reviewed tagged source, and verifies the binary again.
+8. Uploads the binary and checksum to a draft release using the only job with
+   `contents: write`.
+9. The maintainer publishes the completed draft after reviewing its assets;
    GitHub then locks its tag and assets under the repository's immutable-release
    policy.
 
@@ -202,11 +223,13 @@ source commit
     ↓
 release tag
     ↓
-GitHub Actions workflow
+digest-pinned Bun build container
+    ↓
+SHA-256-verified Bun compiler
     ↓
 compiled binary
     ↓
-SHA-256 checksum
+reviewed binary SHA-256 checksum
     ↓
 artifact build-provenance attestation
     ↓
@@ -246,14 +269,33 @@ Inspect the release workflow and confirm that its actions are pinned:
 sed -n '1,200p' .github/workflows/release.yml
 ```
 
-Confirm the expected Bun version and source build:
+Confirm the pinned build image, compiler digest, and reviewed output digest:
 
 ```bash
-bun --version
-bun build --compile --minify --bytecode \
-  --no-compile-autoload-dotenv \
-  --no-compile-autoload-bunfig \
-  index.js --outfile bin/station
+BUN_IMAGE='oven/bun@sha256:296a79bbc988bb0a91ef11099af70a78a8cba98b73fd53f7b2a7715b7c86ced2'
+
+docker run --rm --platform linux/amd64 \
+  --entrypoint /bin/bash \
+  --volume "$PWD:/review:ro" \
+  "$BUN_IMAGE" -c '
+    set -euo pipefail
+    build_root=/tmp/station-build
+    manifest_version="$(sed -nE "s/^[[:space:]]*\"version\":[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\",?$/\1/p" /review/manifest.json)"
+    test -n "$manifest_version"
+    mkdir -p "$build_root/source" "$build_root/home" "$build_root/toolchain"
+    cp -a /review/. "$build_root/source/"
+    ln -s "$(command -v bun)" "$build_root/toolchain/bun"
+    echo "a83d263767d839e4d2649ca8e35d07159c7afc99afdc96d731ced29e056dda0c  $(command -v bun)" | sha256sum -c -
+    cd "$build_root/source"
+    env -i HOME="$build_root/home" LC_ALL=C.UTF-8 \
+      PATH="$build_root/toolchain:/usr/bin:/bin" \
+      "$build_root/toolchain/bun" build --compile --minify --bytecode \
+        --no-compile-autoload-dotenv --no-compile-autoload-bunfig \
+        index.js --outfile bin/station
+    cp "release/checksums/v${manifest_version}-linux-x64.sha256" bin/station.sha256
+    cd bin
+    sha256sum -c station.sha256
+  '
 ```
 
 Verify the public release artifact using the same provenance policy enforced by the installer:
@@ -427,13 +469,15 @@ Because the prebuilt installation is only as trustworthy as the tools that verif
 
 **Trusted tool resolution.** `install.sh` discards the caller's `PATH` and resolves `curl`, `gh`, and `bun` from a fixed, non-ambient search path. It rejects any candidate reachable through a directory owned by another user or writable by group/other. As soon as a tool passes that check, the installer opens a read-only file descriptor on it and invokes it exclusively through that descriptor (via `/proc/self/fd/<n>`) rather than by re-resolving the path — so even if the path, or a directory in its resolution chain, is replaced immediately afterward, the binary that actually runs is the one that was validated. The downloader and verifier run with a minimal environment, so environment variables cannot redirect or disable provenance verification.
 
-**Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. It is verified with `gh attestation verify` _before_ it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind.
+**Verified before installed.** A downloaded binary is staged in a freshly created, randomly named, owner-only directory. It is verified against both the immutable release and its build attestation _before_ it is moved into place, and the move is an atomic rename. A failed verification leaves no binary and no version marker behind. GitHub authentication is reduced to a token obtained through the already validated `gh` executable; user configuration is not loaded during verification.
+
+**Immutable build inputs.** Release compilation runs in an architecture-specific Bun container pinned by OCI digest. CI separately verifies the Bun executable digest and requires the compiled output to match a checksum already present in the reviewed source commit. Compilation has no repository write token; publication occurs in a separate job only after verification and attestation.
 
 **Deterministic runtime configuration.** Release and source builds disable Bun's compiled-executable loading of `.env` and `bunfig.toml`, so running Station from an untrusted working directory cannot inject environment settings or preload JavaScript into the Station process.
 
 **Shared paths are never clobbered blindly.** `~/.local/bin/station` and `~/.config/hypr/station-bindings.lua` are only replaced when they are symlinks that point exactly at the installed plugin files. If either path exists as an unrelated file or symlink, the installer stops and explains what it found instead of overwriting it. `hyprland.lua` is only modified when it is a regular file, and any change is written atomically.
 
-**Ambient execution state is constrained.** A `curl`, `gh`, `bun`, `hyprctl`, or `omarchy` placed earlier in your shell `PATH` is not consulted. Installer trust tools run with an empty temporary home and configuration directory; runtime tools receive only the small environment allowlist needed to communicate with Hyprland and Omarchy.
+**Ambient execution state is constrained.** A `curl`, `gh`, `bun`, `hyprctl`, or `omarchy` placed earlier in your shell `PATH` is not consulted. Installer trust tools run with an empty temporary home and configuration directory; runtime tools receive only the small environment allowlist needed to communicate with Hyprland and Omarchy. Omarchy receives the fixed, validated `/usr/share/omarchy` installation root rather than an inherited `OMARCHY_PATH`.
 
 ## License
 

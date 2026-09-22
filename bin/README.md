@@ -1,7 +1,7 @@
-This directory holds the release binary produced by Bun.
+This directory holds local and release binaries produced by Bun. Generated
+files in this directory are ignored by Git.
 
-For x86_64 Omarchy/Arch:
-  bun build --compile --minify --bytecode --no-compile-autoload-dotenv --no-compile-autoload-bunfig --target=bun-linux-x64 ./index.js --outfile bin/station
-
-For ARM64 releases:
-  bun build --compile --minify --bytecode --no-compile-autoload-dotenv --no-compile-autoload-bunfig --target=bun-linux-arm64 ./index.js --outfile bin/station
+Release binaries must be built by `.github/workflows/release.yml` with the
+digest-pinned Bun image and must match the reviewed checksum under
+`release/checksums/`. See the "Build and release provenance" and "Reviewer
+verification" sections of `README.md` for the authoritative build procedure.

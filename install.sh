@@ -23,8 +23,8 @@ set -eu
 #      one that was actually checked. This closes the gap between
 #      "we checked this path" and "we ran this path".
 #   3. Runs those three tools with a minimal environment and an empty temporary
-#      home/config directory, so loader variables, proxies, or tool-specific
-#      configuration cannot redirect or alter their behaviour.
+#      home/config directory. GitHub authentication is reduced to a single
+#      token obtained through the already validated gh executable.
 #   4. Stages downloaded/built binaries in a freshly created, randomly named,
 #      owner-only directory — never at a predictable pathname — and installs
 #      them with an atomic rename.
@@ -59,7 +59,10 @@ RELEASE_BASE_URL="https://github.com/Yakumy/Station/releases/download"
 # binaries; per-user tool locations follow so that version-manager installs
 # remain usable.
 SYSTEM_TOOL_PATH="/usr/share/omarchy/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
-USER_TOOL_PATH="$HOME_DIR/.local/bin:$HOME_DIR/.bun/bin:$HOME_DIR/.cargo/bin:$HOME_DIR/.nix-profile/bin:$HOME_DIR/.local/share/mise/shims"
+# Prefer mise's canonical shim directory to wrapper scripts that mise-managed
+# installations may place in ~/.local/bin. resolve_trusted_tool replaces a
+# mise shim with the validated, concrete tool binary before opening its FD.
+USER_TOOL_PATH="$HOME_DIR/.local/share/mise/shims:$HOME_DIR/.local/bin:$HOME_DIR/.bun/bin:$HOME_DIR/.cargo/bin:$HOME_DIR/.nix-profile/bin"
 TRUSTED_PATH="$SYSTEM_TOOL_PATH:$USER_TOOL_PATH"
 PATH="$TRUSTED_PATH"
 export PATH
@@ -85,6 +88,58 @@ run_trusted() {
     GH_CONFIG_DIR="$TMP_DIR/config/gh" \
     PATH="$SYSTEM_TOOL_PATH" \
     "$@"
+}
+
+# Run GitHub verification with the same isolated configuration as run_trusted,
+# while exposing only the authentication token needed by GitHub's verification
+# APIs. The token never appears in command arguments or logs.
+run_trusted_gh() {
+  [ -n "${TMP_DIR:-}" ] || die "trusted GitHub CLI invoked without a temporary workspace."
+  [ -n "${GITHUB_AUTH_TOKEN:-}" ] || die "trusted GitHub CLI invoked without authentication."
+  mkdir -p -- "$TMP_DIR/home" "$TMP_DIR/config/gh"
+
+  env -i \
+    HOME="$TMP_DIR/home" \
+    XDG_CONFIG_HOME="$TMP_DIR/config" \
+    GH_CONFIG_DIR="$TMP_DIR/config/gh" \
+    GH_TOKEN="$GITHUB_AUTH_TOKEN" \
+    PATH="$SYSTEM_TOOL_PATH" \
+    "$@"
+}
+
+load_github_auth_token() {
+  token=""
+
+  if [ -n "${GH_TOKEN:-}" ]; then
+    token="$GH_TOKEN"
+  elif [ -n "${GITHUB_TOKEN:-}" ]; then
+    token="$GITHUB_TOKEN"
+  else
+    token="$(
+      env -i \
+        HOME="$HOME_DIR" \
+        XDG_CONFIG_HOME="$HOME_DIR/.config" \
+        GH_CONFIG_DIR="$HOME_DIR/.config/gh" \
+        PATH="$SYSTEM_TOOL_PATH" \
+        "$GH_BIN" auth token --hostname github.com 2>/dev/null
+    )" || return 1
+  fi
+
+  [ -n "$token" ] || return 1
+  [ "${#token}" -le 4096 ] || return 1
+  case "$token" in
+    *[!A-Za-z0-9_.-]*) return 1 ;;
+  esac
+
+  GITHUB_AUTH_TOKEN="$token"
+  token=""
+}
+
+print_verification_error() {
+  error_file="$1"
+  while IFS= read -r error_line; do
+    [ -n "$error_line" ] && echo "  gh: $error_line" >&2
+  done < "$error_file"
 }
 
 # Validate a path and every parent directory.
@@ -247,8 +302,10 @@ BUN_BIN="$OPENED_TOOL_PATH"
 # pre-created symlink or file cannot redirect the write.
 # ---------------------------------------------------------------------------
 TMP_DIR=""
+GITHUB_AUTH_TOKEN=""
 
 cleanup() {
+  GITHUB_AUTH_TOKEN=""
   if [ -n "$TMP_DIR" ]; then
     rm -rf -- "$TMP_DIR" 2>/dev/null || true
   fi
@@ -426,6 +483,12 @@ fetch_binary() {
   echo "  Downloading Station v$VERSION binary..."
   new_temp_dir
 
+  if ! load_github_auth_token; then
+    echo "Station: GitHub CLI authentication is required to verify release assets." >&2
+    echo "  Run 'gh auth login' and retry, or use STATION_INSTALL_METHOD=source." >&2
+    exit 1
+  fi
+
   staged="$TMP_DIR/station"
   release_url="${RELEASE_BASE_URL}/v${VERSION}/station"
 
@@ -442,29 +505,35 @@ fetch_binary() {
 
   echo "  Verifying immutable release asset..."
 
-  if ! run_trusted "$GH_BIN" release verify-asset \
+  release_verification_error="$TMP_DIR/release-verification.err"
+
+  if ! run_trusted_gh "$GH_BIN" release verify-asset \
     "v${VERSION}" \
     "$staged" \
     --repo Yakumy/Station \
-    >/dev/null 2>&1; then
+    >/dev/null 2>"$release_verification_error"; then
     echo "Station: immutable release verification failed." >&2
     echo "  The downloaded binary is not bound to the immutable" >&2
     echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
+    print_verification_error "$release_verification_error"
     exit 1
   fi
 
   echo "  Verifying build provenance..."
 
-  if ! run_trusted "$GH_BIN" attestation verify \
+  provenance_verification_error="$TMP_DIR/provenance-verification.err"
+
+  if ! run_trusted_gh "$GH_BIN" attestation verify \
     "$staged" \
     --repo Yakumy/Station \
     --source-ref "refs/tags/v${VERSION}" \
     --signer-workflow "Yakumy/Station/.github/workflows/release.yml" \
     --deny-self-hosted-runners \
-    >/dev/null 2>&1; then
+    >/dev/null 2>"$provenance_verification_error"; then
     echo "Station: build provenance verification failed." >&2
     echo "  This binary does not match a verified CI build for" >&2
     echo "  Yakumy/Station release v$VERSION. Refusing to install it." >&2
+    print_verification_error "$provenance_verification_error"
     exit 1
   fi
 
