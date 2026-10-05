@@ -10,7 +10,8 @@ Ui.BorderSurface {
   signal displaySelected(string name)
   height: Style.space(190)
   color: Color.popups.background
-  borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
+  borderSpec: Border.flat(Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.12),
+    Math.max(1, Style.normalBorderWidth))
   radius: Style.cornerRadius
   readonly property real inset: Style.spacing.md
   readonly property color cardBackground: Color.popups.background

@@ -140,3 +140,13 @@ background dots use reduced opacity and radius. Removed the panel's extra
 width. Compact role labels fit the narrower settings column. All 12 Node
 test files, 12 Qt pointer cases (including three displays), theme, manifest
 and QML checks pass.
+
+## Display-focused layout revision (2026-10-05)
+
+The redundant display list is removed. Selecting a card in the layout canvas
+now presents that display's connector, role, description, and enable control
+at the top of the controls column. The canvas takes the full left-column
+height. Its frame and the vertical column divider use the same subdued section
+rule, while selected cards retain their accent outline. Mode and Direction use
+Station-owned borderless dropdown triggers with the same text styling as the
+top-level tabs. All automated checks continue to pass.

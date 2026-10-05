@@ -27,6 +27,7 @@ Column {
         spacing: 0
 
         Item {
+          id: layoutHeader
           width: parent.width
           height: Style.space(30)
           Ui.PanelSectionHeader {
@@ -49,112 +50,72 @@ Column {
 
         Station.DisplayLayout {
           width: parent.width - Style.spacing.md * 2
-          height: Style.space(228)
+          height: Math.max(Style.space(228), rightColumn.implicitHeight - layoutHeader.height)
           anchors.horizontalCenter: parent.horizontalCenter
           service: displayTab.service
           selectedDisplayName: displayTab.panelRoot.selectedDisplayName
           onDisplaySelected: function(name) { displayTab.panelRoot.selectDisplay(name) }
         }
 
-        Item { width: 1; height: Style.spacing.sm }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
-
-        Item {
-          width: parent.width
-          height: Style.space(28)
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
-            anchors.verticalCenter: parent.verticalCenter
-            text: "DISPLAYS"
-            foreground: Color.popups.text
-          }
-        }
-
-        Repeater {
-          model: displayTab.service ? displayTab.service.displayDraft : []
-          delegate: Ui.BorderSurface {
-            id: displayRow
-            required property var modelData
-            width: leftColumn.width
-            height: Style.space(34)
-            color: displayTab.panelRoot.selectedDisplayName === modelData.name
-              ? Color.menu.selectedBackground : "transparent"
-            borderSpec: Border.none()
-            radius: Style.cornerRadius
-            opacity: modelData.enabled ? 1 : 0.55
-
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: displayTab.panelRoot.selectDisplay(displayRow.modelData.name)
-            }
-            Row {
-              anchors.left: parent.left
-              anchors.right: enabledButton.left
-              anchors.leftMargin: Style.spacing.md
-              anchors.rightMargin: Style.spacing.sm
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.spacing.sm
-              Text {
-                text: displayRow.modelData.name + " · " + displayTab.panelRoot.roleName(displayRow.modelData)
-                color: displayTab.panelRoot.selectedDisplayName === displayRow.modelData.name
-                  ? Color.menu.selectedText : Color.menu.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.bodySmall
-              }
-              Text {
-                width: Math.max(0, parent.width - x)
-                text: displayRow.modelData.description
-                elide: Text.ElideRight
-                color: Qt.darker(displayTab.panelRoot.selectedDisplayName === displayRow.modelData.name
-                  ? Color.menu.selectedText : Color.menu.text, 1.35)
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-              }
-            }
-            Ui.Button {
-              id: enabledButton
-              anchors.right: parent.right
-              anchors.rightMargin: Style.spacing.sm
-              anchors.verticalCenter: parent.verticalCenter
-              width: Style.space(28)
-              text: displayRow.modelData.enabled ? "✓" : ""
-              foreground: Color.menu.text
-              onClicked: {
-                if (!displayTab.service || displayTab.service.state !== "idle") return
-                var count = displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
-                if (displayRow.modelData.enabled && count <= 1) return
-                displayTab.service.setDisplayValue(displayRow.modelData.name, "enabled", !displayRow.modelData.enabled)
-                displayTab.service.previewLayout()
-              }
-            }
-          }
-        }
-
-        Text {
-          visible: displayTab.service && displayTab.service.unmanaged.length > 0
-          width: parent.width - Style.spacing.md * 2
-          x: Style.spacing.md
-          wrapMode: Text.WordWrap
-          text: "Station manages three displays. Mirror or disable: "
-            + (displayTab.service ? displayTab.service.unmanaged.join(", ") : "")
-          color: Color.urgent
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-        }
       }
 
       Rectangle {
         width: Math.max(1, Style.normalBorderWidth)
         height: displayColumns.height
-        color: Color.popups.border
+        color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.12)
       }
 
       Column {
         id: rightColumn
         width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
         spacing: 0
+
+        Item {
+          width: parent.width
+          height: Style.space(52)
+          Column {
+            anchors.left: parent.left
+            anchors.right: selectedEnabled.left
+            anchors.leftMargin: Style.spacing.md
+            anchors.rightMargin: Style.spacing.sm
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.spacing.xxs
+            Text {
+              width: parent.width
+              text: displayTab.selectedDisplay
+                ? displayTab.selectedDisplay.name + " · " + displayTab.panelRoot.roleName(displayTab.selectedDisplay) : "No display selected"
+              elide: Text.ElideRight
+              color: Color.popups.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.bodySmall
+            }
+            Text {
+              width: parent.width
+              text: displayTab.selectedDisplay ? displayTab.selectedDisplay.description : ""
+              elide: Text.ElideRight
+              color: Qt.darker(Color.popups.text, 1.35)
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+          }
+          Ui.Button {
+            id: selectedEnabled
+            anchors.right: parent.right
+            anchors.rightMargin: Style.spacing.sm
+            anchors.verticalCenter: parent.verticalCenter
+            width: Style.space(28)
+            text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled ? "✓" : ""
+            foreground: Color.popups.text
+            onClicked: {
+              if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+              var enabled = displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
+              if (displayTab.selectedDisplay.enabled && enabled <= 1) return
+              displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "enabled", !displayTab.selectedDisplay.enabled)
+              displayTab.service.previewLayout()
+            }
+          }
+        }
+        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
 
         Item {
           width: parent.width

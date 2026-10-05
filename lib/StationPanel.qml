@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import Quickshell.Io
 import qs.Ui as Ui
 import qs.Commons
@@ -23,6 +24,93 @@ Ui.Panel {
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
   property string themeName: "THEME"
+
+  component ToolbarDropdown: Item {
+    id: toolbarDropdown
+    property string value: ""
+    property var options: []
+    signal changed(string value)
+    implicitHeight: Style.space(40)
+
+    function labelFor(option) {
+      return option && typeof option === "object" ? String(option.label) : String(option)
+    }
+    function valueFor(option) {
+      return option && typeof option === "object" ? String(option.value) : String(option)
+    }
+    function currentLabel() {
+      for (var i = 0; i < options.length; i++) if (valueFor(options[i]) === value) return labelFor(options[i])
+      return options.length ? labelFor(options[0]) : ""
+    }
+
+    Text {
+      id: choiceLabel
+      anchors.left: parent.left
+      anchors.right: choiceChevron.left
+      anchors.verticalCenter: parent.verticalCenter
+      text: toolbarDropdown.currentLabel()
+      color: Color.popups.text
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+      elide: Text.ElideRight
+    }
+    Text {
+      id: choiceChevron
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      text: "󰅀"
+      color: Qt.darker(Color.popups.text, 1.35)
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+    }
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: choicePopup.open()
+    }
+    Popup {
+      id: choicePopup
+      y: toolbarDropdown.height
+      width: toolbarDropdown.width
+      padding: Style.spacing.xs
+      background: Ui.BorderSurface {
+        color: Color.popups.background
+        borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
+        radius: Style.cornerRadius
+      }
+      contentItem: Column {
+        width: choicePopup.availableWidth
+        Repeater {
+          model: toolbarDropdown.options
+          delegate: Item {
+            required property var modelData
+            width: parent.width
+            height: Style.spacing.controlHeight
+            Text {
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.leftMargin: Style.spacing.sm
+              anchors.rightMargin: Style.spacing.sm
+              anchors.verticalCenter: parent.verticalCenter
+              text: toolbarDropdown.labelFor(modelData)
+              color: Color.popups.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.bodySmall
+              elide: Text.ElideRight
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                toolbarDropdown.changed(toolbarDropdown.valueFor(modelData))
+                choicePopup.close()
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   readonly property int conflictCount: service
     ? service.bindStatuses.filter(function(item) { return item.status === "conflict" }).length : 0
@@ -342,20 +430,16 @@ Ui.Panel {
             anchors.rightMargin: Style.spacing.sm
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.spacing.xs
-            Ui.Dropdown {
+            ToolbarDropdown {
               width: Style.space(142)
-              showLabel: false
               value: root.modeValue
               options: root.modeOptions
-              foreground: Color.popups.text
               onChanged: function(value) { root.changeMode(value) }
             }
-            Ui.Dropdown {
+            ToolbarDropdown {
               width: Style.space(132)
-              showLabel: false
               value: root.service ? root.service.config.direction : "ltr"
               options: [{ value: "ltr", label: "Direction: LTR" }, { value: "rtl", label: "Direction: RTL" }]
-              foreground: Color.popups.text
               onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
             }
           }
