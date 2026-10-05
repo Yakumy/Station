@@ -299,7 +299,10 @@ Ui.Panel {
   }
 
   readonly property color barFg: bar ? bar.barForeground : Color.bar.text
-  readonly property real stationLogoSize: Style.space(22)
+  // The Omarchy menu mark is an icon-font glyph whose ink box is exactly one
+  // `Style.font.body` em, so deriving from the same token keeps this mark
+  // pixel-matched to it at any theme font size.
+  readonly property real stationLogoSize: Style.font.body
   readonly property real barControlMargin: Style.spaceReal(7.5)
 
   implicitWidth: barRow.implicitWidth
