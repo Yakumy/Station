@@ -1,8 +1,9 @@
 # Station
 
 Station makes up to three Hyprland displays behave as one workspace system. A
-station is one workspace lane per managed display: station 1 uses workspaces
-1–3, station 2 uses 4–6, and so on. Switching a station changes every display
+station contains one workspace per active managed display. With two displays,
+station 1 uses workspaces 1–2, station 2 uses 3–4, and so on. With one display,
+station numbers and workspace numbers are identical. Switching a station changes every display
 together. Sending a window to another station keeps it on the same physical
 display.
 
@@ -59,7 +60,17 @@ new configuration fails. Settings can remove the managed block entirely.
 ## State and removal
 
 Station stores preferences in `~/.config/omarchy/station/config.json` and
-runtime bookkeeping in `~/.local/state/omarchy/station/state.json`.
+runtime bookkeeping in `~/.local/state/omarchy/station/state.json`. The saved
+workspace mapping and recoverable migration journal live beside it in
+`workspace-map.json`.
+
+When displays change, windows keep their station and stay on surviving physical
+displays. Windows from a removed display merge into a survivor in the same
+station. Workspace numbers compact or expand; a returning display starts with
+empty workspaces. For example, single-display workspace 3 becomes workspace 5
+on the original display when extending to two displays. Explicit Single and
+Mirror modes use one workspace per station. Preview does not renumber windows;
+Keep commits the mode and then migrates them.
 
 ```bash
 omarchy plugin update yakumy.station

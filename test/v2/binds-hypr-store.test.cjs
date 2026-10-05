@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const B = require('../../lib/Binds.js');
 const H = require('../../lib/Hypr.js');
 const S = require('../../lib/Store.js');
-const M = require('../../lib/Model.js');
 
 test('binding normalization ignores modifier order and aliases arrows', () => {
   assert.equal(B.normalize('shift + control + SUPER + ←'), 'SUPER+CTRL+SHIFT+LEFT');
@@ -57,9 +56,9 @@ test('hypr generators validate every external value', () => {
   assert.throws(() => H.address('not-an-address'), /invalid window address/);
   assert.throws(() => H.workspace(31), /invalid workspace/);
   assert.equal(H.moveWindow('0xabc', 4, false), 'hl.dispatch(hl.dsp.window.move({ window = "address:0xabc", workspace = 4, follow = false }))');
-  const rules = H.workspaceRules(2, { A: 1, C: 3 }, [1, 3], M.host);
-  assert.equal(rules.length, 3);
-  assert.match(rules[1], /workspace = "5", monitor = "C"/);
+  const rules = H.compactRules(['A', 'C']);
+  assert.equal(rules.length, 20);
+  assert.match(rules[3], /workspace = "4", monitor = "C"/);
 });
 
 test('store defaults and migrations constrain public values', () => {

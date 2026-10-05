@@ -10,6 +10,7 @@ import "lib/Recovery.js" as Recovery
 import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
 import "lib/Events.js" as Events
+import "lib/Grid.js" as Grid
 
 Item {
   id: root
@@ -21,6 +22,14 @@ Item {
   property var monitors: []
   property var clients: []
   property var lanes: ({})
+  property var workspaceData: ({ mapping: null, pending: null })
+  property bool mappingLoaded: false
+  property string migrationPhase: ""
+  property bool topologyDirty: false
+  property int migrationAttempts: 0
+  property var migrationFocus: null
+  property var migrationCommit: null
+  readonly property var workspaceMap: workspaceData.mapping
   property var unmanaged: []
   property int currentStation: persisted.lastStation || 1
   property int gen: 0
@@ -52,6 +61,8 @@ Item {
   property var currentAction: null
   property var refreshDone: null
   property bool refreshClientsToo: true
+  property bool snapshotBusy: false
+  property var snapshotQueue: []
 
   readonly property string configDir: Quickshell.env("HOME") + "/.config/omarchy/station"
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/station"
@@ -107,19 +118,37 @@ Item {
   }
 
   function refresh(includeClients, done) {
-    if (monitorSnapshot.running || clientSnapshot.running) {
-      refreshRetry.pendingClients = refreshRetry.pendingClients || includeClients
-      refreshRetry.pendingDone = done || refreshRetry.pendingDone
-      refreshRetry.restart()
+    if (snapshotBusy) {
+      snapshotQueue = snapshotQueue.concat([{ clients: includeClients, done: done }])
       return
     }
+    snapshotBusy = true
     refreshClientsToo = includeClients
     refreshDone = done || null
     monitorSnapshot.running = true
   }
 
+  function completeSnapshot(code) {
+    var done = refreshDone
+    refreshDone = null
+    snapshotBusy = false
+    if (code !== 0) {
+      if (state === "migrating") migrationFailed("could not read compositor state")
+    } else if (done) done()
+    if (snapshotQueue.length) {
+      var next = snapshotQueue[0]
+      snapshotQueue = snapshotQueue.slice(1)
+      refresh(next.clients, next.done)
+    }
+  }
+
   function updateAssignments() {
     var connected = monitors.filter(function(m) { return root.validConnector(m.name) })
+    var ids = Model.identities(connected)
+    if (config.enabled.length) connected.forEach(function(m, i) {
+      if (!config.lanes[ids[i]] && config.enabled.indexOf(m.name) === -1)
+        config.enabled = config.enabled.concat([m.name])
+    })
     var assigned = Model.assignLanes(connected, config.lanes, lanes)
     lanes = assigned.lanes
     unmanaged = assigned.unmanaged
@@ -141,11 +170,6 @@ Item {
     draftSingleTarget = config.singleTarget
   }
 
-  function present() {
-    return Model.presentForMode(monitors.filter(function(m) { return m.disabled !== true }),
-      lanes, config.mode, config.enabled, config.singleTarget)
-  }
-
   function focusedMonitor() {
     for (var i = 0; i < monitors.length; i++) if (monitors[i].focused) return monitors[i]
     return null
@@ -156,25 +180,35 @@ Item {
     return null
   }
 
+  function targetMapping() {
+    return Grid.mapping(monitors, lanes, config)
+  }
+
+  function workspaceFor(station, output) {
+    return Grid.workspace(Number(station), output, workspaceMap)
+  }
+
+  function readyForWindows() {
+    return state === "idle" && !workspaceData.pending && Grid.valid(workspaceMap) && !removalGrace.running
+      && Grid.equal(workspaceMap, targetMapping())
+  }
+
   function applyRules(station) {
-    var statements = Hypr.workspaceRules(station, lanes, present(), Model.host)
-    evalLua(Hypr.batch(statements))
+    if (Grid.valid(workspaceMap)) evalLua(Hypr.batch(Hypr.compactRules(workspaceMap.outputs)))
   }
 
   function showStation(stationValue) {
     var stationNumber = Number(stationValue)
     if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
-    var available = present()
-    if (!available.length) return "no-monitor"
+    if (!readyForWindows()) return "busy"
+    var available = workspaceMap.outputs
     var generation = begin("switching")
     var focused = focusedMonitor()
-    var rules = Hypr.workspaceRules(stationNumber, lanes, available, Model.host)
+    var rules = Hypr.compactRules(available)
     var statements = rules.slice()
-    for (var i = 0; i < available.length; i++) statements.push(Hypr.focusWorkspace(Model.ws(stationNumber, available[i])))
-    if (focused && lanes[focused.name]) statements.push(Hypr.focusMonitor(focused.name))
-    expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(lanes).filter(function(name) {
-      return available.indexOf(lanes[name]) !== -1
-    }), until: Date.now() + 2000 }
+    for (var i = 0; i < available.length; i++) statements.push(Hypr.focusWorkspace(workspaceFor(stationNumber, available[i])))
+    if (focused && available.indexOf(focused.name) !== -1) statements.push(Hypr.focusMonitor(focused.name))
+    expect = { kinds: ["workspace", "focusedmon"], outputs: available.slice(), until: Date.now() + 2000 }
     evalLua(Hypr.batch(statements), function(code) {
       if (generation !== gen) return
       if (code === 0) {
@@ -192,11 +226,12 @@ Item {
   }
 
   function sendWindow(stationValue, follow) {
+    if (!readyForWindows()) return "busy"
     var stationNumber = Number(stationValue)
     var client = focusedClient()
     if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
-    if (!client || client.pinned || !lanes[client.monitor] || !Model.inGrid(Number(client.workspace.id))) return "unmanaged"
-    var statement = Hypr.moveWindow(client.address, Model.ws(stationNumber, lanes[client.monitor]), follow)
+    if (!client || client.pinned || workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) return "unmanaged"
+    var statement = Hypr.moveWindow(client.address, workspaceFor(stationNumber, client.monitor), follow)
     evalLua(statement, function() { refresh(true, null) })
     return "started"
   }
@@ -209,12 +244,14 @@ Item {
     if (["left", "right", "up", "down"].indexOf(direction) === -1) return "invalid"
     var delta = Model.step(direction, config.direction)
     if (delta === null) return "edge"
-    var existing = Model.existingStations(clients, monitors, config.minStations, Object.keys(lanes))
+    if (!readyForWindows()) return "busy"
+    var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap)
     var target = Model.nextExisting(currentStation, delta, existing)
     return target === null ? "edge" : showStation(target)
   }
 
   function shiftWindow(direction) {
+    if (!readyForWindows()) return "busy"
     direction = String(direction || "").toLowerCase()
     if (["left", "right", "up", "down"].indexOf(direction) === -1) return "invalid"
     refresh(true, function() { root.shiftFocusedWindow(direction) })
@@ -222,11 +259,12 @@ Item {
   }
 
   function shiftFocusedWindow(direction) {
+    if (!readyForWindows()) return "busy"
     var client = focusedClient()
-    if (!client || client.pinned || !lanes[client.monitor] || !Model.inGrid(Number(client.workspace.id))) return "unmanaged"
-    var managed = Object.keys(lanes)
+    if (!client || client.pinned || workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) return "unmanaged"
+    var managed = workspaceMap.outputs
     var targetMonitor = Model.neighborMonitor(client.monitor, direction, monitors, managed)
-    var targetStation = Model.stationOf(Number(client.workspace.id))
+    var targetStation = Grid.station(Number(client.workspace.id), workspaceMap)
     if (!targetMonitor) {
       var delta = Model.step(direction, config.direction)
       if (delta === null || targetStation + delta < 1 || targetStation + delta > Model.MAX_STATION) return "edge"
@@ -235,26 +273,99 @@ Item {
       targetMonitor = Model.edgeMonitor(opposite, monitors, managed)
     }
     if (!targetMonitor || !lanes[targetMonitor]) return "edge"
-    var statements = Hypr.workspaceRules(targetStation, lanes, present(), Model.host)
-    statements.push(Hypr.moveWindow(client.address, Model.ws(targetStation, lanes[targetMonitor]), true))
+    var statements = Hypr.compactRules(workspaceMap.outputs)
+    statements.push(Hypr.moveWindow(client.address, workspaceFor(targetStation, targetMonitor), true))
     evalLua(Hypr.batch(statements),
       function() { refresh(true, null) })
     return "started"
   }
 
-  function reconcile(scheduleSecond) {
-    if (scheduleSecond === undefined) scheduleSecond = true
-    var generation = begin("reconciling")
+  function reconcile() {
+    if (state === "previewing" || state === "applyingLayout") return
+    if (removalGrace.running) return
+    if (migrationPhase || state === "migrating") { topologyDirty = true; return }
+    begin("migrating")
     refresh(true, function() {
-      if (generation !== gen) return
       updateAssignments()
-      var moves = Model.planReconcile(clients, present(), lanes)
-      var statements = moves.map(function(move) { return Hypr.moveWindow(move.address, move.to, false) })
-      evalLua(Hypr.batch(statements), function() {
-        if (generation !== gen) return
-        finish(generation)
-        showStation(currentStation)
-        if (scheduleSecond) secondReconcile.restart()
+      var target = targetMapping()
+      if (!Grid.valid(target)) { state = "idle"; return }
+      try {
+        var old = workspaceMap || (persisted.legacyWorkspaceGrid ? Grid.legacy(lanes) : target)
+        var pending = workspaceData.pending
+        var plan = pending ? Grid.resume(pending, target, clients) : Grid.plan(old, target, clients, currentStation)
+        var focused = focusedClient()
+        migrationFocus = focused ? Grid.identity(focused) : null
+        workspaceData = { mapping: old, pending: plan }
+        topologyDirty = false
+        migrationPhase = "journal"
+        workspaceFile.setText(JSON.stringify(workspaceData, null, 2) + "\n")
+      } catch (error) { migrationFailed(String(error)) }
+    })
+  }
+
+  function migrationFailed(message) {
+    migrationPhase = ""
+    state = "idle"
+    layoutError = "Workspace migration: " + message
+    // Keep the journal for a later retry; never decode partially moved IDs again.
+    if (++migrationAttempts <= 3) migrationRetry.restart()
+  }
+
+  function migrationSaved() {
+    if (migrationPhase === "journal") {
+      migrationPhase = "moving"
+      executeMigration()
+    } else if (migrationPhase === "commit") {
+      workspaceData = migrationCommit
+      migrationCommit = null
+      migrationPhase = ""
+      migrationAttempts = 0
+      if (layoutError.indexOf("Workspace migration:") === 0) layoutError = ""
+      persisted.legacyWorkspaceGrid = false
+      persisted.lastStation = currentStation
+      saveState()
+      state = "idle"
+      if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
+      showStation(currentStation)
+      if (migrationFocus) {
+        var focused = clients.find(function(c) { return Grid.sameClient(migrationFocus, c) })
+        if (focused && Grid.station(Number(focused.workspace.id), workspaceMap) === currentStation)
+          evalLua("hl.dispatch(hl.dsp.focus({ window = " + Hypr.luaString("address:" + Hypr.address(focused.address)) + " }))")
+      }
+    }
+  }
+
+  function executeMigration() {
+    var plan = workspaceData.pending
+    var statements = Hypr.compactRules(plan.to.outputs)
+    var destinations = {}
+    plan.windows.forEach(function(row) {
+      var client = clients.find(function(c) { return Grid.sameClient(row, c) })
+      if (!client || client.pinned) return
+      if (Number(client.workspace.id) !== row.to) statements.push(Hypr.moveWindow(row.address, row.to, false))
+      destinations[row.to] = row.output
+    })
+    // Workspace rules only place new workspaces. Existing workspaces must also
+    // be placed explicitly after all address-based moves have finished.
+    Object.keys(destinations).forEach(function(id) {
+      statements.push(Hypr.moveWorkspace(Number(id), destinations[id]))
+    })
+    expect = { kinds: ["workspace", "focusedmon"], outputs: plan.to.outputs.slice(), until: Date.now() + 2000 }
+    evalLua(Hypr.batch(statements), function(code, output) {
+      if (code !== 0 || (output && output.trim() !== "ok")) { migrationFailed("compositor rejected the move batch"); return }
+      refresh(true, function() {
+        if (topologyDirty || !Grid.equal(plan.to, targetMapping())) {
+          migrationPhase = ""; state = "idle"; reconcile(); return
+        }
+        var failed = plan.windows.some(function(row) {
+          var client = clients.find(function(c) { return Grid.sameClient(row, c) })
+          return client && !client.pinned && (Number(client.workspace.id) !== row.to || client.monitor !== row.output)
+        })
+        if (failed) { migrationFailed("destination verification failed"); return }
+        currentStation = plan.station
+        migrationCommit = { mapping: plan.to, pending: null }
+        migrationPhase = "commit"
+        workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
       })
     })
   }
@@ -330,9 +441,8 @@ Item {
         return { name: name, lane: lanes[name] }
       }), config, monitors, false)
       expect = { kinds: ["monitor", "workspace"], outputs: outputs, until: Date.now() + 2000 }
-      evalLua(Hypr.batch(monitorRules))
+      evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
     } catch (error) { console.warn("Station monitor mode:", error) }
-    applyRules(currentStation)
     applyBinds()
   }
 
@@ -369,6 +479,7 @@ Item {
   }
 
   function swapRole(name, roleIndex) {
+    if (!readyForWindows()) return "busy"
     var roles = displayDraft.filter(function(display) { return display.enabled && lanes[display.name] })
       .map(function(display) { return lanes[display.name] }).sort(function(a, b) { return a - b })
     var wanted = roles[Number(roleIndex)]
@@ -379,16 +490,13 @@ Item {
     var next = Object.assign({}, lanes)
     next[other] = old[name]
     next[name] = wanted
-    var moves = Model.planRoleChange(clients, old, next)
     lanes = next
-    var statements = moves.map(function(move) { return Hypr.moveWindow(move.address, move.to, false) })
     config.lanes = Object.assign({}, config.lanes)
     var ids = Model.identities(monitors)
     for (var i = 0; i < monitors.length; i++) if (next[monitors[i].name]) config.lanes[ids[i]] = next[monitors[i].name]
     saveConfig()
     syncDisplayDraft()
-    evalLua(Hypr.batch(Hypr.workspaceRules(currentStation, lanes, present(), Model.host).concat(statements)),
-      function() { root.reconcile() })
+    reconcile()
     return "started"
   }
 
@@ -482,11 +590,11 @@ Item {
     monitorsFile.reload()
     saveConfig()
     state = "idle"
-    refresh(true, null)
+    applyRuntime()
   }
 
   function maybeStart() {
-    if (started || !dirsReady || !configLoaded || !stateLoaded || !previewLoaded) return
+    if (started || !dirsReady || !configLoaded || !stateLoaded || !previewLoaded || !mappingLoaded) return
     started = true
     currentStation = persisted.lastStation
     if (previewFound) {
@@ -502,7 +610,6 @@ Item {
         persisted.activeNoticeShown = true
         saveState()
       }
-      reconcile()
     })
   }
 
@@ -609,10 +716,7 @@ Item {
     var output = ""
     if (String(event.name || "").indexOf("workspace") === 0) {
       var workspace = Number(String(event.data || "").split(",")[0])
-      if (Model.inGrid(workspace)) {
-        var lane = Model.host(Model.slotOf(workspace), present())
-        output = Object.keys(lanes).find(function(name) { return lanes[name] === lane }) || ""
-      }
+      if (Grid.contains(workspace, workspaceMap)) output = workspaceMap.outputs[Grid.slot(workspace, workspaceMap)] || ""
     }
     return Events.expected(event, expect, Date.now(), output)
   }
@@ -629,13 +733,16 @@ Item {
     if (name.indexOf("monitoradded") === 0) {
       if (eventExpected(event)) return
       lastTopologyMs = Date.now()
+      removalGrace.stop()
+      if (state === "migrating") topologyDirty = true
       refresh(true, function() { updateAssignments(); applyRuntime(); openPanel() })
       return
     }
     if (name.indexOf("monitorremoved") === 0) {
       if (eventExpected(event)) return
       lastTopologyMs = Date.now()
-      if (state === "switching" || state === "reconciling") {
+      if (state === "migrating") topologyDirty = true
+      if (state === "switching") {
         gen += 1
         state = "idle"
       }
@@ -702,6 +809,29 @@ Item {
   }
 
   FileView {
+    id: workspaceFile
+    path: root.stateDir + "/workspace-map.json"
+    atomicWrites: true
+    printErrors: false
+    onLoaded: {
+      if (root.mappingLoaded) return
+      var data = root.parseJson(text(), null)
+      if (!data || (!Grid.valid(data.mapping) && !(data.pending && data.pending.from && data.pending.from.legacy))) {
+        root.layoutError = "Could not read the saved workspace mapping."
+        return
+      }
+      root.workspaceData = data
+      root.mappingLoaded = true
+      root.maybeStart()
+    }
+    onLoadFailed: {
+      if (!root.mappingLoaded) { root.mappingLoaded = true; root.maybeStart() }
+    }
+    onSaved: root.migrationSaved()
+    onSaveFailed: root.migrationFailed("could not save the migration journal")
+  }
+
+  FileView {
     id: previewToken
     path: root.stateDir + "/preview.token"
     printErrors: false
@@ -716,6 +846,7 @@ Item {
       root.dirsReady = true
       configFile.reload()
       stateFile.reload()
+      workspaceFile.reload()
       previewToken.reload()
       root.maybeStart()
     }
@@ -747,12 +878,9 @@ Item {
       waitForEnd: true
       onStreamFinished: root.monitors = root.parseJson(text, [])
     }
-    onExited: {
-      if (root.refreshClientsToo) clientSnapshot.running = true
-      else {
-        var done = root.refreshDone; root.refreshDone = null
-        if (done) done()
-      }
+    onExited: function(code) {
+      if (code === 0 && root.refreshClientsToo) clientSnapshot.running = true
+      else root.completeSnapshot(code)
     }
   }
 
@@ -763,10 +891,7 @@ Item {
       waitForEnd: true
       onStreamFinished: root.clients = Model.normalizeClients(root.parseJson(text, []), root.monitors)
     }
-    onExited: {
-      var done = root.refreshDone; root.refreshDone = null
-      if (done) done()
-    }
+    onExited: function(code) { root.completeSnapshot(code) }
   }
 
   Process {
@@ -821,21 +946,9 @@ Item {
     onExited: leaseVerify.restart()
   }
 
-  Timer {
-    id: refreshRetry
-    property bool pendingClients: false
-    property var pendingDone: null
-    interval: 100
-    onTriggered: {
-      var clientsToo = pendingClients; var done = pendingDone
-      pendingClients = false; pendingDone = null
-      root.refresh(clientsToo, done)
-    }
-  }
-
-  Timer { id: reloadDebounce; interval: 300; onTriggered: { root.appliedGeneration = -1; root.refresh(true, function() { root.applyRuntime(); root.reconcile() }) } }
-  Timer { id: removalGrace; interval: 5000; onTriggered: root.reconcile() }
-  Timer { id: secondReconcile; interval: 1000; onTriggered: root.reconcile(false) }
+  Timer { id: reloadDebounce; interval: 300; onTriggered: { root.appliedGeneration = -1; root.refresh(true, function() { root.applyRuntime() }) } }
+  Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
+  Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
   Timer { id: leaseVerify; interval: 600; onTriggered: if (!pluginList.running) pluginList.running = true }
   Timer { id: keepDelay; interval: 150; onTriggered: keepTransaction.running = true }
   Timer {
@@ -851,12 +964,12 @@ Item {
     id: followFocus
     interval: 100
     onTriggered: root.refresh(true, function() {
-      if (root.state !== "idle" || Date.now() - root.lastTopologyMs <= 500) return
+      if (!root.readyForWindows() || Date.now() - root.lastTopologyMs <= 500) return
       var monitor = root.focusedMonitor()
       if (!monitor || !root.lanes[monitor.name]) return
       var workspace = Number(monitor.activeWorkspace && monitor.activeWorkspace.id)
-      if (!Model.inGrid(workspace)) return
-      var station = Model.stationOf(workspace)
+      if (!Grid.contains(workspace, root.workspaceMap)) return
+      var station = Grid.station(workspace, root.workspaceMap)
       if (station !== root.currentStation) root.showStation(station)
     })
   }
@@ -883,6 +996,8 @@ Item {
     function approveBinding(value: string): string { return root.approveBinding(value) }
     function status(): string { return JSON.stringify({ state: root.state, generation: root.gen,
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
+      workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
+      migrationPhase: root.migrationPhase, layoutError: root.layoutError,
       monitors: root.monitors, bindStatuses: root.bindStatuses,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
       stockDisableRunning: stockDisable.running }) }

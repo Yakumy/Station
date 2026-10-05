@@ -79,62 +79,61 @@ yakumy.station/
 
 ## 5. Model
 
-```js
-const SLOTS = 3,
-  MAX_STATION = 10;
-const ws = (s, j) => (s - 1) * SLOTS + j;
-const stationOf = (id) => Math.floor((id - 1) / SLOTS) + 1;
-const slotOf = (id) => ((id - 1) % SLOTS) + 1; // "lane" in prose
-const inGrid = (id) => id >= 1 && id <= MAX_STATION * SLOTS;
-```
+**2026-10-05 accepted revision:** compact numbering replaces the original fixed
+three-slot grid. Station identity persists; raw workspace IDs may change when
+the active display count changes.
 
-Workspace numbers never change meaning. Windows on non-grid, special or named workspaces and pinned windows are never moved.
-
-### 5.1 Lane assignment (runtime)
-
-Preferred lane per identity lives in config. At runtime, for the connected, managed monitors:
-
-1. Monitors already present keep their effective lane. Assignment never changes an existing present monitor's lane.
-2. A new monitor takes its preferred lane if free, else the lowest free lane. A lane preferred by an **absent** identity counts as free.
-3. If no lane is free the monitor is **unmanaged** (§5.6).
-4. A new effective lane is saved as that identity's preference.
-
-### 5.2 Present set
-
-`present` = sorted lanes of managed monitors that are enabled, after mode:
-
-- Extend: enabled managed monitors.
-- Mirror: only the mirror source's lane.
-- Single(k): only k's lane.
-
-### 5.3 Host and reconcile
+For ordered active outputs `outputs` and `N = outputs.length`:
 
 ```js
-// Missing lane j: prefer the next higher surviving lane, else the nearest lower.
-function host(j, present) {
-  if (present.includes(j)) return j;
-  const up = present.find((p) => p > j);
-  if (up !== undefined) return up;
-  return Math.max(...present.filter((p) => p < j)); // present is non-empty
-}
-function planReconcile(clients, present, laneOfMonitor) {
-  // pure, idempotent
-  const moves = [];
-  if (!present.length) return moves;
-  for (const c of clients) {
-    const id = c.workspace.id;
-    if (!inGrid(id) || c.pinned) continue;
-    if (!(c.monitor in laneOfMonitor)) continue; // unmanaged monitor: hands off
-    const to = ws(stationOf(id), host(slotOf(id), present));
-    if (to !== id) moves.push({ address: c.address, to });
-  }
-  return moves;
-}
+ws(station, output) = (station - 1) * N + outputs.indexOf(output) + 1
+stationOf(id, oldMap) = Math.floor((id - 1) / oldMap.outputs.length) + 1
 ```
 
-Examples: missing 1 → 2 (else 3); missing 2 with {1,3} → 3, with {1} → 1; missing 3 → 2 (else 1). When the middle display disappears the old third becomes the surviving secondary destination.
+There are ten stations and one to three active outputs. Single and Mirror use
+one output. Two-output stations use 1/2, 3/4, 5/6, etc. There are no reserved
+holes. Non-grid, named, special, pinned, and unmanaged windows are excluded from
+window migration.
 
-Invariants (unit-tested): a window's station never changes; no window ends on a non-present lane; applying a plan twice is a no-op; adding a monitor yields no moves; survivors' own workspaces are untouched.
+### 5.1 Display preferences and active order
+
+Preferred lanes remain persistent per display identity. Still-connected
+monitors retain their effective preference; a new display takes its preferred
+free lane or the lowest free lane. At most three monitors are managed.
+Preferences determine output order, but active slots are always dense. Thus
+preferred lanes 1 and 3 become active slots 1 and 2.
+
+### 5.2 Active mapping
+
+The committed ordered output list is saved in `workspace-map.json`. Extend
+uses enabled managed displays; Single uses its target (or a surviving fallback);
+Mirror uses its source. Newly connected displays join Extend; explicit Single
+keeps them out of the active map. A zero-display interval preserves the saved
+mapping. Layout previews do not change numbering; Keep starts migration.
+
+### 5.3 Migration and recovery
+
+Snapshot clients before any move. Decode station and old display using the
+saved old mapping, including when Hyprland has already moved a disconnected
+display's windows onto a survivor. Preserve each window's station and its display
+if that display survives. Otherwise merge into the next surviving old display,
+or the previous one; if none survive, use the new primary display.
+
+Adding a display expands workspace IDs but keeps windows on surviving physical
+displays. Returning displays start empty; merged windows do not move back.
+Single workspace 3 becomes dual workspace 5 on the original primary display,
+and returns to workspace 3 after collapse.
+
+Persist a journal containing old/new maps and each window's address, PID,
+initial class, station, and destination. Wait for write acknowledgment, apply
+rules and address-based moves, place existing destination workspaces, verify,
+and commit the new mapping. Failed or interrupted operations retain the journal.
+Resume by window identity and recorded station, never by decoding partially
+migrated IDs. If topology changes again, retarget the saved logical destinations.
+Window commands are suspended until the mapping commit completes.
+
+The old fixed-three-slot v2 installation receives a one-time conversion,
+identified by state version 1. Subsequent starts use only the saved compact map.
 
 ### 5.4 Station existence
 
@@ -146,24 +145,9 @@ Invariants (unit-tested): a window's station never changes; no window ends on a 
 
 ### 5.5 Role change and swap
 
-Changing the Role of monitor X swaps lanes between X and the monitor currently holding the requested role. Windows keep **Station and physical monitor**: snapshot clients, update effective lanes and workspace rules, then move each window to `ws(its station, new lane of its current monitor)`.
-
-```js
-function planRoleChange(clients, oldLane, newLane /* by monitor id */) {
-  const moves = [];
-  for (const c of clients) {
-    const id = c.workspace.id,
-      m = c.monitor;
-    if (!inGrid(id) || c.pinned || !(m in newLane) || oldLane[m] === newLane[m])
-      continue;
-    const to = ws(stationOf(id), newLane[m]);
-    if (to !== id) moves.push({ address: c.address, to });
-  }
-  return moves;
-}
-```
-
-Run `planReconcile` afterwards as a safety pass. Lane changes are persisted as new preferences.
+Swap display preferences, then use the same journaled migration from old to new
+output order. Each window retains its station and physical display, while its
+workspace ID changes to the display's new dense slot.
 
 ### 5.6 More than three monitors
 
@@ -197,7 +181,7 @@ function step(dirKey, dir) {
 
 ### 5.8 Switch station
 
-Apply workspace rules for the target station (non-present lanes point at their host's monitor), then `focus` each present lane's workspace, then restore focus to the previously focused monitor. One eval batch, inside a `switching` operation (§6).
+Apply rules for the compact mapping, then `focus` each active output's workspace, then restore focus to the previously focused monitor. One eval batch, inside a `switching` operation (§6).
 
 ### 5.9 Layout geometry
 
@@ -207,12 +191,12 @@ Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`
 
 ### 6.1 Operation state and generations
 
-`Service.state ∈ idle | applyingLayout | previewing | reconciling | switching`, plus an integer `gen`.
+`Service.state ∈ idle | applyingLayout | previewing | migrating | switching`, plus an integer `gen`.
 
-- Every operation increments `gen`, sets `state`, and returns to `idle` at the end. Every delayed callback, timer and async result captures `gen` and aborts if it is stale.
+- Switching uses generations to discard stale callbacks. Migration is serialized and journaled; concurrent topology events mark it for replanning after its current batch.
 - **Self-generated events.** Before an eval that will cause monitor or workspace events (disable, mirror, mode change, switch), record `expect = {kinds, outputs, until: now + 2 s}`. Matching events inside the window never start a topology operation and never trigger follow-focus.
 - A **real** topology event during `previewing` cancels the preview (rollback, §9), then is handled normally.
-- A monitor removed during `switching` or `reconciling` aborts the operation and restarts from a fresh snapshot.
+- A monitor removed during `switching` aborts the switch. During migration it marks topology dirty; recovery retains the recorded station identities.
 
 ### 6.2 Start
 
@@ -221,10 +205,10 @@ Load config/state → recovery check (§9 stale preview token → rollback) → 
 ### 6.3 Events
 
 - `configreloaded`: trailing debounce 300 ms, then re-apply binds, rules and monitor runtime state, then reconcile.
-- `monitoradded*`: immediate; refresh lanes/rules; open the panel on Displays. Moves nothing. In Single mode a new monitor stays off.
-- `monitorremoved*`: wait `graceMs` (default **5000**, setting; the measured reconnect took 3.7 s). Optional toast "Monitor removed. Moving its windows in N s". If the monitor is back, do nothing. Otherwise refresh snapshot, compute `present`, `planReconcile`, one eval batch, then `showStation(lastStation)`. A second reconcile 1 s later should be a no-op. No panel popup.
+- `monitoradded*`: cancel removal grace, refresh displays, reapply the saved mode, and migrate to the resulting compact map. Open the panel on Displays. In Single mode a new monitor stays off.
+- `monitorremoved*`: retain the old mapping during `graceMs` (default 5000). A reconnect cancels compaction. Otherwise reapply the saved mode to survivors and run a journaled migration, then show the retained station.
 - If the Single target (or every enabled monitor) disappears: fall back to Extend on whatever is connected.
-- **Follow focus** (default on, setting): on `workspace.active` (100 ms trailing debounce), act only when `state === idle` and no topology change happened in the last 500 ms; if the focused managed monitor's station differs from another present monitor's, `showStation` it. Re-read state before acting. Suppressed entirely while `switching`, `reconciling`, `applyingLayout`, `previewing` (`syncInProgress`).
+- **Follow focus** (default on, setting): on `workspace.active` (100 ms trailing debounce), act only when `state === idle` and no topology change happened in the last 500 ms; if the focused managed monitor's station differs from another present monitor's, `showStation` it. Re-read state before acting. Suppressed entirely while `switching`, `migrating`, `applyingLayout`, `previewing` (`syncInProgress`).
 
 `[S n]` = station of the focused managed monitor's active workspace.
 
@@ -232,7 +216,7 @@ Load config/state → recovery check (§9 stale preview token → rollback) → 
 
 - **Extend:** enabled displays form one desktop; checkmarks enable/disable individual displays.
 - **Mirror:** all enabled mirror the primary (lowest present lane).
-- **Single on k:** others disabled; windows merge into k's lane via `planReconcile`. Back to Extend moves nothing.
+- **Single on k:** others disabled; journaled migration merges each station onto k and compacts IDs to 1–10. Back to Extend expands IDs and retains windows on k.
 - Mode is global (Mode dropdown beside Direction). Mode and enabled set are config preferences, re-applied at start and after reload, and written into the guarded block (§9).
 - Never leave zero enabled monitors: if the saved enabled set has none connected, enable all connected.
 - Always send explicit `disabled` and `mirror`. [V]

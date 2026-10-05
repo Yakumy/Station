@@ -4,6 +4,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
 const Hypr = require('../../lib/Hypr.js');
+const Grid = require('../../lib/Grid.js');
 
 const monitors = [
   { id: 0, name: 'eDP-1', x: 0, y: 1200, width: 1920, height: 1080, scale: 1 },
@@ -29,7 +30,7 @@ test('numeric compositor monitor IDs normalize without confusing IDs and lanes',
 test('real service arrow action refreshes focus, uses geometry, and applies rules before moving', () => {
   const lua = [];
   const context = {
-    Model, Hypr, monitors, lanes, config: { direction: 'ltr' }, clients: [],
+    Model, Hypr, Grid, monitors, lanes, workspaceMap: { outputs: ['eDP-1', 'HDMI-A-2'] }, readyForWindows: () => true, config: { direction: 'ltr' }, clients: [],
     present: () => [1, 2],
     refresh: (includeClients, done) => {
       if (done) { context.clients = Model.normalizeClients([client], monitors); done(); }
@@ -37,6 +38,7 @@ test('real service arrow action refreshes focus, uses geometry, and applies rule
     evalLua: (statement, done) => { lua.push(statement); done(); },
   };
   context.root = context;
+  context.workspaceFor = (s, o) => Grid.workspace(s, o, context.workspaceMap);
   context.focusedClient = serviceAction(context, 'focusedClient');
   context.shiftFocusedWindow = serviceAction(context, 'shiftFocusedWindow');
   const shift = serviceAction(context, 'shiftWindow');
@@ -46,15 +48,8 @@ test('real service arrow action refreshes focus, uses geometry, and applies rule
   assert.ok(lua[0].indexOf('hl.workspace_rule') < lua[0].indexOf('hl.dispatch'));
   lua.length = 0;
   shift('right');
-  assert.match(lua[0], /window = "address:0xabc", workspace = 4, follow = true/);
+  assert.match(lua[0], /window = "address:0xabc", workspace = 3, follow = true/);
   lua.length = 0;
   shift('down'); // No monitor below, and Down is not the LTR station axis.
   assert.equal(lua.length, 0);
-});
-
-test('occupied third slot merges into its present host without changing its station', () => {
-  const clients = Model.normalizeClients([{ ...client, workspace: { id: 3 } }], monitors);
-  assert.deepEqual(Model.planReconcile(clients, [1, 2], lanes), [{ address: '0xabc', to: 2 }]);
-  assert.deepEqual(Model.planReconcile(Model.normalizeClients([{ ...client, workspace: { id: 2 }, monitor: 1 }], monitors), [1, 2], lanes), []);
-  assert.deepEqual([1, 2, 3].map(s => [Model.ws(s, 1), Model.ws(s, 2)]), [[1, 2], [4, 5], [7, 8]]);
 });

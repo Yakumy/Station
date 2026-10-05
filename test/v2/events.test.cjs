@@ -31,7 +31,7 @@ test('fake service stream ignores Station disable but handles another output add
     Events, expect: expectation,
     refresh: (includeClients, done) => { calls.push('refresh'); done(); },
     updateAssignments: () => calls.push('assign'), applyRuntime: () => calls.push('apply'),
-    openPanel: () => calls.push('open'), removalGrace: { restart: () => calls.push('remove') },
+    openPanel: () => calls.push('open'), removalGrace: { stop: () => {}, restart: () => calls.push('remove') },
   };
   const expectedStart = source.indexOf('  function eventExpected(event) {');
   context.eventExpected = runInNewContext('(' + source.slice(expectedStart, start).trim() + ')', context);
