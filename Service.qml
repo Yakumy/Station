@@ -27,6 +27,7 @@ Item {
   property string migrationPhase: ""
   property bool topologyDirty: false
   property int migrationAttempts: 0
+  property var lastWindowAction: ({})
   property var migrationFocus: null
   property var migrationCommit: null
   readonly property var workspaceMap: workspaceData.mapping
@@ -206,8 +207,7 @@ Item {
     var focused = focusedMonitor()
     var rules = Hypr.compactRules(available)
     var statements = rules.slice()
-    for (var i = 0; i < available.length; i++) statements.push(Hypr.focusWorkspace(workspaceFor(stationNumber, available[i])))
-    if (focused && available.indexOf(focused.name) !== -1) statements.push(Hypr.focusMonitor(focused.name))
+    statements = statements.concat(stationFocusStatements(stationNumber, focused ? focused.name : available[0]))
     expect = { kinds: ["workspace", "focusedmon"], outputs: available.slice(), until: Date.now() + 2000 }
     evalLua(Hypr.batch(statements), function(code) {
       if (generation !== gen) return
@@ -225,14 +225,88 @@ Item {
     return showStation(value)
   }
 
+  function finishWindowAction(generation, result) {
+    if (generation !== gen) return
+    lastWindowAction = Object.assign({}, lastWindowAction, { result: result })
+    finish(generation)
+  }
+
+  function windowActionCurrent(generation) {
+    return generation === gen && state === "moving" && !workspaceData.pending
+      && Grid.equal(workspaceMap, targetMapping()) && !removalGrace.running
+  }
+
+  function readActiveWindow(generation, done) {
+    refresh(true, function() {
+      if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+      enqueue(["hyprctl", "activewindow", "-j"], function(code, output) {
+        if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+        var raw = parseJson(output, null)
+        if (code !== 0 || !raw || !raw.address) { finishWindowAction(generation, "no-window"); return }
+        var client = Model.normalizeClients([raw], monitors)[0]
+        if (workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) {
+          finishWindowAction(generation, "unmanaged"); return
+        }
+        lastWindowAction = Object.assign({}, lastWindowAction, { address: client.address,
+          beforeWorkspace: Number(client.workspace.id), beforeMonitor: client.monitor })
+        done(client)
+      })
+    })
+  }
+
+  function stationFocusStatements(station, finalOutput) {
+    var outputs = workspaceMap.outputs.filter(function(name) { return name !== finalOutput })
+    if (workspaceMap.outputs.indexOf(finalOutput) !== -1) outputs.push(finalOutput)
+    return outputs.map(function(output) { return Hypr.focusWorkspace(workspaceFor(station, output)) })
+  }
+
+  function syncWindowStation(client, generation, result) {
+    var station = Grid.station(Number(client.workspace.id), workspaceMap)
+    if (station === null || workspaceMap.outputs.indexOf(client.monitor) === -1) {
+      finishWindowAction(generation, "unmanaged"); return
+    }
+    var statements = stationFocusStatements(station, client.monitor)
+    statements.push(Hypr.focusWindow(client.address))
+    expect = { kinds: ["workspace", "focusedmon"], outputs: workspaceMap.outputs.slice(), until: Date.now() + 2000 }
+    evalLua(Hypr.batch(statements), function(code) {
+      if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+      if (code !== 0) { finishWindowAction(generation, "error"); return }
+      currentStation = station
+      persisted.lastStation = station
+      saveState()
+      finishWindowAction(generation, result)
+    })
+  }
+
+  function moveActionWindow(client, station, output, follow, generation) {
+    var target = workspaceFor(station, output)
+    var statements = Hypr.compactRules(workspaceMap.outputs)
+    statements.push(Hypr.moveWindow(client.address, target, follow))
+    expect = { kinds: ["workspace", "focusedmon"], outputs: [client.monitor, output], until: Date.now() + 2000 }
+    evalLua(Hypr.batch(statements), function(code, message) {
+      if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+      if (code !== 0 || (message && message.trim() !== "ok")) { finishWindowAction(generation, "error"); return }
+      refresh(true, function() {
+        if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+        var after = clients.find(function(c) { return Grid.sameClient(Grid.identity(client), c) })
+        if (!after) { finishWindowAction(generation, "closed"); return }
+        if (Number(after.workspace.id) !== target || after.monitor !== output) {
+          finishWindowAction(generation, "destination-mismatch"); return
+        }
+        lastWindowAction = Object.assign({}, lastWindowAction, { afterWorkspace: target, afterMonitor: after.monitor })
+        if (follow) syncWindowStation(after, generation, "moved")
+        else finishWindowAction(generation, "moved-silently")
+      })
+    })
+  }
+
   function sendWindow(stationValue, follow) {
+    var station = Number(stationValue)
+    if (!Number.isInteger(station) || station < 1 || station > Model.MAX_STATION) return "invalid"
     if (!readyForWindows()) return "busy"
-    var stationNumber = Number(stationValue)
-    var client = focusedClient()
-    if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
-    if (!client || client.pinned || workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) return "unmanaged"
-    var statement = Hypr.moveWindow(client.address, workspaceFor(stationNumber, client.monitor), follow)
-    evalLua(statement, function() { refresh(true, null) })
+    var generation = begin("moving")
+    lastWindowAction = { action: follow ? "send" : "silent", station: station, result: "reading", receivedAt: Date.now() }
+    readActiveWindow(generation, function(client) { moveActionWindow(client, station, client.monitor, follow, generation) })
     return "started"
   }
 
@@ -245,39 +319,65 @@ Item {
     var delta = Model.step(direction, config.direction)
     if (delta === null) return "edge"
     if (!readyForWindows()) return "busy"
-    var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap)
-    var target = Model.nextExisting(currentStation, delta, existing)
-    return target === null ? "edge" : showStation(target)
+    refresh(true, function() {
+      if (!readyForWindows()) return
+      var focused = focusedMonitor()
+      var station = focused ? Grid.station(Number(focused.activeWorkspace.id), workspaceMap) : currentStation
+      var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap)
+      var target = Model.nextExisting(station || currentStation, delta, existing)
+      if (target !== null) showStation(target)
+    })
+    return "started"
   }
 
   function shiftWindow(direction) {
-    if (!readyForWindows()) return "busy"
     direction = String(direction || "").toLowerCase()
     if (["left", "right", "up", "down"].indexOf(direction) === -1) return "invalid"
-    refresh(true, function() { root.shiftFocusedWindow(direction) })
+    if (!readyForWindows()) return "busy"
+    var generation = begin("moving")
+    lastWindowAction = { action: "direction", direction: direction, result: "reading", receivedAt: Date.now() }
+    readActiveWindow(generation, function(client) {
+      var statements = Hypr.compactRules(workspaceMap.outputs)
+      statements.push(Hypr.nativeMove(client.address, direction))
+      var neighbor = Model.neighborMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
+      expect = { kinds: ["workspace", "focusedmon"], outputs: neighbor ? [client.monitor, neighbor] : [client.monitor], until: Date.now() + 2000 }
+      evalLua(Hypr.batch(statements), function(code, message) {
+        if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+        if (code !== 0 || (message && message.trim() !== "ok")) { finishWindowAction(generation, "error"); return }
+        nativeMoveSettle.before = client
+        nativeMoveSettle.direction = direction
+        nativeMoveSettle.generation = generation
+        nativeMoveSettle.restart()
+      })
+    })
     return "started"
   }
 
-  function shiftFocusedWindow(direction) {
-    if (!readyForWindows()) return "busy"
-    var client = focusedClient()
-    if (!client || client.pinned || workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) return "unmanaged"
-    var managed = workspaceMap.outputs
-    var targetMonitor = Model.neighborMonitor(client.monitor, direction, monitors, managed)
-    var targetStation = Grid.station(Number(client.workspace.id), workspaceMap)
-    if (!targetMonitor) {
-      var delta = Model.step(direction, config.direction)
-      if (delta === null || targetStation + delta < 1 || targetStation + delta > Model.MAX_STATION) return "edge"
-      targetStation += delta
-      var opposite = { left: "right", right: "left", up: "down", down: "up" }[direction]
-      targetMonitor = Model.edgeMonitor(opposite, monitors, managed)
-    }
-    if (!targetMonitor || !lanes[targetMonitor]) return "edge"
-    var statements = Hypr.compactRules(workspaceMap.outputs)
-    statements.push(Hypr.moveWindow(client.address, workspaceFor(targetStation, targetMonitor), true))
-    evalLua(Hypr.batch(statements),
-      function() { refresh(true, null) })
-    return "started"
+  function afterNativeMove(before, direction, generation) {
+    if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+    refresh(true, function() {
+      if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
+      var client = clients.find(function(c) { return Grid.sameClient(Grid.identity(before), c) })
+      if (!client) { finishWindowAction(generation, "closed"); return }
+      if (Model.windowChanged(before, client)) {
+        lastWindowAction = Object.assign({}, lastWindowAction, { afterWorkspace: Number(client.workspace.id), afterMonitor: client.monitor })
+        if (Number(before.workspace.id) !== Number(client.workspace.id) || before.monitor !== client.monitor)
+          syncWindowStation(client, generation, "native")
+        else finishWindowAction(generation, "native")
+        return
+      }
+      var targetMonitor = Model.neighborMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
+      var station = Grid.station(Number(client.workspace.id), workspaceMap)
+      if (!targetMonitor) {
+        var delta = Model.step(direction, config.direction)
+        if (delta === null || station + delta < 1 || station + delta > Model.MAX_STATION) {
+          finishWindowAction(generation, "edge"); return
+        }
+        station += delta
+        targetMonitor = Model.boundaryMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
+      }
+      moveActionWindow(client, station, targetMonitor, true, generation)
+    })
   }
 
   function reconcile() {
@@ -954,6 +1054,15 @@ Item {
     onExited: leaseVerify.restart()
   }
 
+  Timer {
+    id: nativeMoveSettle
+    property var before: null
+    property string direction: ""
+    property int generation: 0
+    interval: 20
+    onTriggered: root.afterNativeMove(before, direction, generation)
+  }
+
   Timer { id: reloadDebounce; interval: 300; onTriggered: { root.appliedGeneration = -1; root.refresh(true, function() { root.applyRuntime() }) } }
   Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
   Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
@@ -1006,6 +1115,7 @@ Item {
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
       migrationPhase: root.migrationPhase, layoutError: root.layoutError,
+      lastWindowAction: root.lastWindowAction,
       monitors: root.monitors, bindStatuses: root.bindStatuses,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
       stockDisableRunning: stockDisable.running }) }

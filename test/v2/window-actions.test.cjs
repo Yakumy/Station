@@ -5,51 +5,158 @@ const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
 const Hypr = require('../../lib/Hypr.js');
 const Grid = require('../../lib/Grid.js');
-
-const monitors = [
-  { id: 0, name: 'eDP-1', x: 0, y: 1200, width: 1920, height: 1080, scale: 1 },
-  { id: 1, name: 'HDMI-A-2', x: 0, y: 0, width: 1920, height: 1200, scale: 1 },
+const vertical = [
+  { id: 0, name: 'A', x: 0, y: 1200, width: 1920, height: 1080, scale: 1 },
+  { id: 1, name: 'B', x: 0, y: 0, width: 1920, height: 1200, scale: 1 },
 ];
-const lanes = { 'eDP-1': 1, 'HDMI-A-2': 2 };
-const client = { address: '0xabc', monitor: 0, workspace: { id: 1 }, pinned: false, focusHistoryID: 0 };
-
-function serviceAction(context, name) {
-  const source = readFileSync('Service.qml', 'utf8');
+const source = readFileSync('Service.qml', 'utf8');
+function action(context, name) {
   const start = source.indexOf('  function ' + name + '(');
   const end = source.indexOf('\n  function ', start + 1);
   return runInNewContext('(' + source.slice(start, end).trim() + ')', context);
 }
-
-test('numeric compositor monitor IDs normalize without confusing IDs and lanes', () => {
-  const raw = [client, { ...client, monitor: 1 }, { ...client, monitor: 99 }];
-  assert.deepEqual(Model.normalizeClients(raw, monitors).map(c => c.monitor), ['eDP-1', 'HDMI-A-2', '']);
-  assert.equal(raw[0].monitor, 0);
-  assert.equal(Model.normalizeClients([{ ...client, monitor: 'HDMI-A-2' }], monitors)[0].monitor, 'HDMI-A-2');
-});
-
-test('real service arrow action refreshes focus, uses geometry, and applies rules before moving', () => {
-  const lua = [];
+function harness({ monitors = vertical, monitor = 0, workspace = 1, native = () => {}, pinned = false } = {}) {
+  const calls = [], requests = [];
+  let live = { address: '0xabc', pid: 7, initialClass: 'test', monitor, workspace: { id: workspace, name: String(workspace) },
+    pinned, at: [10, 10], size: [800, 600], focusHistoryID: 0 };
   const context = {
-    Model, Hypr, Grid, monitors, lanes, workspaceMap: { outputs: ['eDP-1', 'HDMI-A-2'] }, readyForWindows: () => true, config: { direction: 'ltr' }, clients: [],
-    present: () => [1, 2],
-    refresh: (includeClients, done) => {
-      if (done) { context.clients = Model.normalizeClients([client], monitors); done(); }
+    Model, Hypr, Grid, monitors, gen: 0, state: 'idle', currentStation: 1, persisted: {},
+    workspaceMap: { outputs: monitors.map(m => m.name) }, workspaceData: { pending: null },
+    removalGrace: { running: false }, config: { direction: 'ltr' }, lastWindowAction: {},
+    clients: [{ address: '0xdef', monitor: 'B', workspace: { id: 2 }, focusHistoryID: 0 }],
+    readyForWindows() { return context.state === 'idle'; },
+    targetMapping() { return context.workspaceMap; },
+    begin(state) { context.state = state; return ++context.gen; },
+    finish(gen) { if (gen === context.gen) context.state = 'idle'; },
+    parseJson(raw, fallback) { try { return JSON.parse(raw); } catch { return fallback; } },
+    refresh(include, done) { context.clients = live ? Model.normalizeClients([structuredClone(live)], monitors) : []; done(); },
+    enqueue(command, done) { requests.push(command); done(0, JSON.stringify(live || {})); },
+    saveState() {},
+    evalLua(lua, done) {
+      calls.push(lua);
+      const direction = lua.match(/direction = "(left|right|up|down)"/);
+      if (direction) native(live, direction[1]);
+      const move = lua.match(/window = "address:0xabc", workspace = (\d+), follow = (true|false)/);
+      if (move && live) {
+        const id = Number(move[1]);
+        live.workspace = { id, name: String(id) };
+        live.monitor = monitors[(id - 1) % monitors.length].id;
+      }
+      if (done) done(0, 'ok');
     },
-    evalLua: (statement, done) => { lua.push(statement); done(); },
+    nativeMoveSettle: { restart() {} },
   };
   context.root = context;
   context.workspaceFor = (s, o) => Grid.workspace(s, o, context.workspaceMap);
-  context.focusedClient = serviceAction(context, 'focusedClient');
-  context.shiftFocusedWindow = serviceAction(context, 'shiftFocusedWindow');
-  const shift = serviceAction(context, 'shiftWindow');
-  assert.equal(shift('up'), 'started');
-  assert.match(lua[0], /workspace = "2", monitor = "HDMI-A-2"/);
-  assert.match(lua[0], /window = "address:0xabc", workspace = 2, follow = true/);
-  assert.ok(lua[0].indexOf('hl.workspace_rule') < lua[0].indexOf('hl.dispatch'));
-  lua.length = 0;
-  shift('right');
-  assert.match(lua[0], /window = "address:0xabc", workspace = 3, follow = true/);
-  lua.length = 0;
-  shift('down'); // No monitor below, and Down is not the LTR station axis.
-  assert.equal(lua.length, 0);
+  for (const name of ['finishWindowAction', 'windowActionCurrent', 'readActiveWindow', 'stationFocusStatements',
+    'syncWindowStation', 'moveActionWindow', 'sendWindow', 'shiftWindow', 'afterNativeMove']) context[name] = action(context, name);
+  return { c: context, calls, requests, get live() { return live; }, close() { live = null; },
+    settle() { const t = context.nativeMoveSettle; context.afterNativeMove(t.before, t.direction, t.generation); } };
+}
+
+test('numeric IDs normalize and activewindow is authoritative over cached focus', () => {
+  const h = harness();
+  h.c.shiftWindow('up');
+  assert.deepEqual(Array.from(h.requests[0]), ['hyprctl', 'activewindow', '-j']);
+  assert.match(h.calls[0], /window = "address:0xabc", direction = "up"/);
+  assert.doesNotMatch(h.calls[0], /0xdef/);
+  h.settle();
+  assert.equal(h.live.workspace.id, 2);
+  assert.equal(h.live.monitor, 1);
+  assert.equal(h.c.lastWindowAction.result, 'moved');
+});
+
+test('native tile movement stops before any monitor or station fallback', () => {
+  const h = harness({ native: c => { c.at = [400, 10]; } });
+  h.c.shiftWindow('right');
+  h.settle();
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.live.workspace.id, 1);
+  assert.equal(h.c.lastWindowAction.result, 'native');
+  assert.equal(h.c.state, 'idle');
+});
+
+test('native monitor crossing synchronizes displays and explicitly focuses the moved window', () => {
+  const h = harness({ native: c => { c.monitor = 1; c.workspace = { id: 2, name: '2' }; } });
+  h.c.shiftWindow('up');
+  h.settle();
+  assert.equal(h.c.lastWindowAction.result, 'native');
+  const sync = h.calls.at(-1);
+  assert.ok(sync.indexOf('workspace = "1"') < sync.indexOf('workspace = "2"'));
+  assert.ok(sync.endsWith(Hypr.focusWindow('0xabc')));
+});
+
+test('vertical station crossing preserves the current display and updates both workspaces', () => {
+  const h = harness({ monitor: 1, workspace: 2 });
+  h.c.shiftWindow('right');
+  h.settle();
+  assert.equal(h.live.workspace.id, 4);
+  assert.equal(h.live.monitor, 1);
+  assert.equal(h.c.currentStation, 2);
+  assert.equal(h.c.persisted.lastStation, 2);
+  const sync = h.calls.at(-1);
+  assert.match(sync, /workspace = "3"/);
+  assert.match(sync, /workspace = "4"/);
+  assert.ok(sync.endsWith(Hypr.focusWindow('0xabc')));
+});
+
+test('horizontal outer edge enters opposite display of next station', () => {
+  const monitors = vertical.map((m, i) => ({ ...m, x: i * 1920, y: 0, height: 1080 }));
+  const h = harness({ monitors, monitor: 1, workspace: 2 });
+  h.c.shiftWindow('right'); h.settle();
+  assert.equal(h.live.workspace.id, 3);
+  assert.equal(h.live.monitor, 0);
+});
+
+test('single display supports native-first station fallback with bounded edges', () => {
+  const h = harness({ monitors: vertical.slice(0, 1), workspace: 3 });
+  h.c.shiftWindow('right'); h.settle();
+  assert.equal(h.live.workspace.id, 4);
+  const last = harness({ monitors: vertical.slice(0, 1), workspace: 10 });
+  last.c.shiftWindow('right'); last.settle();
+  assert.equal(last.c.lastWindowAction.result, 'edge');
+  assert.equal(last.live.workspace.id, 10);
+  const first = harness();
+  first.c.shiftWindow('left'); first.settle();
+  assert.equal(first.c.lastWindowAction.result, 'edge');
+  const bottom = harness();
+  bottom.c.shiftWindow('down'); bottom.settle();
+  assert.equal(bottom.c.lastWindowAction.result, 'edge');
+});
+
+test('RTL reverses the station step without reversing physical monitor movement', () => {
+  const h = harness({ workspace: 3 });
+  h.c.config.direction = 'rtl';
+  h.c.shiftWindow('right'); h.settle();
+  assert.equal(h.live.workspace.id, 1);
+});
+
+test('closed windows and topology cancellation cannot cause a stale second move', () => {
+  const closed = harness();
+  closed.c.shiftWindow('right'); closed.close(); closed.settle();
+  assert.equal(closed.c.lastWindowAction.result, 'closed');
+  assert.equal(closed.calls.length, 1);
+  const stale = harness();
+  stale.c.shiftWindow('right'); stale.c.gen++; stale.c.state = 'migrating'; stale.settle();
+  assert.equal(stale.calls.length, 1);
+  assert.equal(stale.c.state, 'migrating');
+  const pinned = harness({ pinned: true });
+  pinned.c.shiftWindow('right');
+  assert.equal(pinned.calls.length, 0);
+  assert.equal(pinned.c.lastWindowAction.result, 'unmanaged');
+});
+
+test('numbered send uses the same active window, follows on all displays, and silent send keeps focus', () => {
+  const follow = harness({ monitor: 1, workspace: 2 });
+  follow.c.sendWindow('3', true);
+  assert.equal(follow.live.workspace.id, 6);
+  assert.equal(follow.c.currentStation, 3);
+  assert.match(follow.calls.at(-1), /workspace = "5"/);
+  assert.match(follow.calls.at(-1), /workspace = "6"/);
+  const silent = harness();
+  silent.c.sendWindow('3', false);
+  assert.equal(silent.live.workspace.id, 5);
+  assert.equal(silent.c.currentStation, 1);
+  assert.equal(silent.calls.length, 1);
+  assert.equal(silent.c.lastWindowAction.result, 'moved-silently');
 });

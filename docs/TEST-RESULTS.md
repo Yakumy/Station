@@ -66,5 +66,8 @@ slot-to-monitor assignment.
 
 Physical unplug/replug and real Single/Extend round trips for this new algorithm
 remain to be tested by the user. Three-display coverage is simulated, not a
-claim of a three-monitor hardware test. The requested v1-style directional-key
-sequence is a separate follow-up.
+claim of a three-monitor hardware test. The v1-style directional-key sequence is now ported and covered by service tests
+for native tile/monitor movement, vertical and horizontal station boundaries,
+Single mode, RTL, closed windows, topology cancellation, numbered sends, and
+silent sends. Physical key behavior for this revision awaits the user's test;
+binding registration and simulated actions alone are not physical evidence.

@@ -177,7 +177,7 @@ function step(dirKey, dir) {
 
 - Navigate (`CTRL+SUPER+arrow`): see §5.4.
 - Send (`SUPER+SHIFT+n`): target `ws(n, lane of the window's current monitor)`, follow. `SUPER+SHIFT+ALT+n`: same, no follow.
-- Move across (`SHIFT+CTRL+SUPER+arrow`): try the neighbouring managed monitor by geometry; if none and `step()` is non-null, go to station `s±1` and land on the opposite-edge monitor (moving right lands on the leftmost). The window follows.
+- Move across (`SHIFT+CTRL+SUPER+arrow`), revised to match v1.1.10: read the actual active window, attempt native directional movement, wait 20 ms and re-read that window. If native movement changed position, size, workspace or monitor, do not issue another move. Otherwise try the neighboring managed display in that physical direction. At an outer edge, use `step()` to cross a station; preserve the physical display when crossing perpendicular to the display arrangement, or enter the opposite-edge display when crossing along it. Synchronize every display in the destination station and explicitly focus the moved window. Single mode also permits station-edge fallback. Invalid, pinned, special and unmanaged windows are excluded.
 
 ### 5.8 Switch station
 
@@ -191,7 +191,7 @@ Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`
 
 ### 6.1 Operation state and generations
 
-`Service.state ∈ idle | applyingLayout | previewing | migrating | switching`, plus an integer `gen`.
+`Service.state ∈ idle | applyingLayout | previewing | migrating | moving | switching`, plus an integer `gen`.
 
 - Switching uses generations to discard stale callbacks. Migration is serialized and journaled; concurrent topology events mark it for replanning after its current batch.
 - **Self-generated events.** Before an eval that will cause monitor or workspace events (disable, mirror, mode change, switch), record `expect = {kinds, outputs, until: now + 2 s}`. Matching events inside the window never start a topology operation and never trigger follow-focus.
@@ -208,7 +208,7 @@ Load config/state → recovery check (§9 stale preview token → rollback) → 
 - `monitoradded*`: cancel removal grace, refresh displays, reapply the saved mode, and migrate to the resulting compact map. Open the panel on Displays. In Single mode a new monitor stays off.
 - `monitorremoved*`: retain the old mapping during `graceMs` (default 5000). A reconnect cancels compaction. Otherwise reapply the saved mode to survivors and run a journaled migration, then show the retained station.
 - If the Single target (or every enabled monitor) disappears: fall back to Extend on whatever is connected.
-- **Follow focus** (default on, setting): on `workspace.active` (100 ms trailing debounce), act only when `state === idle` and no topology change happened in the last 500 ms; if the focused managed monitor's station differs from another present monitor's, `showStation` it. Re-read state before acting. Suppressed entirely while `switching`, `migrating`, `applyingLayout`, `previewing` (`syncInProgress`).
+- **Follow focus** (default on, setting): on `workspace.active` (100 ms trailing debounce), act only when `state === idle` and no topology change happened in the last 500 ms; if the focused managed monitor's station differs from another present monitor's, `showStation` it. Re-read state before acting. Suppressed entirely while `switching`, `migrating`, `moving`, `applyingLayout`, `previewing` (`syncInProgress`).
 
 `[S n]` = station of the focused managed monitor's active workspace.
 

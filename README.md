@@ -40,6 +40,18 @@ default bindings when Station is disabled or removed.
 | Previous/next existing station | `CTRL + SUPER + Left/Right` |
 | Move across displays and station edges | `SHIFT + CTRL + SUPER + arrows` |
 
+Arrow movement follows v1's sequence: try normal Hyprland window movement first,
+then a neighboring display, then an adjacent station at the outer edge. A tiled
+window may therefore move within the current display before crossing it. Station
+crossings synchronize all displays and restore focus to the moved window. With
+vertically stacked displays, Left/Right station crossings keep the same display;
+with horizontally arranged displays, they enter the opposite edge. Single mode
+also allows station crossing after native movement reaches an edge.
+
+Bindings use direct Lua `hl.bind`/`hl.dsp.exec_cmd` dispatchers. The v2 service
+registers them at activation and after Hyprland reloads, calling its IPC endpoint.
+It does not require the v1 `station-bindings.lua` include or a Station binary.
+
 The Keybindings tab identifies personal conflicts before applying them. A
 conflicting binding stays inactive until you choose another combination or
 explicitly approve **Replace and unbind it**.

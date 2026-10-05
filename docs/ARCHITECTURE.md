@@ -4,8 +4,8 @@ Station is loaded twice by Omarchy: `Service.qml` owns persistent behavior and
 IPC, while `Panel.qml` is the bar widget and Display-style popout. The panel
 reads the injected service object and contains no workspace policy.
 
-The service keeps five operation states: `idle`, `applyingLayout`,
-`previewing`, `migrating`, and `switching`. Switching uses generations to
+The service keeps six operation states: `idle`, `applyingLayout`,
+`previewing`, `migrating`, `moving`, and `switching`. Switching uses generations to
 discard stale callbacks. Migration is serialized and blocks window commands;
 topology changes during a migration trigger replanning from its journal. Expected monitor and workspace events are recorded before a
 Station-generated Hyprland evaluation so those events cannot trigger a second
@@ -54,3 +54,15 @@ The Keep path writes candidates inside Station's state directory, backs up
 a detached cleanup that waits through shell restart, distinguishes a still
 enabled plugin, restores the stock widget, replaces mode rules with plain
 geometry, clears the lease, and reloads Hyprland.
+
+Window actions read `hyprctl activewindow -j` after refreshing monitor state, so
+they do not rely on a cached focus-history entry. Directional actions execute
+the v1 native directional dispatcher, wait 20 ms, then re-read the same window
+by address/PID/class. If its position, size, monitor or workspace changed, native
+movement won; otherwise geometry and station-edge fallback apply. Generations
+cancel stale fallback after topology changes. Follow moves focus every output
+in the destination station, finish on the moved window's output, and explicitly
+focus its address. Silent moves leave the selected station alone.
+
+`lastWindowAction` in the existing status IPC records reception, selected address,
+and completion result for diagnosing real keys without synthetic input.

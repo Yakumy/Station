@@ -24,7 +24,7 @@ test('custom bindings retain action identity and stop being automatic replacemen
   const left = custom.find(value => value.id === 'go-left');
   assert.equal(left.combo, 'SUPER + CTRL + J');
   assert.equal(left.replacement, false);
-  assert.equal(left.defaultCombo, 'CTRL + SUPER + LEFT');
+  assert.equal(left.defaultCombo, 'SUPER + CTRL + LEFT');
 });
 
 test('menu parser and classification preserve unknown semantics', () => {
@@ -41,7 +41,7 @@ test('M1 bind table contains all actions and only approved defaults replace', ()
   const definitions = B.definitions();
   assert.equal(definitions.length, 36);
   assert.equal(definitions.filter(value => value.replacement).length, 32);
-  assert.ok(definitions.some(value => value.combo === 'CTRL + SUPER + LEFT' && value.replacement));
+  assert.ok(definitions.some(value => value.combo === 'SUPER + CTRL + LEFT' && value.replacement));
   const lua = B.applyLua(definitions.slice(0, 1), []);
   assert.match(lua, /hl\.unbind\("SUPER \+ code:10"\)/);
   assert.match(lua, /omarchy-shell yakumy\.station switchStation 1/);
@@ -70,4 +70,14 @@ test('store defaults and migrations constrain public values', () => {
   assert.deepEqual(config.lanes, {});
   assert.equal(S.loadConfig({ graceMs: 0 }).graceMs, 0);
   assert.equal(S.loadState({ lastStation: 99 }).lastStation, 10);
+});
+
+
+test('bindings use v1 direct exec dispatchers and exact stock modifier spelling', () => {
+  const definitions = B.definitions();
+  const lua = B.applyLua(definitions, []);
+  assert.match(lua, /hl\.bind\("SHIFT \+ CTRL \+ SUPER \+ LEFT", hl\.dsp\.exec_cmd\("omarchy-shell yakumy\.station shiftWindow left"\)/);
+  assert.match(lua, /hl\.unbind\("SUPER \+ CTRL \+ LEFT"\)/);
+  assert.match(lua, /hl\.unbind\("SUPER \+ CTRL \+ RIGHT"\)/);
+  assert.doesNotMatch(lua, /o\.bind/);
 });
