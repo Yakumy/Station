@@ -11,15 +11,13 @@ Ui.BorderSurface {
   signal displaySelected(string name)
   height: Style.space(190)
   color: Color.popups.background
-  borderSpec: Border.flat(canvas.panelRoot ? canvas.panelRoot.hairline : Color.popups.border,
-    Math.max(1, Style.normalBorderWidth))
-  radius: canvas.panelRoot ? canvas.panelRoot.radiusMd : Style.cornerRadius
+  borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+  radius: Style.cornerRadius
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
   readonly property real inset: canvas.panelRoot ? canvas.panelRoot.space4 : Style.spacing.md
   readonly property color cardBackground: Color.popups.background
-  readonly property color cardOutline: Color.popups.text
   readonly property var displays: service ? service.displayDraft : []
   readonly property var bounds: {
     if (!displays.length) return { x: 0, y: 0, width: 1, height: 1, sumWidth: 1, sumHeight: 1 }
@@ -63,7 +61,7 @@ Ui.BorderSurface {
     id: dotGrid
     anchors.fill: parent
     opacity: 0.22
-    property color dotColor: Color.popups.border
+    property color dotColor: Color.popups.text
     onDotColorChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
@@ -95,27 +93,13 @@ Ui.BorderSurface {
       width: logicalSize.width * canvas.zoom
       height: logicalSize.height * canvas.zoom
       z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
-      // Menu selection can be transparent in a theme. Monitor cards must
-      // cover the grid; selection is conveyed by the brighter outline.
-      color: Qt.rgba(canvas.cardBackground.r, canvas.cardBackground.g, canvas.cardBackground.b, 1)
-      // Selection is the one elevation cue in the system: a thicker accent
-      // border plus a muted accent halo behind the card.
+      color: monitorCard.isSelected ? Color.menu.selectedBackground : canvas.cardBackground
       borderSpec: Border.flat(isSelected
         ? Color.accent
-        : Qt.rgba(canvas.cardOutline.r, canvas.cardOutline.g, canvas.cardOutline.b, 0.45),
+        : Border.controlSpec("normal", Color.popups.text, Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
-      radius: canvas.panelRoot ? canvas.panelRoot.radiusMd : Style.cornerRadius
-      opacity: modelData.enabled ? 1 : 0.5
-      Ui.BorderSurface {
-        visible: monitorCard.isSelected && canvas.panelRoot !== null
-        anchors.fill: parent
-        anchors.margins: canvas.panelRoot ? -canvas.panelRoot.focusHalo : 0
-        radius: monitorCard.radius + (canvas.panelRoot ? canvas.panelRoot.focusHalo : 0)
-        color: "transparent"
-        borderSpec: Border.flat(canvas.panelRoot ? canvas.panelRoot.accentMuted : "transparent",
-          canvas.panelRoot ? canvas.panelRoot.focusHalo : 0)
-        z: -1
-      }
+      radius: Style.cornerRadius
+      opacity: modelData.enabled || !canvas.panelRoot ? 1 : canvas.panelRoot.disabledOpacity
       Column {
         anchors.centerIn: parent
         spacing: Style.spacing.xxs
@@ -131,9 +115,9 @@ Ui.BorderSurface {
         Text {
           text: monitorCard.modelData.name
           horizontalAlignment: Text.AlignHCenter
-          color: monitorCard.isSelected && canvas.panelRoot
-            ? canvas.panelRoot.accentHover
-            : (canvas.panelRoot ? canvas.panelRoot.textDim : Color.popups.text)
+          color: monitorCard.isSelected || !canvas.panelRoot
+            ? Color.popups.text
+            : canvas.panelRoot.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
@@ -179,7 +163,7 @@ Ui.BorderSurface {
             height: Style.space(18)
             color: canvas.cardBackground
             borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-            radius: canvas.panelRoot ? canvas.panelRoot.radiusSm : Style.cornerRadius
+            radius: Style.cornerRadius
             Text {
               anchors.centerIn: parent
               text: modelData.label

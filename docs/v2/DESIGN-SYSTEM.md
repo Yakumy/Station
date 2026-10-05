@@ -1,155 +1,135 @@
-# Station — Design System Specification
+# Station — Design System (v2)
 
-## Purpose & scope
+Supersedes the earlier draft in this repo. Tags: **[V]** confirmed in this codebase or in M0 testing, **[VERIFY]** Codex must confirm the exact token/name against the installed `qs.Commons`/`qs.Ui` before relying on it, **[DECISION]** a rule, not a fact.
 
-This spec covers Station, an Omarchy Quattro display-management plugin panel. The current build has correct layout and interaction flow but no shared rules for spacing, type, color or radius — each control was styled on its own, so sizes and gaps drift panel to panel. This document fixes that: one token set, one component spec, used everywhere in the panel.
+## 0. Why this version exists
 
-It is written to sit inside Omarchy's own visual language rather than invent a new one: dark-first, monospace (JetBrainsMono Nerd Font), low-chroma neutral surfaces with a single accent, minimal rounding, no drop shadows or gradients, and compatible with Omarchy's theme engine (`colors.toml`) so the panel can re-skin when the user switches system themes.
+The previous draft specified its own hex palette, its own `colors.toml` blending pipeline, 4–10px rounded corners, and drop-shadow/glow selection halos. None of that matches Omarchy, which M0 already proved exposes live-updating QML singletons (`Color.popups.*`, `Color.menu.*`, `Color.bar.*`, `Color.foreground`, `Color.accent`, `Color.urgent`) and a sharp-cornered, flat, hairline-separated visual language with no shadows or glows [V, §8.6 and §8.5 of `PLATFORM-FINDINGS.md`]. Station must look like it ships with Omarchy, not like a themed web app bolted onto it.
 
-## Principles
+**[DECISION] Station owns zero color or radius of its own.** Every value in this document is a token name or a rule, never a literal. A theme change must repaint every pixel with no restart, because the host already does this for every other panel.
 
-1. **Dark-first, flat.** No gradients, no drop shadows, no glassmorphism. Depth comes from a 3-step surface ramp (background → card → raised/active), not elevation effects.
-2. **Monospace everywhere.** Omarchy's identity is JetBrainsMono Nerd Font across terminal, bar and launcher. Station uses it for every label and value — including numbers, which get `tabular-nums` so columns of digits (resolution, Hz, %) align.
-3. **One accent, used sparingly.** A single blue signals selection, focus and the active tab/segment. It never doubles as decoration.
-4. **Quiet hierarchy through weight and opacity, not size.** Section labels are small, uppercase, wide-tracked and dim (`text-3`); values are the same size as labels but brighter and heavier. Few font sizes, many weight/color steps.
-5. **4px grid, 8px rhythm.** Every gap, padding and offset is a multiple of 4, with 8/16/24 doing most of the work — matching the dotted 16px grid already in the layout canvas.
-6. **Minimal, consistent rounding.** 4–6px radii only. Nothing pill-shaped except true toggles/switches.
-7. **Theme-able, not hard-coded.** Every color is a token that can be re-pointed at an Omarchy `colors.toml` palette; component code never references a raw hex.
+**A comment explaining why a private color or radius constant is "necessary" is not an exception to this rule — it's a sign the component is missing from `qs.Ui`/`qs.Commons`.** Find the existing host component or get the author's sign-off to add one; don't derive a private token to paper over the gap. An audit of this codebase found exactly this pattern: a block of Station-owned radii and nine computed colors (`surfaceOne/Two/Three`, `accentMuted`, `accentHover` via `Qt.lighter`, dim-text variants, a halo radius), each justified by its own comment. All of it must be deleted and replaced with aliases to the tokens in §4, with the one exception noted there for dim text.
 
-## Color tokens
+## 1. The bug this document fixes
 
-All values below are the default (Omarchy "Tokyo-blue") skin. Every token maps to a CSS variable; component styling references only the variable name, never a literal hex, so a theme swap (next section) repoints the whole panel.
+`Panel.qml` calls the exact same `Ui.Button { selected: … }` for Scale, Role, **and** Keep/Revert/Replace. That component renders `selected: true` as a strong, filled, high-emphasis state — correct for a button that commits an action, wrong for a chip that is just one of several peers. The result: **Primary** (merely a choice) looks identical in weight to **Keep** (an action with consequences), and **Secondary** looks like a disabled or unimportant option next to it, when really both are just unselected peers.
 
-| Token | Hex | Role |
-| --- | --- | --- |
-| `--bg` | `#0D0F14` | App/window background |
-| `--surface-0` | `#15171E` | Layout canvas / recessed areas |
-| `--surface-1` | `#1A1D26` | Default card / display node / input fill |
-| `--surface-2` | `#20232E` | Hover state |
-| `--surface-3` | `#262A37` | Active / pressed / selected-segment fill |
-| `--border-subtle` | `#242732` | Hairlines between major regions (header, sidebar) |
-| `--border-default` | `#30343F` | Default control border |
-| `--border-strong` | `#3C4150` | Emphasized border (unselected display node) |
-| `--accent` | `#5B8DFD` | Selection, focus ring, active tab/segment, primary action |
-| `--accent-hover` | `#7EA3FF` | Accent hover/pressed, accent-colored text |
-| `--accent-muted` | `rgba(91,141,253,.16)` | Focus halo / selected-card glow |
-| `--text-1` | `#E7E9EE` | Primary text, values |
-| `--text-2` | `#9AA0B2` | Secondary text, meta |
-| `--text-3` | `#636B7E` | Section labels, muted captions |
-| `--text-4` | `#454B5A` | Disabled / tertiary hints |
-| `--success` | `#4ADE80` | Positive status (reserved) |
-| `--danger` | `#F2667B` | Destructive / error (reserved) |
-| `--warning` | `#F5B700` | Warning — also Omarchy's "Linux Yellow" brand accent, for rare system-level callouts |
+**[DECISION] These are two different components with two different jobs, and the system must give them two different looks:**
 
-**Contrast:** `text-1` on `bg`/`surface-1` is 13.8:1; `text-2` is 5.4:1; `text-3` is 3.1:1 — used only for labels ≥14px or paired with an icon, never for critical body text.
+| Role | Used for | Selected look |
+|---|---|---|
+| **Action** | Keep, Revert, Pick another key, Replace and unbind it, Save | Filled: `Color.accent` background, `Color.popups.background` (or the theme's contrasting foreground) text. This is the *only* place a solid accent fill is allowed. |
+| **Choice: chip group** (Scale, Role, the 4 modifier-key toggles) | one of several peers, mutually exclusive (Scale/Role) or independently toggled (modifiers) | **[DECISION, resolved]** `Ui.ButtonGroup` already exists in the host and already fits Scale and Role exactly (single-select, keyboard h/l nav) — use it there, don't rebuild it. It's single-select only, so the 4 multi-select modifier chips need one new component, `Station/ChoiceChip.qml`. **That new component must copy `Ui.ButtonGroup`'s own chrome exactly** (same fill token, same 0-width border, same bold text, both selected and unselected) rather than inventing a parallel recipe, so the two implementations are visually identical and the panel never shows two different "selected chip" looks. [V, resolved] `Ui.ButtonGroup`'s delegate *is* `Ui.Button { selected: …; bordered: true }`, with the group supplying `foreground/background/accent/fontFamily/fontSize/hasCursor` — so `Station/ChoiceChip.qml` wraps `Ui.Button` directly and gets identical chrome by construction rather than by eye. Unselected: `Border.controlSpec("normal", foreground, accent)` (foreground ~40%, 1px), transparent fill, normal weight. Selected: `Style.selectedFillFor(foreground, accent)` fill, selected border width 0 (which leaves that 1px normal border in place), `Style.selectedStateColor(foreground, accent)` text, `font.bold: true`; `radius: Style.cornerRadius` is already built into `Ui.Button`. Chip border: `Color.menu.selectedBorder` (§4 — it does not equal `Color.accent`). |
+| **Choice: dropdown row** (inside Resolution, Refresh, Mode, Direction — all via `Ui.Dropdown`) | one row selected inside an open list | A different, already-correct host idiom — not the same thing as a chip group. `Color.menu.selectedBackground` fill, `Color.menu.selectedBorder` border, `Color.menu.selectedText` text [V]. Do not unify this with the chip-group recipe above; they're different real host visual shapes for different real host UI patterns, and conflating them was the mistake in the previous draft of this document. |
 
-## Typography
+A Choice (either kind) must never use the Action look, and vice versa. **[V] As implemented:** Scale and Role render through the host's `Ui.ButtonGroup`, the 4 modifier chips through the new `Station/ChoiceChip`, and Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
 
-**Font:** `'JetBrains Mono', 'JetBrainsMono Nerd Font', ui-monospace, monospace` — the same family Omarchy sets system-wide via `omarchy font set`. Weights used: 400 (rare), 500 (default), 600 (emphasis/headings), 700 (display, specimen headings only).
+## 2. Corners
 
-| Style | Size / line-height | Weight | Tracking | Case | Use |
-| --- | --- | --- | --- | --- | --- |
-| Eyebrow | 11 / 16 | 600 | 0.08em | UPPERCASE | Section labels: `LAYOUT`, `BRIGHTNESS`, `SCALE` |
-| Micro meta | 10 / 14 | 500 | 0.04em | UPPERCASE | Fine print: `Lane 2`, grid captions |
-| Caption | 11 / 16 | 500 | 0.02–0.04em | Sentence | Device name, secondary descriptors |
-| Body | 12–13 / 16–18 | 500 | 0 | Sentence | Control labels, dropdown values |
-| Body emphasis | 13 / 18 | 600 | 0 | Sentence | Values: `100%`, `1920x1080`, `60 Hz` |
-| Panel title | 14 / 20 | 600 | 0.01em | Sentence | `Station` |
-| Spec heading | 20 / 28 | 700 | 0.01em | Sentence | Document/specimen titles only |
+**[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`.** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.
 
-**Rules:** numeric values always get `font-variant-numeric: tabular-nums` so stacked numbers align. Section labels (eyebrow) are always `text-3`, never full-bright — they organize, they don't compete with values. There are only 6 sizes in the whole panel; new UI reuses one of them rather than inventing a 7th.
+**Known trap [V]:** a ternary like `selected ? Station.radiusSm : Style.cornerRadius` *looks* compliant because the token appears in the source, but if the first branch is always taken, the token branch is dead code and never executes. The fix must remove the private branch entirely, not just add the token as an unreached fallback next to it.
 
-## Spacing & layout grid
+## 3. No elevation effects
 
-Base unit: **4px**. Only these steps are used — pick the smallest that reads clearly, never an in-between value:
+**[DECISION] No `box-shadow`, no glow, no blur, no gradient, anywhere in Station**, including for selection and focus. Depth and emphasis come only from:
+- a border (neutral control outline from `Border.controlSpec("normal", …)` — never `Color.popups.border`, which resolves to the accent, §4 — `Color.accent` for selection/focus, `Color.urgent` for conflicts), and
+- one step of fill (`Color.popups.background` → `Color.menu.selectedBackground` for a lifted/selected surface).
 
-| Token | Value | Typical use |
-| --- | --- | --- |
-| `space-1` | 4px | Icon-to-label gap, tight stacks |
-| `space-2` | 8px | Segmented control gaps, chip padding |
-| `space-3` | 12px | Compact group padding |
-| `space-4` | 16px | Section gap in sidebar, row padding |
-| `space-5` | 20px | Panel padding (top/bottom) |
-| `space-6` | 24px | Panel padding (left/right), region gutters |
-| `space-8` | 32px | Rarely — separating major blocks |
+This matches `Style.cornerRadius`'s own flat language and is already the rule for the rest of the panel [V, STATION-V2-SPEC.md §11].
 
-**Regions:** header bar is a fixed 56px; sidebar/inspector is a fixed 320px column; the layout canvas fills the rest. Both header and sidebar use 24px horizontal padding and 20px vertical padding, so every region shares the same outer rhythm.
+**One narrow, named exception [V, host-precedented, RESOLVED].** The ban in this section is on *elevation effects* specifically — not on the `QtQuick.Effects` import as a whole. A `MultiEffect` whose only properties set are `colorization`-related (tinting a monochrome icon, such as the Station logo, to match a theme token) is icon theming, not depth, and is allowed; Omarchy's own Tray widget does exactly this. A `MultiEffect` is still banned the moment it also sets any shadow/blur/glow-family property (`shadowEnabled`, `blurEnabled`, etc.) alongside colorization — **the exception covers a colorization-only instance, not any instance that merely includes colorization among other properties.** `DropShadow`, `Glow`, `Blur` and any gradient property remain banned outright, on any element, not just inside an `Effects` import.
 
-**Layout canvas grid:** the dotted background grid stays at 16px (4 × base unit) — this is also the snap increment for dragging display nodes, so the visual grid and the interaction grid are the same number.
+## 4. Color tokens
 
-## Radius & elevation
+No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `PLATFORM-FINDINGS.md` §8.6]:
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `radius-sm` | 4px | Segmented-control segments, small icon buttons, checkboxes |
-| `radius-md` | 6px | Cards, inputs, selects, display nodes, the layout canvas itself |
-| `radius-lg` | 10px | Popovers/menus, modal sheets (none in current panel, reserved) |
-| `radius-full` | 999px | True switches/pill toggles only — not used elsewhere |
+| Token | Role |
+|---|---|
+| `Color.popups.background` | Panel background |
+| `Color.popups.text` | Default text |
+| `Color.popups.border` | **Not a neutral border on the default theme** [V]. Omarchy's generated `shell.toml` maps `[popups] border` to the active-window-border color, i.e. the accent. Using it for a plain row or card border produces an unintended accent-blue box — this is exactly the "every row is bordered blue" bug found in this codebase. Never use it as a neutral border. |
+| **Neutral row separator** | `Ui.PanelSeparator` [V] — the host's own hairline, drawn at a reduced-opacity foreground. This is the only correct way to separate rows with no box. |
+| **Neutral control border** | `Border.controlSpec("normal", …)` [V, RESOLVED] — resolves to foreground at ~40% opacity, 1px. This is already what `Ui.Button { bordered: true }` and `Ui.Dropdown` paint by default, so using it for chip groups, display nodes and secondary actions makes them match controls Omarchy already ships, rather than inventing a fourth border weight. **Scope: this is for actual controls (buttons, dropdowns, chip groups, display nodes) — never for a List row container.** A List row stays fully borderless per §7, even now that a real neutral-border token exists; giving every row this border would recreate "every row is boxed," just in gray instead of blue. Use this, not `Color.popups.border`, anywhere a control needs an outline. |
+| `Color.menu.background` | Dropdown menu background |
+| `Color.menu.text` | Dropdown menu item text |
+| `Color.menu.border` | Dropdown menu border |
+| `Color.menu.selectedBackground` | Lifted fill for a selected Choice chip or a hovered menu row |
+| `Color.menu.selectedText` | Text on a selected Choice chip |
+| `Color.menu.selectedBorder` | Border on a selected Choice chip. **[V] Confirmed to diverge from `Color.accent`** under the probed theme — use `Color.menu.selectedBorder` for chips specifically; reserve `Color.accent` for Action-button fill, focus rings, and the active tab underline. |
+| `Color.menu.scrim` | Backdrop behind an open dropdown, if the host renders one |
+| `Color.accent` | Action-button fill, focus ring, active tab underline |
+| `Color.urgent` | Conflict state (red tab badge, conflict row border, error text). **[V] Known bug:** passing `Color.urgent` as the *fallback* argument of `Border.surfaceSpec` never renders, because `shell.toml` always supplies a primary value (`popups.border`/`menu.border`) and the fallback is only used when the primary is absent. Conflict borders must be set directly, e.g. `Border.flat(Color.urgent, Style.normalBorderWidth)`, not passed as a fallback that will never be reached. |
+| `Color.foreground` | Fallback text only where no `popups`/`menu`/`bar` token applies |
+| `Color.bar.background`, `.text`, `.active` | Bar widget only (`[S n]`); there is no `Color.bar.foreground` — use the injected widget-host `bar.foreground` where available, else `Color.bar.text` [V] |
 
-No drop shadows for resting state. The only "elevation" cue is the **selection glow**: `box-shadow: 0 0 0 3px var(--accent-muted)` combined with a 1.5px `--accent` border — used once, for the currently-selected display node or focused input. A plain popover (if ever needed) may use a single soft shadow (`0 4px 16px rgba(0,0,0,.4)`), but panel chrome itself stays flat.
+**Dim/secondary text [V, host-precedented]:** the only approved way to produce dim or secondary text is `Qt.darker(<base token>, 1.4)`, confirmed as the host's own idiom in three separate components. This is direction-correct on both dark and light themes: it moves a light foreground toward gray on a dark theme, and moves a dark foreground further from a light background on a light theme. **Do not dim text by reducing opacity/alpha** (e.g. `Util.alpha(text, 0.55)`); alpha blending moves text *toward whatever is behind it*, which on a light theme walks a light-ish foreground toward the light background — the same class of white-on-white contrast bug this project already hit once on Catppuccin Latte.
 
-## Components
+Reject anything that computes color from `colors.toml` directly: Quickshell already resolves the active theme into these singletons and repaints them live. A second, Station-owned parsing and blending pipeline is redundant, untested, and a second place for a theme to render wrong.
 
-**Tabs (top nav — Displays / Keybindings / Settings)** Text: body, `text-2`; active tab text: `text-1`. 2px bottom border, `transparent` when inactive, `--accent` when active, 18px gap below the baseline to the header's bottom border. 28px horizontal gap between tabs.
+## 5. Typography
 
-**Segmented control (Scale: 1x/1.25x/.../ Role: Primary/Secondary)** Row of equal-width buttons, `space-2` (8px) gap, no shared container border — each segment is its own `radius-sm` rect. Default: transparent fill, `border-default`, `text-3` label. Active/selected: `surface-3` fill with `border-strong` (for neutral multi-choice like Scale) **or** solid `--accent` fill with `--bg`-colored text (for binary state like Role, where the active choice is also a commitment, not just a filter). Height 28–32px, label is body-emphasis.
+`Style.font.family` for every piece of text — never a literal font string, even though Omarchy's default is JetBrainsMono Nerd Font; the token is what stays correct if the user changes font with `omarchy font set`. Use `Style.font.*` size tokens for the whole type scale; `Style.font.bodySmall` and `Style.font.caption` are already in use in `Panel.qml` [V]. The full list from the installed `Style.qml` [V]: `caption` (10), `bodySmall` (11), `body` (12), `subtitle` (13), `title` (14), `heading` (16), `display` (24), `displayLarge` (28), plus glyph sizes `iconSmall`, `icon`, `iconLarge`, `iconFont`. There is no weight token in `Style.font` — emphasis is `Font.*` weight on top of a size token (§7 already uses `Font.DemiBold`/`Font.Medium`) [V]. The panel itself needs only `caption`, `body` and `title`, all three already in use [V]; reuse before adding anything.
 
-**Slider (Brightness)** 4px track, full-width, `radius-sm`, fill in `--accent` up to value, 14px circular white thumb with a soft shadow, no track border. Value shown right-aligned above the track as body-emphasis with a tabular-nums `%`.
+| Role | Token (confirm name) | Case | Use |
+|---|---|---|---|
+| Eyebrow / section label | smallest available, dim | UPPERCASE | `LAYOUT`, `BRIGHTNESS`, `SCALE` — already `Ui.PanelSectionHeader` |
+| Body | `Style.font.body` (12) for row labels and values, `Style.font.caption` (10) for device names and fine print [V, in use] | Sentence | Row labels, dropdown values |
+| Body emphasis | `Font.DemiBold` at the same `Style.font.*` size — sizes only from `Style.font`, weight from `Font.*` [V] | Sentence | Values: `100%`, `1920×1080`, `60 Hz` |
+| Caption | `Style.font.caption` | Sentence | Device names, "Lane 2", fine print |
+| Panel title | `Style.font.title` + `Font.DemiBold` [V, in use] | Sentence | `Station` |
 
-**Select / dropdown (Resolution, Refresh, Mode, Direction)** `surface-1` fill, `border-default` 1px, `radius-sm`, `space-3` horizontal padding, 8px vertical. Value left, chevron (⌄) right in `text-3`. Open/focus state adds the focus ring (`accent-muted` halo + `accent` border).
+**Tabular figures [V]:** neither `Style.font` nor any host component exposes a tabular-figures property (the host never sets one), and the default family is monospace, so figures already align — set nothing. If a future theme ships a proportional family, alignment must come from a host token; do not hand-roll a width hack. [DECISION]
 
-**Display node (layout canvas item)** 220×110px card, `surface-1` fill, `radius-md`. Default: `border-strong` 1px. Selected: 1.5px `--accent` border + `accent-muted` glow (radius & elevation section). Two 18px rotate-handle chips top-left, number badge + output name centered, number in body-emphasis `text-1`, output name in caption `text-3` (or `accent-hover` when selected).
+## 6. Spacing
 
-**Toggle/checkbox** (reserved for Keybindings/Settings) 18×18px, `radius-sm`, `border-default`; checked = `--accent` fill with a 1.5px white check mark.
+`Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `PLATFORM-FINDINGS.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
 
-**Section label** Every group (LAYOUT, BRIGHTNESS, SCALE, RESOLUTION · REFRESH, ROLE) uses the eyebrow style, `space-3` below it before the control starts.
+Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. One shared vertical rhythm between the Displays sidebar, Keybindings rows and Settings rows, so switching tabs doesn't change the page's density.
 
-## Interaction states & accessibility
+## 7. Component inventory
 
-| State | Rule |
-| --- | --- |
-| Hover | Fill steps up one surface level (`surface-1` → `surface-2`); border unchanged |
-| Active/pressed | Fill steps to `surface-3`; no transform/scale |
-| Selected | `--accent` border (1.5px) + `accent-muted` glow, as in Radius & elevation |
-| Focus (keyboard) | Same glow as selected, always visible on `:focus-visible`, never removed |
-| Disabled | `text-4` label, `border-subtle`, 60% opacity, no hover/active response |
+Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button`, `Ui.TextField` [V, `Panel.qml`].
 
-**Targets:** every interactive control (segments, tabs, slider thumb, dropdown row) is at least 28px tall; icon-only buttons are 28×28px minimum hit area even if the glyph is smaller.
+**Tabs** (Displays / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box.
 
-**Contrast:** all text/background pairs in this system meet WCAG AA (4.5:1 body, 3:1 for ≥14px labels); verified against the color table above.
+**Choice chip** (Scale group, Role group, the 4 modifier-key toggles): see §1. Mode and Direction are dropdown rows (below), not chips. Height matches other interactive controls on the page; no two chip heights in the same row group.
 
-**Motion:** transitions are 120–150ms ease-out on color/border/box-shadow only — no movement, bounce or scale, matching Hyprland's snappy, non-bouncy window animations.
+**Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
 
-## Mapping to Omarchy's theme system
+**Toggle** (Settings: Hide indicator, Follow focus): **[V] Resolved — `Ui.Toggle` exists and Settings already uses it correctly.** No further action needed here; do not replace it with a chip or anything else.
 
-Omarchy themes are defined centrally in `~/.local/state/omarchy/current/theme/colors.toml` and fanned out to the terminal, Waybar, Hyprland borders, btop, etc. Station should read from the same source rather than ship its own fixed palette, so it re-skins automatically when the user runs `omarchy theme set <name>`.
+**[DECISION, open — see "within-Action emphasis" below] Secondary vs. primary Action.** §1 says every Action is filled, but a screen can have more than one Action at once (Keep + Revert; Pick another key + Replace and unbind it), and making both equally heavy loses the sense of which one actually commits. Until this is settled: the *one* action that commits a consequential change (Keep; Replace and unbind it) is filled per §1; a same-row action that only cancels or defers (Revert; Pick another key) is neutral-bordered — `Border.controlSpec("normal", …)` border, `Color.popups.text`, no fill — so the eye finds the committing action first. This is a recommendation pending author sign-off, not yet a settled rule; do not treat it as final until confirmed.
 
-**Suggested mapping** (adjust names to whatever keys the active `colors.toml` actually exposes — Omarchy themes commonly expose a background, a foreground/text set, and 8–16 ANSI-style accent colors):
+**List row** (Keybindings action rows, Settings rows): **[DECISION] default = no border, no individual box.** Rows are separated only by `Ui.PanelSeparator` (a hairline), with shared left/right padding, the way `Ui.PanelSectionHeader` already separates sections. A row gets a `Color.urgent` border **only** while it is an unresolved conflict — that is the one state worth decorating, and decorating every row equally erases it. A row never gets an accent border just for existing; accent belongs to the interactive control inside the row (a focused dropdown, an open menu), not the row container.
 
-| Station token | Source in `colors.toml` |
-| --- | --- |
-| `--bg`, `--surface-0` | `background` (and a programmatically darkened/lightened step) |
-| `--surface-1/2/3` | derived by mixing `background` toward `foreground` at 6% / 10% / 14% |
-| `--border-*` | derived the same way, slightly lighter steps |
-| `--text-1` | `foreground` |
-| `--text-2/3/4` | `foreground` mixed toward `background` at 25% / 45% / 65% |
-| `--accent`, `--accent-hover` | the theme's `color4` (blue) or `color6` (cyan), whichever the active theme defines as its primary accent; fall back to a built-in `#5B8DFD` if the theme has no clear accent |
-| `--warning` | `color3` (yellow) |
-| `--danger` | `color1` (red) |
-| `--success` | `color2` (green) |
+**Select / dropdown** (Resolution, Refresh, Mode, Direction): use the host's own `Ui.Dropdown` — **[V] Resolution, Refresh and the Settings dropdowns already did this correctly, and Mode/Direction now do too: the hand-rolled ~95-line component is deleted and both moved onto `Ui.Dropdown`.** The grouping question is resolved [V]: `Ui.Dropdown`'s popup is a flat `ListView` with no sub-headers, and the Mode data was already flat — `"Mode: Extend"`, `"Mode: Mirror"`, `"Single · <name> · <role>"` — so the grouping lives in the prefix text, not in a real two-level structure. Keeping `showLabel: false` with those prefixed option labels preserves the grouping without a flatten step (and keeps the `/Mode: Extend/`, `/Direction: LTR/` assertions in `test/v2/panel-layout.test.cjs` true). Default border: `Border.controlSpec("normal", …)`, never `Color.popups.border`. Accent only while open or focused.
 
-This keeps Station visually correct under Gruvbox, Tokyo Night, Catppuccin Mocha, Rose Pine and any other installed Omarchy theme, without Station maintaining its own theme list. The specimen sheet in the companion design canvas uses literal hex values for one concrete skin (a Tokyo-Night-leaning dark/blue default) — treat those as the fallback theme, not the only one.
+**Slider** (Brightness): host-owned — Station passes `bar`, bounds, `value` and `enabled` only and sets no colors [V]; `Ui.PanelSlider` paints track `Style.selectedFillFor(bar.foreground, Color.accent)` with `bar.foreground` fill and knob. No glow, no thumb shadow.
 
-### Live theme-following is a requirement, not an enhancement
+**Display node** (Layout canvas): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
 
-Station never ships a fixed palette. Every color in the panel is a CSS custom property resolved at runtime from the **active** Omarchy theme, and the panel repaints **without a restart** the moment the user runs `omarchy theme set <name>` — the same instant Waybar, the terminal and Hyprlock repaint.
+## 8. Do-not list
 
-**What this means for implementation:**
+- No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.
+- No hardcoded radius, including `0` — always `Style.cornerRadius`.
+- No pill/`radius-full` shapes.
+- No solid accent fill on a Choice chip — that look is reserved for Action buttons.
+- No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
+- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; any derived-colour helper other than the approved `Qt.darker(<token>, 1.4)` dim idiom (so `Util.alpha(`, `Qt.tint(` and any other `Qt.darker(` arity fail); any gradient property; any `DropShadow`/`Glow`/`Blur`-family identifier; any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
 
-1. **No hex literals in component code, ever.** Every rule in this spec (`--accent`, `--surface-1`, etc.) is a variable name. Components read `var(--token)`; they never fall back to a hardcoded color except the one bootstrap default used before the first theme read completes.
-2. **One place sets the variables.** A single theme-loader module reads `~/.local/state/omarchy/current/theme/colors.toml`, maps its keys to Station's tokens (per the table above), and writes them onto the app's root element (e.g. `document.documentElement.style.setProperty('--accent', …)`, or the Hyprland-toolkit equivalent if Station isn't a web view). No component touches the TOML file directly.
-3. **The panel watches for theme changes live**, not just on next launch. Omarchy switches themes by rewriting `~/.local/state/omarchy/current/theme` (a symlink) and re-running each app's theme hook. Station should either: (a) watch that path with a filesystem watcher (inotify) and re-run the loader on change, or (b) hook into Omarchy's own theme-change signal/command if the plugin API exposes one (check `omarchy theme set` — it's scriptable, and plugins can register a reload hook). Polling is a fallback only, not the first choice.
-4. **Re-paint is instant and total.** Because every token is a variable, a single update at the root cascades to every control — there is no per-component re-render logic to write, no flash of unstyled content, no partial re-skin.
-5. **Contrast holds across themes.** Since `text-3` labels sit at the edge of AA contrast (3.1:1) on the *default* skin, the loader should verify — or the theme mapping should guarantee — that derived text tokens stay ≥ 3:1 against `--bg` regardless of which theme is active; a theme whose background is unusually light or saturated should not silently break label legibility.
+## 10. Functional bugs found during audit (fix with priority — not cosmetic)
 
-This behavior, and the mapping table above, are not optional polish — they're load-bearing: a Station that hardcodes today's blue-on-near-black palette is not actually following Omarchy's design system, it's just borrowing its look once.
+**[V] Both fixed in this revision** (§8 CI now guards the token choices, so they cannot regress):
+
+1. **Conflict rows never render red.** See the `Color.urgent` entry in §4: the fallback argument of `Border.surfaceSpec` is masked by a primary value `shell.toml` always supplies. A user got no visual warning that a keybinding they were about to apply conflicted with an existing one. Fix directly (`Border.flat(Color.urgent, Style.normalBorderWidth)`), don't pass it as an unreachable fallback.
+2. Every Settings/Keybindings row rendered with an accent-blue border because it was built from `Color.popups.border`, which is not neutral (§4). Fixing the token choice (to `Ui.PanelSeparator` / `Border.controlSpec("normal", …)`) fixes this as a side effect of §4, not a separate task.
+
+## 9. Acceptance
+
+A change passes when, under at least two themes including one light theme (Catppuccin Latte already found a white-on-white contrast bug once — re-check it specifically [V, earlier Latte finding]):
+- Scale and Role render as the same Choice style as each other, visibly lighter than Keep.
+- Keep/Revert/Replace are the only filled, high-emphasis controls on the page — i.e. exactly one filled commit Action per screen (`Keep`, `Apply`, `Replace and unbind it`), no filled Choice anywhere.
+- Keybindings and Settings rows read as a plain hairline list; the only bordered row is one with an active conflict.
+- No rounded corners, shadows or glows appear anywhere, at any theme.
+- Every color, font and spacing value traces to a token in §4–§6, with no literal left in the diff.

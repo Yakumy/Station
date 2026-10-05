@@ -6,9 +6,9 @@ Column {
   id: settingsTab
   required property var panelRoot
   readonly property real inset: panelRoot.regionPadH
-  spacing: panelRoot.space2
+  spacing: 0
 
-  Item { width: 1; height: Math.max(0, settingsTab.inset - settingsTab.spacing) }
+  Item { width: 1; height: settingsTab.inset }
 
   Ui.Toggle {
     width: settingsTab.width - settingsTab.inset * 2
@@ -20,6 +20,13 @@ Column {
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("hideNative", !checked)
   }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
   Ui.Toggle {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
@@ -30,13 +37,17 @@ Column {
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("followFocus", !checked)
   }
-  Ui.BorderSurface {
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
     height: Style.space(48)
-    color: "transparent"
-    borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-    radius: settingsTab.panelRoot.radiusMd
     Text {
       anchors.left: parent.left
       anchors.leftMargin: settingsTab.panelRoot.space3
@@ -64,13 +75,17 @@ Column {
       }
     }
   }
-  Ui.BorderSurface {
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
     height: Style.space(48)
-    color: "transparent"
-    borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-    radius: settingsTab.panelRoot.radiusMd
     Text {
       anchors.left: parent.left
       anchors.leftMargin: settingsTab.panelRoot.space3
@@ -97,13 +112,17 @@ Column {
       }
     }
   }
-  Ui.BorderSurface {
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
     height: Style.space(48)
-    color: "transparent"
-    borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-    radius: settingsTab.panelRoot.radiusMd
     Text {
       anchors.left: parent.left
       anchors.leftMargin: settingsTab.panelRoot.space3
@@ -124,5 +143,5 @@ Column {
     }
   }
 
-  Item { width: 1; height: Math.max(0, settingsTab.inset - settingsTab.spacing) }
+  Item { width: 1; height: settingsTab.inset }
 }

@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Ui as Ui
 import qs.Commons
+import "." as Station
 
 Column {
   id: keybindingsTab
@@ -15,18 +16,15 @@ Column {
     delegate: Column {
       id: bindingGroup
       required property var modelData
+      required property int index
       width: keybindingsTab.width - keybindingsTab.inset * 2
       x: keybindingsTab.inset
       property string groupState: keybindingsTab.panelRoot.groupStatus(modelData.ids)
+      readonly property bool hasSeparator: index < keybindingsTab.panelRoot.bindingGroups.length - 1
 
-      Ui.BorderSurface {
+      Item {
         width: parent.width
         height: Style.space(44)
-        color: "transparent"
-        borderSpec: Border.surfaceSpec("popups", "border",
-          bindingGroup.groupState === "conflict" ? Color.urgent : Color.popups.border,
-          Style.normalBorderWidth)
-        radius: keybindingsTab.panelRoot.radiusMd
         Text {
           anchors.left: parent.left
           anchors.leftMargin: keybindingsTab.panelRoot.space3
@@ -34,7 +32,7 @@ Column {
           width: parent.width * 0.36
           text: bindingGroup.modelData.label
           elide: Text.ElideRight
-          color: keybindingsTab.panelRoot.textPrimary
+          color: Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
         }
@@ -46,7 +44,7 @@ Column {
           text: bindingGroup.modelData.combo
           elide: Text.ElideRight
           // The combo is this row's value, so it carries the emphasis weight.
-          color: keybindingsTab.panelRoot.textPrimary
+          color: Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
           font.weight: Font.DemiBold
@@ -57,7 +55,8 @@ Column {
           anchors.verticalCenter: parent.verticalCenter
           text: keybindingsTab.panelRoot.statusLabel(bindingGroup.groupState)
           color: bindingGroup.groupState === "conflict" ? Color.urgent
-            : (bindingGroup.groupState === "replacement" ? Color.accent : keybindingsTab.panelRoot.textDim)
+            : (bindingGroup.groupState === "replacement" ? Color.accent
+              : Qt.darker(Color.popups.text, 1.4))
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
           font.weight: bindingGroup.groupState === "conflict" ? Font.DemiBold : Font.Medium
@@ -72,8 +71,8 @@ Column {
           width: bindingGroup.width
           height: conflictContent.implicitHeight + keybindingsTab.panelRoot.space3 * 2
           color: Color.menu.selectedBackground
-          borderSpec: Border.surfaceSpec("menu", "border", Color.urgent, Style.normalBorderWidth)
-          radius: keybindingsTab.panelRoot.radiusMd
+          borderSpec: Border.flat(Color.urgent, Style.normalBorderWidth)
+          radius: Style.cornerRadius
           Column {
             id: conflictContent
             anchors.left: parent.left
@@ -94,19 +93,19 @@ Column {
               spacing: keybindingsTab.panelRoot.space2
               Ui.Button {
                 height: keybindingsTab.panelRoot.controlHeight
-                radius: keybindingsTab.panelRoot.radiusSm
+                radius: Style.cornerRadius
                 text: "Pick another key"
                 bordered: true
-                foreground: keybindingsTab.panelRoot.textPrimary
+                foreground: Color.popups.text
                 onClicked: keybindingsTab.panelRoot.beginBindingEdit(conflictRow.modelData)
               }
               Ui.Button {
                 height: keybindingsTab.panelRoot.controlHeight
-                radius: keybindingsTab.panelRoot.radiusSm
+                radius: Style.cornerRadius
                 text: "Replace and unbind it"
-                bordered: true
                 accent: Color.urgent
-                foreground: keybindingsTab.panelRoot.textPrimary
+                background: Color.urgent
+                foreground: Color.popups.background
                 onClicked: keybindingsTab.panelRoot.service.approveBinding(conflictRow.modelData.combo)
               }
             }
@@ -115,14 +114,10 @@ Column {
               spacing: keybindingsTab.panelRoot.space1
               Repeater {
                 model: ["SUPER", "CTRL", "ALT", "SHIFT"]
-                delegate: Ui.Button {
+                delegate: Station.ChoiceChip {
                   required property string modelData
-                  height: keybindingsTab.panelRoot.controlHeight
-                  radius: keybindingsTab.panelRoot.radiusSm
                   text: modelData
-                  bordered: true
                   selected: !!keybindingsTab.panelRoot.editingModifiers[modelData]
-                  foreground: keybindingsTab.panelRoot.textPrimary
                   onClicked: keybindingsTab.panelRoot.toggleEditingModifier(modelData)
                 }
               }
@@ -130,13 +125,13 @@ Column {
                 width: Style.space(88)
                 text: keybindingsTab.panelRoot.editingKey
                 placeholderText: "KEY"
-                foreground: keybindingsTab.panelRoot.textPrimary
+                foreground: Color.popups.text
                 onTextChanged: if (activeFocus) keybindingsTab.panelRoot.editingKey = text
                 onAccepted: keybindingsTab.panelRoot.applyBindingEdit()
               }
               Ui.Button {
                 height: keybindingsTab.panelRoot.controlHeight
-                radius: keybindingsTab.panelRoot.radiusSm
+                radius: Style.cornerRadius
                 text: "Apply"
                 accent: Color.accent
                 background: Color.accent
@@ -146,6 +141,17 @@ Column {
             }
           }
         }
+      }
+
+      Item {
+        visible: bindingGroup.hasSeparator
+        width: parent.width
+        height: keybindingsTab.panelRoot.space2
+      }
+      Ui.PanelSeparator {
+        visible: bindingGroup.hasSeparator
+        width: parent.width
+        foreground: Color.popups.text
       }
     }
   }

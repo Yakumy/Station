@@ -9,6 +9,8 @@ Column {
   required property var panelRoot
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
+  readonly property int enabledCount: service
+    ? service.displayDraft.filter(function(display) { return display.enabled }).length : 0
   // The canvas is a region and takes the shared 24px gutter. The inspector is
   // a dense column inside a ~570px popout, so it keeps the smallest step that
   // reads clearly instead of the full region padding.
@@ -68,7 +70,8 @@ Column {
       Rectangle {
         width: Math.max(1, Style.normalBorderWidth)
         height: displayColumns.height
-        color: displayTab.panelRoot.hairline
+        color: Color.popups.text
+        opacity: 0.12
       }
 
       Column {
@@ -111,7 +114,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: displayTab.panelRoot.space6
             height: displayTab.panelRoot.controlHeight
-            radius: displayTab.panelRoot.radiusSm
+            radius: Style.cornerRadius
             text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled ? "✓" : ""
             foreground: displayTab.panelRoot.textPrimary
             onClicked: {
@@ -167,7 +170,7 @@ Column {
           width: parent.width - displayTab.gutter * 2
           x: displayTab.gutter
           text: "Not available for this display"
-          color: displayTab.panelRoot.textDisabled
+          color: displayTab.panelRoot.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
@@ -189,43 +192,27 @@ Column {
             anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textSecondary
+            color: displayTab.panelRoot.textDim
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
-        Grid {
-          id: scaleGrid
+        Ui.ButtonGroup {
+          id: scaleGroup
           width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
-          columns: 6
-          spacing: displayTab.gutter
-          Repeater {
-            model: [1, 1.25, 1.6, 2, 3, 4]
-            delegate: Ui.Button {
-              required property real modelData
-              readonly property bool activeScale: displayTab.selectedDisplay
-                && Number(displayTab.selectedDisplay.scale) === modelData
-              width: (scaleGrid.width - scaleGrid.spacing * 5) / 6
-              height: displayTab.panelRoot.controlHeight
-              radius: displayTab.panelRoot.radiusSm
-              text: modelData + "x"
-              fontSize: Style.font.body
-              horizontalPadding: 0
-              verticalPadding: 0
-              bordered: true
-              // Scale is a neutral filter, so the chosen segment takes a
-              // raised surface instead of an accent fill, which is reserved
-              // for the Role commitment below.
-              accent: Color.accent
-              background: activeScale ? displayTab.panelRoot.surfaceThree : "transparent"
-              foreground: displayTab.panelRoot.textPrimary
-              onClicked: {
-                if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
-                displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", modelData)
-                displayTab.service.previewLayout()
-              }
-            }
+          foreground: displayTab.panelRoot.textPrimary
+          background: Color.popups.background
+          accent: Color.accent
+          options: [1, 1.25, 1.6, 2, 3, 4].map(function(scale) {
+            return { value: String(scale), label: scale + "x" }
+          })
+          value: displayTab.selectedDisplay
+            ? String(Number(displayTab.selectedDisplay.scale)) : ""
+          onChanged: function(value) {
+            if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+            displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", Number(value))
+            displayTab.service.previewLayout()
           }
         }
         Item { width: 1; height: displayTab.gutter }
@@ -246,7 +233,7 @@ Column {
             anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textSecondary
+            color: displayTab.panelRoot.textDim
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
@@ -306,42 +293,25 @@ Column {
             anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textSecondary
+            color: displayTab.panelRoot.textDim
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
-        Grid {
-          id: roleGrid
+        Ui.ButtonGroup {
+          id: roleGroup
           width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
-          columns: 3
-          spacing: displayTab.gutter
-          Repeater {
-            model: ["Primary", "Secondary", "Third"]
-            delegate: Ui.Button {
-              required property int index
-              required property string modelData
-              visible: displayTab.service
-                && index < displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
-              readonly property bool activeRole: displayTab.selectedDisplay
-                && displayTab.service && displayTab.service.roleOf(displayTab.selectedDisplay.name) === index
-              width: (roleGrid.width - roleGrid.spacing * 2) / 3
-              height: displayTab.panelRoot.controlHeight
-              radius: displayTab.panelRoot.radiusSm
-              text: modelData
-              fontSize: Style.font.body
-              horizontalPadding: 0
-              verticalPadding: 0
-              bordered: true
-              // Role is a commitment rather than a filter, so the active
-              // segment is a solid accent block with background-coloured text.
-              accent: Color.accent
-              background: activeRole ? Color.accent : "transparent"
-              foreground: activeRole ? Color.popups.background : displayTab.panelRoot.textPrimary
-              onClicked: if (displayTab.service && displayTab.selectedDisplay && displayTab.service.state === "idle")
-                displayTab.service.swapRole(displayTab.selectedDisplay.name, index)
-            }
+          foreground: displayTab.panelRoot.textPrimary
+          background: Color.popups.background
+          accent: Color.accent
+          options: ["Primary", "Secondary", "Third"].slice(0, displayTab.enabledCount)
+            .map(function(label, index) { return { value: String(index), label: label } })
+          value: displayTab.service && displayTab.selectedDisplay
+            ? String(displayTab.service.roleOf(displayTab.selectedDisplay.name)) : ""
+          onChanged: function(value) {
+            if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+            displayTab.service.swapRole(displayTab.selectedDisplay.name, Number(value))
           }
         }
         Text {
@@ -410,7 +380,7 @@ Column {
         anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
         height: displayTab.panelRoot.controlHeight
-        radius: displayTab.panelRoot.radiusSm
+        radius: Style.cornerRadius
         text: "Keep"
         // Keep is the primary action, so it carries the accent fill.
         accent: Color.accent
@@ -425,10 +395,10 @@ Column {
         anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
         height: displayTab.panelRoot.controlHeight
-        radius: displayTab.panelRoot.radiusSm
+        radius: Style.cornerRadius
         text: "Revert"
         bordered: true
-        foreground: displayTab.panelRoot.textPrimary
+        foreground: Color.popups.text
         onClicked: displayTab.service.revertPreview("")
       }
     }

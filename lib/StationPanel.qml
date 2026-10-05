@@ -29,13 +29,6 @@ Ui.Panel {
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
   // these; nothing below this block hardcodes a colour, radius or step.
   //
-  // Station owns its radius scale because Style.cornerRadius mirrors Hyprland's
-  // decoration:rounding, which is 0 on most setups and would leave every card,
-  // segment and node perfectly square.
-  readonly property real radiusSm: Style.space(4)
-  readonly property real radiusMd: Style.space(6)
-  readonly property real radiusLg: Style.space(10)
-
   // 4px grid. Only these steps exist; pick the smallest that reads clearly.
   readonly property real space1: Style.space(4)
   readonly property real space2: Style.space(8)
@@ -48,21 +41,8 @@ Ui.Panel {
   readonly property real regionPadH: space6
   readonly property real regionPadV: space5
 
-  // Text ramp. Alphas rather than Qt.darker so the steps stay ordered on light
-  // themes too, where darkening would darken text instead of muting it.
   readonly property color textPrimary: Color.popups.text
-  readonly property color textSecondary: Util.alpha(Color.popups.text, 0.75)
-  readonly property color textDim: Util.alpha(Color.popups.text, 0.55)
-  readonly property color textDisabled: Util.alpha(Color.popups.text, 0.35)
-
-  // Surface ramp: foreground mixed toward the background, one step per state.
-  readonly property color surfaceOne: Util.alpha(Color.popups.text, 0.06)
-  readonly property color surfaceTwo: Util.alpha(Color.popups.text, 0.10)
-  readonly property color surfaceThree: Util.alpha(Color.popups.text, 0.14)
-  readonly property color accentMuted: Util.alpha(Color.accent, 0.16)
-  readonly property color accentHover: Qt.lighter(Color.accent, 1.25)
-  readonly property color hairline: Util.alpha(Color.popups.text, 0.12)
-  readonly property real focusHalo: Style.space(3)
+  readonly property color textDim: Qt.darker(Color.popups.text, 1.4)
 
   readonly property real disabledOpacity: 0.6
   readonly property real tabUnderline: Style.space(2)
@@ -89,102 +69,6 @@ Ui.Panel {
       source: markImage
       colorization: 1.0
       colorizationColor: stationMark.tint
-    }
-  }
-
-  component ToolbarDropdown: Item {
-    id: toolbarDropdown
-    property string value: ""
-    property var options: []
-    signal changed(string value)
-    implicitWidth: choiceLabel.implicitWidth + choiceChevron.implicitWidth + root.space2
-    implicitHeight: root.controlHeight
-
-    function labelFor(option) {
-      return option && typeof option === "object" ? String(option.label) : String(option)
-    }
-    function valueFor(option) {
-      return option && typeof option === "object" ? String(option.value) : String(option)
-    }
-    function currentLabel() {
-      for (var i = 0; i < options.length; i++) if (valueFor(options[i]) === value) return labelFor(options[i])
-      return options.length ? labelFor(options[0]) : ""
-    }
-
-    Text {
-      id: choiceLabel
-      anchors.left: parent.left
-      anchors.right: choiceChevron.left
-      anchors.verticalCenter: parent.verticalCenter
-      text: toolbarDropdown.currentLabel()
-      color: root.textPrimary
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-      elide: Text.ElideRight
-    }
-    Text {
-      id: choiceChevron
-      anchors.right: parent.right
-      anchors.verticalCenter: parent.verticalCenter
-      text: "󰅀"
-      color: root.textDim
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-    }
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: choicePopup.open()
-    }
-    Popup {
-      id: choicePopup
-      y: toolbarDropdown.height + root.space1
-      width: toolbarDropdown.width
-      padding: root.space1
-      background: Ui.BorderSurface {
-        color: root.surfaceOne
-        borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-        radius: root.radiusLg
-      }
-      contentItem: Column {
-        width: choicePopup.availableWidth
-        Repeater {
-          model: toolbarDropdown.options
-          delegate: Item {
-            required property var modelData
-            width: parent.width
-            height: root.controlHeight
-            readonly property bool current: toolbarDropdown.valueFor(modelData) === toolbarDropdown.value
-            Ui.BorderSurface {
-              anchors.fill: parent
-              visible: current
-              radius: root.radiusSm
-              color: Color.menu.selectedBackground
-              borderSpec: Border.surfaceSpec("menu", "selected-border", Color.menu.selectedBorder, Style.normalBorderWidth)
-            }
-            Text {
-              anchors.left: parent.left
-              anchors.right: parent.right
-              anchors.leftMargin: root.space2
-              anchors.rightMargin: root.space2
-              anchors.verticalCenter: parent.verticalCenter
-              text: toolbarDropdown.labelFor(modelData)
-              color: current ? Color.menu.selectedText : root.textPrimary
-              font.family: Style.font.family
-              font.pixelSize: Style.font.body
-              elide: Text.ElideRight
-            }
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                toolbarDropdown.changed(toolbarDropdown.valueFor(modelData))
-                choicePopup.close()
-              }
-            }
-          }
-        }
-      }
     }
   }
 
@@ -404,7 +288,7 @@ Ui.Panel {
         anchors.bottom: parent.bottom
         height: Math.max(1, Style.space(2))
         color: Color.accent
-        radius: height / 2
+        radius: Style.cornerRadius
       }
     }
 
@@ -510,9 +394,9 @@ Ui.Panel {
                     ? -(badge.width + root.space1) / 2 : 0
                   text: tab.modelData
                   // Selection is carried by the accent rule underneath, so the
-                  // label only steps between text-2 and text-1.
+                  // label only steps between the dim and full text tokens.
                   color: tab.conflicted ? Color.urgent
-                    : (root.selectedTab === tab.index ? root.textPrimary : root.textSecondary)
+                    : (root.selectedTab === tab.index ? root.textPrimary : root.textDim)
                   font.family: Style.font.family
                   font.pixelSize: Style.font.body
                 }
@@ -525,7 +409,7 @@ Ui.Panel {
                   width: Math.max(root.space4, badgeText.implicitWidth + root.space2)
                   height: root.space4
                   color: Color.urgent
-                  radius: root.radiusSm
+                  radius: Style.cornerRadius
                   Text {
                     id: badgeText
                     anchors.centerIn: parent
@@ -554,18 +438,25 @@ Ui.Panel {
           }
 
           Row {
+            id: toolbarDropdowns
             anchors.right: parent.right
             anchors.rightMargin: root.regionPadH
             anchors.verticalCenter: parent.verticalCenter
             spacing: root.space2
-            ToolbarDropdown {
-              width: implicitWidth
+            readonly property real available: toolbar.width - root.regionPadH * 2
+              - tabs.implicitWidth - spacing
+            Ui.Dropdown {
+              width: Math.max(Style.space(120), toolbarDropdowns.available / 2)
+              showLabel: false
+              foreground: Color.popups.text
               value: root.modeValue
               options: root.modeOptions
               onChanged: function(value) { root.changeMode(value) }
             }
-            ToolbarDropdown {
-              width: implicitWidth
+            Ui.Dropdown {
+              width: Math.max(Style.space(120), toolbarDropdowns.available / 2)
+              showLabel: false
+              foreground: Color.popups.text
               value: root.service ? root.service.config.direction : "ltr"
               options: [{ value: "ltr", label: "Direction: LTR" }, { value: "rtl", label: "Direction: RTL" }]
               onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
