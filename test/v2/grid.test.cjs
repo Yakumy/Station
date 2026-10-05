@@ -86,6 +86,10 @@ test('legacy conversion is explicit; single numbering never inherits three-slot 
   const from = G.legacy({ A: 1, B: 2 }), to = { outputs: ['A', 'B'] };
   const before = [{ ...windows(to)[0], workspace: { id: 7, name: '7' } }];
   assert.equal(G.plan(from, to, before, 3).windows[0].to, 5);
+  const misplaced = [{ ...windows(to)[0], workspace: { id: 2, name: '2' } }];
+  const repaired = G.plan(from, to, misplaced, 1).windows[0];
+  assert.equal(repaired.output, 'A');
+  assert.equal(repaired.to, 1);
   assert.equal(S.loadState({ version: 1 }).legacyWorkspaceGrid, true);
   assert.equal(S.stateDefaults().legacyWorkspaceGrid, false);
   assert.equal(S.loadState({ version: 2 }).legacyWorkspaceGrid, false);

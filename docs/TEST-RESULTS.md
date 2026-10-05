@@ -4,10 +4,16 @@ Validated on 2026-10-05 with Omarchy 4 and Hyprland 0.56.x.
 
 ## Automated
 
-- Model tests cover all seven non-empty present sets, convergence, station
-  preservation, lane stability and reuse, fourth-display exclusion, role
-  swaps, LTR/RTL navigation, managed-only station existence, logical geometry,
+- Compact-grid tests cover 81 transitions across one/two/three outputs and
+  role orders, consecutive numbering, station preservation, overlapping source
+  and destination IDs, partial-migration recovery, topology changes during
+  recovery, window identity reuse, and the fixed-grid upgrade. Model tests cover
+  display preference stability, fourth-display exclusion, direction, geometry,
   overlap detection, and exact mode selection.
+- Service tests run the actual QML migration functions with a compositor double:
+  no move before journal acknowledgment, no mapping publication before commit
+  acknowledgment, failed saves/moves, shell restart with partial moves, removal
+  grace, and a zero-display interval.
 - Binding tests cover menu, `hyprctl`, and Lua conflict sources, modifier
   normalization, approved replacements, stale Station bind removal, custom
   actions, and unknown-source behavior.
@@ -48,3 +54,17 @@ The fourth-independent-monitor case remains hardware-unavailable and is
 documented as such in the accepted M0 gate. Physical unplug/replug and role
 swap scenarios remain release-candidate manual tests because they move live
 windows or require hardware interaction.
+
+## Compact numbering revision (2026-10-05)
+
+Ten automated test files pass; theme token and QML checks pass. QML probe still
+logs the existing Qt portal registration warning. The local two-display upgrade
+keeps station membership and records its committed mapping in workspace-map.json.
+The live audit exposed old workspaces placed on the wrong monitor; the legacy
+upgrade now preserves their actual physical display instead of trusting the old
+slot-to-monitor assignment.
+
+Physical unplug/replug and real Single/Extend round trips for this new algorithm
+remain to be tested by the user. Three-display coverage is simulated, not a
+claim of a three-monitor hardware test. The requested v1-style directional-key
+sequence is a separate follow-up.
