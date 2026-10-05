@@ -23,13 +23,14 @@ Ui.Panel {
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
-  property string themeName: "THEME"
+  readonly property string pluginVersion: "2.0.0"
 
   component ToolbarDropdown: Item {
     id: toolbarDropdown
     property string value: ""
     property var options: []
     signal changed(string value)
+    implicitWidth: choiceLabel.implicitWidth + choiceChevron.implicitWidth + Style.spacing.xs
     implicitHeight: Style.space(40)
 
     function labelFor(option) {
@@ -245,19 +246,7 @@ Ui.Panel {
     brightnessWrite.running = true
   }
 
-  onOpenedChanged: if (opened) { refreshBrightness(); themeProbe.running = true }
-
-  Process {
-    id: themeProbe
-    command: ["readlink", "-f", Color.currentThemePath]
-    property string captured: ""
-    stdout: StdioCollector { waitForEnd: true; onStreamFinished: themeProbe.captured = text }
-    onRunningChanged: if (running) captured = ""
-    onExited: {
-      var parts = captured.trim().split("/")
-      root.themeName = String(parts[parts.length - 1] || "THEME").replace(/[-_]/g, " ").toUpperCase()
-    }
-  }
+  onOpenedChanged: if (opened) refreshBrightness()
 
   Process {
     id: brightnessRead
@@ -304,6 +293,7 @@ Ui.Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
+    padding: 0
     contentWidth: panel.fittedContentWidth(Style.space(748))
     contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
@@ -347,7 +337,7 @@ Ui.Panel {
               font.bold: true
             }
             Text {
-              text: root.themeName
+              text: "v" + root.pluginVersion
               color: Color.accent
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -431,13 +421,13 @@ Ui.Panel {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.spacing.xs
             ToolbarDropdown {
-              width: Style.space(142)
+              width: implicitWidth
               value: root.modeValue
               options: root.modeOptions
               onChanged: function(value) { root.changeMode(value) }
             }
             ToolbarDropdown {
-              width: Style.space(132)
+              width: implicitWidth
               value: root.service ? root.service.config.direction : "ltr"
               options: [{ value: "ltr", label: "Direction: LTR" }, { value: "rtl", label: "Direction: RTL" }]
               onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }

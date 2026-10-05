@@ -150,3 +150,11 @@ height. Its frame and the vertical column divider use the same subdued section
 rule, while selected cards retain their accent outline. Mode and Direction use
 Station-owned borderless dropdown triggers with the same text styling as the
 top-level tabs. All automated checks continue to pass.
+
+## Header and toolbar compactness (2026-10-05)
+
+Mode and Direction triggers now size to their text and chevron, keeping both
+inside the controls side of the layout divider. The panel has no outer content
+padding, removing the unused top gap while retaining the header's own aligned
+logo inset. The header subtitle now reports `v2.0.0` rather than the active
+theme. Automated Node, Qt pointer, theme, manifest, and QML checks pass.
