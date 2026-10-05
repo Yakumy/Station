@@ -342,9 +342,14 @@ Item {
     var plan = workspaceData.pending
     var statements = Hypr.compactRules(plan.to.outputs)
     var destinations = {}
+    var affected = {}
     plan.windows.forEach(function(row) {
       var client = clients.find(function(c) { return Grid.sameClient(row, c) })
       if (!client || client.pinned) return
+      if (Number(client.workspace.id) !== row.to || client.monitor !== row.output) {
+        if (client.monitor) affected[client.monitor] = true
+        affected[row.output] = true
+      }
       if (Number(client.workspace.id) !== row.to) statements.push(Hypr.moveWindow(row.address, row.to, false))
       destinations[row.to] = row.output
     })
@@ -353,7 +358,7 @@ Item {
     Object.keys(destinations).forEach(function(id) {
       statements.push(Hypr.moveWorkspace(Number(id), destinations[id]))
     })
-    expect = { kinds: ["workspace", "focusedmon"], outputs: plan.to.outputs.slice(), until: Date.now() + 2000 }
+    expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(affected), until: Date.now() + 2000 }
     evalLua(Hypr.batch(statements), function(code, output) {
       if (code !== 0 || (output && output.trim() !== "ok")) { migrationFailed("compositor rejected the move batch"); return }
       refresh(true, function() {

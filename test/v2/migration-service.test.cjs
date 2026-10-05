@@ -52,6 +52,7 @@ test('service saves plan before moving and saves commit before publishing new nu
   assert.equal(evals.length, 0);
   assert.deepEqual(writes[0].pending.windows.map(w => w.to), [1, 3, 5, 7]);
   c.migrationSaved(); // durable journal acknowledgment
+  assert.deepEqual(copy(c.expect.outputs), ['A']); // New empty display B caused no move events.
   assert.deepEqual(c.clients.map(w => w.workspace.id), [1, 3, 5, 7]);
   assert.deepEqual(c.workspaceMap.outputs, ['A']);
   assert.equal(c.state, 'migrating');
