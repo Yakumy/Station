@@ -295,7 +295,10 @@ Item {
         var plan = pending ? Grid.resume(pending, target, clients) : Grid.plan(old, target, clients, currentStation)
         var focused = focusedClient()
         migrationFocus = focused ? Grid.identity(focused) : null
-        workspaceData = { mapping: old, pending: plan }
+        // FileView does not emit saved when setText receives identical text.
+        // A revision makes every journal attempt an acknowledged disk write,
+        // including recovery of an otherwise unchanged plan after restart.
+        workspaceData = { mapping: old, pending: plan, revision: Number(workspaceData.revision || 0) + 1 }
         topologyDirty = false
         migrationPhase = "journal"
         workspaceFile.setText(JSON.stringify(workspaceData, null, 2) + "\n")
@@ -363,7 +366,7 @@ Item {
         })
         if (failed) { migrationFailed("destination verification failed"); return }
         currentStation = plan.station
-        migrationCommit = { mapping: plan.to, pending: null }
+        migrationCommit = { mapping: plan.to, pending: null, revision: workspaceData.revision + 1 }
         migrationPhase = "commit"
         workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
       })

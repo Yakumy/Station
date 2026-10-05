@@ -85,7 +85,9 @@ test('restarted service uses saved per-window destinations after a partial expan
   const restarted = harness({ from: saved.mapping, pending: saved.pending });
   // Workspace 2 already became 3; old workspace 3 still exists alongside it.
   restarted.c.clients[1].workspace = { id: 3, name: '3' };
+  restarted.c.workspaceData.revision = saved.revision;
   restarted.c.reconcile();
+  assert.ok(restarted.writes[0].revision > saved.revision);
   restarted.c.migrationSaved();
   restarted.c.migrationSaved();
   assert.deepEqual(restarted.c.clients.map(w => w.workspace.id), [1, 3, 5, 7]);
