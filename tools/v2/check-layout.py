@@ -73,7 +73,13 @@ Item {
       state = "previewing"
     }
   }
-  Station.DisplayLayout { id: layout; width: 567; service: service }
+  Flickable {
+    id: panelScroll
+    width: 567; height: 180
+    contentWidth: width; contentHeight: 420
+    clip: true
+    Station.DisplayLayout { id: layout; width: panelScroll.width; service: service }
+  }
   TestCase {
     name: "DisplayLayout"; when: windowShown
     function initTestCase() { failOnWarning(/.*/) }
@@ -104,6 +110,10 @@ Item {
     function test_horizontal_right() { move("HDMI-A-2", 1920, 1200) }
     function test_horizontal_left_negative() { move("HDMI-A-2", -1920, 1200) }
     function test_vertical_below() { move("HDMI-A-2", 0, 2280) }
+    function test_vertical_drag_is_not_stolen_by_panel_scroll() {
+      move("HDMI-A-2", 0, 2280)
+      compare(panelScroll.contentY, 0)
+    }
     function test_click_only_selects() {
       var target = card("HDMI-A-2")
       mouseClick(target, target.width / 2, target.height / 2)

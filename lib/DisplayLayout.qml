@@ -71,6 +71,9 @@ Ui.BorderSurface {
         id: pointer
         anchors.fill: parent
         enabled: canvas.service && canvas.service.state === "idle"
+        // The panel is inside a vertical ScrollView. Without this, its
+        // Flickable cancels monitor drags as soon as the gesture turns vertical.
+        preventStealing: true
         property point startPointer
         cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
         onPressed: function(mouse) {

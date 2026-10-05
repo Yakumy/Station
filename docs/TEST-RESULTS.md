@@ -84,11 +84,18 @@ Selected resolution, scale and rotation determine the displayed logical size.
 
 `python3 tools/v2/check-layout.py` runs the production layout component,
 Model.js geometry and extracted Service.qml position setter, with theme paint
-and Preview compositor calls doubled. Nine cases pass (11 QtTest passes
+and Preview compositor calls doubled. Ten cases pass (12 QtTest passes
 including setup/cleanup), without warnings: horizontal right/left (including
 negative coordinates), vertical, click-only selection, repeated drag after Revert, nearby
 edge snapping, selected-mode/scale/rotation geometry, three-display fit, and
 invalid/busy position rejection. The CI workflow includes this check.
+
+After the first live test failed, the harness was corrected to put the layout
+inside the same kind of scrolling `Flickable` used by the panel. That reproduced
+the reset: the parent stole the pointer grab and canceled every drag. The
+monitor-card `MouseArea` now prevents stealing; the additional vertical-scroll
+regression passes and confirms that the panel does not scroll during a monitor
+drag.
 
 All ten Node test files pass; theme checking scans 13 runtime sources with zero
 violations; manifest validation and QML compilation pass. The Wayland QML
