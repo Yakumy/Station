@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import Quickshell.Io
 import qs.Ui as Ui
 import qs.Commons
@@ -24,6 +25,31 @@ Ui.Panel {
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
   readonly property string pluginVersion: "2.0.0"
+
+  component StationMark: Item {
+    id: stationMark
+    property color tint: Color.popups.text
+    implicitWidth: Style.space(22)
+    implicitHeight: Style.space(22)
+
+    Image {
+      id: markImage
+      anchors.fill: parent
+      anchors.margins: Style.spacing.xxs
+      fillMode: Image.PreserveAspectFit
+      source: Qt.resolvedUrl("../assets/station.svg")
+      sourceSize.width: Math.round(width * Screen.devicePixelRatio)
+      sourceSize.height: Math.round(height * Screen.devicePixelRatio)
+      visible: false
+      layer.enabled: true
+    }
+    MultiEffect {
+      anchors.fill: markImage
+      source: markImage
+      colorization: 1.0
+      colorizationColor: stationMark.tint
+    }
+  }
 
   component ToolbarDropdown: Item {
     id: toolbarDropdown
@@ -280,10 +306,27 @@ Ui.Panel {
     id: barButton
     anchors.fill: parent
     bar: root.bar
-    text: "▯▮▯  [S " + root.stationNumber + "]"
+    text: "Station"
     tooltipText: "Station"
     fontSize: Style.font.body
+    labelVisible: false
+    fixedWidth: Style.space(58)
     onPressed: root.toggle()
+    Row {
+      anchors.centerIn: parent
+      spacing: Style.spacing.xs
+      StationMark {
+        width: Style.space(16)
+        height: Style.space(16)
+        tint: barButton.foreground
+      }
+      Text {
+        text: "[S " + root.stationNumber + "]"
+        color: barButton.foreground
+        font.family: barButton.fontFamily
+        font.pixelSize: barButton.fontSize
+      }
+    }
   }
 
   Ui.KeyboardPanel {
@@ -314,13 +357,11 @@ Ui.Panel {
         Item {
           width: parent.width
           height: Style.space(56)
-          Text {
+          StationMark {
             id: logo
-            textFormat: Text.PlainText
-            text: "▯▮▯"
-            color: root.bar ? root.bar.foreground : Color.bar.text
-            font.family: root.bar ? root.bar.fontFamily : Style.font.family
-            font.pixelSize: Style.font.display
+            width: Style.space(28)
+            height: Style.space(28)
+            tint: root.bar ? root.bar.foreground : Color.bar.text
             anchors.left: parent.left
             anchors.leftMargin: Style.spacing.md
             anchors.verticalCenter: parent.verticalCenter
