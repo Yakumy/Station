@@ -353,11 +353,18 @@ Column {
     }
 
     Item {
-      visible: displayTab.service && displayTab.service.state === "previewing"
       width: parent.width
-      height: visible ? Style.space(46) : 0
-      Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+      // Reserve the preview footer from the start so Keep/Revert never
+      // changes the panel height or shifts the canvas.
+      height: Style.space(46)
+      readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
+      Ui.PanelSeparator {
+        visible: parent.previewing
+        width: parent.width
+        foreground: Color.popups.text
+      }
       Text {
+        visible: parent.previewing
         anchors.left: parent.left
         anchors.leftMargin: Style.spacing.md
         anchors.right: revertButton.left
@@ -371,6 +378,7 @@ Column {
       }
       Ui.Button {
         id: keepButton
+        visible: parent.previewing
         anchors.right: parent.right
         anchors.rightMargin: Style.spacing.md
         anchors.verticalCenter: parent.verticalCenter
@@ -382,6 +390,7 @@ Column {
       }
       Ui.Button {
         id: revertButton
+        visible: parent.previewing
         anchors.right: keepButton.left
         anchors.rightMargin: Style.spacing.sm
         anchors.verticalCenter: parent.verticalCenter
