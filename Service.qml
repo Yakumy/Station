@@ -666,7 +666,10 @@ Item {
     previewCountdown.stop()
     pendingDisplayConfig = null
     enqueue(["rm", "-f", stateDir + "/preview.token"], function() {
-      root.enqueue(["hyprctl", "reload"], function() { root.state = "idle"; root.refresh(true, null) })
+      root.enqueue(["hyprctl", "reload"], function(code) {
+        if (code !== 0) root.layoutError = "Could not reload the saved monitor layout."
+        root.restoreAppliedLayout()
+      })
     })
     if (reason) layoutError = reason
     return "started"
@@ -692,12 +695,23 @@ Item {
     }
   }
 
+  function restoreAppliedLayout() {
+    // Our configreloaded event is suppressed while applyingLayout. Explicitly
+    // rebuild the draft from the fresh compositor snapshot and restore binds.
+    appliedGeneration = -1
+    refresh(true, function() {
+      root.state = "idle"
+      root.syncDisplayDraft()
+      root.applyRuntime()
+    })
+  }
+
   function finishKeep(code, errorText) {
     if (code !== 0) {
       layoutError = code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
         : "Could not save the monitor layout."
-      state = "idle"
-      refresh(true, null)
+      pendingDisplayConfig = null
+      restoreAppliedLayout()
       return
     }
     config.enabled = displayDraft.filter(function(display) { return display.enabled }).map(function(display) { return display.name })

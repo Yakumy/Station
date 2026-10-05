@@ -209,6 +209,54 @@ Column {
             anchors.left: parent.left
             anchors.leftMargin: Style.spacing.md
             anchors.verticalCenter: parent.verticalCenter
+            text: "SCALE"
+            foreground: Color.popups.text
+          }
+          Text {
+            anchors.right: parent.right
+            anchors.rightMargin: Style.spacing.md
+            anchors.verticalCenter: parent.verticalCenter
+            text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
+            color: Qt.darker(Color.popups.text, 1.35)
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+          }
+        }
+        Grid {
+          id: scaleGrid
+          width: parent.width - Style.spacing.md * 2
+          anchors.horizontalCenter: parent.horizontalCenter
+          columns: 6
+          spacing: Style.spacing.xs
+          Repeater {
+            model: [1, 1.25, 1.6, 2, 3, 4]
+            delegate: Ui.Button {
+              required property real modelData
+              width: (scaleGrid.width - scaleGrid.spacing * 5) / 6
+              text: modelData + "x"
+              fontSize: Style.font.caption
+              horizontalPadding: 0
+              bordered: true
+              selected: displayTab.selectedDisplay && Number(displayTab.selectedDisplay.scale) === modelData
+              foreground: Color.popups.text
+              onClicked: {
+                if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+                displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", modelData)
+                displayTab.service.previewLayout()
+              }
+            }
+          }
+        }
+        Item { width: 1; height: Style.spacing.sm }
+        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+
+        Item {
+          width: parent.width
+          height: Style.space(30)
+          Ui.PanelSectionHeader {
+            anchors.left: parent.left
+            anchors.leftMargin: Style.spacing.md
+            anchors.verticalCenter: parent.verticalCenter
             text: "RESOLUTION · REFRESH"
             foreground: Color.popups.text
           }
@@ -256,52 +304,6 @@ Column {
               if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
               displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", value)
               displayTab.service.previewLayout()
-            }
-          }
-        }
-        Item { width: 1; height: Style.spacing.sm }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
-
-        Item {
-          width: parent.width
-          height: Style.space(30)
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
-            anchors.verticalCenter: parent.verticalCenter
-            text: "SCALE"
-            foreground: Color.popups.text
-          }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
-            anchors.verticalCenter: parent.verticalCenter
-            text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: Qt.darker(Color.popups.text, 1.35)
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
-          }
-        }
-        Grid {
-          id: scaleGrid
-          width: parent.width - Style.spacing.md * 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          columns: 3
-          spacing: Style.spacing.xs
-          Repeater {
-            model: [1, 1.25, 1.6, 2, 3, 4]
-            delegate: Ui.Button {
-              required property real modelData
-              width: (scaleGrid.width - scaleGrid.spacing * 2) / 3
-              text: modelData + "x"
-              bordered: true
-              selected: displayTab.selectedDisplay && Number(displayTab.selectedDisplay.scale) === modelData
-              foreground: Color.popups.text
-              onClicked: {
-                if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
-                displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", modelData)
-                displayTab.service.previewLayout()
-              }
             }
           }
         }

@@ -116,3 +116,16 @@ All eleven Node test files, the 12-case Qt pointer suite, theme-token scan,
 manifest validation, and component-by-component QML compilation pass. The QML
 checker now compiles every runtime QML component instead of only the two entry
 points.
+
+## Panel sizing and preview restoration (2026-10-05)
+
+Panel requested width increases from 680 to 748 theme units; fitted height is
+multiplied by 1.1, within screen bounds. All six scale choices occupy one row
+above Resolution/Refresh. Added the missing brightness debounce callback.
+
+Manual Revert and timeout service regressions exercise the real QML functions
+with delayed compositor snapshots. They confirm discarded geometry, scale and
+mode reset only after fresh monitor data arrives, and runtime bindings are
+invalidated and reapplied. All 12 Node test files and 12 Qt pointer cases pass;
+the theme scan reports zero violations in 17 sources. Manifest validation and
+QML compilation pass (the existing Qt portal registration warning remains).

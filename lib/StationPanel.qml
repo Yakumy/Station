@@ -141,6 +141,11 @@ Ui.Panel {
     brightnessRead.running = true
   }
 
+  function queueBrightness(value) {
+    brightnessDebounce.pending = Math.round(value)
+    brightnessDebounce.restart()
+  }
+
   function setBrightness(value) {
     if (!brightnessAvailable || !selectedDisplayName) return
     pendingBrightness = Math.max(1, Math.min(100, Math.round(value)))
@@ -211,8 +216,8 @@ Ui.Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(680))
-    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+    contentWidth: panel.fittedContentWidth(Style.space(748))
+    contentHeight: panel.cappedContentHeight(panel.fittedContentHeight(content.implicitHeight) * 1.1)
 
     Ui.PanelKeyCatcher {
       id: keyCatcher

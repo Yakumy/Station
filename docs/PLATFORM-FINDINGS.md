@@ -253,6 +253,20 @@ omarchy menu keybindings --print | head -3
 
 Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` with a real keypress, then `hyprctl reload` and confirm it is gone; (2) a runtime `hl.workspace_rule` on a fresh workspace number; (3) `omarchy-shell <your-id> <method> <arg>` against a throwaway service; (4) enable/disable `omarchy.workspaces` and confirm the `center` fallback; (5) `hl.monitor` with an exact `availableModes` string.
 
+## Preview restoration and shell reload observations (2026-10-05)
+
+- Station suppresses `configreloaded` while applying a display layout. Therefore
+  its own Revert must explicitly refresh the compositor snapshot, rebuild the
+  display draft, and invalidate/reapply runtime bindings. Refreshing monitor data
+  alone leaves the canvas and mode selector showing the discarded preview.
+- A Quickshell SIGSEGV at 18:01:04 followed repeated local-plugin reloads and a
+  restart request. The core stack includes `__dynamic_cast` and QML object
+  finalization/incubation; it does not identify a Station QML callback as the
+  cause. The shell automatically recovered. Omarchy's launch script separately
+  documents restart crashes after reloading partially written trees. Updating
+  the local checkout while the shell is stopped avoids that reload sequence;
+  this is a precaution, not proof of the crash's root cause.
+
 ## 14. Where evidence lives
 
 | Source | Content |
