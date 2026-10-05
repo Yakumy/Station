@@ -217,7 +217,7 @@ Ui.Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(748))
-    contentHeight: panel.cappedContentHeight(panel.fittedContentHeight(content.implicitHeight) * 1.1)
+    contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     Ui.PanelKeyCatcher {
       id: keyCatcher

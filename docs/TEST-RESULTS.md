@@ -129,3 +129,14 @@ mode reset only after fresh monitor data arrives, and runtime bindings are
 invalidated and reapplied. All 12 Node test files and 12 Qt pointer cases pass;
 the theme scan reports zero violations in 17 sources. Manifest validation and
 QML compilation pass (the existing Qt portal registration warning remains).
+
+## Layout canvas polish (2026-10-05)
+
+The Displays columns now use a 65/35 split. The canvas grows to 228 theme
+units high, with smaller cards and reserved arrangement space for up to three
+monitors. Cards use an opaque popup surface and accent selection border;
+background dots use reduced opacity and radius. Removed the panel's extra
+10% height padding so its height follows content again, retaining its wider
+width. Compact role labels fit the narrower settings column. All 12 Node
+test files, 12 Qt pointer cases (including three displays), theme, manifest
+and QML checks pass.

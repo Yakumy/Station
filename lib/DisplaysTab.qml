@@ -23,7 +23,7 @@ Column {
 
       Column {
         id: leftColumn
-        width: parent.width * 0.53
+        width: parent.width * 0.65
         spacing: 0
 
         Item {
@@ -49,7 +49,7 @@ Column {
 
         Station.DisplayLayout {
           width: parent.width - Style.spacing.md * 2
-          height: Style.space(198)
+          height: Style.space(228)
           anchors.horizontalCenter: parent.horizontalCenter
           service: displayTab.service
           selectedDisplayName: displayTab.panelRoot.selectedDisplayName
@@ -345,6 +345,8 @@ Column {
                 && index < displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
               width: (roleGrid.width - roleGrid.spacing * 2) / 3
               text: modelData
+              fontSize: Style.font.caption
+              horizontalPadding: 0
               bordered: true
               selected: displayTab.selectedDisplay
                 && displayTab.service.roleOf(displayTab.selectedDisplay.name) === index

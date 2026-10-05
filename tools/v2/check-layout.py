@@ -50,6 +50,7 @@ import QtQuick
 QtObject {
   function surfaceSpec() { return {} }
   function controlSpec() { return {} }
+  function flat(color, width) { return { color: color, width: width } }
 }
 ''')
     (root / 'tst_layout.qml').write_text('''import QtQuick
