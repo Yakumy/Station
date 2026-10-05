@@ -1,0 +1,248 @@
+# Hyprland on Omarchy 4 with Quickshell: verified behaviour
+
+Purpose: a durable record of how this stack actually behaves, gathered while building Station v2, so a future agent does **not** re-run the same experiments. Read §0 first, then use the sections as a lookup.
+
+## 0. How to use this document
+
+- **Trust level.** Every entry carries a tag:
+  - **[LIVE]** observed on a running system (Codex test sessions, 2026-10-04/05).
+  - **[SRC]** read from installed Omarchy/Quickshell source or from Station v1/v2 code that ran on a real machine.
+  - **[DOC]** stated in the official Hyprland wiki (Hyprland 0.55/0.56 Lua pages).
+  - **[INFER]** reasoned from the above, not tested.
+- **Do not re-run** anything tagged [LIVE] unless the fingerprint in §13 shows the stack changed.
+- **Do test** the items in §12 (never covered).
+- Provenance: round 1 results reached the author as a summary; rounds 2 and M0 and the cold-login and integration results as detailed reports. Raw captures lived under `/tmp/station-desktop-tests-20261004*` and `~/.local/state/omarchy/station-m0-cold/` on the author's machine and may no longer exist. This file is the durable record. Monitor serial numbers are deliberately omitted.
+
+## 1. Environment tested
+
+| Item | Value |
+|---|---|
+| Hyprland | 0.56.2 (`efb50993780079460b0cbed1363e2166a2de1d9f`), Lua configuration |
+| Omarchy | 4 (branch "Quattro"), installed under `/usr/share/omarchy`, `$OMARCHY_PATH` set |
+| Shell | `omarchy-shell` (Quickshell), supervised: it restarts itself after being killed |
+| Tools | `jq-1.8.2` installed; `hyprctl`, `omarchy`, `omarchy-shell`, `omarchy-brightness-display` on PATH |
+| Hardware | Two monitors only: a laptop panel (`eDP-1`) and one external HDMI monitor (`HDMI-A-2`). **Three- and four-monitor behaviour was never observed.** |
+| Theme | Tokyo Night was the active theme (the theme-set test simply re-applied it) |
+
+## 2. Hyprland Lua configuration and `hyprctl eval`
+
+| Fact | Tag |
+|---|---|
+| Since 0.55 hyprlang is deprecated; configuration is Lua. Under a Lua config the legacy `hyprctl keyword` form is rejected; runtime changes go through `hyprctl eval '<lua>'`, which prints `ok` on success. | [DOC][LIVE] |
+| After any Lua config change validate with `hyprctl reload` then `hyprctl configerrors` (empty output = clean). Station's Keep transaction sleeps 1 s between reload and `configerrors`. | [SRC] |
+| One `eval` can contain many statements joined with `; `. Twelve `window.move` dispatches in a single eval, no sleeps, completed in about 10 ms including process and IPC overhead. | [LIVE] |
+| Dispatch syntax that works (used by v1 for a month and by v2): `hl.dispatch(hl.dsp.window.move({ window = "address:0x…", workspace = N, follow = false }))`, `hl.dispatch(hl.dsp.workspace.move({ workspace = N, monitor = "NAME" }))`, `hl.dispatch(hl.dsp.dpms({ action = "off", monitor = "NAME" }))`. | [SRC][LIVE] |
+| Focus constructors accepted and working: `hl.dsp.focus({ workspace = "N" })` and `hl.dsp.focus({ monitor = "NAME" })`. A two-monitor batch focused one workspace per monitor and then restored focus to the original monitor. | [LIVE] |
+| The `hl` table can be enumerated with `pairs(hl)` from an eval (write results to a file with `io.open`). `hl.get_monitors` is present. | [LIVE] |
+| `hl.get_monitors()` returns a Lua table of userdata (`HL.Monitor(<id>:<name>)`). Readable fields: `id`, `name`, `width`, `height`, `scale`, `active_workspace` (userdata `HL.Workspace`); position and size are tables; `enabled` is `nil`. It is **not** the JSON that `hyprctl` returns. | [LIVE] |
+| Omarchy provides an `o` helper available inside `eval`: `o.bind(keys, description, action)` works there (see §3). Omarchy also has `o.window(match, rules)` for window rules (see `$OMARCHY_PATH/default/hypr/windows.lua`). Window-rule syntax changes between Hyprland versions: always read the current wiki before writing rules. | [LIVE][SRC] |
+| Omarchy user config lives in `~/.config/hypr/` (`hyprland.lua`, `bindings.lua`, `monitors.lua`, `input.lua`, `looknfeel.lua`, `autostart.lua`). `omarchy refresh hyprland` resets them to defaults. Never edit `/usr/share/omarchy`. | [SRC] |
+| Hyprland hot-reloads config on save. `hyprctl reload` forces it. **A reload clears all runtime state** (§3, §4, §5). | [LIVE] |
+
+## 3. Keybindings
+
+| Fact | Tag |
+|---|---|
+| `hyprctl eval 'o.bind("SUPER + code:10", "desc", "notify-send x")'` returns `ok`; a **real physical** Super+1 press fired it. | [LIVE] |
+| `hyprctl binds -j` reports Lua binds with `dispatcher: "__lua"`, an opaque `arg` (an id such as `17`), `modmask` (SUPER = 64), and `description`. For `code:` binds `key` is `""` and `keycode` is `0`; for a named key such as `F11` `key` shows `"F11"`. **The JSON cannot tell you which keycode a Lua bind uses.** A `jq` filter on `key == "code:10"` or `"10"` matches nothing. | [LIVE] |
+| `hl.bind("SUPER + code:10", …)` through the raw API produced an entry with empty key and keycode 0; the Omarchy wrapper `o.bind` is what Omarchy itself uses and what works. | [LIVE] |
+| Synthetic keypresses (virtual input) did **not** trigger binds in the test harness. Test bindings with a human keypress. | [LIVE] |
+| `hyprctl reload` removes runtime binds (both `hl.bind` and `o.bind`). `configreloaded` follows; re-apply afterwards. | [LIVE] |
+| **Binding the same combo twice leaves two entries and both commands fire** (A then B). `hl.unbind(combo)` removes **all** entries on that combo. `hl.unbind` followed by `o.bind` leaves exactly one. | [LIVE] |
+| Omarchy 4 binds workspace keys in a loop with keycodes: `SUPER + code:10…19` switch workspace, `SUPER + SHIFT + code:10…19` move window, `SUPER + SHIFT + ALT + code:10…19` move window silently. `CTRL + SUPER + ←/→` is "Move grouped window focus left/right". `SUPER + SHIFT + ALT + ←/→` moves a whole workspace to another monitor. Source: `$OMARCHY_PATH/default/hypr/bindings/tiling.lua`. 55 declarations containing SUPER and CTRL exist in the defaults. | [LIVE][SRC] |
+| **`omarchy menu keybindings --print` is the reliable listing.** It shows defaults, `SUPER + 1…0`, the user's `bindings.lua` entries, **and runtime binds**, with the real display key even when `hyprctl` shows `key:""`. Baseline 227 lines (228 with one extra runtime bind); output identical with `DEBUG=1` and with an empty `XDG_CACHE_HOME`. Format example: `SUPER + 1                           → description`. It uses plain `hyprctl binds` plus a Lua-source-derived cache. Upstream has had an open issue where a scan can die partway so user binds are missed; it did not occur on the test machine. | [LIVE][SRC] |
+| Station v2 installed exactly 36 binds (consistent with the action table: 10 switch + 10 send + 10 silent + 2 navigate + 4 move-across; the per-action breakdown is arithmetic, only the total was reported); after a plain shell restart the count stayed 36 with no duplicates. | [LIVE] |
+| Hyprland main (after 0.56.2) is expected to report Lua binds differently from `__lua`. Re-check `hyprctl binds -j` shape after upgrades. | [INFER] |
+| Physical keypress to completed station switch (compositor bind → timestamp wrapper → `omarchy-shell` IPC → service → finished Hyprland eval), 20 samples: p50 66 ms, p95 68 ms, range 64–69 ms. Shell ping alone, 20 samples: p50 79.75 ms, p95 87.16 ms (ping carries extra overhead). | [LIVE] |
+
+## 4. Workspaces and rules
+
+| Fact | Tag |
+|---|---|
+| A runtime `hl.workspace_rule({ workspace = "N", monitor = "NAME" })` places a **newly created** workspace on that monitor (tested with a fresh number, `500005`). | [LIVE] |
+| The rule **does not move an existing workspace**. Apply rules before the first focus or move into a station. | [LIVE] |
+| Runtime workspace rules vanish on `hyprctl reload`. | [LIVE] |
+| Empty workspaces are destroyed by Hyprland; a spare workspace can be created and destroyed in the same millisecond during an unplug (see §6). | [LIVE] |
+| `hyprctl clients -j` gives each client `address`, `workspace.id`, `monitor` (numeric id), `pinned`. After a monitor is removed, client workspace ids are unchanged and only the monitor id changes (e.g. 1 → 0). | [LIVE] |
+| Station's fixed grid: `workspace = (station − 1) × 3 + lane`, stations 1–10, three lanes. Special and named workspaces and pinned windows are never moved. | [SRC] |
+
+## 5. Monitors
+
+| Fact | Tag |
+|---|---|
+| `hl.monitor({ output, mode, position, scale, transform, mirror, disabled, … })`. `mode` accepts `"WxH@R"`, `"preferred"`, `"highres"`, `"highrr"`, `"maxwidth"`. `output` may be a name or `desc:<description>`; an empty output defines a fallback rule. | [DOC] |
+| Position is a virtual layout in an inverse-Y system; negative values are allowed (`-1920x0` is left, `0x-1080` is above). | [DOC] |
+| `hyprctl monitors all -j` lists enabled and disabled monitors. Fields used: `name`, `description` (e.g. `<make> <model> <serial>`), `make`, `model`, `serial`, `transform`, `disabled`, `mirrorOf` (`"none"` or the numeric id as a string, e.g. `"0"`), `availableModes`, geometry. The laptop panel has an **empty serial**; its identity falls back to model + connector. | [LIVE] |
+| `availableModes` contains duplicates and near-duplicates (e.g. `1920x1080@60.00Hz`, `1920x1200@59.88Hz`). `hl.monitor` **accepted the exact reported spelling** `1920x1080@60.00Hz` with no config error and preserved the refresh. Deduplicate for display only; keep one exact allowlisted string per choice. | [LIVE] |
+| `mirror = "<output>"` works. **Re-enabling a monitor without a mirror field keeps its previous mirror rule**; send `mirror = ""` to clear it. Always send explicit `disabled` and `mirror` fields. | [LIVE] |
+| `disabled = true` and `disabled = false` work at runtime. | [LIVE] |
+| **`hyprctl reload` resets runtime monitor changes** (disabled and mirror return to what the config says). Therefore mode state must be re-applied after every `configreloaded`. | [LIVE] |
+| **Precedence: with two rules for the same output, the last one wins**, both inside one runtime eval and when a marked block is appended at the end of `monitors.lua`. | [LIVE] |
+| Software disable of a monitor: workspaces and windows migrate to the survivor first, **then** `monitorremoved` fires. | [LIVE] |
+| Station v1 used `dpms off` for single mode; v2 uses `disabled = true`. | [SRC] |
+
+## 6. Events (Hyprland socket2 and Quickshell)
+
+| Fact | Tag |
+|---|---|
+| Quickshell exposes socket2 as `Hyprland.rawEvent`; in QML: `Connections { target: Hyprland; function onRawEvent(event) { … event.name … } }`. Verified in the running v2 service. | [LIVE] |
+| Event text forms seen: `monitorremoved>>NAME`, `monitorremovedv2>>ID,NAME,DESCRIPTION`, `monitoraddedv2>>ID,NAME,DESCRIPTION`, `moveworkspace>>WS,MONITOR`, `moveworkspacev2>>ID,WS,MONITOR`, `createworkspace>>N`, `workspace>>N`, `destroyworkspace>>N`, `focusedmon>>MONITOR,WS`, `configreloaded>>`, `closelayer>>omarchy-bar`. | [LIVE] |
+| **Physical unplug, observed order** (60 s clean run; everything within about half a millisecond): `createworkspace>>3`, `workspace>>3`, `moveworkspace>>1,eDP-1`, `destroyworkspace>>3`, `monitorremoved>>HDMI-A-2`, `monitorremovedv2`. About 14 ms later `closelayer>>omarchy-background`, ~90 ms after that `closelayer>>omarchy-bar`. No `configreloaded`, no `monitoradded` during the 60 s. | [LIVE] |
+| The spare workspace `3` is transient (created, focused, destroyed in the same millisecond) and absent from before and after snapshots. Follow-focus logic that reacts to `workspace>>` during a topology change will chase it. | [LIVE] |
+| **Fast reconnect (3.7 s):** `monitoradded` came with Hyprland itself moving the workspace and its windows **back** to the returning monitor (`moveworkspace>>1,HDMI-A-2`). A merge before that point would have been undone. Hence the 5 s default grace delay. | [LIVE] |
+| `hyprctl reload` emits one `configreloaded`. `omarchy theme set <name>` (even re-applying the same theme) emits **two**, about 220 ms apart. Use a trailing debounce of about 300 ms. | [LIVE] |
+| Software disable emits focus and workspace migration then `monitorremoved`; enable emits `monitoradded`; mirror emits workspace events. A Station-generated eval therefore must record an "expected events" window **before** the eval. | [LIVE] |
+| Unrelated physical hotplug happening while a Station-generated eval is in flight was **not** tested (see §12). | — |
+
+## 7. Cold start and boot
+
+| Fact | Tag |
+|---|---|
+| During `monitors.lua` evaluation at **cold compositor start**, `hl.get_monitors` exists but returns an **empty table** (two sessions: external connected; laptop-only). Monitors appear normally afterwards. | [LIVE] |
+| Therefore a guarded block that disables monitors only when `up[name]` is true will emit **no** disable at login. It is fail-safe, but Single/Mirror mode cannot be enforced from the file at boot: the service applies saved mode once monitors are visible, so the first moments may be in Extend. | [LIVE] |
+| On a warm `hyprctl reload`, `hl.get_monitors()` during parse **does** return the connected monitors. | [LIVE] |
+| Hyprland starts the shell via autostart; the shell is supervised and returns after `SIGKILL`. | [LIVE] |
+
+## 8. Omarchy shell and plugin system
+
+### 8.1 Lifecycle
+
+| Fact | Tag |
+|---|---|
+| `omarchy plugin add <git-url> [--enable]` clones and validates. No install hooks, no package manager, no privileges. Plugins are added **disabled** unless `--enable`. Updates are `omarchy plugin update <id>` (fast-forward with a diff); removal is `omarchy plugin remove <id> [--yes]`. Plugins are unsandboxed and run inside the shell process. | [SRC] |
+| Station's working manifest: `schemaVersion 1`, `id`, `name`, `version`, `kinds: ["bar-widget","service"]`, `entryPoints: { "barWidget": "Panel.qml", "service": "Service.qml" }`, `barWidget: { displayName, description, category, allowMultiple, defaultSection: "left" }`. | [SRC] |
+| A plugin with both kinds is loaded twice: the service from `Service.qml`, the bar widget and popout from `Panel.qml`. The popout reads the injected service object. | [LIVE] |
+| `omarchy-shell shell listPlugins` prints a JSON **array**; entries have `id, name, kinds, enabled, active, canDisable, firstParty, clonedFrom`. `active` was `false` for every entry, so use **`enabled`**. | [LIVE] |
+| `omarchy-shell shell ping` succeeds when the shell is up (about 80 ms). | [LIVE] |
+
+### 8.2 IPC
+
+| Fact | Tag |
+|---|---|
+| A service declares `IpcHandler { target: "yakumy.station" … }`. Call it as `omarchy-shell yakumy.station <method> <arg>`. It works with the popout closed, and invalid input is rejected by validation in the method. | [LIVE] |
+| `omarchy-shell shell call <id> <method> <arg>` (`shell.callIfLoaded`) reaches **loaded panels only**, never services. | [SRC][LIVE] |
+| Do not use `keepLoaded` to work around routing: the host also uses it to retain services across plugin hot reloads. | [SRC] |
+| QML function names cannot be reserved words: use `switchStation`, not `switch`. | [INFER] |
+| The service can open or toggle its popout with `shell.summon("<id>", "{}")` / `shell.toggle("<id>", "{}")`. | [LIVE] |
+
+### 8.3 Bar placement and enable/disable
+
+| Fact | Tag |
+|---|---|
+| `omarchy plugin disable omarchy.workspaces` removes the stock widget from the layout; `omarchy plugin enable omarchy.workspaces` restores it. | [LIVE] |
+| **Re-enabling without placement does not return it to its old place**: it landed in `center` index 4 (the widget's manifest has no `defaultSection`, so the registry falls back to `center`). | [LIVE] |
+| Bar indexes are **zero-based** and clamped to list bounds. `moveBarEntry` removes the old entry before resolving the destination. | [LIVE][SRC] |
+| `omarchy bar put` is idempotent: it leaves an already-present widget where it is. **Restore with enable, then `omarchy bar move <id> --section <s> --index <i>`.** | [LIVE] |
+| A stock widget that was already disabled before Station touched it stayed disabled (no lease = never enable). A leased widget restored to the newest recorded position. | [LIVE] |
+
+### 8.4 Plugin destruction and removal
+
+| Fact | Tag |
+|---|---|
+| `Component.onDestruction` fires on plugin **disable, remove, and shell restart alike**. A cleanup started from it must distinguish them. | [LIVE] |
+| Working pattern: start a detached script, wait ~3 s, retry `omarchy-shell shell ping` up to 15 s, read `listPlugins`; if the plugin is `enabled` → do nothing (restart); else restore the stock widget, neutralise `monitors.lua`, clear the lease, `hyprctl reload`. Restart produced `restart-skip`; disable and remove ran cleanup after about 5 s and left default `SUPER+1` and grouped-focus bindings restored and no Station binds. | [LIVE] |
+| A detached watchdog (`sleep 20; [ -e token ] && { rm token; hyprctl reload; }`) **survives `SIGKILL` of the shell**; it removed the token, reloaded at 19.99 s and restored geometry. | [LIVE] |
+| Normal removal leaves an inert backup directory under the plugin tree. | [LIVE] |
+
+### 8.5 Popout panel (UI)
+
+| Fact | Tag |
+|---|---|
+| The on-demand `panel` loader does **not** inject the `anchorItem` and `bar` that `KeyboardPanel` requires, so use the **Display popout structure**: a bar widget whose entry `Panel.qml` is a `qs.Ui` popout. | [SRC] |
+| Display's building blocks: `qs.Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, themed controls. Source: `/usr/share/omarchy/shell/plugins/panels/monitor/` (`Panel.qml`, `Model.js`, manifest id `omarchy.monitor`). | [SRC] |
+| The popout rendered anchored at `(5,27)` under the widget on `eDP-1`, took keyboard focus, closed on Esc and on outside click. **A requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels** under the active theme and scale: design to the available size. | [LIVE] |
+| Offscreen Qt backend cannot load `KeyboardPanel`; component checks need the Wayland session. | [LIVE] |
+
+### 8.6 Theme tokens (`import qs.Commons`, `import qs.Ui`)
+
+| Group | Tokens that exist |
+|---|---|
+| Popups | `Color.popups.background`, `.text`, `.border` |
+| Menus | `Color.menu.background`, `.text`, `.border`, `.scrim`, `.selectedBackground`, `.selectedText`, `.selectedBorder` |
+| Global | `Color.foreground`, `Color.accent`, `Color.urgent` |
+| Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). The injected widget-host `bar.foreground` is a separate API; fall back to `Color.bar.text`. |
+| Geometry/type | `Style.cornerRadius`, `Style.space(px)`, `Style.spacing.*`, `Style.font.*`, `Border.surfaceSpec(...)`, `BorderSurface` |
+
+Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; CI for Station fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
+
+### 8.7 Brightness
+
+| Fact | Tag |
+|---|---|
+| Public CLI: `omarchy brightness display [--no-osd] [--monitor name] [+N%\|N%-\|N%\|off\|on]`. Write example: `omarchy brightness display --no-osd --monitor <name> 40%`. | [LIVE] |
+| Read: `omarchy-brightness-display --monitor <name>` prints the percent on line 1; empty or `unavailable` means unavailable. Display's panel parses it with `parseInt`, clamps 0–100. | [SRC] |
+| The binary routes internal panels to `brightnessctl`, ordinary external monitors to DDC/CI, supported Apple displays to an Apple helper. | [SRC] |
+| **Never call `omarchy-brightness-display --help`:** the direct binary has no help handler and treats it as an adjustment argument. Use `omarchy brightness display --help`. | [LIVE] |
+| Display's `Model.js` does not read brightness; it only clamps, labels and computes scale and parses display JSON. Reading goes Panel.qml → `omarchy-monitor-state` (every 5 s while open) → `omarchy-brightness-display --monitor <focused>`. | [SRC] |
+
+## 9. Station-specific design results that follow from the above
+
+1. **Runtime effects are re-applied after every `configreloaded`** (binds, workspace rules, monitor runtime state), debounced ~300 ms.
+2. **Unbind only what Station owns or was told to replace** (known Omarchy defaults, user-approved combos, combos it applied earlier); a blind unbind-before-bind can delete a user's own bind.
+3. **File = geometry; runtime = mode.** `monitors.lua` carries a marked block with geometry and a fail-safe guarded disable; because the cold list is empty, the service applies mode after discovery.
+4. **Preview/Keep transaction:** apply at runtime with a detached watchdog; on Keep: backup, atomic write, `hyprctl reload`, check `configerrors`, restore the backup on errors.
+5. **Removal cleanup is a detached fixed-template script** with positional arguments only (never interpolated data).
+6. **Grace delay 5 s** before merging windows after a removal; adds move nothing.
+7. **Follow-focus must ignore workspace events during and shortly after topology changes.**
+
+## 10. Security-relevant facts
+
+- Monitor `description`, `make`, `model`, `serial` come from EDID and are untrusted: matching and display only, never interpolated into Lua, argv or file text without a proper serialiser. Connector names (`^[A-Za-z0-9_.:-]{1,64}$`) are kernel-generated and may be used once validated.
+- Omarchy has itself shipped a fix for USB device names being executed as Hyprland Lua.
+- `execDetached` and `Process` use argv arrays; shell templates take positional arguments only.
+- The cleanup and Keep scripts refuse symlinked targets, write temp files then `mv`, and keep timestamped backups (last five).
+
+## 11. Known traps (consolidated)
+
+1. `hyprctl binds -j` cannot identify `code:` binds. Use `omarchy menu keybindings --print`.
+2. Binding the same combo twice fires both. `hl.unbind` removes every entry on the combo, including the user's.
+3. A reload erases runtime binds, workspace rules, and runtime monitor state.
+4. Re-enabling `omarchy.workspaces` lands in `center` index 4; `bar put` will not fix it; use `bar move`.
+5. `shell call` reaches panels only; use the service-owned `IpcHandler` target.
+6. `Component.onDestruction` also fires on shell restart.
+7. Cold-start `hl.get_monitors()` is empty during config evaluation.
+8. `mirror` survives re-enable unless cleared with `mirror = ""`.
+9. A spare workspace appears and disappears during an unplug; do not follow it.
+10. On a fast reconnect Hyprland restores the workspace to the returning monitor by itself.
+11. Synthetic keypresses do not exercise binds; use a real key press.
+12. Popout content renders smaller than requested under theme scaling.
+13. `omarchy-brightness-display --help` is not help.
+14. `availableModes` has near-duplicates; the exact string matters.
+
+## 12. Never tested (test before relying on)
+
+- Three or four monitors (hardware was unavailable).
+- Physical hotplug **during** a Station-generated eval, and two monitors added within a second (dock). See the review note in the project chat: the service's expected-event check must match output names.
+- Dock behaviour with changing connector names across ports.
+- Laptop lid close/open with an external monitor attached (clamshell), suspend/resume, and DPMS off/on cycles: these may emit monitor events and were not exercised.
+- Fractional scaling and rotated monitors with the logical-coordinate canvas.
+- HDR, VRR and colour management (out of scope).
+- Behaviour on Hyprland main after 0.56.2 (bind reporting is expected to change).
+- Role-swap scenarios and physical unplug/replug flows with many live windows (release-candidate manual tests).
+
+## 13. Fingerprint and fast re-verification
+
+If these all match, trust §2–§8 and skip the old tests. If any differs, re-verify only the sections it touches.
+
+```sh
+hyprctl version | head -3                 # expect 0.56.x, commit efb5099…
+omarchy version                           # expect Omarchy 4
+jq --version                              # expect jq-1.8.x
+hyprctl eval 'return type(hl.get_monitors)' ; echo
+omarchy-shell shell listPlugins | jq -r '.[0] | keys | join(",")'
+omarchy menu keybindings --print | head -3
+```
+
+Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` with a real keypress, then `hyprctl reload` and confirm it is gone; (2) a runtime `hl.workspace_rule` on a fresh workspace number; (3) `omarchy-shell <your-id> <method> <arg>` against a throwaway service; (4) enable/disable `omarchy.workspaces` and confirm the `center` fallback; (5) `hl.monitor` with an exact `availableModes` string.
+
+## 14. Where evidence lives
+
+| Source | Content |
+|---|---|
+| `docs/v2/M0.md` | 13-item gate with observations |
+| `docs/v2/M0-evidence.json` | source hashes, 20 latency samples, monitor snapshot |
+| `docs/v2/COLD-LOGIN-CHECK.md` | cold-start procedure and result |
+| `docs/TEST-RESULTS.md` | automated and live integration results |
+| `docs/ARCHITECTURE.md` | how the service is structured |
+| `tools/v2/probe-platform.mjs`, `live-m0.py`, `cold-login.py` | read-only probes and the live runner |
+| `archive/dev-before-v2-20261004` | abandoned v1-era history; read-only reference, never merge |
