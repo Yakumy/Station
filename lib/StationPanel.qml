@@ -361,12 +361,19 @@ Ui.Panel {
   // Popout coordinator identity stays off the bar slot root so the host's
   // open-panel dot does not center across logo + [S n]. The underline under
   // the logo is drawn by the logo button itself.
+  //
+  // KeyboardPanel.close() forwards to owner.close(), and `owner` is this
+  // object, so these must call straight through to `root`. Do NOT introduce a
+  // property or local named `panel` here: `id: panel` below belongs to the
+  // KeyboardPanel, and that name wins, so `panel.close()` would call
+  // KeyboardPanel.close() again and recurse until the stack blows. The
+  // recursion threw a RangeError that left outside-click dismissal dead --
+  // clicking the icon still worked because root.toggle() bypasses this object.
   QtObject {
     id: popoutOwner
-    property var panel: root
-    readonly property bool popoutSwitchClosing: panel ? panel.popoutSwitchClosing : false
-    function close() { if (panel) panel.close() }
-    function closeForPopoutSwitch() { if (panel) panel.closeForPopoutSwitch() }
+    readonly property bool popoutSwitchClosing: root.popoutSwitchClosing
+    function close() { root.close() }
+    function closeForPopoutSwitch() { root.closeForPopoutSwitch() }
   }
 
   Row {
