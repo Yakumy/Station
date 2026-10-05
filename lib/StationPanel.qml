@@ -65,7 +65,7 @@ Ui.Panel {
   readonly property real focusHalo: Style.space(3)
 
   readonly property real disabledOpacity: 0.6
-  readonly property real tabUnderline: space1
+  readonly property real tabUnderline: Style.space(2)
   readonly property real controlHeight: Style.spacing.controlHeight
 
   component StationMark: Item {
@@ -481,6 +481,7 @@ Ui.Panel {
           Row {
             id: tabs
             anchors.left: parent.left
+            anchors.leftMargin: root.regionPadH
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
@@ -491,7 +492,9 @@ Ui.Panel {
                 required property string modelData
                 readonly property bool conflicted: index === 1 && root.conflictCount > 0
                 height: tabs.height
-                width: tabLabel.implicitWidth + root.regionPadH
+                // 28px between tabs; the row's left margin carries the 24px
+                // region inset so the first tab still aligns with the logo.
+                width: tabLabel.implicitWidth + root.space4 + root.space3
                   + (conflicted ? badge.width + root.space1 : 0)
                 Text {
                   id: tabLabel
