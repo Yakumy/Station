@@ -419,7 +419,7 @@ Ui.Panel {
             anchors.right: parent.right
             anchors.rightMargin: Style.spacing.sm
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.spacing.xs
+            spacing: Style.spacing.md
             ToolbarDropdown {
               width: implicitWidth
               value: root.modeValue
