@@ -106,4 +106,6 @@ python3 tools/v2/check-qml.py .
 ```
 
 The implementation contract and hardware evidence are in
-[`docs/v2/SPEC.md`](docs/v2/SPEC.md) and [`docs/v2/M0.md`](docs/v2/M0.md).
+[`docs/v2/SPEC.md`](docs/v2/SPEC.md) and [`docs/v2/M0.md`](docs/v2/M0.md). Visual
+tokens, spacing, typography, and component rules are in
+[`docs/v2/DESIGN-SYSTEM.md`](docs/v2/DESIGN-SYSTEM.md).

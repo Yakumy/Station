@@ -26,6 +26,48 @@ Ui.Panel {
   property string editingKey: ""
   readonly property string pluginVersion: "2.0.0"
 
+  // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
+  // these; nothing below this block hardcodes a colour, radius or step.
+  //
+  // Station owns its radius scale because Style.cornerRadius mirrors Hyprland's
+  // decoration:rounding, which is 0 on most setups and would leave every card,
+  // segment and node perfectly square.
+  readonly property real radiusSm: Style.space(4)
+  readonly property real radiusMd: Style.space(6)
+  readonly property real radiusLg: Style.space(10)
+
+  // 4px grid. Only these steps exist; pick the smallest that reads clearly.
+  readonly property real space1: Style.space(4)
+  readonly property real space2: Style.space(8)
+  readonly property real space3: Style.space(12)
+  readonly property real space4: Style.space(16)
+  readonly property real space5: Style.space(20)
+  readonly property real space6: Style.space(24)
+
+  // Regions share one outer rhythm: 24px horizontal, 20px vertical.
+  readonly property real regionPadH: space6
+  readonly property real regionPadV: space5
+
+  // Text ramp. Alphas rather than Qt.darker so the steps stay ordered on light
+  // themes too, where darkening would darken text instead of muting it.
+  readonly property color textPrimary: Color.popups.text
+  readonly property color textSecondary: Util.alpha(Color.popups.text, 0.75)
+  readonly property color textDim: Util.alpha(Color.popups.text, 0.55)
+  readonly property color textDisabled: Util.alpha(Color.popups.text, 0.35)
+
+  // Surface ramp: foreground mixed toward the background, one step per state.
+  readonly property color surfaceOne: Util.alpha(Color.popups.text, 0.06)
+  readonly property color surfaceTwo: Util.alpha(Color.popups.text, 0.10)
+  readonly property color surfaceThree: Util.alpha(Color.popups.text, 0.14)
+  readonly property color accentMuted: Util.alpha(Color.accent, 0.16)
+  readonly property color accentHover: Qt.lighter(Color.accent, 1.25)
+  readonly property color hairline: Util.alpha(Color.popups.text, 0.12)
+  readonly property real focusHalo: Style.space(3)
+
+  readonly property real disabledOpacity: 0.6
+  readonly property real tabUnderline: space1
+  readonly property real controlHeight: Style.spacing.controlHeight
+
   component StationMark: Item {
     id: stationMark
     property color tint: Color.popups.text
@@ -55,8 +97,8 @@ Ui.Panel {
     property string value: ""
     property var options: []
     signal changed(string value)
-    implicitWidth: choiceLabel.implicitWidth + choiceChevron.implicitWidth + Style.spacing.xs
-    implicitHeight: Style.space(40)
+    implicitWidth: choiceLabel.implicitWidth + choiceChevron.implicitWidth + root.space2
+    implicitHeight: root.controlHeight
 
     function labelFor(option) {
       return option && typeof option === "object" ? String(option.label) : String(option)
@@ -75,9 +117,9 @@ Ui.Panel {
       anchors.right: choiceChevron.left
       anchors.verticalCenter: parent.verticalCenter
       text: toolbarDropdown.currentLabel()
-      color: Color.popups.text
+      color: root.textPrimary
       font.family: Style.font.family
-      font.pixelSize: Style.font.bodySmall
+      font.pixelSize: Style.font.body
       elide: Text.ElideRight
     }
     Text {
@@ -85,9 +127,9 @@ Ui.Panel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: "󰅀"
-      color: Qt.darker(Color.popups.text, 1.35)
+      color: root.textDim
       font.family: Style.font.family
-      font.pixelSize: Style.font.bodySmall
+      font.pixelSize: Style.font.body
     }
     MouseArea {
       anchors.fill: parent
@@ -96,13 +138,13 @@ Ui.Panel {
     }
     Popup {
       id: choicePopup
-      y: toolbarDropdown.height
+      y: toolbarDropdown.height + root.space1
       width: toolbarDropdown.width
-      padding: Style.spacing.xs
+      padding: root.space1
       background: Ui.BorderSurface {
-        color: Color.popups.background
+        color: root.surfaceOne
         borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-        radius: Style.cornerRadius
+        radius: root.radiusLg
       }
       contentItem: Column {
         width: choicePopup.availableWidth
@@ -111,17 +153,25 @@ Ui.Panel {
           delegate: Item {
             required property var modelData
             width: parent.width
-            height: Style.spacing.controlHeight
+            height: root.controlHeight
+            readonly property bool current: toolbarDropdown.valueFor(modelData) === toolbarDropdown.value
+            Ui.BorderSurface {
+              anchors.fill: parent
+              visible: current
+              radius: root.radiusSm
+              color: Color.menu.selectedBackground
+              borderSpec: Border.surfaceSpec("menu", "selected-border", Color.menu.selectedBorder, Style.normalBorderWidth)
+            }
             Text {
               anchors.left: parent.left
               anchors.right: parent.right
-              anchors.leftMargin: Style.spacing.sm
-              anchors.rightMargin: Style.spacing.sm
+              anchors.leftMargin: root.space2
+              anchors.rightMargin: root.space2
               anchors.verticalCenter: parent.verticalCenter
               text: toolbarDropdown.labelFor(modelData)
-              color: Color.popups.text
+              color: current ? Color.menu.selectedText : root.textPrimary
               font.family: Style.font.family
-              font.pixelSize: Style.font.bodySmall
+              font.pixelSize: Style.font.body
               elide: Text.ElideRight
             }
             MouseArea {
@@ -383,8 +433,8 @@ Ui.Panel {
 
       Column {
         id: content
-        x: Style.spacing.sm
-        width: parent.width - Style.spacing.sm * 2
+        x: 0
+        width: parent.width
         spacing: 0
 
         Item {
@@ -396,28 +446,28 @@ Ui.Panel {
             height: Style.space(28)
             tint: root.bar ? root.bar.foreground : Color.bar.text
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: root.regionPadH
             anchors.verticalCenter: parent.verticalCenter
           }
           Column {
             anchors.left: logo.right
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: root.space3
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.spacing.xs
+            spacing: root.space1
             Text {
               text: "Station"
-              color: Color.popups.text
+              color: root.textPrimary
               font.family: Style.font.family
               font.pixelSize: Style.font.title
-              font.bold: true
+              font.weight: Font.DemiBold
             }
             Text {
               text: "v" + root.pluginVersion
-              color: Color.accent
+              color: root.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
-              font.bold: true
-              font.letterSpacing: Style.space(1)
+              font.weight: Font.Medium
+              font.letterSpacing: root.space1
             }
           }
         }
@@ -427,7 +477,7 @@ Ui.Panel {
         Item {
           id: toolbar
           width: parent.width
-          height: Style.space(40)
+          height: root.controlHeight + root.space1
           Row {
             id: tabs
             anchors.left: parent.left
@@ -439,30 +489,33 @@ Ui.Panel {
                 id: tab
                 required property int index
                 required property string modelData
+                readonly property bool conflicted: index === 1 && root.conflictCount > 0
                 height: tabs.height
-                width: tabLabel.implicitWidth + Style.spacing.lg * 2
-                  + (index === 1 && root.conflictCount ? badge.width + Style.spacing.xs : 0)
+                width: tabLabel.implicitWidth + root.regionPadH
+                  + (conflicted ? badge.width + root.space1 : 0)
                 Text {
                   id: tabLabel
                   anchors.centerIn: parent
-                  anchors.horizontalCenterOffset: tab.index === 1 && root.conflictCount
-                    ? -(badge.width + Style.spacing.xs) / 2 : 0
+                  anchors.horizontalCenterOffset: tab.conflicted
+                    ? -(badge.width + root.space1) / 2 : 0
                   text: tab.modelData
-                  color: tab.index === 1 && root.conflictCount ? Color.urgent
-                    : (root.selectedTab === tab.index ? Color.accent : Qt.darker(Color.popups.text, 1.35))
+                  // Selection is carried by the accent rule underneath, so the
+                  // label only steps between text-2 and text-1.
+                  color: tab.conflicted ? Color.urgent
+                    : (root.selectedTab === tab.index ? root.textPrimary : root.textSecondary)
                   font.family: Style.font.family
-                  font.pixelSize: Style.font.bodySmall
+                  font.pixelSize: Style.font.body
                 }
                 Rectangle {
                   id: badge
-                  visible: tab.index === 1 && root.conflictCount > 0
+                  visible: tab.conflicted
                   anchors.left: tabLabel.right
-                  anchors.leftMargin: Style.spacing.xs
+                  anchors.leftMargin: root.space1
                   anchors.verticalCenter: tabLabel.verticalCenter
-                  width: Math.max(Style.space(16), badgeText.implicitWidth + Style.spacing.xs * 2)
-                  height: Style.space(16)
+                  width: Math.max(root.space4, badgeText.implicitWidth + root.space2)
+                  height: root.space4
                   color: Color.urgent
-                  radius: Style.cornerRadius
+                  radius: root.radiusSm
                   Text {
                     id: badgeText
                     anchors.centerIn: parent
@@ -470,15 +523,15 @@ Ui.Panel {
                     color: Color.popups.background
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
-                    font.bold: true
+                    font.weight: Font.DemiBold
                   }
                 }
                 Rectangle {
                   anchors.left: parent.left
                   anchors.right: parent.right
                   anchors.bottom: parent.bottom
-                  height: Math.max(1, Style.normalBorderWidth)
-                  color: tab.index === 1 && root.conflictCount ? Color.urgent : Color.accent
+                  height: root.tabUnderline
+                  color: tab.conflicted ? Color.urgent : Color.accent
                   visible: root.selectedTab === tab.index
                 }
                 MouseArea {
@@ -492,9 +545,9 @@ Ui.Panel {
 
           Row {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.sm
+            anchors.rightMargin: root.regionPadH
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.spacing.md
+            spacing: root.space2
             ToolbarDropdown {
               width: implicitWidth
               value: root.modeValue

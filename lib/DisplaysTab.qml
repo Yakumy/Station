@@ -9,6 +9,11 @@ Column {
   required property var panelRoot
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
+  // The canvas is a region and takes the shared 24px gutter. The inspector is
+  // a dense column inside a ~570px popout, so it keeps the smallest step that
+  // reads clearly instead of the full region padding.
+  readonly property real pad: panelRoot.regionPadH
+  readonly property real gutter: panelRoot.space2
   spacing: 0
 
   Column {
@@ -29,30 +34,31 @@ Column {
         Item {
           id: layoutHeader
           width: parent.width
-          height: Style.space(30)
+          height: panelRoot.space5
           Ui.PanelSectionHeader {
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: displayTab.pad
             anchors.verticalCenter: parent.verticalCenter
             text: "LAYOUT"
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
           }
           Text {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
+            anchors.rightMargin: displayTab.pad
             anchors.verticalCenter: parent.verticalCenter
             text: "LOGICAL COORDINATES · DRAG TO ARRANGE"
-            color: Qt.darker(Color.popups.text, 1.45)
+            color: displayTab.panelRoot.textDim
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
 
         Station.DisplayLayout {
-          width: parent.width - Style.spacing.md * 2
+          width: parent.width - displayTab.pad * 2
           height: Math.max(Style.space(228), rightColumn.implicitHeight - layoutHeader.height)
           anchors.horizontalCenter: parent.horizontalCenter
           service: displayTab.service
+          panelRoot: displayTab.panelRoot
           selectedDisplayName: displayTab.panelRoot.selectedDisplayName
           onDisplaySelected: function(name) { displayTab.panelRoot.selectDisplay(name) }
         }
@@ -62,7 +68,7 @@ Column {
       Rectangle {
         width: Math.max(1, Style.normalBorderWidth)
         height: displayColumns.height
-        color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.12)
+        color: displayTab.panelRoot.hairline
       }
 
       Column {
@@ -72,12 +78,12 @@ Column {
 
         Item {
           width: parent.width
-          height: Style.space(52)
+          height: panelRoot.space6 + panelRoot.space2
           Column {
             anchors.left: parent.left
             anchors.right: selectedEnabled.left
-            anchors.leftMargin: Style.spacing.md
-            anchors.rightMargin: Style.spacing.sm
+            anchors.leftMargin: displayTab.gutter
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.spacing.xxs
             Text {
@@ -85,15 +91,15 @@ Column {
               text: displayTab.selectedDisplay
                 ? displayTab.selectedDisplay.name + " · " + displayTab.panelRoot.roleName(displayTab.selectedDisplay) : "No display selected"
               elide: Text.ElideRight
-              color: Color.popups.text
+              color: displayTab.panelRoot.textPrimary
               font.family: Style.font.family
-              font.pixelSize: Style.font.bodySmall
+              font.pixelSize: Style.font.body
             }
             Text {
               width: parent.width
               text: displayTab.selectedDisplay ? displayTab.selectedDisplay.description : ""
               elide: Text.ElideRight
-              color: Qt.darker(Color.popups.text, 1.35)
+              color: displayTab.panelRoot.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -101,11 +107,13 @@ Column {
           Ui.Button {
             id: selectedEnabled
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.sm
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
-            width: Style.space(28)
+            width: displayTab.panelRoot.space6
+            height: displayTab.panelRoot.controlHeight
+            radius: displayTab.panelRoot.radiusSm
             text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled ? "✓" : ""
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
             onClicked: {
               if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
               var enabled = displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
@@ -115,30 +123,33 @@ Column {
             }
           }
         }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
 
         Item {
           width: parent.width
-          height: Style.space(30)
+          height: panelRoot.space5
           Ui.PanelSectionHeader {
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: "BRIGHTNESS"
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
           }
+          // Body-emphasis value: brighter and heavier than the eyebrow above
+          // it. The monospace family keeps the digits aligned as they change.
           Text {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.panelRoot.brightnessAvailable ? displayTab.panelRoot.brightness + "%" : "—"
-            color: Qt.darker(Color.popups.text, 1.35)
+            color: displayTab.panelRoot.textPrimary
             font.family: Style.font.family
-            font.pixelSize: Style.font.caption
+            font.pixelSize: Style.font.body
+            font.weight: Font.DemiBold
           }
         }
         Ui.PanelSlider {
-          width: parent.width - Style.spacing.md * 2
+          width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
           bar: displayTab.panelRoot.bar
           minimum: 1
@@ -147,59 +158,68 @@ Column {
           value: displayTab.panelRoot.brightness
           enabled: displayTab.panelRoot.brightnessAvailable
             && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-          opacity: enabled ? 1 : 0.35
+          opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
           onMoved: function(value) { displayTab.panelRoot.brightness = Math.round(value) }
           onReleased: function(value) { displayTab.panelRoot.queueBrightness(value) }
         }
         Text {
           visible: !displayTab.panelRoot.brightnessAvailable
-          width: parent.width - Style.spacing.md * 2
-          x: Style.spacing.md
+          width: parent.width - displayTab.gutter * 2
+          x: displayTab.gutter
           text: "Not available for this display"
-          color: Qt.darker(Color.popups.text, 1.45)
+          color: displayTab.panelRoot.textDisabled
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
-        Item { width: 1; height: Style.spacing.sm }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+        Item { width: 1; height: displayTab.gutter }
+        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
 
         Item {
           width: parent.width
-          height: Style.space(30)
+          height: panelRoot.space5
           Ui.PanelSectionHeader {
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: "SCALE"
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
           }
           Text {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: Qt.darker(Color.popups.text, 1.35)
+            color: displayTab.panelRoot.textSecondary
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
         Grid {
           id: scaleGrid
-          width: parent.width - Style.spacing.md * 2
+          width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
           columns: 6
-          spacing: Style.spacing.xs
+          spacing: displayTab.gutter
           Repeater {
             model: [1, 1.25, 1.6, 2, 3, 4]
             delegate: Ui.Button {
               required property real modelData
+              readonly property bool activeScale: displayTab.selectedDisplay
+                && Number(displayTab.selectedDisplay.scale) === modelData
               width: (scaleGrid.width - scaleGrid.spacing * 5) / 6
+              height: displayTab.panelRoot.controlHeight
+              radius: displayTab.panelRoot.radiusSm
               text: modelData + "x"
-              fontSize: Style.font.caption
+              fontSize: Style.font.body
               horizontalPadding: 0
+              verticalPadding: 0
               bordered: true
-              selected: displayTab.selectedDisplay && Number(displayTab.selectedDisplay.scale) === modelData
-              foreground: Color.popups.text
+              // Scale is a neutral filter, so the chosen segment takes a
+              // raised surface instead of an accent fill, which is reserved
+              // for the Role commitment below.
+              accent: Color.accent
+              background: activeScale ? displayTab.panelRoot.surfaceThree : "transparent"
+              foreground: displayTab.panelRoot.textPrimary
               onClicked: {
                 if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
                 displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", modelData)
@@ -208,33 +228,33 @@ Column {
             }
           }
         }
-        Item { width: 1; height: Style.spacing.sm }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+        Item { width: 1; height: displayTab.gutter }
+        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
 
         Item {
           width: parent.width
-          height: Style.space(30)
+          height: panelRoot.space5
           Ui.PanelSectionHeader {
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: "RESOLUTION · REFRESH"
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
           }
           Text {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: Qt.darker(Color.popups.text, 1.35)
+            color: displayTab.panelRoot.textSecondary
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
         Row {
-          width: parent.width - Style.spacing.md * 2
+          width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
-          spacing: Style.spacing.sm
+          spacing: displayTab.gutter
           Ui.Dropdown {
             width: (parent.width - parent.spacing) / 2
             showLabel: false
@@ -243,7 +263,7 @@ Column {
                 + Model.parseMode(displayTab.selectedDisplay.mode).height : ""
             options: displayTab.selectedDisplay
               ? Model.resolutionChoices(displayTab.selectedDisplay.availableModes) : []
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
             onChanged: function(value) {
               if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
               var exact = Model.modeForResolution(displayTab.selectedDisplay.availableModes,
@@ -260,7 +280,7 @@ Column {
               ? Model.refreshChoices(displayTab.selectedDisplay.availableModes,
                 Model.parseMode(displayTab.selectedDisplay.mode).width + "x"
                   + Model.parseMode(displayTab.selectedDisplay.mode).height) : []
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
             onChanged: function(value) {
               if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
               displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", value)
@@ -268,35 +288,35 @@ Column {
             }
           }
         }
-        Item { width: 1; height: Style.spacing.sm }
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+        Item { width: 1; height: displayTab.gutter }
+        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
 
         Item {
           width: parent.width
-          height: Style.space(30)
+          height: panelRoot.space5
           Ui.PanelSectionHeader {
             anchors.left: parent.left
-            anchors.leftMargin: Style.spacing.md
+            anchors.leftMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: "ROLE"
-            foreground: Color.popups.text
+            foreground: displayTab.panelRoot.textPrimary
           }
           Text {
             anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.md
+            anchors.rightMargin: displayTab.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: Qt.darker(Color.popups.text, 1.35)
+            color: displayTab.panelRoot.textSecondary
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
           }
         }
         Grid {
           id: roleGrid
-          width: parent.width - Style.spacing.md * 2
+          width: parent.width - displayTab.gutter * 2
           anchors.horizontalCenter: parent.horizontalCenter
           columns: 3
-          spacing: Style.spacing.xs
+          spacing: displayTab.gutter
           Repeater {
             model: ["Primary", "Secondary", "Third"]
             delegate: Ui.Button {
@@ -304,30 +324,37 @@ Column {
               required property string modelData
               visible: displayTab.service
                 && index < displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
+              readonly property bool activeRole: displayTab.selectedDisplay
+                && displayTab.service && displayTab.service.roleOf(displayTab.selectedDisplay.name) === index
               width: (roleGrid.width - roleGrid.spacing * 2) / 3
+              height: displayTab.panelRoot.controlHeight
+              radius: displayTab.panelRoot.radiusSm
               text: modelData
-              fontSize: Style.font.caption
+              fontSize: Style.font.body
               horizontalPadding: 0
+              verticalPadding: 0
               bordered: true
-              selected: displayTab.selectedDisplay
-                && displayTab.service.roleOf(displayTab.selectedDisplay.name) === index
-              foreground: Color.popups.text
+              // Role is a commitment rather than a filter, so the active
+              // segment is a solid accent block with background-coloured text.
+              accent: Color.accent
+              background: activeRole ? Color.accent : "transparent"
+              foreground: activeRole ? Color.popups.background : displayTab.panelRoot.textPrimary
               onClicked: if (displayTab.service && displayTab.selectedDisplay && displayTab.service.state === "idle")
                 displayTab.service.swapRole(displayTab.selectedDisplay.name, index)
             }
           }
         }
         Text {
-          width: parent.width - Style.spacing.md * 2
-          x: Style.spacing.md
-          topPadding: Style.spacing.sm
+          width: parent.width - displayTab.gutter * 2
+          x: displayTab.gutter
+          topPadding: displayTab.gutter
           text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
             ? "Lane " + displayTab.selectedDisplay.lane : "Enable this display to assign a role"
-          color: Qt.darker(Color.popups.text, 1.45)
+          color: displayTab.panelRoot.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
-        Item { width: 1; height: Style.spacing.sm }
+        Item { width: 1; height: displayTab.gutter }
       }
     }
 
@@ -335,14 +362,14 @@ Column {
       visible: displayTab.service && displayTab.service.layoutError !== ""
         && displayTab.service.state !== "previewing"
       width: parent.width
-      height: visible ? errorText.implicitHeight + Style.spacing.sm * 2 : 0
+      height: visible ? errorText.implicitHeight + displayTab.gutter * 2 : 0
       Ui.PanelSeparator { width: parent.width; foreground: Color.urgent }
       Text {
         id: errorText
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: Style.spacing.md
-        anchors.rightMargin: Style.spacing.md
+        anchors.leftMargin: displayTab.gutter
+        anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
         text: displayTab.service ? displayTab.service.layoutError : ""
         wrapMode: Text.WordWrap
@@ -361,18 +388,18 @@ Column {
       Ui.PanelSeparator {
         visible: parent.previewing
         width: parent.width
-        foreground: Color.popups.text
+        foreground: displayTab.panelRoot.textPrimary
       }
       Text {
         visible: parent.previewing
         anchors.left: parent.left
-        anchors.leftMargin: Style.spacing.md
+        anchors.leftMargin: displayTab.gutter
         anchors.right: revertButton.left
-        anchors.rightMargin: Style.spacing.sm
+        anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
         text: "Keep these settings? Reverting in "
           + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
-        color: Color.popups.text
+        color: displayTab.panelRoot.textPrimary
         font.family: Style.font.family
         font.pixelSize: Style.font.body
       }
@@ -380,23 +407,28 @@ Column {
         id: keepButton
         visible: parent.previewing
         anchors.right: parent.right
-        anchors.rightMargin: Style.spacing.md
+        anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
+        height: displayTab.panelRoot.controlHeight
+        radius: displayTab.panelRoot.radiusSm
         text: "Keep"
-        selected: true
-        bordered: true
-        foreground: Color.popups.text
+        // Keep is the primary action, so it carries the accent fill.
+        accent: Color.accent
+        background: Color.accent
+        foreground: Color.popups.background
         onClicked: displayTab.service.keepPreview()
       }
       Ui.Button {
         id: revertButton
         visible: parent.previewing
         anchors.right: keepButton.left
-        anchors.rightMargin: Style.spacing.sm
+        anchors.rightMargin: displayTab.gutter
         anchors.verticalCenter: parent.verticalCenter
+        height: displayTab.panelRoot.controlHeight
+        radius: displayTab.panelRoot.radiusSm
         text: "Revert"
         bordered: true
-        foreground: Color.popups.text
+        foreground: displayTab.panelRoot.textPrimary
         onClicked: displayTab.service.revertPreview("")
       }
     }

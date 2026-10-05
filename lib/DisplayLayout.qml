@@ -6,14 +6,18 @@ import "Model.js" as Model
 Ui.BorderSurface {
   id: canvas
   property var service: null
+  property var panelRoot: null
   property string selectedDisplayName: ""
   signal displaySelected(string name)
   height: Style.space(190)
   color: Color.popups.background
-  borderSpec: Border.flat(Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.12),
+  borderSpec: Border.flat(canvas.panelRoot ? canvas.panelRoot.hairline : Color.popups.border,
     Math.max(1, Style.normalBorderWidth))
-  radius: Style.cornerRadius
-  readonly property real inset: Style.spacing.md
+  radius: canvas.panelRoot ? canvas.panelRoot.radiusMd : Style.cornerRadius
+  // The dotted grid and the drag snap are the same 16px step, so what you see
+  // is what you land on.
+  readonly property real gridStep: Style.space(16)
+  readonly property real inset: canvas.panelRoot ? canvas.panelRoot.space4 : Style.spacing.md
   readonly property color cardBackground: Color.popups.background
   readonly property color cardOutline: Color.popups.text
   readonly property var displays: service ? service.displayDraft : []
@@ -41,7 +45,7 @@ Ui.BorderSurface {
 
   function commitPosition(display, x, y) {
     if (!service || service.state !== "idle") return
-    var snapped = Model.snapPosition(display, x, y, displays, Style.space(12) / zoom)
+    var snapped = Model.snapPosition(display, x, y, displays, gridStep / zoom)
     // This function belongs to the canvas, which survives rebuilding the
     // Repeater. Never continue a service mutation from a destroyed delegate.
     if (service.setDisplayPosition(display.name, snapped.x, snapped.y) === "ok") service.previewLayout()
@@ -67,7 +71,7 @@ Ui.BorderSurface {
       var context = getContext("2d")
       context.clearRect(0, 0, width, height)
       context.fillStyle = dotColor
-      var gap = Math.max(Style.space(10), 4)
+      var gap = canvas.gridStep
       var radius = Math.max(Style.space(0.7), 0.5)
       for (var x = gap; x < width; x += gap) for (var y = gap; y < height; y += gap) {
         context.beginPath()
@@ -83,30 +87,56 @@ Ui.BorderSurface {
       id: monitorCard
       required property var modelData
       readonly property var logicalSize: Model.logicalSize(modelData)
+      readonly property bool isSelected: canvas.selectedDisplayName === modelData.name
       property real offsetX: 0
       property real offsetY: 0
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom + offsetX
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom + offsetY
       width: logicalSize.width * canvas.zoom
       height: logicalSize.height * canvas.zoom
-      z: pointer.pressed ? 1 : 0
+      z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
       // Menu selection can be transparent in a theme. Monitor cards must
       // cover the grid; selection is conveyed by the brighter outline.
       color: Qt.rgba(canvas.cardBackground.r, canvas.cardBackground.g, canvas.cardBackground.b, 1)
-      borderSpec: Border.flat(canvas.selectedDisplayName === modelData.name
-        ? Color.accent : Qt.rgba(canvas.cardOutline.r, canvas.cardOutline.g, canvas.cardOutline.b, 0.45),
-        Math.max(1, Style.normalBorderWidth))
-      radius: Style.cornerRadius
+      // Selection is the one elevation cue in the system: a thicker accent
+      // border plus a muted accent halo behind the card.
+      borderSpec: Border.flat(isSelected
+        ? Color.accent
+        : Qt.rgba(canvas.cardOutline.r, canvas.cardOutline.g, canvas.cardOutline.b, 0.45),
+        isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
+      radius: canvas.panelRoot ? canvas.panelRoot.radiusMd : Style.cornerRadius
       opacity: modelData.enabled ? 1 : 0.5
-      Text {
+      Ui.BorderSurface {
+        visible: monitorCard.isSelected && canvas.panelRoot !== null
+        anchors.fill: parent
+        anchors.margins: canvas.panelRoot ? -canvas.panelRoot.focusHalo : 0
+        radius: monitorCard.radius + (canvas.panelRoot ? canvas.panelRoot.focusHalo : 0)
+        color: "transparent"
+        borderSpec: Border.flat(canvas.panelRoot ? canvas.panelRoot.accentMuted : "transparent",
+          canvas.panelRoot ? canvas.panelRoot.focusHalo : 0)
+        z: -1
+      }
+      Column {
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: Style.space(6)
-        text: (modelData.enabled && canvas.service ? canvas.service.roleOf(modelData.name) + 1 : "Off")
-          + "\n" + modelData.name
-        horizontalAlignment: Text.AlignHCenter
-        color: Color.popups.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
+        spacing: Style.spacing.xxs
+        Text {
+          text: monitorCard.modelData.enabled && canvas.service
+            ? canvas.service.roleOf(monitorCard.modelData.name) + 1 : "Off"
+          horizontalAlignment: Text.AlignHCenter
+          color: canvas.panelRoot ? canvas.panelRoot.textPrimary : Color.popups.text
+          font.family: Style.font.family
+          font.pixelSize: Style.font.body
+          font.weight: Font.DemiBold
+        }
+        Text {
+          text: monitorCard.modelData.name
+          horizontalAlignment: Text.AlignHCenter
+          color: monitorCard.isSelected && canvas.panelRoot
+            ? canvas.panelRoot.accentHover
+            : (canvas.panelRoot ? canvas.panelRoot.textDim : Color.popups.text)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+        }
       }
       MouseArea {
         id: pointer
@@ -138,18 +168,18 @@ Ui.BorderSurface {
       Row {
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.margins: Style.spacing.xs
-        spacing: Style.spacing.xs
+        anchors.margins: canvas.panelRoot ? canvas.panelRoot.space1 : Style.spacing.xs
+        spacing: canvas.panelRoot ? canvas.panelRoot.space1 : Style.spacing.xs
         z: 2
         Repeater {
           model: [{ label: "↶", delta: -1 }, { label: "↷", delta: 1 }]
           delegate: Ui.BorderSurface {
             required property var modelData
-            width: Style.space(19)
-            height: Style.space(19)
-            color: Color.popups.background
+            width: Style.space(18)
+            height: Style.space(18)
+            color: canvas.cardBackground
             borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-            radius: Style.cornerRadius
+            radius: canvas.panelRoot ? canvas.panelRoot.radiusSm : Style.cornerRadius
             Text {
               anchors.centerIn: parent
               text: modelData.label
