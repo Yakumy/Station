@@ -217,6 +217,11 @@ Item {
   function shiftWindow(direction) {
     direction = String(direction || "").toLowerCase()
     if (["left", "right", "up", "down"].indexOf(direction) === -1) return "invalid"
+    refresh(true, function() { root.shiftFocusedWindow(direction) })
+    return "started"
+  }
+
+  function shiftFocusedWindow(direction) {
     var client = focusedClient()
     if (!client || client.pinned || !lanes[client.monitor] || !Model.inGrid(Number(client.workspace.id))) return "unmanaged"
     var managed = Object.keys(lanes)
@@ -230,7 +235,9 @@ Item {
       targetMonitor = Model.edgeMonitor(opposite, monitors, managed)
     }
     if (!targetMonitor || !lanes[targetMonitor]) return "edge"
-    evalLua(Hypr.moveWindow(client.address, Model.ws(targetStation, lanes[targetMonitor]), true),
+    var statements = Hypr.workspaceRules(targetStation, lanes, present(), Model.host)
+    statements.push(Hypr.moveWindow(client.address, Model.ws(targetStation, lanes[targetMonitor]), true))
+    evalLua(Hypr.batch(statements),
       function() { refresh(true, null) })
     return "started"
   }
@@ -754,7 +761,7 @@ Item {
     command: ["hyprctl", "clients", "-j"]
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.clients = root.parseJson(text, [])
+      onStreamFinished: root.clients = Model.normalizeClients(root.parseJson(text, []), root.monitors)
     }
     onExited: {
       var done = root.refreshDone; root.refreshDone = null
