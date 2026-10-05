@@ -2,16 +2,18 @@
   "schemaVersion": 1,
   "id": "yakumy.station",
   "name": "Station",
-  "version": "1.1.10",
+  "version": "2.0.0",
   "author": "Yakumy",
   "license": "Apache-2.0",
-  "description": "Create linked dual-monitor workstations from Hyprland workspaces.",
-  "kinds": ["bar-widget"],
+  "description": "Synchronized workspaces and display management for Omarchy",
+  "kinds": ["bar-widget", "service"],
   "entryPoints": {
-    "barWidget": "station-indicator.qml"
+    "barWidget": "Panel.qml",
+    "service": "Service.qml"
   },
   "barWidget": {
     "displayName": "Station",
+    "description": "Switch every display as one station",
     "category": "Workflow",
     "allowMultiple": false,
     "defaultSection": "left"

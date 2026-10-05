@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "yakumy.station-m0",
+  "name": "Station M0 probe",
+  "version": "0.0.0",
+  "author": "yakumy",
+  "description": "Disposable IPC and Display popout contract probe",
+  "kinds": ["bar-widget", "service"],
+  "entryPoints": { "barWidget": "Panel.qml", "service": "Service.qml" },
+  "barWidget": {
+    "displayName": "Station M0 probe",
+    "description": "Temporary platform check",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

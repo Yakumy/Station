@@ -1,0 +1,446 @@
+# Station v2 — Build Spec (final)
+
+Plugin id `yakumy.station` for Omarchy 4 (Quattro), Hyprland 0.56.x (Lua config).
+Tags: **[V]** verified on the author's machine, **[A]** assumption. Every [A] that affects architecture is eliminated in **M0** (§15) before M1 starts. Record observed results in the M0 table; do not design around an unverified assumption.
+
+GUI reference: open `reference/gui-reference.html` in a browser. It shows layout, states and behaviour. Its colours are a preview palette only; the real plugin uses theme tokens (§11).
+
+## 1. What Station is
+
+A pure Quickshell plugin (QML + JS, a little generated Lua). One concept, the **Station**: switching station switches every monitor together; sending a window to a station keeps it on the same monitor; unplugging a monitor merges its windows into a surviving monitor without changing their station. A GUI arranges displays.
+
+Non-goals: no binary, no `install.sh`, no standalone CLI, no v1 migration, no more than 3 managed monitors, no HDR/VRR/colour management, no self-update logic.
+
+## 2. Principles
+
+1. Install, update, remove are the stock `omarchy plugin add|update|remove`. Omarchy owns updates and review. Station performs no network access.
+2. The plugin works when enabled. No init button, no wizard.
+3. Station writes only: its own config and state files, and (on Keep) a marked block in `~/.config/hypr/monitors.lua`, with backup. It never edits `hyprland.lua` or `bindings.lua`.
+4. Every runtime effect (binds, workspace rules, monitor runtime state) is re-applied after each `configreloaded`. Removing Station triggers an immediate reload (§10), so nothing lingers.
+5. No colour, radius, spacing or font literals. Theme tokens only.
+6. Every value that reaches Lua or argv is validated (§13).
+7. Every asynchronous operation is generation-checked (§6).
+
+## 2a. Three concepts that must never be mixed
+
+| Concept        | Meaning                                                                                                                                                                                         | Where it lives                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Identity**   | Physical monitor: key from `description`; if two connected monitors share it, append `@<connector>`. Laptop panels have no serial, so model + connector. [V]                                    | config.json                                   |
+| **Lane** (1–3) | The workspace column the monitor drives: `ws(station, lane)`. Persistent preference per identity.                                                                                               | config.json (preference), runtime (effective) |
+| **Role label** | What the user sees: Primary / Secondary / Third. **Derived**: the ordinal of the monitor's lane among lanes currently present. If lanes {1,3} are present the labels are Primary and Secondary. | never stored                                  |
+
+A missing lane never makes the GUI say "Primary + Third". Changing Role in the GUI swaps lanes between two physical monitors (§5.5).
+
+## 3. Verified platform facts
+
+| #   | Fact                                                                                                                                                                                                                                                                                                                    | Consequence                                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | [V] `hyprctl eval 'o.bind("SUPER + code:10", desc, "cmd")'` works and fires on a real keypress. JSON shows `key:""`, `keycode:0`, `dispatcher:"__lua"`, `description` set.                                                                                                                                              | Use `o.bind` via eval. Do not rely on `hyprctl binds -j` for key identity.               |
+| 2   | [V] `hyprctl reload` removes runtime binds and workspace rules and resets runtime monitor changes (disabled, mirror).                                                                                                                                                                                                   | Re-apply everything after reload.                                                        |
+| 3   | [V] `configreloaded` fires on reload; `omarchy theme set` fires it **twice**, ~220 ms apart.                                                                                                                                                                                                                            | Trailing debounce ~300 ms.                                                               |
+| 4   | [V] Binding the same combo twice leaves two entries and both commands fire. `hl.unbind(combo)` removes all entries on it.                                                                                                                                                                                               | Unbind only under the rules in §8.                                                       |
+| 5   | [V] `omarchy menu keybindings --print` lists defaults, `SUPER+1..0`, personal binds and runtime binds with correct display keys. Identical with DEBUG and fresh cache.                                                                                                                                                  | Primary conflict source. Prefix Station bind descriptions with `Station:`.               |
+| 6   | [V] A runtime `hl.workspace_rule({workspace, monitor})` places a newly created workspace on that monitor; it vanishes on reload.                                                                                                                                                                                        | Apply rules before moving/focusing into a station.                                       |
+| 7   | [V] One `eval` with 12 `window.move` calls, no sleeps: ~10 ms.                                                                                                                                                                                                                                                          | Batch all moves.                                                                         |
+| 8   | [V] Soft disable and physical unplug: workspaces migrate to the survivor, then `monitorremoved` fires; physical unplug also shows a transient create/focus/destroy of a spare workspace within the same millisecond. Client workspace ids are unchanged.                                                                | Reconcile from a post-removal snapshot. Ignore workspace events during topology changes. |
+| 9   | [V] On a 3.7 s reconnect Hyprland moved the workspace and its windows back to the returning monitor.                                                                                                                                                                                                                    | Grace delay before merging (default 5 s).                                                |
+| 10  | [V] `hl.monitor({... mirror="X"})`, `{disabled=true}`, `{disabled=false}` work. Re-enabling without `mirror` keeps the old mirror; `mirror=""` clears it.                                                                                                                                                               | Always send explicit `disabled` and `mirror`.                                            |
+| 11  | [V] `hl.get_monitors()` exists and worked while `monitors.lua` was parsed during a reload (returns userdata with `id,name,width,height,scale,active_workspace`; `enabled` is nil). [V, M0] On two cold compositor starts it existed but returned an empty table, both with HDMI connected and laptop-only; monitors appeared normally after startup. | Guarded block (§9). Never depend on the cold `up` set to apply Single/disable; the service applies runtime mode after monitors become available. |
+| 12  | [V] `Component.onDestruction` fires on plugin disable, remove, and shell restart alike.                                                                                                                                                                                                                                 | Cleanup must distinguish them (§10).                                                     |
+| 13  | [V] Re-enabling `omarchy.workspaces` without placement puts it in `center` index 4, not its old place.                                                                                                                                                                                                                  | Record and restore placement (§10).                                                      |
+| 14  | [V] `omarchy-shell shell listPlugins` entries: `id,name,kinds,enabled,active,canDisable,firstParty,clonedFrom`. `active` was false for all; use `enabled`.                                                                                                                                                              |                                                                                          |
+| 15  | [V] Brightness read: `omarchy-brightness-display --monitor <name>` prints percent on line 1; empty or `unavailable` = unavailable. Write: `omarchy brightness display --no-osd --monitor <name> N%`. Internal: brightnessctl; external: DDC/CI. The direct binary has **no** `--help`; never call it with unknown args. |                                                                                          |
+| 16  | [V] Display plugin: `/usr/share/omarchy/shell/plugins/panels/monitor/` (`Panel.qml`, `Model.js`), kind `bar-widget`. Reference only; never edit.                                                                                                                                                                        |                                                                                          |
+| 17  | [V] Shell IPC ping ~83 ms.                                                                                                                                                                                                                                                                                              | See latency target §8.                                                                   |
+| 18  | [V] Lua dispatch syntax (from v1): `hl.dispatch(hl.dsp.window.move({ window="address:0x…", workspace=N, follow=false }))`, `hl.dispatch(hl.dsp.workspace.move({ workspace=N, monitor="NAME" }))`.                                                                                                                       |                                                                                          |
+| 19  | [V] Omarchy 4 binds `SUPER+1..0` as `SUPER + code:10…19`.                                                                                                                                                                                                                                                               | Unbind with the same form.                                                               |
+
+## 4. Stack and layout
+
+QML for UI and services; plain JS modules for logic. Tests with `node --test` (lib/ has no QML dependencies).
+
+```
+yakumy.station/
+├── manifest.json        # id yakumy.station, kinds ["bar-widget","service"]; copy key names from the Display manifest and PluginRegistry.qml; Panel.qml is the widget's popout entry, as in Display
+├── Service.qml          # root item: IPC methods, state machine, event loop
+├── BarWidget.qml        # logo + [S n]; click toggles the popout
+├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Keybindings | Settings
+├── lib/
+│   ├── Model.js         # lanes, roles, planners (pure)
+│   ├── Hypr.js          # the only place hyprctl/eval is called; validation; Lua generators
+│   ├── Binds.js         # bind table, apply, conflict checker
+│   ├── MonitorsLua.js   # managed block generator/writer, Keep transaction
+│   ├── Recovery.js      # preview watchdog, cleanup script templates
+│   └── Store.js         # config.json / state.json load, save, migrate
+└── test/
+```
+
+`barWidget.defaultSection: "left"`; on first start place it at left index 1 (next to `omarchy.menu`) with `omarchy bar`. **M0 finding:** the on-demand `panel` kind does not inject the `anchorItem` and `bar` that `KeyboardPanel` requires, so Station uses the **Display popout structure** (bar-widget + `Panel.qml`) as its primary design, with the service opening it for hotplug through the widget. M0 must prove, on an installed fixture, a rendered popout of about 680×560 with keyboard focus, Esc and outside-click closing, anchoring under the widget, and a service-driven open. If the popout cannot reach that size, reduce the layout (single column, tabs) rather than switching kinds.
+
+## 5. Model
+
+```js
+const SLOTS = 3,
+  MAX_STATION = 10;
+const ws = (s, j) => (s - 1) * SLOTS + j;
+const stationOf = (id) => Math.floor((id - 1) / SLOTS) + 1;
+const slotOf = (id) => ((id - 1) % SLOTS) + 1; // "lane" in prose
+const inGrid = (id) => id >= 1 && id <= MAX_STATION * SLOTS;
+```
+
+Workspace numbers never change meaning. Windows on non-grid, special or named workspaces and pinned windows are never moved.
+
+### 5.1 Lane assignment (runtime)
+
+Preferred lane per identity lives in config. At runtime, for the connected, managed monitors:
+
+1. Monitors already present keep their effective lane. Assignment never changes an existing present monitor's lane.
+2. A new monitor takes its preferred lane if free, else the lowest free lane. A lane preferred by an **absent** identity counts as free.
+3. If no lane is free the monitor is **unmanaged** (§5.6).
+4. A new effective lane is saved as that identity's preference.
+
+### 5.2 Present set
+
+`present` = sorted lanes of managed monitors that are enabled, after mode:
+
+- Extend: enabled managed monitors.
+- Mirror: only the mirror source's lane.
+- Single(k): only k's lane.
+
+### 5.3 Host and reconcile
+
+```js
+// Missing lane j: prefer the next higher surviving lane, else the nearest lower.
+function host(j, present) {
+  if (present.includes(j)) return j;
+  const up = present.find((p) => p > j);
+  if (up !== undefined) return up;
+  return Math.max(...present.filter((p) => p < j)); // present is non-empty
+}
+function planReconcile(clients, present, laneOfMonitor) {
+  // pure, idempotent
+  const moves = [];
+  if (!present.length) return moves;
+  for (const c of clients) {
+    const id = c.workspace.id;
+    if (!inGrid(id) || c.pinned) continue;
+    if (!(c.monitor in laneOfMonitor)) continue; // unmanaged monitor: hands off
+    const to = ws(stationOf(id), host(slotOf(id), present));
+    if (to !== id) moves.push({ address: c.address, to });
+  }
+  return moves;
+}
+```
+
+Examples: missing 1 → 2 (else 3); missing 2 with {1,3} → 3, with {1} → 1; missing 3 → 2 (else 1). When the middle display disappears the old third becomes the surviving secondary destination.
+
+Invariants (unit-tested): a window's station never changes; no window ends on a non-present lane; applying a plan twice is a no-op; adding a monitor yields no moves; survivors' own workspaces are untouched.
+
+### 5.4 Station existence
+
+`existing = {1..minStations} ∪ {stations holding a grid client on a managed monitor} ∪ {stations currently displayed on a managed monitor}`. `minStations` is a setting, default 3 (1..10).
+
+- `SUPER+n` goes to any station 1..10 (created lazily by focus). An empty non-default station that is no longer displayed stops existing.
+- Arrow navigation moves to the next/previous **existing** station in the step. No wrap. At the edge: no-op.
+- Window moves go to exactly `s±1` (1..10), creating it.
+
+### 5.5 Role change and swap
+
+Changing the Role of monitor X swaps lanes between X and the monitor currently holding the requested role. Windows keep **Station and physical monitor**: snapshot clients, update effective lanes and workspace rules, then move each window to `ws(its station, new lane of its current monitor)`.
+
+```js
+function planRoleChange(clients, oldLane, newLane /* by monitor id */) {
+  const moves = [];
+  for (const c of clients) {
+    const id = c.workspace.id,
+      m = c.monitor;
+    if (!inGrid(id) || c.pinned || !(m in newLane) || oldLane[m] === newLane[m])
+      continue;
+    const to = ws(stationOf(id), newLane[m]);
+    if (to !== id) moves.push({ address: c.address, to });
+  }
+  return moves;
+}
+```
+
+Run `planReconcile` afterwards as a safety pass. Lane changes are persisted as new preferences.
+
+### 5.6 More than three monitors
+
+Station manages at most 3 enabled, non-mirrored monitors. A fourth independent monitor is **unmanaged**: the Displays panel opens with an explanation and offers Mirror or Disable. Station never disables anything by itself. Unmanaged monitors are excluded from follow-focus, lane lookup, send/move actions, reconcile, and `[S n]` derivation, and their windows are never touched.
+
+### 5.7 Direction
+
+`ltr | rtl` (later `ttb | btt`). Arrow keys are physical; the mapping to a station step:
+
+```js
+const AXIS = {
+  ltr: { ax: "x", next: +1 },
+  rtl: { ax: "x", next: -1 },
+  ttb: { ax: "y", next: +1 },
+  btt: { ax: "y", next: -1 },
+};
+function step(dirKey, dir) {
+  // returns +1 next, -1 previous, null if other axis
+  const a = AXIS[dir],
+    k =
+      a.ax === "x"
+        ? { left: -1, right: +1 }[dirKey]
+        : { up: -1, down: +1 }[dirKey];
+  return k === undefined ? null : k * a.next;
+}
+```
+
+- Navigate (`CTRL+SUPER+arrow`): see §5.4.
+- Send (`SUPER+SHIFT+n`): target `ws(n, lane of the window's current monitor)`, follow. `SUPER+SHIFT+ALT+n`: same, no follow.
+- Move across (`SHIFT+CTRL+SUPER+arrow`): try the neighbouring managed monitor by geometry; if none and `step()` is non-null, go to station `s±1` and land on the opposite-edge monitor (moving right lands on the leftmost). The window follows.
+
+### 5.8 Switch station
+
+Apply workspace rules for the target station (non-present lanes point at their host's monitor), then `focus` each present lane's workspace, then restore focus to the previously focused monitor. One eval batch, inside a `switching` operation (§6).
+
+### 5.9 Layout geometry
+
+Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`, `h = pixelH / scale`, with w/h swapped for transforms 1, 3, 5, 7. A 3840×2160 display at scale 2 occupies 1920×1080. Snap edge-to-edge to neighbours and to a 10-unit grid. Rectangles must not overlap; overlapping layouts cannot be Kept.
+
+## 6. Runtime behaviour
+
+### 6.1 Operation state and generations
+
+`Service.state ∈ idle | applyingLayout | previewing | reconciling | switching`, plus an integer `gen`.
+
+- Every operation increments `gen`, sets `state`, and returns to `idle` at the end. Every delayed callback, timer and async result captures `gen` and aborts if it is stale.
+- **Self-generated events.** Before an eval that will cause monitor or workspace events (disable, mirror, mode change, switch), record `expect = {kinds, outputs, until: now + 2 s}`. Matching events inside the window never start a topology operation and never trigger follow-focus.
+- A **real** topology event during `previewing` cancels the preview (rollback, §9), then is handled normally.
+- A monitor removed during `switching` or `reconciling` aborts the operation and restarts from a fresh snapshot.
+
+### 6.2 Start
+
+Load config/state → recovery check (§9 stale preview token → rollback) → read monitors/clients → validate environment (Hyprland ≥ 0.55 Lua, Quickshell `Hyprland` module) → assign lanes → apply (binds, rules, monitor runtime state) → stock widget lease (§10) → reconcile → one-time toast "Station is active. SUPER+1…0 now switch stations."
+
+### 6.3 Events
+
+- `configreloaded`: trailing debounce 300 ms, then re-apply binds, rules and monitor runtime state, then reconcile.
+- `monitoradded*`: immediate; refresh lanes/rules; open the panel on Displays. Moves nothing. In Single mode a new monitor stays off.
+- `monitorremoved*`: wait `graceMs` (default **5000**, setting; the measured reconnect took 3.7 s). Optional toast "Monitor removed. Moving its windows in N s". If the monitor is back, do nothing. Otherwise refresh snapshot, compute `present`, `planReconcile`, one eval batch, then `showStation(lastStation)`. A second reconcile 1 s later should be a no-op. No panel popup.
+- If the Single target (or every enabled monitor) disappears: fall back to Extend on whatever is connected.
+- **Follow focus** (default on, setting): on `workspace.active` (100 ms trailing debounce), act only when `state === idle` and no topology change happened in the last 500 ms; if the focused managed monitor's station differs from another present monitor's, `showStation` it. Re-read state before acting. Suppressed entirely while `switching`, `reconciling`, `applyingLayout`, `previewing` (`syncInProgress`).
+
+`[S n]` = station of the focused managed monitor's active workspace.
+
+## 7. Modes
+
+- **Extend:** enabled displays form one desktop; checkmarks enable/disable individual displays.
+- **Mirror:** all enabled mirror the primary (lowest present lane).
+- **Single on k:** others disabled; windows merge into k's lane via `planReconcile`. Back to Extend moves nothing.
+- Mode is global (Mode dropdown beside Direction). Mode and enabled set are config preferences, re-applied at start and after reload, and written into the guarded block (§9).
+- Never leave zero enabled monitors: if the saved enabled set has none connected, enable all connected.
+- Always send explicit `disabled` and `mirror`. [V]
+
+## 8. Keybindings
+
+| Action                               | Default                         | Replaces                                                                                                                                                                                                                                            |
+| ------------------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Switch to station n                  | `SUPER + 1…0`                   | Omarchy workspace switch (`SUPER + code:10…19`)                                                                                                                                                                                                     |
+| Move window to station n (follow)    | `SUPER + SHIFT + 1…0`           | Omarchy move to workspace                                                                                                                                                                                                                           |
+| Move window silently                 | `SUPER + SHIFT + ALT + 1…0`     | Omarchy move-window-silently (default; confirmed live and in `default/hypr/bindings/tiling.lua`)                                                                                                                                                    |
+| Station to the left / right          | `CTRL + SUPER + ←/→`            | Omarchy "Move grouped window focus left/right" (intentional replacement; author approved 2026-10-04). Applied automatically so Station navigation works on installation. |
+| Move window across monitors/stations | `SHIFT + CTRL + SUPER + arrows` |                                                                                                                                                                                                                                                     |
+| (unbind only)                        | `SUPER + SHIFT + ALT + ←/→`     | Omarchy "move workspace to monitor" (breaks lane mapping)                                                                                                                                                                                           |
+
+IPC methods on the service root (explicit names; `switch` is a reserved word and invalid as a QML function name): `switchStation(n)`, `sendToStation(n)`, `sendSilent(n)`, `goDirection(d)`, `shiftWindow(d)`, `togglePanel()`. All arguments are strings validated against enums/integers. Command: `omarchy-shell yakumy.station <method> <arg>`, a **service-owned `IpcHandler`** with target `yakumy.station`. (`omarchy-shell shell call` only reaches loaded panels, not services; do not use `keepLoaded` to hide this, since the host also uses it to retain services across hot-reloads.) Description: `Station: <label>`.
+
+**Apply rules (this replaces any blanket "unbind then bind"):**
+
+- `hl.unbind(combo)` is allowed only for (a) intentional replacements (the Omarchy defaults in the table), (b) combos the user approved with "Replace and unbind it", (c) combos Station itself applied earlier, recorded in `state.appliedBinds` (this makes a plain shell restart idempotent, since runtime binds survive it). Anything else must never be unbound.
+- A combo with an unresolved conflict is **not applied**.
+- Otherwise bind once per config generation (tracked by a reload counter). Never apply the same set twice in one generation.
+
+**Latency target:** measure press-to-station-switch end to end. Initial requirement p50 < 120 ms, p95 < 180 ms; optimise from measurements.
+
+**Conflict checker**, in order:
+
+1. `omarchy menu keybindings --print`: parse `<keys> → <description>`; normalise (split on spaces and `+`, upper-case, `CONTROL`→`CTRL`, modifier set + one key token).
+2. `hyprctl binds -j`: modmask + key for plain-key entries only (cross-check).
+3. Fallback: regex scan of `~/.config/hypr/bindings.lua` for literal `"MODS + KEY"`.
+
+Ignore entries whose description starts with `Station:`. Statuses:
+
+- **Intentional replacement** (amber): applied automatically; tell the user what it replaced. The set is exactly: `SUPER+1…0`, `SUPER+SHIFT+1…0`, `SUPER+SHIFT+ALT+1…0` (all Omarchy defaults), `CTRL+SUPER+←/→` (Omarchy grouped-window focus; author-approved replacement), and the unbind-only `SUPER+SHIFT+ALT+←/→`. Nothing else is ever added to it automatically.
+- **Conflict** (red): shown with the owner and "Pick another key" / "Replace and unbind it" (stored and re-applied after reloads; warn that unbind removes every entry on that combo).
+- **Free**: only when source 1 succeeded and nothing matched.
+- **Unverified**: source 1 failed or is empty. The fallback can add conflicts but **never** turns unknown into free. Unverified binds are applied with a visible badge.
+
+The Keybindings tab label turns red with a count badge while any conflict is unresolved. Key entry is a modifier-toggle + key picker (raw capture cannot see combos Hyprland already consumes).
+
+## 9. `monitors.lua` managed block, preview and Keep
+
+### 9.1 Block
+
+```lua
+-- >>> station (managed; edited by the Station panel) >>>
+local up = {}
+if type(hl.get_monitors) == "function" then
+  local ok, list = pcall(hl.get_monitors)
+  if ok and type(list) == "table" then
+    for _, m in ipairs(list) do
+      local ok2, name = pcall(function() return m.name end)
+      if ok2 and type(name) == "string" then up[name] = true end
+    end
+  end
+end
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1, transform = 0 })
+hl.monitor({ output = "HDMI-A-2", mode = "2560x1440@144", position = "1920x0", scale = 1, transform = 0 })
+-- Single mode on HDMI-A-2: disable others only when the target is up
+if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
+-- <<< station <<<
+```
+
+- Failure, a missing function, or an empty list must never disable a display or break config evaluation. Never emit `disabled = true` unguarded; never disable the last up monitor.
+- Output names must match `^[A-Za-z0-9_.:-]{1,64}$` and are emitted through an escaping serialiser. EDID text never goes into the file. `mode` values must be an exact element of the monitor's `availableModes`; the spelling `hl.monitor` accepts is an M0 item, not inferred from JSON.
+- [V, M0] Last rule for an output wins; place the block at the end. If rules for the same outputs exist outside the block, tell the user.
+- [V, M0] Cold evaluation can return an empty `hl.get_monitors()` table even when displays are connected. In that case the block emits no guarded `disabled = true`; the service applies the saved runtime mode after monitor discovery. This safety fallback may briefly start in Extend rather than risking a black screen.
+
+### 9.2 Preview and crash-safe rollback
+
+1. Before any preview, write `~/.local/state/omarchy/station/preview.token` and start a **detached watchdog** from a fixed template with positional arguments only: `sh -c 'sleep "$1"; [ -e "$2" ] && { rm -f "$2"; hyprctl reload; }' sh 20 <tokenpath>`. No daemon, no root.
+2. Apply the preview at runtime; show the 12 s Keep/Revert countdown (the UI timer is shorter than the watchdog).
+3. Revert, or timeout, restores previous runtime state and removes the token.
+4. At shell start, a stale token means a crashed preview: roll back immediately with `hyprctl reload`.
+
+### 9.3 Keep is a transaction
+
+preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → atomic write (temp file + rename, refuse symlinks, markers only) → `hyprctl reload` → `hyprctl configerrors`.
+
+- Errors present: restore the backup, reload again, restore runtime state, show the error. Keep has **not** succeeded.
+- Clean: remove the watchdog token, write config.json, **also write `~/.local/state/omarchy/station/monitors-block.plain.lua`** (the same block with geometry/scale/rotation/mode only: no guard, no `disabled`, no `mirror`; used by the removal cleanup in §10.2), return to `idle`; Station re-applies after the reload event.
+
+## 10. Bar widget and removal
+
+### 10.1 Stock widget lease
+
+`state.stockLease = { wasEnabled, section, index, disabledByStation }`.
+
+- On each activation (if Settings "Hide Omarchy's workspace indicator" is on, default): if `omarchy.workspaces` is enabled, capture its current placement (`section`, `index`), set `wasEnabled=true`, `omarchy plugin disable omarchy.workspaces`, `disabledByStation=true`. If it is already disabled and no lease exists, record `wasEnabled=false`; **Station never enables it.** If a lease exists, keep it.
+- Restore only when `disabledByStation && wasEnabled`: `omarchy plugin enable omarchy.workspaces`, then `omarchy bar move omarchy.workspaces --section <s> --index <i>` (re-enabling alone lands in `center` index 4 [V]). Clear the lease afterwards. **M0 correction:** `bar put` deliberately leaves an already-present widget in place; after enable, use `bar move` to restore placement.
+- Do **not** use `clonedFrom` as a replacement mechanism; Station is not a clone of that plugin.
+
+### 10.2 Cleanup after disable/remove
+
+`Component.onDestruction` fires on disable, remove **and** shell restart [V], so it starts a detached script from a fixed template with positional, validated arguments (`section` ∈ `left|center|right`, `index` and `wasEnabled` integers):
+
+1. Sleep 3 s; wait up to ~15 s for `omarchy-shell shell ping` (the shell may be restarting).
+2. If the shell answers and `listPlugins` shows `yakumy.station` with `enabled` true: do nothing (restart case).
+3. If it is absent or disabled: restore the stock widget per the lease; **neutralise the managed `monitors.lua` block** (replace everything between the markers with `~/.local/state/omarchy/station/monitors-block.plain.lua`, the geometry-only copy Station keeps in sync in §9.3, using a fixed `awk` template, a timestamped backup and an atomic `mv`; do nothing if the markers or the plain file are missing). This keeps the user's arranged layout but removes every `disabled`/`mirror` rule and the guard, so Single or Mirror mode cannot outlive the plugin. **Then run `hyprctl reload`**. Runtime binds and workspace rules outlive the QML objects until a reload; `omarchy plugin remove yakumy.station` must leave `SUPER+number` and normal Hyprland behaviour working immediately.
+4. If the shell never answers, do nothing. Troubleshooting note in the docs: run `hyprctl reload`.
+
+[A] exact `listPlugins` JSON shape and presence of `jq`: M0.
+
+## 11. GUI
+
+Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plugin: header icon + title + small uppercase theme-name subtitle; hairline-separated sections; small uppercase labels with right-aligned values; segmented boxes; list with a check on the right.
+
+**Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
+
+**Panel:** header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict) with **Mode** (Extend, Mirror, "Single display on" → one entry per monitor `name · role`) and **Direction** (LTR, RTL) dropdowns on the right.
+
+Displays tab:
+
+- Left: **Layout** canvas (logical coordinates, §5.9; drag; snap; rotate buttons at each monitor's top-left; selected outlined; disabled dashed; overlaps flagged) and **Displays** list (connector, role label, model, check = enabled).
+- Right: **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show "Not available for this display" on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), **Resolution** and **Refresh rate** (from `availableModes`, which contains near-duplicates such as `1920x1080@60.00Hz` and `1920x1200@59.88Hz`; the UI deduplicates what it shows but keeps the exact allowlisted mode string for each choice), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Role** (labels derived per §2a; choosing a taken role swaps lanes).
+- Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
+- Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
+
+Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
+
+Settings tab: Hide Omarchy's workspace indicator, Follow focus, Grace delay, Minimum stations, installed version.
+
+**Theme tokens** (`import qs.Commons`, `import qs.Ui`):
+
+| Element                          | Token                                                                                                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Panel background / border        | `Color.popups.background` / `BorderSurface` + `Border.surfaceSpec("popups","border",…)`                                                                   |
+| Text                             | `Color.popups.text` in the popout; bar widget text: injected `bar.foreground` where available, else `Color.bar.text` (there is no `Color.bar.foreground`) |
+| Dropdown menus and selected rows | `Color.menu.background`, `.text`, `.border`, `.scrim`, `.selectedBackground`, `.selectedText`, `.selectedBorder`                                          |
+| Global fallbacks                 | `Color.foreground`, `Color.accent`, `Color.urgent`                                                                                                        |
+| Active tab, selected, Keep       | `Color.accent`                                                                                                                                            |
+| Conflicts, red tab               | `Color.urgent`                                                                                                                                            |
+| Corners                          | `Style.cornerRadius` (never hardcode)                                                                                                                     |
+| Spacing, fonts                   | `Style.space(px)`, `Style.spacing.*`, `Style.font.*`                                                                                                      |
+| Buttons, dropdowns, tab strips   | reuse `qs.Ui` controls                                                                                                                                    |
+
+CI check: fail on any hex colour (including short and alpha forms) and on symlinks. Copy Display's **component structure**, not its raw numeric spacing or font values: wrap dimensions in `Style.space`, use `Style.font` and `Style.spacing`, and keep the shared `BorderSurface`/`Border` model. Token names above were read from the installed `Color.qml` in M0.
+
+## 12. Install, update, delete
+
+|         | Flow                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install | `omarchy plugin add https://github.com/yakumy/station.git --enable`. Station works immediately.                                                                                                                                                                                                                                                                                                                                                                            |
+| Update  | `omarchy plugin update yakumy.station`, then `omarchy restart shell`. Station shows its installed version only. Schema changes migrate by `version` in config/state.                                                                                                                                                                                                                                                                                                       |
+| Delete  | `omarchy plugin remove yakumy.station`. The cleanup script (§10.2) restores the stock widget if appropriate and reloads Hyprland. The cleanup also rewrites the managed `monitors.lua` block to plain geometry (no disable/mirror/guard), so the user's layout stays but no Station mode survives. Left behind: config.json, state.json and `monitors.lua` backups (inert files). Settings offers "Remove Station block" to delete the block entirely before uninstalling. |
+
+Files:
+
+- `~/.config/omarchy/station/config.json`: identities and preferred lanes, mode preferences, enabled set, direction, follow-focus, grace delay, minStations, custom keybindings, hideNative.
+- `~/.local/state/omarchy/station/state.json`: last station, applied binds, stock lease, pending transaction, version.
+- `~/.local/state/omarchy/station/preview.token`.
+
+## 13. Security
+
+- No downloaded code, no network access, no `sh -c` with unvalidated data, no `eval` of strings built from device text. The two detached scripts are fixed templates with positional validated arguments.
+- Terminology: a **connector** is the `name` field from hyprctl. It must match `^[A-Za-z0-9_.:-]{1,64}$` and may then be used as a Lua string (escaped) or an argv element (monitor ops, brightness). **EDID-derived fields** (`description`, `make`, `model`, `serial`) are untrusted: matching and display only, never interpolated into Lua, argv or file text without a proper serialiser. (Omarchy itself shipped a fix for USB device names being executed as Hyprland Lua.)
+- `Process`/`execDetached` use argv arrays.
+- `monitors.lua`: backup, atomic write, no symlink following, markers only.
+- Logs never contain command lines with unvalidated input.
+
+## 14. Tests
+
+**Unit** (`node --test`):
+
+- All transitions between the 7 non-empty present sets with random windows: station never changes, nothing left on a missing lane, plan∘plan = ∅, adds produce no moves.
+- `host()` for every case in §5.3; Mirror/Single `present`; lane assignment including lane reuse across docks and the unmanaged 4th monitor; role-swap planner; direction mapping (ltr, rtl); `existing` stations.
+- Conflict parser against real `omarchy menu keybindings --print` lines and modifier-order variants; "unknown never becomes free".
+- `MonitorsLua` generator: golden files, bad-name rejection, guard always wraps `disabled = true`, `pcall` structure.
+- Logical-size and overlap math (3840×2160 at scale 2; rotated transforms).
+
+**Integration / manual** (each must pass before release):
+
+1. Station disabled with no Hyprland reload in between; then normal `omarchy plugin remove`: `SUPER+number` works immediately.
+2. Stock workspace widget already disabled before Station: never enabled by cleanup. Widget moved after first Station use: restored to the newest recorded place.
+3. Shell crash (`kill -9`) during a monitor preview: watchdog reloads and restores the layout.
+4. Station-generated disable/mirror events do not start topology operations or follow-focus.
+5. Role swap with windows on all monitors: windows keep station and physical monitor.
+6. Unplug during a pending preview; monitor removed during `showStation`.
+7. Fourth independent monitor: unmanaged, panel opens, nothing touched.
+8. Named and special workspaces; floating, fullscreen and pinned clients.
+9. Rapid remove/add/remove sequences, including re-adds inside the grace window.
+10. Fast reconnect under 5 s: no merge. Physical unplug: merge after grace, station preserved.
+11. Theme change in Single mode: no flicker, binds and rules survive; cold boot with and without externals; two identical monitors; docks with different monitors reusing lanes.
+12. Keep with a deliberately broken `monitors.lua`: backup restored, error shown.
+13. Plain `omarchy restart shell`: no duplicate binds, stock widget not touched.
+14. Press-to-switch latency p50 and p95.
+
+## 15. Milestones
+
+**M0 — assumption-elimination gate (blocks M1).** Test each item and write the observed result in the table; amend this spec where reality differs.
+
+| #   | Item                                                                                                                                                                                          | Observed |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1   | `hl.dsp.focus({ workspace="N" })` and `hl.dsp.focus({ monitor="NAME" })` syntax                                                                                                               | Pass: constructors and a two-monitor focus batch worked; original monitor focus was restored. |
+| 2   | Service-owned `IpcHandler` target: `omarchy-shell yakumy.station <method> <arg>` with the popout closed; p50/p95 keypress-to-switch (ping alone: p50 ~80 ms)                                  | Pass: direct closed-popout IPC; 20 physical-key samples p50 66 ms / p95 68 ms (64–69 ms). |
+| 3   | Display-popout structure: ~680×560 render, keyboard focus, Esc/outside-click, anchoring under the widget, service-driven open                                                                 | Pass with sizing correction: service open, anchor, focus, Esc and outside click; theme-scaled content was 567×467. |
+| 4   | Cold-start `hl.get_monitors()` in `monitors.lua`; guarded block behaviour                                                                                                                     | Pass with correction: two cold sessions returned an empty table during config evaluation; connected/laptop-only monitors appeared normally afterward. Guard remains safe; service applies runtime mode. |
+| 5   | Monitor rule precedence (last wins?) and block position                                                                                                                                       | Pass: last rule won at runtime and at the end of `monitors.lua`. |
+| 6   | Destruction ordering on disable/remove/restart; `listPlugins` JSON shape; `jq` present; cleanup + `hyprctl reload` leaves `SUPER+n` working                                                   | Pass on fixture: restart skipped cleanup; disable/remove cleanup reloaded and restored defaults. |
+| 7   | `omarchy bar put/move` semantics and index handling; `omarchy plugin enable/disable` side effects on `shell.json`                                                                             | Pass with correction: indexes are zero-based; enable then `bar move` restores placement; `put` does not relocate. |
+| 8   | Watchdog survives `kill -9` of the shell and reloads                                                                                                                                          | Pass: token removed and layout reloaded/restored after 19.99 s; supervised shell returned. |
+| 9   | Timing and attribution of Station-generated monitor/workspace events                                                                                                                          | Pass: controlled disable/enable/mirror sequences captured; record `expect` before eval. Concurrent physical hotplug remains an integration test. |
+| 10  | `availableModes` string format and the `mode` string Hyprland accepts                                                                                                                         | Pass: exact `1920x1080@60.00Hz` accepted; JSON duplicates confirmed. |
+| 11  | Behaviour with a 4th monitor (if hardware allows; else document as untested)                                                                                                                  | Untested: only two physical monitors available; permitted to remain documented. |
+| 12  | Plain shell restart: existing `Station:` binds detected by description; no duplicates                                                                                                         | Pass on fixture: three before, three after; lease untouched. |
+| 13  | Removal cleanup end to end with Single mode saved: block neutralised to plain geometry, all monitors back, stock widget restored in place, `SUPER+n` default again, no leftover runtime binds | Pass on fixture for disable and remove; original desktop state restored afterward. |
+
+- **M1 core:** Model.js + unit tests, lane assignment, switch/send/silent/go/shift, bind apply with the §8 rules, reload re-apply, reconcile on removal with grace, state machine and generations, follow focus, bar widget, stock lease and cleanup.
+- **M2 displays:** panel, canvas (logical coordinates), list, resolution/refresh/scale, role swap, brightness, Mode and Direction dropdowns, preview watchdog, Keep transaction, `monitors.lua` block.
+- **M3 keybindings:** conflict checker, editor, red tab.
+- **M4 polish:** settings tab, docs, marketplace listing and review notes.

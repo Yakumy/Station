@@ -1,0 +1,128 @@
+{
+  "capturedAt": "2026-10-04T17:24:23.648Z",
+  "sourceHashes": {
+    "shell.qml": "4a4b7694e5b9e0bd952ce0efa2d6dc2cea44cdfa98cc2f442e40fe41cbc1beab",
+    "services/PluginRegistry.qml": "8466127c53037b80b582544610b0bdf78a86764e4f037a3b9ce360d107359803",
+    "Commons/Color.qml": "cc9b62e2eaf8c307aa02206d9320c3d0ca349cf8feed452a6eddf387adaa5320",
+    "Ui/Panel.qml": "e6588b3d7c1075d68c6392d028483fcc5d4d2bcb29180758fe265a957cbdc71d",
+    "Ui/KeyboardPanel.qml": "96245f2da8d38baa0017caa285d596c485bd19a3a4d2cd1675bee9d84ffba42d",
+    "plugins/panels/monitor/manifest.json": "d79086c49ae4a4bf377421f0d48cb4149b2a86974dae253e2ad8bf8abd0538fa",
+    "plugins/panels/monitor/Panel.qml": "2f3f95e5fc75af2af1f1af418a65469c37714b2bec38cfd2206bdd3f1f1b0e69",
+    "plugins/panels/monitor/Model.js": "9dd9cb7f7dc11f16e571a48bf2a7c51be75ddaef3d4d5f35c511be8f91ecd2ec"
+  },
+  "hyprlandVersion": "0.56.2",
+  "monitors": [
+    {
+      "name": "eDP-1",
+      "width": 1920,
+      "height": 1080,
+      "scale": 1,
+      "transform": 0,
+      "disabled": false,
+      "mirrorOf": "none",
+      "availableModes": [
+        "1920x1080@60.00Hz"
+      ]
+    },
+    {
+      "name": "HDMI-A-2",
+      "width": 1920,
+      "height": 1200,
+      "scale": 1,
+      "transform": 0,
+      "disabled": false,
+      "mirrorOf": "none",
+      "availableModes": [
+        "1920x1200@59.88Hz",
+        "1920x1080@60.00Hz",
+        "1920x1080@60.00Hz",
+        "1920x1080@59.94Hz",
+        "1920x1080@50.00Hz",
+        "1600x1200@60.00Hz",
+        "1680x1050@59.88Hz",
+        "1280x1024@75.03Hz",
+        "1280x1024@60.02Hz",
+        "1440x900@59.90Hz",
+        "1280x800@59.91Hz",
+        "1280x720@60.00Hz",
+        "1280x720@60.00Hz",
+        "1280x720@59.94Hz",
+        "1280x720@50.00Hz",
+        "1024x768@75.03Hz",
+        "1024x768@70.07Hz",
+        "1024x768@60.00Hz",
+        "800x600@75.00Hz",
+        "800x600@72.19Hz",
+        "800x600@60.32Hz",
+        "720x576@50.00Hz",
+        "720x576@50.00Hz",
+        "720x576@50.00Hz",
+        "720x480@60.00Hz",
+        "720x480@60.00Hz",
+        "720x480@59.94Hz",
+        "720x480@59.94Hz",
+        "720x480@59.94Hz",
+        "640x480@75.00Hz",
+        "640x480@72.81Hz",
+        "640x480@66.67Hz",
+        "640x480@60.00Hz",
+        "640x480@59.94Hz",
+        "640x480@59.94Hz",
+        "720x400@70.08Hz"
+      ]
+    }
+  ],
+  "plugins": {
+    "shape": "array",
+    "fields": [
+      "id",
+      "name",
+      "kinds",
+      "enabled",
+      "active",
+      "canDisable",
+      "firstParty",
+      "clonedFrom"
+    ],
+    "stationInstalled": false,
+    "stockEnabled": true
+  },
+  "jq": "jq-1.8.2",
+  "assertions": {
+    "focusConstructors": "ok",
+    "warmGetMonitors": "ok"
+  },
+  "bindingExamples": [
+    "SUPER SHIFT ALT + 0                 → Move window silently to workspace 10",
+    "SUPER SHIFT ALT + 1                 → Move window silently to workspace 1",
+    "SUPER CTRL + LEFT                   → Move grouped window focus left",
+    "SUPER CTRL + RIGHT                  → Move grouped window focus right"
+  ],
+  "shellPing": {
+    "samplesMs": [
+      78.80122699999998,
+      92.606898,
+      82.238111,
+      86.996622,
+      78.93420300000002,
+      78.86532599999998,
+      78.13389900000004,
+      82.38087200000007,
+      87.158904,
+      79.08988499999987,
+      80.20828700000015,
+      78.14092899999991,
+      79.74754199999984,
+      81.73324300000013,
+      81.97219800000016,
+      77.61735599999997,
+      79.41578900000013,
+      81.19653500000004,
+      75.95842999999991,
+      83.23589200000015
+    ],
+    "p50Ms": 79.74754199999984,
+    "p95Ms": 87.158904,
+    "note": "CLI ping round trip only; not service routing or press-to-switch latency."
+  }
+}

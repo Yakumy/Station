@@ -1,0 +1,22 @@
+name: Station v2 checks
+on:
+  push:
+    branches: [dev]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Test M0 tooling
+        run: node --test test/m0/*.test.mjs
+      - name: Test v2 core
+        run: node --test test/v2/*.test.cjs
+      - name: Check probe theme tokens
+        run: node tools/v2/check-theme-tokens.mjs tools/v2/m0-plugin
+      - name: Reject literal palettes and symlinks in v2 sources
+        run: node tools/v2/check-theme-tokens.mjs
