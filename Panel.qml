@@ -5,6 +5,7 @@ import qs.Ui as Ui
 import qs.Commons
 import "lib/Model.js" as Model
 import "lib/Binds.js" as Binds
+import "lib" as Station
 
 Ui.Panel {
   id: root
@@ -237,64 +238,11 @@ Ui.Panel {
           spacing: Style.spacing.sm
 
           Ui.PanelSectionHeader { text: "LAYOUT · LOGICAL COORDINATES · DRAG TO ARRANGE"; foreground: Color.popups.text; fontFamily: Style.font.family }
-          Ui.BorderSurface {
-            id: canvas
+          Station.DisplayLayout {
             width: parent.width
-            height: Style.space(190)
-            color: Color.popups.background
-            borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
-            radius: Style.cornerRadius
-            readonly property real zoom: 0.09
-            readonly property real inset: Style.spacing.md
-            function minimum(axis) {
-              var value = 0
-              if (!root.service || !root.service.displayDraft.length) return value
-              value = Number(root.service.displayDraft[0][axis]) || 0
-              for (var i = 1; i < root.service.displayDraft.length; i++)
-                value = Math.min(value, Number(root.service.displayDraft[i][axis]) || 0)
-              return value
-            }
-            Repeater {
-              model: root.service ? root.service.displayDraft : []
-              delegate: Ui.BorderSurface {
-                id: monitorCard
-                required property var modelData
-                readonly property bool rotated: [1, 3, 5, 7].indexOf(Number(modelData.transform)) !== -1
-                readonly property real logicalWidth: (rotated ? Number(modelData.height) : Number(modelData.width)) / Number(modelData.scale)
-                readonly property real logicalHeight: (rotated ? Number(modelData.width) : Number(modelData.height)) / Number(modelData.scale)
-                x: canvas.inset + (Number(modelData.x) - canvas.minimum("x")) * canvas.zoom
-                y: canvas.inset + (Number(modelData.y) - canvas.minimum("y")) * canvas.zoom
-                width: Math.max(Style.space(70), logicalWidth * canvas.zoom)
-                height: Math.max(Style.space(42), logicalHeight * canvas.zoom)
-                color: root.selectedDisplayName === modelData.name ? Color.menu.selectedBackground : Color.menu.background
-                borderSpec: Border.controlSpec(root.selectedDisplayName === modelData.name ? "selected" : "normal", Color.menu.text, Color.accent)
-                radius: Style.cornerRadius
-                opacity: modelData.enabled ? 1 : 0.5
-                Text {
-                  anchors.centerIn: parent
-                  text: modelData.name + "\nLane " + modelData.lane
-                  horizontalAlignment: Text.AlignHCenter
-                  color: root.selectedDisplayName === modelData.name ? Color.menu.selectedText : Color.menu.text
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.caption
-                }
-                MouseArea {
-                  anchors.fill: parent
-                  drag.target: monitorCard
-                  cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                  onPressed: root.selectDisplay(modelData.name)
-                  onReleased: {
-                    if (!root.service || root.service.state !== "idle") return
-                    var nx = (monitorCard.x - canvas.inset) / canvas.zoom + canvas.minimum("x")
-                    var ny = (monitorCard.y - canvas.inset) / canvas.zoom + canvas.minimum("y")
-                    var snapped = Model.snapPosition(modelData, nx, ny, root.service.displayDraft)
-                    root.service.setDisplayValue(modelData.name, "x", snapped.x)
-                    root.service.setDisplayValue(modelData.name, "y", snapped.y)
-                    root.service.previewLayout()
-                  }
-                }
-              }
-            }
+            service: root.service
+            selectedDisplayName: root.selectedDisplayName
+            onDisplaySelected: function(name) { root.selectDisplay(name) }
           }
 
           Ui.PanelSectionHeader { text: "DISPLAYS"; foreground: Color.popups.text; fontFamily: Style.font.family }

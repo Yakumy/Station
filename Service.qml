@@ -567,6 +567,16 @@ Item {
     return "ok"
   }
 
+  function setDisplayPosition(name, x, y) {
+    if (state !== "idle" || !isFinite(x) || !isFinite(y)) return "invalid"
+    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
+    if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    displayDraft = displayDraft.map(function(display) {
+      return display.name === name ? Object.assign({}, display, { x: Math.round(x), y: Math.round(y) }) : display
+    })
+    return "ok"
+  }
+
   function setModeValue(mode, target) {
     if (["extend", "mirror", "single"].indexOf(mode) === -1) return "invalid"
     if (mode === "single") {

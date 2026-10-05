@@ -9,6 +9,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
   - **[SRC]** read from installed Omarchy/Quickshell source or from Station v1/v2 code that ran on a real machine.
   - **[DOC]** stated in the official Hyprland wiki (Hyprland 0.55/0.56 Lua pages).
   - **[INFER]** reasoned from the above, not tested.
+  - **[QTTEST]** production QML exercised with Qt pointer events in an isolated offscreen harness; theme painting and compositor calls are doubled. This is not a physical desktop test.
 - **Do not re-run** anything tagged [LIVE] unless the fingerprint in §13 shows the stack changed.
 - **Do test** the items in §12 (never covered).
 - Provenance: round 1 results reached the author as a summary; rounds 2 and M0 and the cold-login and integration results as detailed reports. Raw captures lived under `/tmp/station-desktop-tests-20261004*` and `~/.local/state/omarchy/station-m0-cold/` on the author's machine and may no longer exist. This file is the durable record. Monitor serial numbers are deliberately omitted.
@@ -49,6 +50,9 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Synthetic keypresses (virtual input) did **not** trigger binds in the test harness. Test bindings with a human keypress. | [LIVE] |
 | `hyprctl reload` removes runtime binds (both `hl.bind` and `o.bind`). `configreloaded` follows; re-apply afterwards. | [LIVE] |
 | **Binding the same combo twice leaves two entries and both commands fire** (A then B). `hl.unbind(combo)` removes **all** entries on that combo. `hl.unbind` followed by `o.bind` leaves exactly one. | [LIVE] |
+| On this Lua provider, use the **registered modifier spelling/order** when unbinding. `CTRL + SUPER + LEFT` left the stock `SUPER + CTRL + LEFT` grouped-focus binding present; matching the stock spelling removed it. Station now uses `SUPER + CTRL + LEFT/RIGHT` for those intentional replacements. | [LIVE] |
+| Station's direct `hl.bind(combo, hl.dsp.exec_cmd(command), { description = ... })` path is working on this installation. This supersedes any inference from the earlier raw-bind registration probe that `hl.bind` itself cannot work. The user confirmed the repaired arrows with real keys on 2026-10-05. | [SRC][LIVE] |
+| v1.1.10 directional movement first asks Hyprland to move the active window natively. A native tiled move can change position or size without changing workspace/monitor; compare all four after the settle delay before issuing a fallback move. Read `hyprctl activewindow -j` for the actual focus, then track that window by address and identity. | [SRC][LIVE] |
 | Omarchy 4 binds workspace keys in a loop with keycodes: `SUPER + code:10…19` switch workspace, `SUPER + SHIFT + code:10…19` move window, `SUPER + SHIFT + ALT + code:10…19` move window silently. `CTRL + SUPER + ←/→` is "Move grouped window focus left/right". `SUPER + SHIFT + ALT + ←/→` moves a whole workspace to another monitor. Source: `$OMARCHY_PATH/default/hypr/bindings/tiling.lua`. 55 declarations containing SUPER and CTRL exist in the defaults. | [LIVE][SRC] |
 | **`omarchy menu keybindings --print` is the reliable listing.** It shows defaults, `SUPER + 1…0`, the user's `bindings.lua` entries, **and runtime binds**, with the real display key even when `hyprctl` shows `key:""`. Baseline 227 lines (228 with one extra runtime bind); output identical with `DEBUG=1` and with an empty `XDG_CACHE_HOME`. Format example: `SUPER + 1                           → description`. It uses plain `hyprctl binds` plus a Lua-source-derived cache. Upstream has had an open issue where a scan can die partway so user binds are missed; it did not occur on the test machine. | [LIVE][SRC] |
 | Station v2 installed exactly 36 binds (consistent with the action table: 10 switch + 10 send + 10 silent + 2 navigate + 4 move-across; the per-action breakdown is arithmetic, only the total was reported); after a plain shell restart the count stayed 36 with no duplicates. | [LIVE] |
@@ -64,7 +68,9 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Runtime workspace rules vanish on `hyprctl reload`. | [LIVE] |
 | Empty workspaces are destroyed by Hyprland; a spare workspace can be created and destroyed in the same millisecond during an unplug (see §6). | [LIVE] |
 | `hyprctl clients -j` gives each client `address`, `workspace.id`, `monitor` (numeric id), `pinned`. After a monitor is removed, client workspace ids are unchanged and only the monitor id changes (e.g. 1 → 0). | [LIVE] |
-| Station's fixed grid: `workspace = (station − 1) × 3 + lane`, stations 1–10, three lanes. Special and named workspaces and pinned windows are never moved. | [SRC] |
+| Station's original fixed three-lane grid was superseded on 2026-10-05 by the accepted compact mapping: `workspace = (station − 1) × activeWidth + slot`. Single/Mirror width is one; Extend width is the managed active-output count. The durable mapping records output order. Special and named workspaces and pinned windows are excluded from migration. | [SRC] |
+| Resolve a client's numeric `monitor` against the current `hyprctl monitors all -j` entries' **`id`**, then use the connector name. Monitor IDs are not Station lane numbers or array indexes. The key repair required this conversion for both client snapshots and `activewindow`. | [LIVE][SRC] |
+| When compact numbering reuses an existing destination workspace, set its rule **and explicitly move that workspace to the intended monitor**. Window moves into an existing workspace alone inherit its previous physical placement. The local upgrade audit confirmed preservation of each window's physical display and station after adding this step. | [LIVE][SRC] |
 
 ## 5. Monitors
 
@@ -152,6 +158,9 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Display's building blocks: `qs.Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, themed controls. Source: `/usr/share/omarchy/shell/plugins/panels/monitor/` (`Panel.qml`, `Model.js`, manifest id `omarchy.monitor`). | [SRC] |
 | The popout rendered anchored at `(5,27)` under the widget on `eDP-1`, took keyboard focus, closed on Esc and on outside click. **A requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels** under the active theme and scale: design to the available size. | [LIVE] |
 | Offscreen Qt backend cannot load `KeyboardPanel`; component checks need the Wayland session. | [LIVE] |
+| Replacing a JavaScript-array `Repeater.model` immediately destroys its delegates. The original drag release wrote X with `setDisplayValue`, then failed with `ReferenceError: root is not defined` before writing Y or calling Preview. Commit X/Y in one update and continue the transaction from a component outside the Repeater. Reproduced with the production handler in Qt's offscreen pointer harness. | [QTTEST] |
+| Qt's `MouseArea.drag.target` starts moving after its drag threshold; an exact pointer displacement can therefore leave a card short of the desired edge. The repaired layout derives offsets from press/release coordinates in the canvas, keeps its transform stable during the gesture, and snaps within a theme-scaled 12-screen-pixel distance. Its fit reserves room for horizontal and vertical arrangements. | [QTTEST][SRC] |
+| Isolated layout tests cover horizontal placement on either side, vertical placement, negative positions, repeat drags after Revert, click without Preview, edge snapping, selected-mode/scale/rotation geometry, and three large displays fitting the canvas. Scaled/rotated and three-display **hardware** behavior remain unverified. | [QTTEST] |
 
 ### 8.6 Theme tokens (`import qs.Commons`, `import qs.Ui`)
 
@@ -175,6 +184,14 @@ Themes switch live: the shell updates the singletons and bindings repaint. Do no
 | **Never call `omarchy-brightness-display --help`:** the direct binary has no help handler and treats it as an adjustment argument. Use `omarchy brightness display --help`. | [LIVE] |
 | Display's `Model.js` does not read brightness; it only clamps, labels and computes scale and parses display JSON. Reading goes Panel.qml → `omarchy-monitor-state` (every 5 s while open) → `omarchy-brightness-display --monitor <focused>`. | [SRC] |
 
+### 8.8 FileView writes and reload validation
+
+| Fact | Tag |
+|---|---|
+| `FileView.setText` with unchanged text does not provide a fresh `saved` acknowledgment. A recovered migration that rewrote an identical journal waited indefinitely. Incrementing a journal revision forces an acknowledged write for every attempt; wait for that acknowledgment before changing compositor state. | [LIVE][SRC] |
+| Component compilation checks syntax/types but do not instantiate the service or exercise asynchronous file callbacks. Journal recovery needed a runtime test in addition to compilation. | [LIVE][SRC] |
+| Plugin source reload alone did not reliably replace cached JavaScript during the compact-grid repair. Restarting the shell loaded the installed revision. Runtime binds are reinstalled asynchronously afterwards; an immediate count can temporarily be zero before returning to 36. | [LIVE] |
+
 ## 9. Station-specific design results that follow from the above
 
 1. **Runtime effects are re-applied after every `configreloaded`** (binds, workspace rules, monitor runtime state), debounced ~300 ms.
@@ -182,7 +199,7 @@ Themes switch live: the shell updates the singletons and bindings repaint. Do no
 3. **File = geometry; runtime = mode.** `monitors.lua` carries a marked block with geometry and a fail-safe guarded disable; because the cold list is empty, the service applies mode after discovery.
 4. **Preview/Keep transaction:** apply at runtime with a detached watchdog; on Keep: backup, atomic write, `hyprctl reload`, check `configerrors`, restore the backup on errors.
 5. **Removal cleanup is a detached fixed-template script** with positional arguments only (never interpolated data).
-6. **Grace delay 5 s** before merging windows after a removal; adds move nothing.
+6. **Grace delay 5 s** before merging windows after a removal; additions preserve windows' physical display and station while compact workspace IDs may change.
 7. **Follow-focus must ignore workspace events during and shortly after topology changes.**
 
 ## 10. Security-relevant facts

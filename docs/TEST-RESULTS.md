@@ -69,5 +69,29 @@ remain to be tested by the user. Three-display coverage is simulated, not a
 claim of a three-monitor hardware test. The v1-style directional-key sequence is now ported and covered by service tests
 for native tile/monitor movement, vertical and horizontal station boundaries,
 Single mode, RTL, closed windows, topology cancellation, numbered sends, and
-silent sends. Physical key behavior for this revision awaits the user's test;
-binding registration and simulated actions alone are not physical evidence.
+silent sends. The user confirmed the repaired keybindings and arrow behavior
+with real keys on 2026-10-05.
+
+## Layout drag repair (2026-10-05)
+
+The original drag handler was reproduced in Qt's offscreen pointer harness:
+its first X write rebuilt the Repeater and destroyed the card, causing
+`ReferenceError: root is not defined` before the Y write and Preview.
+The replacement commits both coordinates atomically from the canvas, derives
+pointer offsets without losing the drag-threshold distance, uses screen-pixel
+edge snapping, and fits the available canvas with space for both orientations.
+Selected resolution, scale and rotation determine the displayed logical size.
+
+`python3 tools/v2/check-layout.py` runs the production layout component,
+Model.js geometry and extracted Service.qml position setter, with theme paint
+and Preview compositor calls doubled. Nine cases pass (11 QtTest passes
+including setup/cleanup), without warnings: horizontal right/left (including
+negative coordinates), vertical, click-only selection, repeated drag after Revert, nearby
+edge snapping, selected-mode/scale/rotation geometry, three-display fit, and
+invalid/busy position rejection. The CI workflow includes this check.
+
+All ten Node test files pass; theme checking scans 13 runtime sources with zero
+violations; manifest validation and QML compilation pass. The Wayland QML
+probe still emits the existing Qt portal registration warning.
+Physical GUI drag/Keep confirmation remains for the user; these tests do not
+alter the live monitor arrangement.
