@@ -9,6 +9,7 @@ import "lib/Store.js" as Store
 import "lib/Recovery.js" as Recovery
 import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
+import "lib/Events.js" as Events
 
 Item {
   id: root
@@ -171,7 +172,9 @@ Item {
     var statements = rules.slice()
     for (var i = 0; i < available.length; i++) statements.push(Hypr.focusWorkspace(Model.ws(stationNumber, available[i])))
     if (focused && lanes[focused.name]) statements.push(Hypr.focusMonitor(focused.name))
-    expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(lanes), until: Date.now() + 2000 }
+    expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(lanes).filter(function(name) {
+      return available.indexOf(lanes[name]) !== -1
+    }), until: Date.now() + 2000 }
     evalLua(Hypr.batch(statements), function(code) {
       if (generation !== gen) return
       if (code === 0) {
@@ -316,7 +319,10 @@ Item {
       var monitorRules = MonitorsLua.runtimeModeRules(Object.keys(lanes).map(function(name) {
         return { name: name, lane: lanes[name] }
       }), config)
-      expect = { kinds: ["monitor", "workspace"], outputs: Object.keys(lanes), until: Date.now() + 2000 }
+      var outputs = MonitorsLua.changedOutputs(Object.keys(lanes).map(function(name) {
+        return { name: name, lane: lanes[name] }
+      }), config, monitors, false)
+      expect = { kinds: ["monitor", "workspace"], outputs: outputs, until: Date.now() + 2000 }
       evalLua(Hypr.batch(monitorRules))
     } catch (error) { console.warn("Station monitor mode:", error) }
     applyRules(currentStation)
@@ -413,7 +419,10 @@ Item {
     var lua = pendingDisplayConfig.block.split("\n").filter(function(line) {
       return line !== MonitorsLua.START && line !== MonitorsLua.END
     }).join("\n")
-    expect = { kinds: ["monitor", "workspace"], outputs: Object.keys(lanes), until: Date.now() + 2000 }
+    expect = { kinds: ["monitor", "workspace"], outputs: MonitorsLua.changedOutputs(
+      pendingDisplayConfig.displays, { mode: draftMode, singleTarget: draftSingleTarget,
+        enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) },
+      previewBefore, true), until: Date.now() + 2000 }
     evalLua(lua)
   }
 
@@ -589,9 +598,16 @@ Item {
     return shell ? String(shell.summon("yakumy.station", "{}")) : "no-shell"
   }
 
-  function eventExpected(name) {
-    if (Date.now() > Number(expect.until || 0)) return false
-    return (expect.kinds || []).some(function(kind) { return String(name).indexOf(kind) !== -1 })
+  function eventExpected(event) {
+    var output = ""
+    if (String(event.name || "").indexOf("workspace") === 0) {
+      var workspace = Number(String(event.data || "").split(",")[0])
+      if (Model.inGrid(workspace)) {
+        var lane = Model.host(Model.slotOf(workspace), present())
+        output = Object.keys(lanes).find(function(name) { return lanes[name] === lane }) || ""
+      }
+    }
+    return Events.expected(event, expect, Date.now(), output)
   }
 
   function handleEvent(event) {
@@ -604,13 +620,13 @@ Item {
       return
     }
     if (name.indexOf("monitoradded") === 0) {
-      if (eventExpected(name)) return
+      if (eventExpected(event)) return
       lastTopologyMs = Date.now()
       refresh(true, function() { updateAssignments(); applyRuntime(); openPanel() })
       return
     }
     if (name.indexOf("monitorremoved") === 0) {
-      if (eventExpected(name)) return
+      if (eventExpected(event)) return
       lastTopologyMs = Date.now()
       if (state === "switching" || state === "reconciling") {
         gen += 1
@@ -622,7 +638,7 @@ Item {
       return
     }
     if ((name.indexOf("workspace") !== -1 || name.indexOf("focusedmon") !== -1)
-        && !eventExpected(name) && config.followFocus && state === "idle"
+        && !eventExpected(event) && config.followFocus && state === "idle"
         && Date.now() - lastTopologyMs > 500) followFocus.restart()
   }
 
