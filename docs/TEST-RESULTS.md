@@ -97,8 +97,22 @@ monitor-card `MouseArea` now prevents stealing; the additional vertical-scroll
 regression passes and confirms that the panel does not scroll during a monitor
 drag.
 
-All ten Node test files pass; theme checking scans 13 runtime sources with zero
+All eleven Node test files pass; theme checking scans 17 runtime sources with zero
 violations; manifest validation and QML compilation pass. The Wayland QML
 probe still emits the existing Qt portal registration warning.
-Physical GUI drag/Keep confirmation remains for the user; these tests do not
-alter the live monitor arrangement.
+The user confirmed physical horizontal and vertical drag/Keep behavior after
+the ScrollView pointer-grab fix.
+
+## Reference panel revision (2026-10-05)
+
+The panel now follows `docs/v2/reference/panel.png`: fixed header and tab row,
+global Mode and Direction dropdowns, a two-column Displays view, grouped
+keybindings, and compact settings. The layout canvas has theme-token dots and
+per-monitor rotation controls. There is no panel `ScrollView`, `Flickable`, or
+`ListView`; content height follows the selected tab and the panel requests the
+space it needs. A static CI test guards the fixed, non-scrollable structure.
+
+All eleven Node test files, the 12-case Qt pointer suite, theme-token scan,
+manifest validation, and component-by-component QML compilation pass. The QML
+checker now compiles every runtime QML component instead of only the two entry
+points.

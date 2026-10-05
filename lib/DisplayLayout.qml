@@ -42,6 +42,35 @@ Ui.BorderSurface {
     if (service.setDisplayPosition(display.name, snapped.x, snapped.y) === "ok") service.previewLayout()
   }
 
+  function rotateDisplay(display, delta) {
+    if (!service || service.state !== "idle") return
+    var transform = Number(display.transform) || 0
+    var flipped = transform >= 4 ? 4 : 0
+    var next = flipped + ((transform - flipped + delta + 4) % 4)
+    if (service.setDisplayValue(display.name, "transform", next) === "ok") service.previewLayout()
+  }
+
+  Canvas {
+    id: dotGrid
+    anchors.fill: parent
+    property color dotColor: Color.popups.border
+    onDotColorChanged: requestPaint()
+    onWidthChanged: requestPaint()
+    onHeightChanged: requestPaint()
+    onPaint: {
+      var context = getContext("2d")
+      context.clearRect(0, 0, width, height)
+      context.fillStyle = dotColor
+      var gap = Math.max(Style.space(10), 4)
+      var radius = Math.max(Style.space(1), 0.6)
+      for (var x = gap; x < width; x += gap) for (var y = gap; y < height; y += gap) {
+        context.beginPath()
+        context.arc(x, y, radius, 0, Math.PI * 2)
+        context.fill()
+      }
+    }
+  }
+
   Repeater {
     model: canvas.displays
     delegate: Ui.BorderSurface {
@@ -61,7 +90,8 @@ Ui.BorderSurface {
       opacity: modelData.enabled ? 1 : 0.5
       Text {
         anchors.centerIn: parent
-        text: modelData.name + "\nLane " + modelData.lane
+        text: (modelData.enabled && canvas.service ? canvas.service.roleOf(modelData.name) + 1 : "Off")
+          + "\n" + modelData.name
         horizontalAlignment: Text.AlignHCenter
         color: canvas.selectedDisplayName === modelData.name ? Color.menu.selectedText : Color.menu.text
         font.family: Style.font.family
@@ -71,8 +101,7 @@ Ui.BorderSurface {
         id: pointer
         anchors.fill: parent
         enabled: canvas.service && canvas.service.state === "idle"
-        // The panel is inside a vertical ScrollView. Without this, its
-        // Flickable cancels monitor drags as soon as the gesture turns vertical.
+        // Retain the gesture if this component is ever embedded in a Flickable.
         preventStealing: true
         property point startPointer
         cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
@@ -93,6 +122,36 @@ Ui.BorderSurface {
           monitorCard.offsetX = 0; monitorCard.offsetY = 0
           if (Math.hypot(dx, dy) < Qt.styleHints.startDragDistance) return
           canvas.commitPosition(display, Number(display.x) + dx / canvas.zoom, Number(display.y) + dy / canvas.zoom)
+        }
+      }
+      Row {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.margins: Style.spacing.xs
+        spacing: Style.spacing.xs
+        z: 2
+        Repeater {
+          model: [{ label: "↶", delta: -1 }, { label: "↷", delta: 1 }]
+          delegate: Ui.BorderSurface {
+            required property var modelData
+            width: Style.space(19)
+            height: Style.space(19)
+            color: Color.popups.background
+            borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+            radius: Style.cornerRadius
+            Text {
+              anchors.centerIn: parent
+              text: modelData.label
+              color: Color.popups.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: canvas.rotateDisplay(monitorCard.modelData, modelData.delta)
+            }
+          }
         }
       }
     }

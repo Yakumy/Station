@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var spacing: ({md: 8})
+  property var spacing: ({xs: 3, md: 8})
   property int cornerRadius: 0
   property int normalBorderWidth: 1
   property var font: ({family: "monospace", caption: 12})
@@ -40,7 +40,7 @@ QtObject {
     (commons / 'Color.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var popups: ({background: "black", border: "white"})
+  property var popups: ({background: "black", border: "white", text: "white"})
   property var menu: ({background: "black", text: "white", selectedBackground: "grey", selectedText: "white"})
   property string accent: "white"
 }
@@ -66,6 +66,10 @@ Item {
     property int previews: 0
     property int writes: 0
     onDisplayDraftChanged: writes++
+    function roleOf(name) {
+      for (var i = 0; i < displayDraft.length; i++) if (displayDraft[i].name === name) return i
+      return -1
+    }
 ''' + setter + '''
     function previewLayout() {
       if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")

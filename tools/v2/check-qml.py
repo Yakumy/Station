@@ -17,11 +17,14 @@ with tempfile.TemporaryDirectory(prefix="station-qml-") as directory:
         (root / name).symlink_to(Path("/usr/share/omarchy/shell") / name,
                                 target_is_directory=True)
     (root / "Probe").symlink_to(fixture, target_is_directory=True)
+    component_names = ["Panel.qml", "Service.qml"]
+    if (fixture / "lib").is_dir():
+        component_names += ["lib/" + path.name for path in sorted((fixture / "lib").glob("*.qml"))]
     (root / "shell.qml").write_text('''import QtQuick
 import Quickshell
 ShellRoot {
   Component.onCompleted: {
-    for (var name of ["Panel.qml", "Service.qml"]) {
+    for (var name of ''' + repr(component_names).replace("'", '"') + ''') {
       var c = Qt.createComponent("Probe/" + name)
       if (c.status !== Component.Ready) {
         console.error("''' + label + '''_COMPILE_FAILED " + c.errorString())
