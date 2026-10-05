@@ -307,7 +307,8 @@ Ui.Panel {
 
       Column {
         id: content
-        width: parent.width
+        x: Style.spacing.sm
+        width: parent.width - Style.spacing.sm * 2
         spacing: 0
 
         Item {
