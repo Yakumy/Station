@@ -35,7 +35,6 @@ Ui.Panel {
     Image {
       id: markImage
       anchors.fill: parent
-      anchors.margins: Style.spacing.xxs
       fillMode: Image.PreserveAspectFit
       source: Qt.resolvedUrl("../assets/station.svg")
       sourceSize.width: Math.round(width * Screen.devicePixelRatio)
@@ -299,40 +298,71 @@ Ui.Panel {
     onExited: if (root.brightnessQueued) root.setBrightness(root.pendingBrightness)
   }
 
-  implicitWidth: barButton.implicitWidth
-  implicitHeight: barButton.implicitHeight
+  readonly property color barFg: bar ? bar.barForeground : Color.bar.text
+  readonly property real stationLogoSize: Style.space(22)
+  readonly property real barControlMargin: Style.spaceReal(7.5)
 
-  Ui.WidgetButton {
-    id: barButton
-    anchors.fill: parent
-    bar: root.bar
-    text: "Station"
-    tooltipText: "Station"
-    fontSize: Style.font.body
-    labelVisible: false
-    fixedWidth: Style.space(58)
-    onPressed: root.toggle()
-    Row {
-      anchors.centerIn: parent
-      spacing: Style.spacing.xs
+  implicitWidth: barRow.implicitWidth
+  implicitHeight: barRow.implicitHeight
+
+  // Popout coordinator identity stays off the bar slot root so the host's
+  // open-panel dot does not center across logo + [S n]. The underline under
+  // the logo is drawn by the logo button itself.
+  QtObject {
+    id: popoutOwner
+    property var panel: root
+    readonly property bool popoutSwitchClosing: panel ? panel.popoutSwitchClosing : false
+    function close() { if (panel) panel.close() }
+    function closeForPopoutSwitch() { if (panel) panel.closeForPopoutSwitch() }
+  }
+
+  Row {
+    id: barRow
+    spacing: 0
+
+    Ui.WidgetButton {
+      id: logoButton
+      bar: root.bar
+      text: "Station"
+      tooltipText: "Station"
+      labelVisible: false
+      hasVisualContent: true
+      horizontalMargin: 7.5
+      fixedWidth: Math.round(root.stationLogoSize + root.barControlMargin * 2)
+      fixedHeight: bar ? bar.barSize : Style.bar.sizeHorizontal
+      onPressed: root.toggle()
       StationMark {
-        width: Style.space(16)
-        height: Style.space(16)
-        tint: barButton.foreground
+        anchors.centerIn: parent
+        width: root.stationLogoSize
+        height: root.stationLogoSize
+        tint: root.barFg
       }
-      Text {
-        text: "[S " + root.stationNumber + "]"
-        color: barButton.foreground
-        font.family: barButton.fontFamily
-        font.pixelSize: barButton.fontSize
+      Rectangle {
+        visible: root.opened
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: Math.max(1, Style.space(2))
+        color: Color.accent
+        radius: height / 2
       }
+    }
+
+    Ui.WidgetButton {
+      id: stationButton
+      bar: root.bar
+      text: "[S" + root.stationNumber + "]"
+      tooltipText: "Station"
+      horizontalMargin: 7.5
+      fontSize: Style.font.body
+      onPressed: root.toggle()
     }
   }
 
   Ui.KeyboardPanel {
     id: panel
-    anchorItem: barButton
-    owner: root
+    anchorItem: logoButton
+    owner: popoutOwner
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
