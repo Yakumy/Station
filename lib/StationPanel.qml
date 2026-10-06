@@ -311,7 +311,10 @@ Ui.Panel {
     open: root.opened
     focusTarget: keyCatcher
     padding: 0
-    contentWidth: panel.fittedContentWidth(Style.space(748))
+    // The six scale chips need ~262px in a row; at the 65/35 column split
+    // that takes ~920 theme units of panel before the 4x chip stops painting
+    // over the right edge. Do not shrink this while Scale stays one row.
+    contentWidth: panel.fittedContentWidth(Style.space(920))
     contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     Ui.PanelKeyCatcher {

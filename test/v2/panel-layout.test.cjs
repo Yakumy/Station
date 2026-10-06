@@ -22,6 +22,21 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(settings, /Installed version/);
 });
 
+test('scale stays one row of six and the panel reserves room for it', () => {
+  const panel = read('lib/StationPanel.qml');
+  const displays = read('lib/DisplaysTab.qml');
+
+  // Ui.ButtonGroup never wraps or clips: six chips need ~262px, so the panel
+  // must reserve the width that keeps them inside the card. Below that width
+  // the 4x chip painted past the panel's right edge.
+  assert.match(displays, /id: scaleGroup/);
+  assert.match(displays, /\[1, 1\.25, 1\.6, 2, 3, 4\]/);
+  const width = panel.match(/fittedContentWidth\(Style\.space\((\d+)\)\)/);
+  assert.ok(width, 'panel width is a Style.space request');
+  assert.ok(Number(width[1]) >= 920,
+    `panel requests ${width[1]} theme units; six scale chips need at least 920`);
+});
+
 test('popout owner closes through root, never through the KeyboardPanel id', () => {
   const panel = read('lib/StationPanel.qml');
   const owner = panel.match(/QtObject\s*\{\s*id: popoutOwner([\s\S]*?)\n {2}\}/);
