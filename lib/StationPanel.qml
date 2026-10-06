@@ -150,7 +150,7 @@ Ui.Panel {
   }
 
   function changeMode(value) {
-    if (!service || service.state !== "idle") return
+    if (!service || !service.draftEditable) return
     if (value.indexOf("single:") === 0) service.setModeValue("single", value.substring(7))
     else service.setModeValue(value, "")
   }
@@ -210,7 +210,20 @@ Ui.Panel {
     // Intent lives on the service, not here: this widget is destroyed when
     // the bar rebuilds its entries, and a dead widget cannot reopen anything.
     if (service) service.panelWanted = opened
+    // A real close ends the session, so the next open starts back on
+    // Displays. A rebuild never closes, so the tab survives it.
+    if (!opened && service) service.rememberedTab = 0
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
+  }
+
+  onSelectedTabChanged: if (service) service.rememberedTab = selectedTab
+
+  // The bar rebuilds this widget wholesale, so the tab it was showing has to
+  // come back from the service instead of from this instance.
+  function restoreSession() {
+    if (!service) return
+    var remembered = Number(service.rememberedTab)
+    if (remembered >= 0 && remembered <= 2 && selectedTab !== remembered) selectedTab = remembered
   }
 
   // A rebuilt widget inherits the panel it was carrying. summon() answers
@@ -225,17 +238,17 @@ Ui.Panel {
     })
   }
 
-  onServiceChanged: requestPanelBack()
-  Component.onCompleted: requestPanelBack()
+  onServiceChanged: { restoreSession(); requestPanelBack() }
+  Component.onCompleted: { restoreSession(); requestPanelBack() }
 
   Timer {
     id: reopenTimer
-    interval: 200
+    interval: 60
     property int attempts: 0
     onTriggered: {
       if (!root.service || !root.service.panelWanted) { attempts = 0; return }
       if (root.service.openPanel() === "true") { attempts = 0; return }
-      if (attempts < 4) { attempts += 1; restart() } else attempts = 0
+      if (attempts < 10) { attempts += 1; restart() } else attempts = 0
     }
   }
 

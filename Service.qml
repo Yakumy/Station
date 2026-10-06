@@ -55,6 +55,14 @@ Item {
   // and asks for the panel back. Deliberately in-memory: a shell restart
   // starts with the panel closed.
   property bool panelWanted: false
+  // Set by the panel on every tab switch. The widget is rebuilt when the bar
+  // reloads its entries, and a rebuilt instance would otherwise start back
+  // on Displays; the service is the object that survives that rebuild.
+  property int rememberedTab: 0
+  // A preview is an editing session, not a lock: the draft stays editable
+  // until Keep or Revert, so the user can rearrange again without having to
+  // settle the previous attempt first.
+  readonly property bool draftEditable: state === "idle" || state === "previewing"
   property var displayDraft: []
   property string draftMode: "extend"
   property string draftSingleTarget: ""
@@ -575,7 +583,7 @@ Item {
   }
 
   function setDisplayPosition(name, x, y) {
-    if (state !== "idle" || !isFinite(x) || !isFinite(y)) return "invalid"
+    if (!draftEditable || !isFinite(x) || !isFinite(y)) return "invalid"
     try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
     if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
     displayDraft = displayDraft.map(function(display) {
@@ -632,14 +640,17 @@ Item {
   }
 
   function previewLayout() {
-    if (state !== "idle") return "busy"
+    if (!draftEditable) return "busy"
     try {
       if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")
       var generated = MonitorsLua.generate(displayDraft, {
         mode: draftMode, enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }),
         singleTarget: draftSingleTarget
       })
-      previewBefore = monitors.slice()
+      // A re-edit joins the session already in progress: keep the baseline
+      // the first preview captured, so Revert still means "back to the layout
+      // as it was before this session", and Revert never lands mid-session.
+      if (state !== "previewing") previewBefore = monitors.slice()
       pendingDisplayConfig = generated
       layoutError = ""
       begin("previewing")

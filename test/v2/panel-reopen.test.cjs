@@ -19,7 +19,8 @@ test('the panel records its open state and a rebuilt widget claims it back', () 
   assert.match(panel, /service\.openPanel\(\) === "true"/);
   // summon answers false until the bar registers the slot, so asking once
   // from a just-created widget would lose the panel.
-  assert.match(panel, /attempts < 4/);
+  assert.match(panel, /interval: 60/);
+  assert.match(panel, /attempts < 10/);
 });
 
 test('closing the panel cancels any pending reopen', () => {

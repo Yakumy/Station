@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync, rmSync } = require('node:fs');
+const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync, rmSync, existsSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawnSync, spawn } = require('node:child_process');
 const R = require('../../lib/Recovery.js');
 const T = require('../../lib/Transactions.js');
 
@@ -22,6 +22,43 @@ test('preview and Keep templates use positional arguments and rollback on config
   assert.match(T.keep, /hyprctl configerrors/);
   assert.match(T.keep, /cp -- "\$backup" "\$monitors"/);
   assert.match(T.keep, /NR > 5/);
+});
+
+test('watchdog reverts an abandoned preview but stands down on a re-armed token', async () => {
+  // previewArm touches the token before every apply, so a watchdog from an
+  // earlier preview must not roll back a session the user is still editing.
+  const root = mkdtempSync(join(tmpdir(), 'station-watchdog-'));
+  try {
+    const bin = join(root, 'bin');
+    const log = join(root, 'hyprctl.log');
+    mkdirSync(bin);
+    writeFileSync(join(bin, 'hyprctl'), `#!/bin/sh\nprintf '%s\\n' "$@" >> ${JSON.stringify(log)}\n`);
+    chmodSync(join(bin, 'hyprctl'), 0o755);
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}` };
+    const run = (window, token) => new Promise((resolve) => {
+      spawn('sh', ['-c', T.watchdog, 'sh', window, token], { env })
+        .on('exit', (code) => resolve(code));
+    });
+
+    const fresh = join(root, 'fresh.token');
+    writeFileSync(fresh, '');
+    const pending = run('2', fresh);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // A later preview applies inside the window: this watchdog stands down.
+    writeFileSync(fresh, '');
+    assert.equal(await pending, 0);
+    assert.ok(existsSync(fresh), 'a token re-armed by a newer preview is kept');
+    assert.ok(!existsSync(log), 'no reload while a newer preview owns the session');
+
+    const stale = join(root, 'stale.token');
+    writeFileSync(stale, '');
+    assert.equal(spawnSync('touch', ['-d', '10 seconds ago', stale]).status, 0);
+    assert.equal(await run('1', stale), 0);
+    assert.ok(!existsSync(stale), 'an untouched token is consumed');
+    assert.match(readFileSync(log, 'utf8'), /reload/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('cleanup executable replaces the literal-parenthesis marker block with plain geometry', () => {

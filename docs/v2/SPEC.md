@@ -287,10 +287,11 @@ if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
 
 ### 9.2 Preview and crash-safe rollback
 
-1. Before any preview, write `~/.local/state/omarchy/station/preview.token` and start a **detached watchdog** from a fixed template with positional arguments only: `sh -c 'sleep "$1"; [ -e "$2" ] && { rm -f "$2"; hyprctl reload; }' sh 20 <tokenpath>`. No daemon, no root.
-2. Apply the preview at runtime; show the 12 s Keep/Revert countdown (the UI timer is shorter than the watchdog).
+1. Before any preview, write `~/.local/state/omarchy/station/preview.token` and start a **detached watchdog** from a fixed template with positional arguments only: `sh -c 'sleep "$1"; [ -e "$2" ] || exit 0; age=$(( $(date +%s) - $(stat -c %Y "$2") )); [ "$age" -lt "$1" ] && exit 0; rm -f "$2"; hyprctl reload;' sh 20 <tokenpath>`. No daemon, no root. The watchdog belongs to the preview that armed it: the arm step re-touches the token before every apply, so a token younger than the sleep window means a newer preview owns the session and this one stands down; only a token untouched for the full window reverts. Without that, a session longer than the window would be rolled back by the first preview's watchdog while the user was still editing.
+2. Apply the preview at runtime; show the 12 s Keep/Revert countdown (the UI timer is shorter than the watchdog). The countdown restarts on every apply, so an editing session survives as long as the user keeps editing.
 3. Revert, or timeout, restores previous runtime state and removes the token.
 4. At shell start, a stale token means a crashed preview: roll back immediately with `hyprctl reload`.
+5. **The draft stays editable while a preview is pending** (`draftEditable` = `idle | previewing`): drag, rotate, mode, resolution, refresh, scale, role and enable are all live, and each change re-runs the preview against the same session. `previewBefore` is captured on the first preview only, so Revert always means "back to the layout this session started from". Only Keep/Revert and unrelated work (block removal, follow focus, runtime binds) stay gated on `idle`.
 
 ### 9.3 Keep is a transaction
 
@@ -324,7 +325,9 @@ preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → 
 
 The bar rebuilds Station's widget whenever its layout entries change (a plugin enable/disable, `omarchy bar move`) and whenever an output reconfigures (§9.3 expects `monitorremoved`/`monitoradded` for a moved display). The popout is a child of that widget, so it goes down with it: measured as the panel simply vanishing while the user is still in the Displays layout or the Settings tab.
 
-The intent therefore lives on the service, which outlives the widget: `panelWanted` is written on every `opened` transition. Destruction never writes it, so a rebuilt widget starts up seeing `true` and asks the service to `openPanel()`; every real close (Esc, outside-click, another popout taking over, `shell.hide`) writes `false` and cancels the retry, so the user's close still sticks. `summon()` answers `false` until the bar has registered the slot, so the ask runs on a 200 ms retry capped at five attempts, and is only issued when the widget comes up with the flag already set — a shell restart starts closed because the flag is in memory.
+The intent therefore lives on the service, which outlives the widget: `panelWanted` is written on every `opened` transition. Destruction never writes it, so a rebuilt widget starts up seeing `true` and asks the service to `openPanel()`; every real close (Esc, outside-click, another popout taking over, `shell.hide`) writes `false` and cancels the retry, so the user's close still sticks. `summon()` answers `false` until the bar has registered the slot, so the ask runs on a 60 ms retry capped at ten attempts, and is only issued when the widget comes up with the flag already set — a shell restart starts closed because the flag is in memory.
+
+The open tab rides along the same way: `rememberedTab` is written on every tab switch and cleared on a real close, so a rebuilt widget comes back on the tab the user was actually using (a rebuilt instance would otherwise start on Displays), while a panel the user dismissed still reopens on Displays.
 
 ## 11. GUI
 
@@ -336,7 +339,7 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 Displays tab:
 
-- Left: **Layout** canvas (logical coordinates, §5.9; drag; snap; rotate buttons at each monitor's top-left; selected outlined; disabled dashed; overlaps flagged) and **Displays** list (connector, role label, model, check = enabled).
+- Left: **Layout** canvas (logical coordinates, §5.9; drag; snap; rotate buttons at each monitor's top-left; selected outlined; disabled dashed; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2) and **Displays** list (connector, role label, model, check = enabled).
 - Right: **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show "Not available for this display" on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), **Resolution** and **Refresh rate** (from `availableModes`, which contains near-duplicates such as `1920x1080@60.00Hz` and `1920x1200@59.88Hz`; the UI deduplicates what it shows but keeps the exact allowlisted mode string for each choice), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Role** (labels derived per §2a; choosing a taken role swaps lanes).
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.

@@ -118,7 +118,7 @@ Column {
             text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled ? "✓" : ""
             foreground: displayTab.panelRoot.textPrimary
             onClicked: {
-              if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
               var enabled = displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
               if (displayTab.selectedDisplay.enabled && enabled <= 1) return
               displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "enabled", !displayTab.selectedDisplay.enabled)
@@ -201,7 +201,7 @@ Column {
           value: displayTab.selectedDisplay
             ? String(Number(displayTab.selectedDisplay.scale)) : ""
           onChanged: function(value) {
-            if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+            if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
             displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", Number(value))
             displayTab.service.previewLayout()
           }
@@ -234,7 +234,7 @@ Column {
               ? Model.resolutionChoices(displayTab.selectedDisplay.availableModes) : []
             foreground: displayTab.panelRoot.textPrimary
             onChanged: function(value) {
-              if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
               var exact = Model.modeForResolution(displayTab.selectedDisplay.availableModes,
                 value, displayTab.selectedDisplay.mode)
               displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", exact)
@@ -251,7 +251,7 @@ Column {
                   + Model.parseMode(displayTab.selectedDisplay.mode).height) : []
             foreground: displayTab.panelRoot.textPrimary
             onChanged: function(value) {
-              if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
               displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", value)
               displayTab.service.previewLayout()
             }
@@ -283,7 +283,7 @@ Column {
           value: displayTab.service && displayTab.selectedDisplay
             ? String(displayTab.service.roleOf(displayTab.selectedDisplay.name)) : ""
           onChanged: function(value) {
-            if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
+            if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
             displayTab.service.swapRole(displayTab.selectedDisplay.name, Number(value))
           }
         }

@@ -42,7 +42,7 @@ Ui.BorderSurface {
   readonly property real originY: (height - bounds.height * zoom) / 2
 
   function commitPosition(display, x, y) {
-    if (!service || service.state !== "idle") return
+    if (!service || !service.draftEditable) return
     var snapped = Model.snapPosition(display, x, y, displays, gridStep / zoom)
     // This function belongs to the canvas, which survives rebuilding the
     // Repeater. Never continue a service mutation from a destroyed delegate.
@@ -50,7 +50,7 @@ Ui.BorderSurface {
   }
 
   function rotateDisplay(display, delta) {
-    if (!service || service.state !== "idle") return
+    if (!service || !service.draftEditable) return
     var transform = Number(display.transform) || 0
     var flipped = transform >= 4 ? 4 : 0
     var next = flipped + ((transform - flipped + delta + 4) % 4)
@@ -125,7 +125,7 @@ Ui.BorderSurface {
       MouseArea {
         id: pointer
         anchors.fill: parent
-        enabled: canvas.service && canvas.service.state === "idle"
+        enabled: canvas.service && canvas.service.draftEditable
         // Retain the gesture if this component is ever embedded in a Flickable.
         preventStealing: true
         property point startPointer

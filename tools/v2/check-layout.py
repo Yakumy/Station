@@ -14,6 +14,9 @@ service = (repo / 'Service.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
+# The setter gates on the same editable flag the service declares, so the
+# probe has to declare it too or the real function throws.
+editable = next(line for line in service.splitlines() if 'property bool draftEditable' in line).strip()
 with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     root = Path(directory)
     probe = root / 'Probe'
@@ -63,6 +66,7 @@ Item {
   QtObject {
     id: service
     property string state: "idle"
+    ''' + editable + '''
     property var displayDraft: []
     property int previews: 0
     property int writes: 0
@@ -163,9 +167,24 @@ Item {
     function test_invalid_position_is_rejected() {
       compare(service.setDisplayPosition("missing", 0, 0), "invalid")
       compare(service.setDisplayPosition("eDP-1", NaN, 0), "invalid")
-      service.state = "previewing"
+      service.state = "applyingLayout"
       compare(service.setDisplayPosition("eDP-1", 1920, 0), "invalid")
       compare(service.writes, 0)
+      service.state = "previewing"
+      compare(service.setDisplayPosition("eDP-1", 1920, 0), "ok")
+      compare(service.writes, 1)
+    }
+    function test_drag_while_a_preview_is_pending() {
+      move("HDMI-A-2", 1920, 1200)
+      compare(service.state, "previewing")
+      var target = card("HDMI-A-2"), display = target.modelData
+      mouseDrag(layout, target.x + target.width / 2, target.y + target.height / 2,
+        (-1920 - display.x) * layout.zoom, (1200 - display.y) * layout.zoom,
+        Qt.LeftButton, Qt.NoModifier, 5)
+      compare(service.previews, 2, "A re-arrangement joins the pending preview")
+      var changed = service.displayDraft.filter(function(d) { return d.name === "HDMI-A-2" })[0]
+      compare(changed.x, -1920); compare(changed.y, 1200)
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0)
     }
   }
 }
