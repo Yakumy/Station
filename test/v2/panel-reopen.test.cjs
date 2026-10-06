@@ -15,6 +15,10 @@ test('the open intent lives on the service, which outlives the widget', () => {
 
 test('the panel records its open state and a rebuilt widget claims it back', () => {
   assert.match(panel, /service\.panelWanted = opened/);
+  // The record can be made before the service binding resolves, so the
+  // transition is held and replayed instead of dropped.
+  assert.match(panel, /intentPending = true\n {4}flushIntent\(\)/);
+  assert.match(panel, /if \(!service \|\| !intentPending\) return/);
   assert.match(panel, /if \(!service \|\| !service\.panelWanted\) return/);
   assert.match(panel, /service\.openPanel\(\) === "true"/);
   // The first ask runs as soon as construction clears, before the retry.
@@ -28,6 +32,10 @@ test('the panel records its open state and a rebuilt widget claims it back', () 
 test('closing the panel cancels any pending reopen', () => {
   const handler = panel.match(/onOpenedChanged: \{([\s\S]*?)\n {2}\}/);
   assert.ok(handler, 'onOpenedChanged is a block handler');
-  assert.match(handler[1], /service\.panelWanted = opened/);
+  assert.match(handler[1], /flushIntent\(\)/);
   assert.match(handler[1], /reopenTimer\.stop\(\)/);
+  const flusher = panel.match(/function flushIntent\(\) \{([\s\S]*?)\n {2}\}/);
+  assert.ok(flusher, 'flushIntent is defined');
+  assert.match(flusher[1], /service\.panelWanted = opened/);
+  assert.match(flusher[1], /if \(!opened\) service\.rememberedTab = 0/);
 });

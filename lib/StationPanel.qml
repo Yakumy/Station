@@ -205,14 +205,24 @@ Ui.Panel {
     brightnessWrite.running = true
   }
 
+  // The service binding can still be empty when the panel changes state (the
+  // bar configures this widget after it is created), so a transition that
+  // happens before it resolves is replayed the moment it does. An open
+  // recorded nowhere would leave a rebuilt widget thinking the panel was
+  // closed; a close recorded nowhere would reopen a dismissed panel.
+  property bool intentPending: false
+
+  function flushIntent() {
+    if (!service || !intentPending) return
+    intentPending = false
+    service.panelWanted = opened
+    if (!opened) service.rememberedTab = 0
+  }
+
   onOpenedChanged: {
     if (opened) refreshBrightness()
-    // Intent lives on the service, not here: this widget is destroyed when
-    // the bar rebuilds its entries, and a dead widget cannot reopen anything.
-    if (service) service.panelWanted = opened
-    // A real close ends the session, so the next open starts back on
-    // Displays. A rebuild never closes, so the tab survives it.
-    if (!opened && service) service.rememberedTab = 0
+    intentPending = true
+    flushIntent()
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
@@ -240,8 +250,8 @@ Ui.Panel {
     })
   }
 
-  onServiceChanged: { restoreSession(); requestPanelBack() }
-  Component.onCompleted: { restoreSession(); requestPanelBack() }
+  onServiceChanged: { flushIntent(); restoreSession(); requestPanelBack() }
+  Component.onCompleted: { flushIntent(); restoreSession(); requestPanelBack() }
 
   Timer {
     id: reopenTimer

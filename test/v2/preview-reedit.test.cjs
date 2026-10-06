@@ -44,6 +44,6 @@ test('every draft control reads the same editable flag', () => {
 test('the panel remembers its tab across a bar rebuild but not across a close', () => {
   assert.match(service, /property int rememberedTab: 0/);
   assert.match(panel, /onSelectedTabChanged: if \(service\) service\.rememberedTab = selectedTab/);
-  assert.match(panel, /if \(!opened && service\) service\.rememberedTab = 0/);
+  assert.match(panel, /if \(!opened\) service\.rememberedTab = 0/);
   assert.match(panel, /service\.rememberedTab/);
 });
