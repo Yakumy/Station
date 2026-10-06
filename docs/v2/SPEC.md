@@ -320,6 +320,12 @@ preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → 
 
 [A] exact `listPlugins` JSON shape and presence of `jq`: M0.
 
+### 10.3 Panel survives a widget rebuild
+
+The bar rebuilds Station's widget whenever its layout entries change (a plugin enable/disable, `omarchy bar move`) and whenever an output reconfigures (§9.3 expects `monitorremoved`/`monitoradded` for a moved display). The popout is a child of that widget, so it goes down with it: measured as the panel simply vanishing while the user is still in the Displays layout or the Settings tab.
+
+The intent therefore lives on the service, which outlives the widget: `panelWanted` is written on every `opened` transition. Destruction never writes it, so a rebuilt widget starts up seeing `true` and asks the service to `openPanel()`; every real close (Esc, outside-click, another popout taking over, `shell.hide`) writes `false` and cancels the retry, so the user's close still sticks. `summon()` answers `false` until the bar has registered the slot, so the ask runs on a 200 ms retry capped at five attempts, and is only issued when the widget comes up with the flag already set — a shell restart starts closed because the flag is in memory.
+
 ## 11. GUI
 
 Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plugin: header icon + title + small uppercase theme-name subtitle; hairline-separated sections; small uppercase labels with right-aligned values; segmented boxes; list with a check on the right.

@@ -48,6 +48,13 @@ Item {
   property string hyprBindingsText: ""
   property string personalBindingsText: ""
   property int stockDisableAttempts: 0
+  // The bar rebuilds our widget when its layout entries change (a plugin
+  // enable/disable, a widget move) and whenever an output reconfigures, and
+  // the panel window dies with the widget. The widget writes its open state
+  // here on the way out; destruction cannot, so a rebuilt widget reads true
+  // and asks for the panel back. Deliberately in-memory: a shell restart
+  // starts with the panel closed.
+  property bool panelWanted: false
   property var displayDraft: []
   property string draftMode: "extend"
   property string draftSingleTarget: ""
@@ -1153,7 +1160,7 @@ Item {
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
       migrationPhase: root.migrationPhase, layoutError: root.layoutError,
       lastWindowAction: root.lastWindowAction,
-      monitors: root.monitors, bindStatuses: root.bindStatuses,
+      monitors: root.monitors, bindStatuses: root.bindStatuses, panelWanted: root.panelWanted,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
       stockDisableRunning: stockDisable.running }) }
   }

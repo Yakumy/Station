@@ -205,7 +205,39 @@ Ui.Panel {
     brightnessWrite.running = true
   }
 
-  onOpenedChanged: if (opened) refreshBrightness()
+  onOpenedChanged: {
+    if (opened) refreshBrightness()
+    // Intent lives on the service, not here: this widget is destroyed when
+    // the bar rebuilds its entries, and a dead widget cannot reopen anything.
+    if (service) service.panelWanted = opened
+    if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
+  }
+
+  // A rebuilt widget inherits the panel it was carrying. summon() answers
+  // false until the bar has registered this slot, so ask on a short retry
+  // instead of once. Qt.callLater keeps the first ask clear of construction.
+  function requestPanelBack() {
+    if (!service || !service.panelWanted) return
+    Qt.callLater(function() {
+      if (!root.service || !root.service.panelWanted) return
+      reopenTimer.attempts = 0
+      reopenTimer.start()
+    })
+  }
+
+  onServiceChanged: requestPanelBack()
+  Component.onCompleted: requestPanelBack()
+
+  Timer {
+    id: reopenTimer
+    interval: 200
+    property int attempts: 0
+    onTriggered: {
+      if (!root.service || !root.service.panelWanted) { attempts = 0; return }
+      if (root.service.openPanel() === "true") { attempts = 0; return }
+      if (attempts < 4) { attempts += 1; restart() } else attempts = 0
+    }
+  }
 
   Process {
     id: brightnessRead
