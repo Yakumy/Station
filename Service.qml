@@ -768,10 +768,23 @@ Item {
     if (lease.disabledByStation && lease.wasEnabled) {
       enqueue(["omarchy", "plugin", "enable", "omarchy.workspaces"], function(code) {
         if (code !== 0) return
-        root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", lease.section,
-          "--index", String(lease.index)], function() {
-          root.persisted.stockLease = null
-          root.saveState()
+        // Re-enabling alone drops it in the centre, and the recorded spot is
+        // where it sat before Station leased it: between the Omarchy menu mark
+        // and our own widget. Park it behind Station instead so the row reads
+        // menu, Station, workspaces; the recorded section/index only covers a
+        // bar that has since dropped the Station widget.
+        root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--after",
+          "yakumy.station"], function(afterCode) {
+          if (afterCode === 0) {
+            root.persisted.stockLease = null
+            root.saveState()
+            return
+          }
+          root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", lease.section,
+            "--index", String(lease.index)], function() {
+            root.persisted.stockLease = null
+            root.saveState()
+          })
         })
       })
     } else {

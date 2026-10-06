@@ -306,7 +306,7 @@ preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → 
 `state.stockLease = { wasEnabled, section, index, disabledByStation }`.
 
 - On each activation (if Settings "Hide Omarchy's workspace indicator" is on, default): if `omarchy.workspaces` is enabled, capture its current placement (`section`, `index`), set `wasEnabled=true`, `omarchy plugin disable omarchy.workspaces`, `disabledByStation=true`. If it is already disabled and no lease exists, record `wasEnabled=false`; **Station never enables it.** If a lease exists, keep it.
-- Restore only when `disabledByStation && wasEnabled`: `omarchy plugin enable omarchy.workspaces`, then `omarchy bar move omarchy.workspaces --section <s> --index <i>` (re-enabling alone lands in `center` index 4 [V]). Clear the lease afterwards. **M0 correction:** `bar put` deliberately leaves an already-present widget in place; after enable, use `bar move` to restore placement.
+- Restore only when `disabledByStation && wasEnabled`: `omarchy plugin enable omarchy.workspaces`, then `omarchy bar move omarchy.workspaces --after yakumy.station` so it comes back **behind** the Station widget rather than in the pre-lease spot between the Omarchy menu mark and Station (re-enabling alone lands in `center` index 4 [V]). If `--after` fails because Station is off the bar, fall back to `omarchy bar move omarchy.workspaces --section <s> --index <i>`, the captured pre-lease placement. Clear the lease afterwards. **M0 correction:** `bar put` deliberately leaves an already-present widget in place; after enable, use `bar move` to restore placement.
 - Do **not** use `clonedFrom` as a replacement mechanism; Station is not a clone of that plugin.
 
 ### 10.2 Cleanup after disable/remove
