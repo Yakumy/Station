@@ -227,12 +227,14 @@ Ui.Panel {
   }
 
   // A rebuilt widget inherits the panel it was carrying. summon() answers
-  // false until the bar has registered this slot, so ask on a short retry
-  // instead of once. Qt.callLater keeps the first ask clear of construction.
+  // false until the bar has registered this slot, so ask now and then fall
+  // back to a short retry. Qt.callLater keeps the first ask clear of
+  // construction; the window mapping, not the retry, sets the floor.
   function requestPanelBack() {
     if (!service || !service.panelWanted) return
     Qt.callLater(function() {
       if (!root.service || !root.service.panelWanted) return
+      if (root.service.openPanel() === "true") return
       reopenTimer.attempts = 0
       reopenTimer.start()
     })
@@ -243,12 +245,12 @@ Ui.Panel {
 
   Timer {
     id: reopenTimer
-    interval: 60
+    interval: 30
     property int attempts: 0
     onTriggered: {
       if (!root.service || !root.service.panelWanted) { attempts = 0; return }
       if (root.service.openPanel() === "true") { attempts = 0; return }
-      if (attempts < 10) { attempts += 1; restart() } else attempts = 0
+      if (attempts < 20) { attempts += 1; restart() } else attempts = 0
     }
   }
 

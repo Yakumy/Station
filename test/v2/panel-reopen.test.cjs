@@ -17,10 +17,12 @@ test('the panel records its open state and a rebuilt widget claims it back', () 
   assert.match(panel, /service\.panelWanted = opened/);
   assert.match(panel, /if \(!service \|\| !service\.panelWanted\) return/);
   assert.match(panel, /service\.openPanel\(\) === "true"/);
+  // The first ask runs as soon as construction clears, before the retry.
+  assert.match(panel, /Qt\.callLater\([\s\S]*?if \(root\.service\.openPanel\(\) === "true"\) return/);
   // summon answers false until the bar registers the slot, so asking once
   // from a just-created widget would lose the panel.
-  assert.match(panel, /interval: 60/);
-  assert.match(panel, /attempts < 10/);
+  assert.match(panel, /interval: 30/);
+  assert.match(panel, /attempts < 20/);
 });
 
 test('closing the panel cancels any pending reopen', () => {
