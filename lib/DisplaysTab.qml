@@ -187,15 +187,6 @@ Column {
             text: "SCALE"
             foreground: displayTab.panelRoot.textPrimary
           }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textDim
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
-          }
         }
         Ui.ButtonGroup {
           id: scaleGroup
@@ -227,15 +218,6 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             text: "RESOLUTION · REFRESH"
             foreground: displayTab.panelRoot.textPrimary
-          }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textDim
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
           }
         }
         Row {
@@ -288,15 +270,6 @@ Column {
             text: "ROLE"
             foreground: displayTab.panelRoot.textPrimary
           }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: displayTab.selectedDisplay ? displayTab.selectedDisplay.name : ""
-            color: displayTab.panelRoot.textDim
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
-          }
         }
         Ui.ButtonGroup {
           id: roleGroup
@@ -313,16 +286,6 @@ Column {
             if (!displayTab.service || !displayTab.selectedDisplay || displayTab.service.state !== "idle") return
             displayTab.service.swapRole(displayTab.selectedDisplay.name, Number(value))
           }
-        }
-        Text {
-          width: parent.width - displayTab.gutter * 2
-          x: displayTab.gutter
-          topPadding: displayTab.gutter
-          text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-            ? "Lane " + displayTab.selectedDisplay.lane : "Enable this display to assign a role"
-          color: displayTab.panelRoot.textDim
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
         }
         Item { width: 1; height: displayTab.gutter }
       }
