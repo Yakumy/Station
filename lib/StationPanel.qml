@@ -219,10 +219,36 @@ Ui.Panel {
     if (!opened) service.rememberedTab = 0
   }
 
+  // A popout switch is not a dismissal. The bar hands the popout to the
+  // newer copy of this widget it just built, and closes us through
+  // closeForPopoutSwitch while our destruction is still deferred — so the
+  // panel is up on that copy a moment after we are told we closed. The
+  // switch has not published its new owner yet from inside the close, so
+  // decide afterwards whether any copy is still showing. Takes what it
+  // reads as arguments: this instance may be gone by the time it runs.
+  function settlePopoutSwitch(svc, barRef) {
+    if (!svc) return
+    var widgets = barRef && typeof barRef.moduleWidgets === "function" ? barRef.moduleWidgets("yakumy.station") : []
+    var up = false
+    for (var i = 0; i < widgets.length; i++) {
+      if (widgets[i] && widgets[i].opened === true) { up = true; break }
+    }
+    svc.panelWanted = up
+    if (!up) svc.rememberedTab = 0
+  }
+
   onOpenedChanged: {
-    if (opened) refreshBrightness()
-    intentPending = true
-    flushIntent()
+    if (opened) {
+      refreshBrightness()
+      intentPending = true
+      flushIntent()
+    } else if (popoutSwitchClosing) {
+      var svc = service, barRef = bar, settle = settlePopoutSwitch
+      if (svc) Qt.callLater(function() { settle(svc, barRef) })
+    } else {
+      intentPending = true
+      flushIntent()
+    }
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
