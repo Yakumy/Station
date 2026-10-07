@@ -28,7 +28,7 @@ ShellRoot {
       var c = Qt.createComponent("Probe/" + name)
       if (c.status !== Component.Ready) {
         console.error("''' + label + '''_COMPILE_FAILED " + c.errorString())
-        return
+        continue
       }
     }
     console.log("''' + label + '''_COMPONENTS_READY")

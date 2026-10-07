@@ -19,10 +19,10 @@ The previous draft specified its own hex palette, its own `colors.toml` blending
 | Role | Used for | Selected look |
 |---|---|---|
 | **Action** | Keep, Revert, Pick another key, Replace and unbind it, Save | Filled: `Color.accent` background, `Color.popups.background` (or the theme's contrasting foreground) text. This is the *only* place a solid accent fill is allowed. |
-| **Choice: chip group** (Scale, Role, the 4 modifier-key toggles) | one of several peers, mutually exclusive (Scale/Role) or independently toggled (modifiers) | **[DECISION, resolved]** `Ui.ButtonGroup` already exists in the host and already fits Scale and Role exactly (single-select, keyboard h/l nav) — use it there, don't rebuild it. It's single-select only, so the 4 multi-select modifier chips need one new component, `Station/ChoiceChip.qml`. **That new component must copy `Ui.ButtonGroup`'s own chrome exactly** (same fill token, same 0-width border, same bold text, both selected and unselected) rather than inventing a parallel recipe, so the two implementations are visually identical and the panel never shows two different "selected chip" looks. [V, resolved] `Ui.ButtonGroup`'s delegate *is* `Ui.Button { selected: …; bordered: true }`, with the group supplying `foreground/background/accent/fontFamily/fontSize/hasCursor` — so `Station/ChoiceChip.qml` wraps `Ui.Button` directly and gets identical chrome by construction rather than by eye. Unselected: `Border.controlSpec("normal", foreground, accent)` (foreground ~40%, 1px), transparent fill, normal weight. Selected: `Style.selectedFillFor(foreground, accent)` fill, selected border width 0 (which leaves that 1px normal border in place), `Style.selectedStateColor(foreground, accent)` text, `font.bold: true`; `radius: Style.cornerRadius` is already built into `Ui.Button`. Chip border: `Color.menu.selectedBorder` (§4 — it does not equal `Color.accent`). |
-| **Choice: dropdown row** (inside Resolution, Refresh, Mode, Direction — all via `Ui.Dropdown`) | one row selected inside an open list | A different, already-correct host idiom — not the same thing as a chip group. `Color.menu.selectedBackground` fill, `Color.menu.selectedBorder` border, `Color.menu.selectedText` text [V]. Do not unify this with the chip-group recipe above; they're different real host visual shapes for different real host UI patterns, and conflating them was the mistake in the previous draft of this document. |
+| **Choice: chip group** (the 4 modifier-key toggles) | independently toggled key modifiers | `Station/ChoiceChip.qml` wraps the host's `Ui.Button` choice chrome. Scale and Role no longer use chips in the approved larger-panel render: Scale is a notched slider, Role is a compact number menu in each monitor card. |
+| **Choice: dropdown row** (Mode, Direction, monitor role) | one row selected inside an open list | The larger-panel render uses compact text triggers and host menu color tokens. Resolution and Refresh are now indexed sliders, not dropdowns. |
 
-A Choice (either kind) must never use the Action look, and vice versa. **[V] As implemented:** Scale and Role render through the host's `Ui.ButtonGroup`, the 4 modifier chips through the new `Station/ChoiceChip`, and Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
+A Choice (either kind) must never use the Action look, and vice versa. The 4 modifier chips use `Station/ChoiceChip`; Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
 
 ## 2. Corners
 
@@ -93,7 +93,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Tabs** (Displays / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box.
 
-**Choice chip** (Scale group, Role group, the 4 modifier-key toggles): see §1. Mode and Direction are dropdown rows (below), not chips. Height matches other interactive controls on the page; no two chip heights in the same row group.
+**Choice chip** (the 4 modifier-key toggles): see §1. Displays uses sliders and compact text menus instead.
 
 **Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
 
@@ -103,9 +103,9 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **List row** (Keybindings action rows, Settings rows): **[DECISION] default = no border, no individual box.** Rows are separated only by `Ui.PanelSeparator` (a hairline), with shared left/right padding, the way `Ui.PanelSectionHeader` already separates sections. A row gets a `Color.urgent` border **only** while it is an unresolved conflict — that is the one state worth decorating, and decorating every row equally erases it. A row never gets an accent border just for existing; accent belongs to the interactive control inside the row (a focused dropdown, an open menu), not the row container.
 
-**Select / dropdown** (Resolution, Refresh, Mode, Direction): use the host's own `Ui.Dropdown`. The Displays information column puts Mode and Direction at its top, each with a small section label. Their triggers use short values (`Extend`, `Mirror`, `Single · <name>`, `LTR`, `RTL`) and measured content widths so the chevron sits near the text. The Mode trigger keeps a modest minimum width so the named Single choices remain distinguishable in the host popup, whose width follows its trigger. Default border: `Border.controlSpec("normal", …)`, never `Color.popups.border`. Accent only while open or focused.
+**Select / dropdown** (Mode, Direction, monitor role): the approved render puts compact borderless triggers in the top tab row and inside the monitor cards. `Station/InlineDropdown.qml` keeps the text and chevron content-sized, uses host menu tokens for the popup, and right-aligns Mode's wider menu so named Single-output choices stay readable within the panel.
 
-**Slider** (Brightness): host-owned — Station passes `bar`, bounds, `value` and `enabled` only and sets no colors [V]; `Ui.PanelSlider` paints track `Style.selectedFillFor(bar.foreground, Color.accent)` with `bar.foreground` fill and knob. No glow, no thumb shadow.
+**Slider** (Brightness, Text size, Scale, Resolution, Refresh): host-owned `Ui.PanelSlider` paints the track and knob. The last four use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
 
 **Display node** (Layout canvas): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
 
@@ -128,7 +128,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 ## 9. Acceptance
 
 A change passes when, under at least two themes including one light theme (Catppuccin Latte already found a white-on-white contrast bug once — re-check it specifically [V, earlier Latte finding]):
-- Scale and Role render as the same Choice style as each other, visibly lighter than Keep.
+- Scale, Resolution, and Refresh show valid notched choices; monitor role menus show the enabled role numbers; Keep remains visually heavier than these choices.
 - Keep/Revert/Replace are the only filled, high-emphasis controls on the page — i.e. exactly one filled commit Action per screen (`Keep`, `Apply`, `Replace and unbind it`), no filled Choice anywhere.
 - Keybindings and Settings rows read as a plain hairline list; the only bordered row is one with an active conflict.
 - No rounded corners, shadows or glows appear anywhere, at any theme.

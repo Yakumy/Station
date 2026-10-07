@@ -9,441 +9,422 @@ Column {
   required property var panelRoot
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
-  readonly property int enabledCount: service
-    ? service.displayDraft.filter(function(display) { return display.enabled }).length : 0
-  // The canvas is a region and takes the shared 24px gutter. The inspector is
-  // a dense column inside a ~570px popout, so it keeps the smallest step that
-  // reads clearly instead of the full region padding.
   readonly property real pad: panelRoot.regionPadH
   readonly property real gutter: panelRoot.space2
-  readonly property real dropdownTrim: Style.spacing.controlPaddingX + Style.spacing.md
-    + Style.spacing.controlGap + chevronMeasure.implicitWidth + Style.normalBorderWidth * 2
+  readonly property var resolutionOptions: {
+    var modes = selectedDisplay ? Model.resolutionChoices(selectedDisplay.availableModes) : []
+    return modes.slice().sort(function(a, b) {
+      var left = a.value.split("x").map(Number), right = b.value.split("x").map(Number)
+      return left[0] * left[1] - right[0] * right[1] || left[0] - right[0]
+    })
+  }
+  readonly property var refreshOptions: {
+    if (!selectedDisplay) return []
+    var mode = Model.parseMode(selectedDisplay.mode)
+    if (!mode) return []
+    return Model.refreshChoices(selectedDisplay.availableModes, mode.width + "x" + mode.height)
+      .slice().sort(function(a, b) {
+        return Model.parseMode(a.value).refresh - Model.parseMode(b.value).refresh
+      })
+  }
+  readonly property var scaleOptions: [1, 1.25, 1.6, 2, 3, 4]
+
+  function choiceIndex(options, value) {
+    for (var i = 0; i < options.length; i++)
+      if (String(options[i].value) === String(value)) return i
+    return 0
+  }
+
+  function applyDisplayValue(key, value) {
+    if (!service || !selectedDisplay || !service.draftEditable) return
+    if (selectedDisplay[key] === value) return
+    if (service.setDisplayValue(selectedDisplay.name, key, value) === "ok") service.previewLayout()
+  }
+
   spacing: 0
 
-  Column {
-    id: mainColumn
+  Row {
+    id: displayColumns
     width: parent.width
-    spacing: 0
+    height: Style.space(428)
 
-    Row {
-      id: displayColumns
-      width: parent.width
-      height: Math.max(leftColumn.implicitHeight, rightColumn.implicitHeight)
+    Column {
+      id: leftColumn
+      width: parent.width * 0.576
+      spacing: 0
 
-      Column {
-        id: leftColumn
-        width: parent.width * 0.65
-        spacing: 0
-
-        Item {
-          id: layoutHeader
-          width: parent.width
-          height: panelRoot.space5
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: displayTab.pad
-            anchors.verticalCenter: parent.verticalCenter
-            text: "LAYOUT"
-            foreground: displayTab.panelRoot.textPrimary
-          }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.pad
-            anchors.verticalCenter: parent.verticalCenter
-            text: "DRAG TO ARRANGE"
-            color: displayTab.panelRoot.textDim
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
-          }
+      Item {
+        width: parent.width
+        height: Style.space(28)
+        Ui.PanelSectionHeader {
+          anchors.left: parent.left
+          anchors.leftMargin: displayTab.pad
+          anchors.verticalCenter: parent.verticalCenter
+          text: "LAYOUT"
+          foreground: displayTab.panelRoot.textPrimary
         }
-
-        Station.DisplayLayout {
-          width: parent.width - displayTab.pad * 2
-          height: Math.max(Style.space(228), rightColumn.implicitHeight - layoutHeader.height)
-          anchors.horizontalCenter: parent.horizontalCenter
-          service: displayTab.service
-          panelRoot: displayTab.panelRoot
-          selectedDisplayName: displayTab.panelRoot.selectedDisplayName
-          onDisplaySelected: function(name) { displayTab.panelRoot.selectDisplay(name) }
+        Text {
+          anchors.right: parent.right
+          anchors.rightMargin: displayTab.pad
+          anchors.verticalCenter: parent.verticalCenter
+          text: "DRAG TO ARRANGE"
+          color: displayTab.panelRoot.textDim
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
         }
-
       }
 
-      Rectangle {
-        width: Math.max(1, Style.normalBorderWidth)
-        height: displayColumns.height
-        color: Color.popups.text
-        opacity: 0.12
+      Station.DisplayLayout {
+        id: layoutCanvas
+        width: parent.width - displayTab.pad * 2
+        height: Style.space(370)
+        anchors.horizontalCenter: parent.horizontalCenter
+        service: displayTab.service
+        panelRoot: displayTab.panelRoot
+        selectedDisplayName: displayTab.panelRoot.selectedDisplayName
+        onDisplaySelected: function(name) { displayTab.panelRoot.selectDisplay(name) }
       }
 
-      Column {
-        id: rightColumn
-        width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
-        spacing: 0
+      Text {
+        visible: displayTab.service && displayTab.service.layoutError !== ""
+        width: parent.width - displayTab.pad * 2
+        x: displayTab.pad
+        topPadding: displayTab.gutter
+        text: displayTab.service ? displayTab.service.layoutError : ""
+        color: Color.urgent
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+        wrapMode: Text.WordWrap
+      }
+    }
 
-        Item {
-          width: parent.width
-          height: displayConfigRow.implicitHeight + displayTab.gutter * 2
+    Rectangle {
+      width: Math.max(1, Style.normalBorderWidth)
+      height: displayColumns.height
+      color: Color.popups.text
+      opacity: 0.12
+    }
 
-          Text {
-            id: chevronMeasure
-            visible: false
-            text: "󰅀"
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-          }
-          Text {
-            id: modeLabelMeasure
-            visible: false
-            text: modeSelect.currentLabel()
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-          }
-          Text {
-            id: directionLabelMeasure
-            visible: false
-            text: directionSelect.currentLabel()
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-          }
+    Column {
+      id: rightColumn
+      width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
+      spacing: 0
+      readonly property real sideInset: Style.space(28)
 
-          Row {
-            id: displayConfigRow
-            x: displayTab.gutter
-            y: displayTab.gutter
-            width: parent.width - displayTab.gutter * 2
-            spacing: displayTab.gutter
-
-            Column {
-              id: modeGroup
-              width: Math.max(0, Math.min(Math.max(Style.space(120),
-                  modeLabelMeasure.implicitWidth + displayTab.dropdownTrim),
-                displayConfigRow.width - directionGroup.width - displayConfigRow.spacing))
-              spacing: Style.spacing.xxs
-              Ui.PanelSectionHeader {
-                text: "MODE"
-                foreground: displayTab.panelRoot.textPrimary
-              }
-              Ui.Dropdown {
-                id: modeSelect
-                width: parent.width
-                showLabel: false
-                foreground: displayTab.panelRoot.textPrimary
-                value: displayTab.panelRoot.modeValue
-                options: displayTab.panelRoot.modeOptions
-                onChanged: function(value) { displayTab.panelRoot.changeMode(value) }
-              }
-            }
-
-            Column {
-              id: directionGroup
-              width: Math.min(directionLabelMeasure.implicitWidth + displayTab.dropdownTrim,
-                displayConfigRow.width * 0.38)
-              spacing: Style.spacing.xxs
-              Ui.PanelSectionHeader {
-                text: "DIRECTION"
-                foreground: displayTab.panelRoot.textPrimary
-              }
-              Ui.Dropdown {
-                id: directionSelect
-                width: parent.width
-                showLabel: false
-                foreground: displayTab.panelRoot.textPrimary
-                value: displayTab.service ? displayTab.service.config.direction : "ltr"
-                options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" }]
-                onChanged: function(value) {
-                  if (displayTab.service) displayTab.service.setDirectionValue(value)
-                }
-              }
-            }
-          }
+      Item {
+        width: parent.width
+        height: Style.space(28)
+        Text {
+          anchors.left: parent.left
+          anchors.leftMargin: rightColumn.sideInset
+          anchors.verticalCenter: parent.verticalCenter
+          text: displayTab.selectedDisplay ? "Selected: " + displayTab.selectedDisplay.name : "No display selected"
+          color: displayTab.panelRoot.textPrimary
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          elide: Text.ElideRight
         }
+      }
 
-        Item {
-          width: parent.width
-          height: panelRoot.space6 + panelRoot.space2
-          Column {
-            anchors.left: parent.left
-            anchors.right: selectedEnabled.left
-            anchors.leftMargin: displayTab.gutter
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.spacing.xxs
+      Ui.BorderSurface {
+        id: controlFrame
+        width: parent.width - rightColumn.sideInset * 2
+        height: Style.space(370)
+        anchors.horizontalCenter: parent.horizontalCenter
+        color: Color.popups.background
+        borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+        radius: Style.cornerRadius
+
+        Column {
+          anchors.fill: parent
+          spacing: 0
+
+          Item {
+            width: parent.width
+            height: controlFrame.height / 5
             Text {
-              width: parent.width
-              text: displayTab.selectedDisplay
-                ? displayTab.selectedDisplay.name + " · " + displayTab.panelRoot.roleName(displayTab.selectedDisplay) : "No display selected"
-              elide: Text.ElideRight
-              color: displayTab.panelRoot.textPrimary
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: "BRIGHTNESS"
+              color: displayTab.panelRoot.textDim
               font.family: Style.font.family
-              font.pixelSize: Style.font.body
+              font.pixelSize: Style.font.caption
             }
             Text {
-              width: parent.width
-              text: displayTab.selectedDisplay ? displayTab.selectedDisplay.description : ""
-              elide: Text.ElideRight
+              anchors.right: parent.right
+              anchors.rightMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: displayTab.panelRoot.brightnessAvailable ? displayTab.panelRoot.brightness + "%" : "—"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Ui.PanelSlider {
+              width: parent.width - displayTab.pad * 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: displayTab.gutter
+              bar: displayTab.panelRoot.bar
+              minimum: 1
+              maximum: 100
+              integer: true
+              value: displayTab.panelRoot.brightness
+              enabled: displayTab.panelRoot.brightnessAvailable
+                && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
+              onMoved: function(value) { displayTab.panelRoot.brightness = Math.round(value) }
+              onReleased: function(value) { displayTab.panelRoot.queueBrightness(value) }
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+          }
+
+          Item {
+            width: parent.width
+            height: controlFrame.height / 5
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: "TEXT SIZE"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: displayTab.panelRoot.displayedTextSize() + "px"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Ui.PanelSlider {
+              width: parent.width - displayTab.pad * 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: displayTab.gutter
+              bar: displayTab.panelRoot.bar
+              minimum: 0
+              maximum: displayTab.panelRoot.textSizeStops.length - 1
+              step: 1
+              integer: true
+              tickCount: displayTab.panelRoot.textSizeStops.length
+              value: displayTab.panelRoot.currentTextIndex()
+              onReleased: function(value) { displayTab.panelRoot.setTextSizeIndex(Math.round(value)) }
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+          }
+
+          Item {
+            width: parent.width
+            height: controlFrame.height / 5
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: "SCALE"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: displayTab.selectedDisplay ? displayTab.selectedDisplay.scale + "x" : "—"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Ui.PanelSlider {
+              width: parent.width - displayTab.pad * 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: displayTab.gutter
+              bar: displayTab.panelRoot.bar
+              minimum: 0
+              maximum: displayTab.scaleOptions.length - 1
+              step: 1
+              integer: true
+              tickCount: displayTab.scaleOptions.length
+              value: displayTab.selectedDisplay
+                ? Math.max(0, displayTab.scaleOptions.indexOf(Number(displayTab.selectedDisplay.scale))) : 0
+              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+              onReleased: function(value) {
+                displayTab.applyDisplayValue("scale", displayTab.scaleOptions[Math.round(value)])
+              }
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+          }
+
+          Item {
+            width: parent.width
+            height: controlFrame.height / 5
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: "RESOLUTION"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: {
+                var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
+                return mode ? mode.width + "x" + mode.height : "—"
+              }
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Ui.PanelSlider {
+              width: parent.width - displayTab.pad * 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: displayTab.gutter
+              bar: displayTab.panelRoot.bar
+              minimum: 0
+              maximum: Math.max(0, displayTab.resolutionOptions.length - 1)
+              step: 1
+              integer: true
+              tickCount: displayTab.resolutionOptions.length
+              value: {
+                var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
+                return mode ? displayTab.choiceIndex(displayTab.resolutionOptions, mode.width + "x" + mode.height) : 0
+              }
+              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+                && displayTab.resolutionOptions.length > 0
+              onReleased: function(value) {
+                var choice = displayTab.resolutionOptions[Math.round(value)]
+                if (!choice || !displayTab.selectedDisplay) return
+                var exact = Model.modeForResolution(displayTab.selectedDisplay.availableModes,
+                  choice.value, displayTab.selectedDisplay.mode)
+                displayTab.applyDisplayValue("mode", exact)
+              }
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+          }
+
+          Item {
+            width: parent.width
+            height: controlFrame.height / 5
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: "REFRESH RATE"
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: displayTab.gutter
+              anchors.top: parent.top
+              anchors.topMargin: displayTab.gutter
+              text: {
+                var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
+                return mode ? mode.refresh + " Hz" : "—"
+              }
+              color: displayTab.panelRoot.textDim
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+            Ui.PanelSlider {
+              width: parent.width - displayTab.pad * 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: displayTab.gutter
+              bar: displayTab.panelRoot.bar
+              minimum: 0
+              maximum: Math.max(0, displayTab.refreshOptions.length - 1)
+              step: 1
+              integer: true
+              tickCount: displayTab.refreshOptions.length
+              value: displayTab.selectedDisplay
+                ? displayTab.choiceIndex(displayTab.refreshOptions, displayTab.selectedDisplay.mode) : 0
+              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+                && displayTab.refreshOptions.length > 0
+              onReleased: function(value) {
+                var choice = displayTab.refreshOptions[Math.round(value)]
+                if (choice) displayTab.applyDisplayValue("mode", choice.value)
+              }
+            }
+            Text {
+              visible: !displayTab.panelRoot.brightnessAvailable
+              anchors.left: parent.left
+              anchors.leftMargin: displayTab.gutter
+              anchors.bottom: parent.bottom
+              text: "Brightness not available for this display"
               color: displayTab.panelRoot.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
           }
-          Ui.Button {
-            id: selectedEnabled
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            width: displayTab.panelRoot.space6
-            height: displayTab.panelRoot.controlHeight
-            radius: Style.cornerRadius
-            text: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled ? "✓" : ""
-            foreground: displayTab.panelRoot.textPrimary
-            onClicked: {
-              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
-              var enabled = displayTab.service.displayDraft.filter(function(display) { return display.enabled }).length
-              if (displayTab.selectedDisplay.enabled && enabled <= 1) return
-              displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "enabled", !displayTab.selectedDisplay.enabled)
-              displayTab.service.previewLayout()
-            }
-          }
         }
-        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
-
-        Item {
-          width: parent.width
-          height: panelRoot.space5
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: "BRIGHTNESS"
-            foreground: displayTab.panelRoot.textPrimary
-          }
-          // Body-emphasis value: brighter and heavier than the eyebrow above
-          // it. The monospace family keeps the digits aligned as they change.
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: displayTab.panelRoot.brightnessAvailable ? displayTab.panelRoot.brightness + "%" : "—"
-            color: displayTab.panelRoot.textPrimary
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-            font.weight: Font.DemiBold
-          }
-        }
-        Ui.PanelSlider {
-          width: parent.width - displayTab.gutter * 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          bar: displayTab.panelRoot.bar
-          minimum: 1
-          maximum: 100
-          integer: true
-          value: displayTab.panelRoot.brightness
-          enabled: displayTab.panelRoot.brightnessAvailable
-            && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-          opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
-          onMoved: function(value) { displayTab.panelRoot.brightness = Math.round(value) }
-          onReleased: function(value) { displayTab.panelRoot.queueBrightness(value) }
-        }
-        Text {
-          visible: !displayTab.panelRoot.brightnessAvailable
-          width: parent.width - displayTab.gutter * 2
-          x: displayTab.gutter
-          text: "Not available for this display"
-          color: displayTab.panelRoot.textDim
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-        }
-        Item { width: 1; height: displayTab.gutter }
-        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
-
-        Item {
-          width: parent.width
-          height: panelRoot.space5
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: "SCALE"
-            foreground: displayTab.panelRoot.textPrimary
-          }
-        }
-        Ui.ButtonGroup {
-          id: scaleGroup
-          width: parent.width - displayTab.gutter * 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          foreground: displayTab.panelRoot.textPrimary
-          background: Color.popups.background
-          accent: Color.accent
-          options: [1, 1.25, 1.6, 2, 3, 4].map(function(scale) {
-            return { value: String(scale), label: scale + "x" }
-          })
-          value: displayTab.selectedDisplay
-            ? String(Number(displayTab.selectedDisplay.scale)) : ""
-          onChanged: function(value) {
-            if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
-            displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "scale", Number(value))
-            displayTab.service.previewLayout()
-          }
-        }
-        Item { width: 1; height: displayTab.gutter }
-        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
-
-        Item {
-          width: parent.width
-          height: panelRoot.space5
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: "RESOLUTION · REFRESH"
-            foreground: displayTab.panelRoot.textPrimary
-          }
-        }
-        Row {
-          width: parent.width - displayTab.gutter * 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          spacing: displayTab.gutter
-          Ui.Dropdown {
-            width: (parent.width - parent.spacing) / 2
-            showLabel: false
-            value: displayTab.selectedDisplay && Model.parseMode(displayTab.selectedDisplay.mode)
-              ? Model.parseMode(displayTab.selectedDisplay.mode).width + "x"
-                + Model.parseMode(displayTab.selectedDisplay.mode).height : ""
-            options: displayTab.selectedDisplay
-              ? Model.resolutionChoices(displayTab.selectedDisplay.availableModes) : []
-            foreground: displayTab.panelRoot.textPrimary
-            onChanged: function(value) {
-              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
-              var exact = Model.modeForResolution(displayTab.selectedDisplay.availableModes,
-                value, displayTab.selectedDisplay.mode)
-              displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", exact)
-              displayTab.service.previewLayout()
-            }
-          }
-          Ui.Dropdown {
-            width: (parent.width - parent.spacing) / 2
-            showLabel: false
-            value: displayTab.selectedDisplay ? displayTab.selectedDisplay.mode : ""
-            options: displayTab.selectedDisplay && Model.parseMode(displayTab.selectedDisplay.mode)
-              ? Model.refreshChoices(displayTab.selectedDisplay.availableModes,
-                Model.parseMode(displayTab.selectedDisplay.mode).width + "x"
-                  + Model.parseMode(displayTab.selectedDisplay.mode).height) : []
-            foreground: displayTab.panelRoot.textPrimary
-            onChanged: function(value) {
-              if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
-              displayTab.service.setDisplayValue(displayTab.selectedDisplay.name, "mode", value)
-              displayTab.service.previewLayout()
-            }
-          }
-        }
-        Item { width: 1; height: displayTab.gutter }
-        Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
-
-        Item {
-          width: parent.width
-          height: panelRoot.space5
-          Ui.PanelSectionHeader {
-            anchors.left: parent.left
-            anchors.leftMargin: displayTab.gutter
-            anchors.verticalCenter: parent.verticalCenter
-            text: "ROLE"
-            foreground: displayTab.panelRoot.textPrimary
-          }
-        }
-        Ui.ButtonGroup {
-          id: roleGroup
-          width: parent.width - displayTab.gutter * 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          foreground: displayTab.panelRoot.textPrimary
-          background: Color.popups.background
-          accent: Color.accent
-          options: ["Primary", "Secondary", "Third"].slice(0, displayTab.enabledCount)
-            .map(function(label, index) { return { value: String(index), label: label } })
-          value: displayTab.service && displayTab.selectedDisplay
-            ? String(displayTab.service.roleOf(displayTab.selectedDisplay.name)) : ""
-          onChanged: function(value) {
-            if (!displayTab.service || !displayTab.selectedDisplay || !displayTab.service.draftEditable) return
-            displayTab.service.swapRole(displayTab.selectedDisplay.name, Number(value))
-          }
-        }
-        Item { width: 1; height: displayTab.gutter }
       }
     }
+  }
 
-    Item {
-      visible: displayTab.service && displayTab.service.layoutError !== ""
-        && displayTab.service.state !== "previewing"
-      width: parent.width
-      height: visible ? errorText.implicitHeight + displayTab.gutter * 2 : 0
-      Ui.PanelSeparator { width: parent.width; foreground: Color.urgent }
-      Text {
-        id: errorText
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: displayTab.gutter
-        anchors.rightMargin: displayTab.gutter
-        anchors.verticalCenter: parent.verticalCenter
-        text: displayTab.service ? displayTab.service.layoutError : ""
-        wrapMode: Text.WordWrap
-        color: Color.urgent
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-      }
+  Item {
+    width: parent.width
+    height: Style.space(66)
+    readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
+    Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+    Text {
+      visible: parent.previewing
+      anchors.left: parent.left
+      anchors.leftMargin: displayTab.pad
+      anchors.right: revertButton.left
+      anchors.rightMargin: displayTab.gutter
+      anchors.verticalCenter: parent.verticalCenter
+      text: "Keep these settings? Reverting in "
+        + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
+      color: displayTab.panelRoot.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
     }
-
-    Item {
-      width: parent.width
-      // Reserve the preview footer from the start so Keep/Revert never
-      // changes the panel height or shifts the canvas.
-      height: Style.space(46)
-      readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
-      Ui.PanelSeparator {
-        visible: parent.previewing
-        width: parent.width
-        foreground: displayTab.panelRoot.textPrimary
-      }
-      Text {
-        visible: parent.previewing
-        anchors.left: parent.left
-        anchors.leftMargin: displayTab.gutter
-        anchors.right: revertButton.left
-        anchors.rightMargin: displayTab.gutter
-        anchors.verticalCenter: parent.verticalCenter
-        text: "Keep these settings? Reverting in "
-          + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
-        color: displayTab.panelRoot.textPrimary
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-      }
-      Ui.Button {
-        id: keepButton
-        visible: parent.previewing
-        anchors.right: parent.right
-        anchors.rightMargin: displayTab.gutter
-        anchors.verticalCenter: parent.verticalCenter
-        height: displayTab.panelRoot.controlHeight
-        radius: Style.cornerRadius
-        text: "Keep"
-        // Keep is the primary action, so it carries the accent fill.
-        accent: Color.accent
-        background: Color.accent
-        foreground: Color.popups.background
-        onClicked: displayTab.service.keepPreview()
-      }
-      Ui.Button {
-        id: revertButton
-        visible: parent.previewing
-        anchors.right: keepButton.left
-        anchors.rightMargin: displayTab.gutter
-        anchors.verticalCenter: parent.verticalCenter
-        height: displayTab.panelRoot.controlHeight
-        radius: Style.cornerRadius
-        text: "Revert"
-        bordered: true
-        foreground: Color.popups.text
-        onClicked: displayTab.service.revertPreview("")
-      }
+    Ui.Button {
+      id: keepButton
+      visible: parent.previewing
+      anchors.right: parent.right
+      anchors.rightMargin: displayTab.pad
+      anchors.verticalCenter: parent.verticalCenter
+      height: displayTab.panelRoot.controlHeight
+      radius: Style.cornerRadius
+      text: "Keep"
+      accent: Color.accent
+      background: Color.accent
+      foreground: Color.popups.background
+      onClicked: displayTab.service.keepPreview()
+    }
+    Ui.Button {
+      id: revertButton
+      visible: parent.previewing
+      anchors.right: keepButton.left
+      anchors.rightMargin: displayTab.gutter
+      anchors.verticalCenter: parent.verticalCenter
+      height: displayTab.panelRoot.controlHeight
+      radius: Style.cornerRadius
+      text: "Revert"
+      bordered: true
+      foreground: Color.popups.text
+      onClicked: displayTab.service.revertPreview("")
     }
   }
 }

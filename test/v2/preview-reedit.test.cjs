@@ -73,9 +73,11 @@ test('settling a preview still requires one, and unrelated work stays gated on i
 test('every draft control reads the same editable flag', () => {
   assert.match(layout, /if \(!service \|\| !service\.draftEditable\) return/);
   assert.match(layout, /enabled: canvas\.service && canvas\.service\.draftEditable/);
-  assert.equal((layout.match(/service\.state !== "idle"/g) || []).length, 0);
+  // Role swaps migrate windows and are intentionally gated on idle; card
+  // position and rotation previews still use draftEditable.
+  assert.equal((layout.match(/service\.state !== "idle"/g) || []).length, 1);
   assert.equal((tab.match(/service\.state !== "idle"/g) || []).length, 0);
-  assert.equal((tab.match(/!displayTab\.service\.draftEditable/g) || []).length, 5);
+  assert.match(tab, /if \(!service \|\| !selectedDisplay \|\| !service\.draftEditable\) return/);
   assert.match(panel, /if \(!service \|\| !service\.draftEditable\) return/);
 });
 

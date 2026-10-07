@@ -339,12 +339,12 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict). The Displays tab's right-hand information column begins with compact **Mode** (Extend, Mirror, or Single on one named output) and **Direction** (LTR, RTL) dropdowns.
+**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
 
 Displays tab:
 
-- Left: **Layout** canvas (logical coordinates, §5.9; drag; snap; rotate buttons at each monitor's top-left; selected outlined; disabled dashed; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2) and **Displays** list (connector, role label, model, check = enabled).
-- Right: **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show "Not available for this display" on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), **Resolution** and **Refresh rate** (from `availableModes`, which contains near-duplicates such as `1920x1080@60.00Hz` and `1920x1200@59.88Hz`; the UI deduplicates what it shows but keeps the exact allowlisted mode string for each choice), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Role** (labels derived per §2a; choosing a taken role swaps lanes).
+- Left: **Layout** canvas (logical coordinates, §5.9; drag and snap; wheel/button zoom and background pan; selected outlined; hover-only rotation controls at the selected monitor's upper corners; role-number menu inside each enabled monitor; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2). A red layout error appears below the canvas.
+- Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders; Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
 

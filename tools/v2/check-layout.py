@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     root = Path(directory)
     probe = root / 'Probe'
     probe.mkdir()
-    for name in ('DisplayLayout.qml', 'Model.js', 'MonitorsLua.js'):
+    for name in ('DisplayLayout.qml', 'InlineDropdown.qml', 'Model.js', 'MonitorsLua.js'):
         (probe / name).write_text((repo / 'lib' / name).read_text())
     ui = root / 'qs' / 'Ui'
     commons = root / 'qs' / 'Commons'
@@ -33,10 +33,10 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var spacing: ({xs: 3, md: 8})
+  property var spacing: ({xs: 3, sm: 4, md: 8, xxs: 2, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
   property int cornerRadius: 0
   property int normalBorderWidth: 1
-  property var font: ({family: "monospace", caption: 12})
+  property var font: ({family: "monospace", caption: 12, body: 12, title: 14})
   function space(n) { return n * 5 / 6 }
 }
 ''')
@@ -44,7 +44,7 @@ QtObject {
 import QtQuick
 QtObject {
   property var popups: ({background: "black", border: "white", text: "white"})
-  property var menu: ({background: "black", text: "white", selectedBackground: "grey", selectedText: "white"})
+  property var menu: ({background: "black", text: "white", border: "white", selectedBackground: "grey", selectedText: "white"})
   property string accent: "white"
 }
 ''')
@@ -163,6 +163,25 @@ Item {
         verify(target.y >= layout.inset - 0.01)
         verify(target.y + target.height <= layout.height - layout.inset + 0.01)
       }
+    }
+    function test_zoom_keeps_pointer_position_stable() {
+      var target = card("HDMI-A-2")
+      var oldWidth = target.width
+      var oldCenterX = target.x + target.width / 2
+      var oldCenterY = target.y + target.height / 2
+      layout.zoomAt(1.2, oldCenterX, oldCenterY)
+      verify(target.width > oldWidth)
+      compare(Math.round(target.x + target.width / 2), Math.round(oldCenterX))
+      compare(Math.round(target.y + target.height / 2), Math.round(oldCenterY))
+      compare(service.previews, 0)
+    }
+    function test_background_pan_does_not_modify_monitor_layout() {
+      var oldX = layout.panX, oldY = layout.panY
+      mouseDrag(layout, 12, 12, 30, 20, Qt.LeftButton, Qt.NoModifier, 5)
+      verify(layout.panX > oldX)
+      verify(layout.panY > oldY)
+      compare(service.writes, 0)
+      compare(service.previews, 0)
     }
     function test_invalid_position_is_rejected() {
       compare(service.setDisplayPosition("missing", 0, 0), "invalid")

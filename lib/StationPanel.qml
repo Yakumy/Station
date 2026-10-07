@@ -29,6 +29,9 @@ Ui.Panel {
   property bool brightnessAvailable: false
   property int pendingBrightness: 0
   property bool brightnessQueued: false
+  readonly property var textSizeStops: [9, 10, 11, 12, 14, 16, 20]
+  property int textSizePreviewIndex: -1
+  property int queuedTextSize: -1
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
@@ -204,6 +207,31 @@ Ui.Panel {
     brightnessDebounce.restart()
   }
 
+  function nearestTextIndex(px) {
+    var best = 0, distance = Infinity
+    for (var i = 0; i < textSizeStops.length; i++) {
+      var next = Math.abs(textSizeStops[i] - px)
+      if (next < distance) { best = i; distance = next }
+    }
+    return best
+  }
+
+  function currentTextIndex() {
+    return textSizePreviewIndex >= 0 ? textSizePreviewIndex : nearestTextIndex(Style.font.baseSize)
+  }
+
+  function displayedTextSize() {
+    return textSizePreviewIndex >= 0 ? textSizeStops[textSizePreviewIndex] : Style.font.baseSize
+  }
+
+  function setTextSizeIndex(index) {
+    if (index < 0 || index >= textSizeStops.length) return
+    textSizePreviewIndex = index
+    if (textSizeWrite.running) { queuedTextSize = textSizeStops[index]; return }
+    textSizeWrite.command = ["omarchy-display-text-size", String(textSizeStops[index])]
+    textSizeWrite.running = true
+  }
+
   function setBrightness(value) {
     if (!brightnessAvailable || !selectedDisplayName) return
     pendingBrightness = Math.max(1, Math.min(100, Math.round(value)))
@@ -371,6 +399,28 @@ Ui.Panel {
     onExited: if (root.brightnessQueued) root.setBrightness(root.pendingBrightness)
   }
 
+  Process {
+    id: textSizeWrite
+    stdout: StdioCollector { waitForEnd: true }
+    onExited: {
+      if (root.queuedTextSize >= 0) {
+        var next = root.queuedTextSize
+        root.queuedTextSize = -1
+        command = ["omarchy-display-text-size", String(next)]
+        running = true
+      }
+    }
+  }
+
+  Connections {
+    target: Style
+    function onFontBaseSizeChanged() {
+      if (root.textSizePreviewIndex >= 0
+          && root.nearestTextIndex(Style.font.baseSize) === root.textSizePreviewIndex)
+        root.textSizePreviewIndex = -1
+    }
+  }
+
   readonly property color barFg: bar ? bar.barForeground : Color.bar.text
   // The Omarchy menu mark is an icon-font glyph whose ink box is exactly one
   // `Style.font.body` em, so deriving from the same token keeps this mark
@@ -450,10 +500,9 @@ Ui.Panel {
     open: root.opened
     focusTarget: keyCatcher
     padding: 0
-    // The six scale chips need ~262px in a row; at the 65/35 column split
-    // that takes ~920 theme units of panel before the 4x chip stops painting
-    // over the right edge. Do not shrink this while Scale stays one row.
-    contentWidth: panel.fittedContentWidth(Style.space(920))
+    // The reference's wider two-column canvas is approximately 830 logical
+    // pixels at the current font scale. The host still caps this to the screen.
+    contentWidth: panel.fittedContentWidth(Style.space(996))
     contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     Ui.PanelKeyCatcher {
@@ -573,6 +622,30 @@ Ui.Panel {
                   onClicked: root.selectedTab = tab.index
                 }
               }
+            }
+          }
+          Row {
+            visible: root.selectedTab === 0
+            anchors.right: parent.right
+            anchors.rightMargin: root.regionPadH
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: root.space3
+            Station.InlineDropdown {
+              prefix: "Direction: "
+              value: root.service ? root.service.config.direction : "ltr"
+              options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" },
+                { value: "ttb", label: "TTB" }, { value: "btt", label: "BTT" }]
+              foreground: root.textDim
+              onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
+            }
+            Station.InlineDropdown {
+              prefix: "Mode: "
+              value: root.modeValue
+              options: root.modeOptions
+              popupMinWidth: root.space6 * 7
+              popupAlignRight: true
+              foreground: root.textDim
+              onChanged: function(value) { root.changeMode(value) }
             }
           }
         }

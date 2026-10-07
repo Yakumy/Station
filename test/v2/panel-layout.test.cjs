@@ -12,31 +12,30 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   const runtime = [panel, displays, bindings, settings].join('\n');
 
   assert.doesNotMatch(runtime, /\b(?:ScrollView|Flickable|ListView)\s*\{/);
-  assert.match(displays, /text: "MODE"/);
-  assert.match(displays, /text: "DIRECTION"/);
-  assert.match(displays, /modeLabelMeasure\.implicitWidth \+ displayTab\.dropdownTrim/);
-  assert.match(displays, /directionLabelMeasure\.implicitWidth \+ displayTab\.dropdownTrim/);
+  assert.match(panel, /prefix: "Mode: "/);
+  assert.match(panel, /prefix: "Direction: "/);
   assert.match(displays, /id: leftColumn/);
   assert.match(displays, /id: rightColumn/);
   assert.match(displays, /Station\.DisplayLayout/);
-  assert.match(displays, /Ui\.PanelSlider/);
+  assert.equal((displays.match(/Ui\.PanelSlider\s*\{/g) || []).length, 5);
+  assert.match(displays, /text: "DRAG TO ARRANGE"/);
+  assert.match(displays, /"Selected: " \+ displayTab\.selectedDisplay\.name/);
+  assert.match(displays, /text: "RESOLUTION"/);
+  assert.match(displays, /text: "REFRESH RATE"/);
   assert.match(bindings, /bindingGroups/);
   assert.match(settings, /Installed version/);
 });
 
-test('scale stays one row of six and the panel reserves room for it', () => {
+test('larger panel reserves the reference canvas and discrete slider stops', () => {
   const panel = read('lib/StationPanel.qml');
   const displays = read('lib/DisplaysTab.qml');
 
-  // Ui.ButtonGroup never wraps or clips: six chips need ~262px, so the panel
-  // must reserve the width that keeps them inside the card. Below that width
-  // the 4x chip painted past the panel's right edge.
-  assert.match(displays, /id: scaleGroup/);
-  assert.match(displays, /\[1, 1\.25, 1\.6, 2, 3, 4\]/);
+  assert.match(displays, /scaleOptions: \[1, 1\.25, 1\.6, 2, 3, 4\]/);
+  assert.match(displays, /resolutionOptions\.length/);
+  assert.match(displays, /refreshOptions\.length/);
   const width = panel.match(/fittedContentWidth\(Style\.space\((\d+)\)\)/);
   assert.ok(width, 'panel width is a Style.space request');
-  assert.ok(Number(width[1]) >= 920,
-    `panel requests ${width[1]} theme units; six scale chips need at least 920`);
+  assert.ok(Number(width[1]) >= 996, `panel requests ${width[1]} theme units`);
 });
 
 test('popout owner closes through root, never through the KeyboardPanel id', () => {
