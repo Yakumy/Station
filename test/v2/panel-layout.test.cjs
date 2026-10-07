@@ -12,8 +12,10 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   const runtime = [panel, displays, bindings, settings].join('\n');
 
   assert.doesNotMatch(runtime, /\b(?:ScrollView|Flickable|ListView)\s*\{/);
-  assert.match(panel, /Mode: Extend/);
-  assert.match(panel, /Direction: LTR/);
+  assert.match(displays, /text: "MODE"/);
+  assert.match(displays, /text: "DIRECTION"/);
+  assert.match(displays, /modeLabelMeasure\.implicitWidth \+ displayTab\.dropdownTrim/);
+  assert.match(displays, /directionLabelMeasure\.implicitWidth \+ displayTab\.dropdownTrim/);
   assert.match(displays, /id: leftColumn/);
   assert.match(displays, /id: rightColumn/);
   assert.match(displays, /Station\.DisplayLayout/);

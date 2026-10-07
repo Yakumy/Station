@@ -339,7 +339,7 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict) with **Mode** (Extend, Mirror, "Single display on" → one entry per monitor `name · role`) and **Direction** (LTR, RTL) dropdowns on the right.
+**Panel:** header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict). The Displays tab's right-hand information column begins with compact **Mode** (Extend, Mirror, or Single on one named output) and **Direction** (LTR, RTL) dropdowns.
 
 Displays tab:
 

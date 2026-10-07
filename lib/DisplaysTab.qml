@@ -16,6 +16,8 @@ Column {
   // reads clearly instead of the full region padding.
   readonly property real pad: panelRoot.regionPadH
   readonly property real gutter: panelRoot.space2
+  readonly property real dropdownTrim: Style.spacing.controlPaddingX + Style.spacing.md
+    + Style.spacing.controlGap + chevronMeasure.implicitWidth + Style.normalBorderWidth * 2
   spacing: 0
 
   Column {
@@ -78,6 +80,84 @@ Column {
         id: rightColumn
         width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
         spacing: 0
+
+        Item {
+          width: parent.width
+          height: displayConfigRow.implicitHeight + displayTab.gutter * 2
+
+          Text {
+            id: chevronMeasure
+            visible: false
+            text: "󰅀"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+          }
+          Text {
+            id: modeLabelMeasure
+            visible: false
+            text: modeSelect.currentLabel()
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+          }
+          Text {
+            id: directionLabelMeasure
+            visible: false
+            text: directionSelect.currentLabel()
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+          }
+
+          Row {
+            id: displayConfigRow
+            x: displayTab.gutter
+            y: displayTab.gutter
+            width: parent.width - displayTab.gutter * 2
+            spacing: displayTab.gutter
+
+            Column {
+              id: modeGroup
+              width: Math.max(0, Math.min(Math.max(Style.space(120),
+                  modeLabelMeasure.implicitWidth + displayTab.dropdownTrim),
+                displayConfigRow.width - directionGroup.width - displayConfigRow.spacing))
+              spacing: Style.spacing.xxs
+              Ui.PanelSectionHeader {
+                text: "MODE"
+                foreground: displayTab.panelRoot.textPrimary
+              }
+              Ui.Dropdown {
+                id: modeSelect
+                width: parent.width
+                showLabel: false
+                foreground: displayTab.panelRoot.textPrimary
+                value: displayTab.panelRoot.modeValue
+                options: displayTab.panelRoot.modeOptions
+                onChanged: function(value) { displayTab.panelRoot.changeMode(value) }
+              }
+            }
+
+            Column {
+              id: directionGroup
+              width: Math.min(directionLabelMeasure.implicitWidth + displayTab.dropdownTrim,
+                displayConfigRow.width * 0.38)
+              spacing: Style.spacing.xxs
+              Ui.PanelSectionHeader {
+                text: "DIRECTION"
+                foreground: displayTab.panelRoot.textPrimary
+              }
+              Ui.Dropdown {
+                id: directionSelect
+                width: parent.width
+                showLabel: false
+                foreground: displayTab.panelRoot.textPrimary
+                value: displayTab.service ? displayTab.service.config.direction : "ltr"
+                options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" }]
+                onChanged: function(value) {
+                  if (displayTab.service) displayTab.service.setDirectionValue(value)
+                }
+              }
+            }
+          }
+        }
 
         Item {
           width: parent.width

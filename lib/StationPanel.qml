@@ -91,11 +91,11 @@ Ui.Panel {
   readonly property string modeValue: service && service.draftMode === "single"
     ? "single:" + service.draftSingleTarget : (service ? service.draftMode : "extend")
   readonly property var modeOptions: {
-    var options = [{ value: "extend", label: "Mode: Extend" }, { value: "mirror", label: "Mode: Mirror" }]
+    var options = [{ value: "extend", label: "Extend" }, { value: "mirror", label: "Mirror" }]
     if (!service) return options
     service.displayDraft.forEach(function(display) {
       options.push({ value: "single:" + display.name,
-        label: "Single · " + display.name + " · " + root.roleName(display) })
+        label: "Single · " + display.name })
     })
     return options
   }
@@ -506,7 +506,6 @@ Ui.Panel {
         }
 
         Item {
-          id: toolbar
           width: parent.width
           height: root.controlHeight + root.space1
           Row {
@@ -574,32 +573,6 @@ Ui.Panel {
                   onClicked: root.selectedTab = tab.index
                 }
               }
-            }
-          }
-
-          Row {
-            id: toolbarDropdowns
-            anchors.right: parent.right
-            anchors.rightMargin: root.regionPadH
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: root.space2
-            readonly property real available: toolbar.width - root.regionPadH * 2
-              - tabs.implicitWidth - spacing
-            Ui.Dropdown {
-              width: Math.max(Style.space(120), toolbarDropdowns.available / 2)
-              showLabel: false
-              foreground: Color.popups.text
-              value: root.modeValue
-              options: root.modeOptions
-              onChanged: function(value) { root.changeMode(value) }
-            }
-            Ui.Dropdown {
-              width: Math.max(Style.space(120), toolbarDropdowns.available / 2)
-              showLabel: false
-              foreground: Color.popups.text
-              value: root.service ? root.service.config.direction : "ltr"
-              options: [{ value: "ltr", label: "Direction: LTR" }, { value: "rtl", label: "Direction: RTL" }]
-              onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
             }
           }
         }
