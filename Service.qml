@@ -63,6 +63,9 @@ Item {
   // reloads its entries, and a rebuilt instance would otherwise start back
   // on Displays; the service is the object that survives that rebuild.
   property int rememberedTab: 0
+  // Keep the inspector's selected connector through a per-output bar rebuild.
+  // A temporary output disappearance must not erase the selection.
+  property string rememberedDisplayName: ""
   // A preview is an editing session, not a lock: the draft stays editable
   // until Keep or Revert, so the user can rearrange again without having to
   // settle the previous attempt first.

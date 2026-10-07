@@ -17,7 +17,14 @@ Ui.Panel {
   property var service: bar && bar.shell ? bar.shell.serviceFor("yakumy.station") : null
   property int selectedTab: 0
   property int stationNumber: service ? service.currentStation : 1
-  property string selectedDisplayName: service && service.displayDraft.length ? service.displayDraft[0].name : ""
+  readonly property string selectedDisplayName: {
+    if (!service) return ""
+    var displays = service.displayDraft
+    var remembered = service.rememberedDisplayName
+    for (var i = 0; i < displays.length; i++)
+      if (displays[i].name === remembered) return remembered
+    return displays.length ? displays[0].name : ""
+  }
   property int brightness: 0
   property bool brightnessAvailable: false
   property int pendingBrightness: 0
@@ -146,8 +153,9 @@ Ui.Panel {
   }
 
   function selectDisplay(name) {
-    selectedDisplayName = name
-    refreshBrightness()
+    if (!service || !service.displayDraft.some(function(display) { return display.name === name })) return
+    service.rememberedDisplayName = name
+    refreshBrightness(name)
   }
 
   function changeMode(value) {
@@ -184,9 +192,10 @@ Ui.Panel {
     if (service.setBinding(editingBindingId, parts.join(" + ")) === "ok") editingBindingId = ""
   }
 
-  function refreshBrightness() {
-    if (!selectedDisplayName || brightnessRead.running) return
-    brightnessRead.command = ["omarchy-brightness-display", "--monitor", selectedDisplayName]
+  function refreshBrightness(name) {
+    var target = name || selectedDisplayName
+    if (!target || brightnessRead.running) return
+    brightnessRead.command = ["omarchy-brightness-display", "--monitor", target]
     brightnessRead.running = true
   }
 

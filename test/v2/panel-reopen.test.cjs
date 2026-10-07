@@ -10,9 +10,28 @@ const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'
 test('the open intent lives on the service, which outlives the widget', () => {
   assert.match(service, /property bool panelWanted: false/);
   assert.match(service, /property string panelScreenName: ""/);
+  assert.match(service, /property string rememberedDisplayName: ""/);
   // The panel dies with the bar widget, so the intent is readable from the
   // IPC status instead of only from a live panel instance.
   assert.match(service, /panelWanted: root\.panelWanted/);
+});
+
+test('the selected connector survives a panel rebuild and a temporary draft gap', () => {
+  const binding = panel.match(/readonly property string selectedDisplayName: \{([\s\S]*?)\n  \}/);
+  assert.ok(binding, 'selected connector is a service-backed binding');
+  const state = { rememberedDisplayName: 'HDMI-A-2', displayDraft: [
+    { name: 'eDP-1' }, { name: 'HDMI-A-2' },
+  ] };
+  const context = { service: state };
+  const selected = runInNewContext('(function selectedDisplayName() {' + binding[1] + '\n})', context);
+  assert.equal(selected(), 'HDMI-A-2');
+  state.displayDraft = [{ name: 'eDP-1' }];
+  assert.equal(selected(), 'eDP-1', 'inspector has a valid temporary fallback');
+  assert.equal(state.rememberedDisplayName, 'HDMI-A-2', 'fallback must not discard the choice');
+  state.displayDraft = [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }];
+  assert.equal(selected(), 'HDMI-A-2');
+  assert.match(panel, /service\.rememberedDisplayName = name/);
+  assert.doesNotMatch(panel, /\n {4}selectedDisplayName = name/);
 });
 
 test('the panel records its open state and a rebuilt widget claims it back on the same output', () => {
