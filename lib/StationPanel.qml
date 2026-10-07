@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import Quickshell.Io
+import Quickshell
 import qs.Ui as Ui
 import qs.Commons
 import "Model.js" as Model
@@ -212,10 +213,28 @@ Ui.Panel {
   // closed; a close recorded nowhere would reopen a dismissed panel.
   property bool intentPending: false
 
+  function currentScreenName() {
+    var window = panel.anchorWindow
+    return window && window.screen ? String(window.screen.name || "") : ""
+  }
+
+  // An explicit dismissal wins even if a bar rebuild is in progress.
+  function close() {
+    if (service) service.panelTransferUntil = 0
+    controller.hide()
+  }
+
+  function closeForPopoutSwitch() {
+    popoutSwitchClosing = true
+    controller.hide()
+    Qt.callLater(function() { popoutSwitchClosing = false })
+  }
+
   function flushIntent() {
     if (!service || !intentPending) return
     intentPending = false
     service.panelWanted = opened
+    if (opened && currentScreenName()) service.panelScreenName = currentScreenName()
     if (!opened) service.rememberedTab = 0
   }
 
@@ -233,8 +252,12 @@ Ui.Panel {
     for (var i = 0; i < widgets.length; i++) {
       if (widgets[i] && widgets[i].opened === true) { up = true; break }
     }
-    svc.panelWanted = up
-    if (!up) svc.rememberedTab = 0
+    if (up) svc.panelWanted = true
+    else if ((barRef && barRef.activePopout && barRef.activePopout.foreign === true)
+        || Date.now() >= svc.panelTransferUntil) {
+      svc.panelWanted = false
+      svc.rememberedTab = 0
+    }
   }
 
   onOpenedChanged: {
@@ -245,7 +268,7 @@ Ui.Panel {
     } else if (popoutSwitchClosing) {
       var svc = service, barRef = bar, settle = settlePopoutSwitch
       if (svc) Qt.callLater(function() { settle(svc, barRef) })
-    } else {
+    } else if (!service || Date.now() >= service.panelTransferUntil) {
       intentPending = true
       flushIntent()
     }
@@ -262,15 +285,39 @@ Ui.Panel {
     if (remembered >= 0 && remembered <= 2 && selectedTab !== remembered) selectedTab = remembered
   }
 
-  // A rebuilt widget inherits the panel it was carrying. summon() answers
-  // false until the bar has registered this slot, so ask now and then fall
-  // back to a short retry. Qt.callLater keeps the first ask clear of
-  // construction; the window mapping, not the retry, sets the floor.
+  // Open this output's copy directly: shell.summon routes to the focused
+  // output, which can differ from the one the user opened before a move.
+  function tryRestorePanel() {
+    if (!service || !service.panelWanted) return true
+    if (root.opened) return true
+    var widgets = bar && typeof bar.moduleWidgets === "function" ? bar.moduleWidgets("yakumy.station") : []
+    for (var i = 0; i < widgets.length; i++) {
+      if (widgets[i] && widgets[i].opened === true) {
+        // An old copy may still be marked open while its bar slot is being
+        // replaced. Keep polling until that copy goes away.
+        return Date.now() >= service.panelTransferUntil
+      }
+    }
+    var mine = currentScreenName()
+    if (!mine) return false
+    var wanted = service.panelScreenName
+    if (wanted && wanted !== mine) {
+      var stillConnected = false
+      for (var j = 0; j < Quickshell.screens.length; j++)
+        if (Quickshell.screens[j].name === wanted) { stillConnected = true; break }
+      if (stillConnected) return false
+    }
+    root.open()
+    return true
+  }
+
+  // A rebuilt widget inherits the panel it was carrying. The bar window and
+  // its screen can resolve after this component, so retry briefly.
   function requestPanelBack() {
     if (!service || !service.panelWanted) return
     Qt.callLater(function() {
       if (!root.service || !root.service.panelWanted) return
-      if (root.service.openPanel() === "true") return
+      if (root.tryRestorePanel()) return
       reopenTimer.attempts = 0
       reopenTimer.start()
     })
@@ -285,8 +332,8 @@ Ui.Panel {
     property int attempts: 0
     onTriggered: {
       if (!root.service || !root.service.panelWanted) { attempts = 0; return }
-      if (root.service.openPanel() === "true") { attempts = 0; return }
-      if (attempts < 20) { attempts += 1; restart() } else attempts = 0
+      if (root.tryRestorePanel()) { attempts = 0; return }
+      if (attempts < 100) { attempts += 1; restart() } else attempts = 0
     }
   }
 

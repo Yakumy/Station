@@ -43,6 +43,20 @@ test('runtime mode always emits explicit disabled and mirror state', () => {
   assert.match(fallback[0], /disabled = false/);
 });
 
+test('position-only preview touches only the moved output', () => {
+  const before = displays().map(display => ({ ...display, enabled: true }));
+  const after = before.map(display => ({ ...display }));
+  after[1].x = 2400;
+  const rules = L.positionOnlyRules(before, after, 'extend', 'extend');
+  assert.equal(rules.length, 1);
+  assert.match(rules[0], /output = "HDMI-A-2"/);
+  assert.doesNotMatch(rules[0], /eDP-1/);
+  assert.deepEqual(L.positionOnlyRules(after, after, 'extend', 'extend'), []);
+  after[1].scale = 2;
+  assert.equal(L.positionOnlyRules(before, after, 'extend', 'extend'), null);
+  assert.equal(L.positionOnlyRules(before, before, 'mirror', 'extend'), null);
+});
+
 test('managed block is unique, replaced at EOF, and malformed markers fail closed', () => {
   const generated = L.generate(displays(), { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] });
   const once = L.replaceManagedBlock('require("defaults")\n', generated.block);

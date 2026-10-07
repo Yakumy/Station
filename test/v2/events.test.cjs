@@ -40,7 +40,7 @@ test('fake service stream ignores Station disable but handles another output add
   assert.deepEqual(calls, []);
   now += 1000;
   handler({ name: 'monitoraddedv2', data: '1,HDMI-A-2,External display' });
-  assert.deepEqual(calls, ['refresh', 'assign', 'apply', 'open']);
+  assert.deepEqual(calls, ['refresh', 'assign', 'apply']);
   assert.equal(context.lastTopologyMs, now);
 });
 

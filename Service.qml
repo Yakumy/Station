@@ -55,6 +55,10 @@ Item {
   // and asks for the panel back. Deliberately in-memory: a shell restart
   // starts with the panel closed.
   property bool panelWanted: false
+  // The bar has a separate widget on each output. Preserve the output that
+  // owned the panel when a layout edit or bar entry change rebuilds it.
+  property string panelScreenName: ""
+  property double panelTransferUntil: 0
   // Set by the panel on every tab switch. The widget is rebuilt when the bar
   // reloads its entries, and a rebuilt instance would otherwise start back
   // on Displays; the service is the object that survives that rebuild.
@@ -67,6 +71,7 @@ Item {
   property string draftMode: "extend"
   property string draftSingleTarget: ""
   property var previewBefore: []
+  property var previewApplied: null
   property var pendingDisplayConfig: null
   property string layoutError: ""
   property int previewSeconds: 0
@@ -650,9 +655,10 @@ Item {
       // A re-edit joins the session already in progress: keep the baseline
       // the first preview captured, so Revert still means "back to the layout
       // as it was before this session", and Revert never lands mid-session.
-      if (state !== "previewing") previewBefore = monitors.slice()
+      if (state !== "previewing") { previewBefore = monitors.slice(); previewApplied = null }
       pendingDisplayConfig = generated
       layoutError = ""
+      if (panelWanted) panelTransferUntil = Date.now() + 3000
       begin("previewing")
       previewArm.running = true
       return "started"
@@ -670,15 +676,24 @@ Item {
     var lua = pendingDisplayConfig.block.split("\n").filter(function(line) {
       return line !== MonitorsLua.START && line !== MonitorsLua.END
     }).join("\n")
+    var previous = previewApplied ? previewApplied.displays : previewBefore.map(function(monitor) {
+      return Object.assign({}, monitor, { mode: Model.currentMode(monitor),
+        enabled: Model.enabledNames(previewBefore, config.enabled).indexOf(monitor.name) !== -1 })
+    })
+    var positionRules = MonitorsLua.positionOnlyRules(previous, pendingDisplayConfig.displays,
+      previewApplied ? previewApplied.mode : config.mode, draftMode)
+    if (positionRules !== null) lua = positionRules.join("; ")
     expect = { kinds: ["monitor", "workspace"], outputs: MonitorsLua.changedOutputs(
       pendingDisplayConfig.displays, { mode: draftMode, singleTarget: draftSingleTarget,
         enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) },
       previewBefore, true), until: Date.now() + 2000 }
+    previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode }
     evalLua(lua)
   }
 
   function revertPreview(reason) {
     if (state !== "previewing") return "idle"
+    if (panelWanted) panelTransferUntil = Date.now() + 3000
     gen += 1
     state = "applyingLayout"
     previewCountdown.stop()
@@ -696,6 +711,7 @@ Item {
   function keepPreview() {
     if (state !== "previewing" || !pendingDisplayConfig) return "idle"
     try {
+      if (panelWanted) panelTransferUntil = Date.now() + 3000
       var source = monitorsSource || ""
       var merged = MonitorsLua.replaceManagedBlock(source, pendingDisplayConfig.block)
       var conflicts = MonitorsLua.externalRuleConflicts(source,
@@ -717,6 +733,7 @@ Item {
     // Our configreloaded event is suppressed while applyingLayout. Explicitly
     // rebuild the draft from the fresh compositor snapshot and restore binds.
     appliedGeneration = -1
+    previewApplied = null
     refresh(true, function() {
       root.state = "idle"
       root.syncDisplayDraft()
@@ -737,6 +754,7 @@ Item {
     config.singleTarget = draftSingleTarget
     config = Object.assign({}, config)
     pendingDisplayConfig = null
+    previewApplied = null
     monitorsFile.reload()
     saveConfig()
     state = "idle"
@@ -813,6 +831,7 @@ Item {
 
   function setSetting(name, value) {
     if (name === "hideNative") {
+      if (panelWanted) panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
       config = Object.assign({}, config)
       saveConfig()
@@ -898,7 +917,7 @@ Item {
       lastTopologyMs = Date.now()
       removalGrace.stop()
       if (state === "migrating") topologyDirty = true
-      refresh(true, function() { updateAssignments(); applyRuntime(); openPanel() })
+      refresh(true, function() { updateAssignments(); applyRuntime() })
       return
     }
     if (name.indexOf("monitorremoved") === 0) {
