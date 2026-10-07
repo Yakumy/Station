@@ -36,11 +36,56 @@ test('mirror explicitly clears stale mirror state on its source', () => {
 test('runtime mode always emits explicit disabled and mirror state', () => {
   const rules = L.runtimeModeRules([{ name: 'A', lane: 1 }, { name: 'B', lane: 2 }],
     { mode: 'single', singleTarget: 'B', enabled: ['A', 'B'] });
-  assert.match(rules[0], /disabled = true, mirror = ""/);
-  assert.match(rules[1], /disabled = false, mirror = ""/);
+  assert.match(rules[0], /output = "B", disabled = false, mirror = ""/);
+  assert.match(rules[1], /output = "A", disabled = true, mirror = ""/);
   const fallback = L.runtimeModeRules([{ name: 'A', lane: 1 }],
     { mode: 'single', singleTarget: 'missing', enabled: [] });
   assert.match(fallback[0], /disabled = false/);
+});
+
+test('mode switches establish their surviving output before mirroring or disabling the old one', () => {
+  const single = L.generate(displays(), { mode: 'single', singleTarget: 'HDMI-A-2', enabled: ['eDP-1', 'HDMI-A-2'] }).block;
+  assert.ok(single.indexOf('output = "HDMI-A-2", disabled = false') < single.indexOf('output = "eDP-1", disabled = true'));
+  const mirror = L.runtimeModeRules([{ name: 'eDP-1', lane: 2 }, { name: 'HDMI-A-2', lane: 1 }],
+    { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] });
+  assert.match(mirror[0], /output = "HDMI-A-2", disabled = false, mirror = ""/);
+  assert.match(mirror[1], /output = "eDP-1", disabled = false, mirror = "HDMI-A-2"/);
+  const persistedMirror = L.generate(displays().map((display, i) => ({ ...display, lane: 2 - i })),
+    { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] }).block;
+  assert.ok(persistedMirror.indexOf('output = "HDMI-A-2", disabled = false')
+    < persistedMirror.indexOf('output = "eDP-1", disabled = false, mirror = "HDMI-A-2"'));
+});
+
+test('every two-display mode transition keeps a real unmirrored output active', () => {
+  const displays = [{ name: 'A', lane: 2 }, { name: 'B', lane: 1 }];
+  const choices = [
+    { mode: 'extend', enabled: ['A', 'B'] },
+    { mode: 'mirror', enabled: ['A', 'B'] },
+    { mode: 'single', singleTarget: 'A', enabled: ['A', 'B'] },
+    { mode: 'single', singleTarget: 'B', enabled: ['A', 'B'] },
+  ];
+  for (const from of choices) for (const to of choices) {
+    const current = Object.fromEntries(L.runtimeModeStates(displays, from).map(state => [state.name, { ...state }]));
+    for (const rule of L.runtimeModeRules(displays, to)) {
+      const [, name, disabled, mirror] = rule.match(/output = "([AB])", disabled = (true|false), mirror = "([AB]?)"/);
+      current[name] = { disabled: disabled === 'true', mirror };
+      assert.ok(Object.values(current).some(state => !state.disabled && !state.mirror),
+        `${from.mode}:${from.singleTarget || ''} -> ${to.mode}:${to.singleTarget || ''} lost its last output at ${rule}`);
+    }
+  }
+});
+
+test('mode-only previews never reapply output geometry', () => {
+  const before = displays();
+  const rules = L.modeOnlyRules(before, before,
+    { mode: 'single', singleTarget: 'eDP-1', enabled: ['eDP-1', 'HDMI-A-2'] },
+    { mode: 'single', singleTarget: 'HDMI-A-2', enabled: ['eDP-1', 'HDMI-A-2'] });
+  assert.equal(rules.length, 2);
+  assert.match(rules[0], /output = "HDMI-A-2"/);
+  assert.ok(rules.every(rule => !/mode = |position = |scale = |transform = /.test(rule)));
+  const changed = before.map(display => ({ ...display }));
+  changed[0].scale = 2;
+  assert.equal(L.modeOnlyRules(before, changed, { mode: 'extend' }, { mode: 'extend' }), null);
 });
 
 test('position-only preview touches only the moved output', () => {

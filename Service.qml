@@ -683,14 +683,28 @@ Item {
       return Object.assign({}, monitor, { mode: Model.currentMode(monitor),
         enabled: Model.enabledNames(previewBefore, config.enabled).indexOf(monitor.name) !== -1 })
     })
+    var previousOptions = previewApplied ? previewApplied.options : {
+      mode: config.mode, singleTarget: config.singleTarget, enabled: config.enabled
+    }
+    var nextOptions = { mode: draftMode, singleTarget: draftSingleTarget,
+      enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
     var positionRules = MonitorsLua.positionOnlyRules(previous, pendingDisplayConfig.displays,
       previewApplied ? previewApplied.mode : config.mode, draftMode)
     if (positionRules !== null) lua = positionRules.join("; ")
-    expect = { kinds: ["monitor", "workspace"], outputs: MonitorsLua.changedOutputs(
-      pendingDisplayConfig.displays, { mode: draftMode, singleTarget: draftSingleTarget,
-        enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) },
-      previewBefore, true), until: Date.now() + 2000 }
-    previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode }
+    else {
+      var modeRules = MonitorsLua.modeOnlyRules(previous, pendingDisplayConfig.displays,
+        previousOptions, nextOptions)
+      if (modeRules !== null) lua = modeRules.join("; ")
+    }
+    var expectedOutputs = positionRules !== null ? positionRules.map(function(rule) {
+      return pendingDisplayConfig.displays.find(function(display) {
+        return rule.indexOf("output = " + MonitorsLua.luaString(display.name) + ",") !== -1
+      }).name
+    }) : modeRules !== null ? MonitorsLua.changedModeNames(pendingDisplayConfig.displays,
+      previousOptions, nextOptions) : MonitorsLua.changedOutputs(
+        pendingDisplayConfig.displays, nextOptions, previewBefore, true)
+    expect = { kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 }
+    previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode, options: nextOptions }
     evalLua(lua)
   }
 

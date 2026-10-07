@@ -64,6 +64,40 @@ test('successive position previews reconfigure only the output being moved', () 
   assert.ok((calls[2].match(/hl\.monitor/g) || []).length >= 2, 'scale changes keep the full guarded transaction');
 });
 
+test('a mode-only preview enables the new single output first without geometry rules', () => {
+  const before = [
+    { name: 'eDP-1', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 0, y: 0, scale: 1, transform: 0 },
+    { name: 'HDMI-A-2', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 1920, y: 0, scale: 1, transform: 0 },
+  ];
+  const draft = before.map((monitor, index) => ({ ...monitor, mode: monitor.availableModes[0], enabled: true, lane: index + 1 }));
+  const calls = [];
+  const context = {
+    Model, MonitorsLua,
+    Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
+    state: 'previewing', stateDir: '/tmp/station-preview-test',
+    config: { mode: 'single', singleTarget: 'eDP-1', enabled: ['eDP-1', 'HDMI-A-2'] },
+    previewBefore: before, previewApplied: null, draftMode: 'single', draftSingleTarget: 'HDMI-A-2',
+    displayDraft: draft, previewCountdown: { restart() {} },
+    evalLua(lua) { calls.push(lua); },
+  };
+  const body = service.match(/  function applyPreview\(\) \{([\s\S]*?)\n  \}/);
+  const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'HDMI-A-2', enabled: context.config.enabled });
+  apply();
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].indexOf('output = "HDMI-A-2", disabled = false')
+    < calls[0].indexOf('output = "eDP-1", disabled = true'));
+  assert.doesNotMatch(calls[0], /mode = |position = |scale = |transform = /);
+  assert.deepEqual([...context.expect.outputs], ['eDP-1', 'HDMI-A-2']);
+  context.draftSingleTarget = 'eDP-1';
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'eDP-1', enabled: context.config.enabled });
+  apply();
+  assert.ok(calls[1].indexOf('output = "eDP-1", disabled = false')
+    < calls[1].indexOf('output = "HDMI-A-2", disabled = true'));
+  assert.deepEqual([...context.expect.outputs], ['eDP-1', 'HDMI-A-2'],
+    'the second preview attributes events against the applied preview, not its original baseline');
+});
+
 test('settling a preview still requires one, and unrelated work stays gated on idle', () => {
   assert.match(service, /function revertPreview\(reason\) \{\n {4}if \(state !== "previewing"\)/);
   assert.match(service, /function keepPreview\(\) \{\n {4}if \(state !== "previewing"/);
