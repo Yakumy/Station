@@ -521,11 +521,11 @@ Ui.Panel {
 
         Item {
           width: parent.width
-          height: Style.space(56)
+          height: Style.space(67)
           StationMark {
             id: logo
-            width: Style.space(28)
-            height: Style.space(28)
+            width: Style.space(34)
+            height: Style.space(34)
             tint: root.bar ? root.bar.foreground : Color.bar.text
             anchors.left: parent.left
             anchors.leftMargin: root.regionPadH

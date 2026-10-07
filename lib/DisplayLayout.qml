@@ -12,6 +12,7 @@ Ui.BorderSurface {
   property string selectedDisplayName: ""
   signal displaySelected(string name)
   height: Style.space(370)
+  clip: true
   color: Color.popups.background
   borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
   radius: Style.cornerRadius
