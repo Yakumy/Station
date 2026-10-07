@@ -505,8 +505,6 @@ Ui.Panel {
           }
         }
 
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
-
         Item {
           id: toolbar
           width: parent.width

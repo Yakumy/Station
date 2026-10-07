@@ -48,7 +48,7 @@ Column {
             anchors.right: parent.right
             anchors.rightMargin: displayTab.pad
             anchors.verticalCenter: parent.verticalCenter
-            text: "LOGICAL COORDINATES · DRAG TO ARRANGE"
+            text: "DRAG TO ARRANGE"
             color: displayTab.panelRoot.textDim
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
