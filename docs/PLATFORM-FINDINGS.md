@@ -199,6 +199,16 @@ continues to come exclusively from `WidgetButton.foreground`. A fresh live bar
 capture after installation contains exact `#c2c2b0` pixels in the Station mark
 and no pixels at the former `#979789` peak.
 
+**[LIVE][SRC] Bar-logo optical size:** the SVG has no unused outer margin: its
+stroked path reaches all four view-box edges, and the live 10px Station mark
+painted a 10×10 bound versus roughly 8×9 for the Omarchy font glyph. The
+perceived smaller size came from ink density instead: normalized screenshot
+coverage was 41.69 equivalent full pixels for Station versus 44.41 for
+Omarchy. Increasing the source stroke from 50 to 54 restores comparable visual
+weight while retaining the same `Style.font.body` size and bar-slot geometry.
+The installed result measured 44.28 equivalent full-color pixels versus 44.41
+for Omarchy (about 0.3% apart), while preserving the exact bar foreground.
+
 ### 8.7 Brightness
 
 | Fact | Tag |

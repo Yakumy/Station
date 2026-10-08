@@ -49,6 +49,7 @@ test('bar logo shares the Omarchy menu foreground and size token', () => {
   // luminance. A white source makes the SVG a pure alpha mask, so a fully
   // covered pixel is exactly the WidgetButton foreground instead of dimmer.
   assert.match(mark, /stroke="white"/);
+  assert.match(mark, /stroke-width="54"/);
   assert.doesNotMatch(mark, /(?:stroke-)?opacity=/);
 });
 
