@@ -60,10 +60,10 @@ test('successive position previews reconfigure only the output being moved', () 
   apply();
   assert.equal((calls[1].match(/hl\.monitor/g) || []).length, 1);
   assert.match(calls[1], /position = "2600x0"/);
-  draft[1].scale = 2;
+  draft[1].transform = 1;
   context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'extend', enabled: context.config.enabled });
   apply();
-  assert.ok((calls[2].match(/hl\.monitor/g) || []).length >= 2, 'scale changes keep the full guarded transaction');
+  assert.ok((calls[2].match(/hl\.monitor/g) || []).length >= 2, 'rotation changes keep the full guarded transaction');
 });
 
 test('a mode-only preview enables the new single output first without geometry rules', () => {
@@ -108,14 +108,17 @@ test('settling a preview still requires one, and unrelated work stays gated on i
   assert.match(service, /function removeStationBlock\(\) \{\n {4}if \(state !== "idle"\) return "busy"/);
 });
 
-test('every draft control reads the same editable flag', () => {
+test('layout edits stay previewable while side controls require idle', () => {
   assert.match(layout, /if \(!service \|\| !service\.draftEditable\) return/);
   assert.match(layout, /enabled: canvas\.service && canvas\.service\.draftEditable/);
   // Role swaps migrate windows and are intentionally gated on idle; card
   // position and rotation previews still use draftEditable.
   assert.match(layout, /else if \(canvas\.service\.state === "idle"\)/);
-  assert.equal((tab.match(/service\.state !== "idle"/g) || []).length, 0);
-  assert.match(tab, /if \(!service \|\| !selectedDisplay \|\| !service\.draftEditable\) return/);
+  assert.equal((tab.match(/service\.state !== "idle"/g) || []).length, 1);
+  assert.match(tab, /if \(!service \|\| !selectedDisplay \|\| service\.state !== "idle"\) return/);
+  assert.match(tab, /service\.applyDisplaySetting\(selectedDisplay\.name, key, value\)/);
+  assert.doesNotMatch(tab, /service\.previewLayout\(\)/,
+    'Scale, Resolution, and Refresh persist directly instead of entering preview');
   assert.match(panel, /if \(!service \|\| !service\.draftEditable\) return/);
 });
 

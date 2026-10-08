@@ -36,9 +36,9 @@ Column {
   }
 
   function applyDisplayValue(key, value) {
-    if (!service || !selectedDisplay || !service.draftEditable) return
+    if (!service || !selectedDisplay || service.state !== "idle") return
     if (selectedDisplay[key] === value) return
-    if (service.setDisplayValue(selectedDisplay.name, key, value) === "ok") service.previewLayout()
+    service.applyDisplaySetting(selectedDisplay.name, key, value)
   }
 
   spacing: 0
@@ -257,7 +257,8 @@ Column {
               tickCount: displayTab.scaleOptions.length
               value: displayTab.selectedDisplay
                 ? Math.max(0, displayTab.scaleOptions.indexOf(Number(displayTab.selectedDisplay.scale))) : 0
-              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+              enabled: displayTab.service && displayTab.service.state === "idle"
+                && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
               onReleased: function(value) {
                 displayTab.applyDisplayValue("scale", displayTab.scaleOptions[Math.round(value)])
               }
@@ -306,7 +307,8 @@ Column {
                 var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
                 return mode ? displayTab.choiceIndex(displayTab.resolutionOptions, mode.width + "x" + mode.height) : 0
               }
-              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+              enabled: displayTab.service && displayTab.service.state === "idle"
+                && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
                 && displayTab.resolutionOptions.length > 0
               onReleased: function(value) {
                 var choice = displayTab.resolutionOptions[Math.round(value)]
@@ -358,7 +360,8 @@ Column {
               tickCount: displayTab.refreshOptions.length
               value: displayTab.selectedDisplay
                 ? displayTab.choiceIndex(displayTab.refreshOptions, displayTab.selectedDisplay.mode) : 0
-              enabled: displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+              enabled: displayTab.service && displayTab.service.state === "idle"
+                && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
                 && displayTab.refreshOptions.length > 0
               onReleased: function(value) {
                 var choice = displayTab.refreshOptions[Math.round(value)]

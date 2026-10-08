@@ -294,11 +294,11 @@ if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
 2. Apply the preview at runtime, snapshot the resulting topology, and run journaled migration using the preview's mode/enable settings. Before disabling or mirroring the output that owns an open panel, close its keyboard-focused layer surface and wait for an acknowledgement after unmap; enable a disabled destination if necessary, focus the surviving non-mirrored output, then apply the remaining monitor rules. Reopen the panel on that output only after compositor success. Revert performs the same evacuation/enable/focus ordering before a saved Single/Mirror reload. A missing close acknowledgement aborts instead of removing the output. Once migration and focus complete, renew the recovery token/watchdog and show the full 12 s Keep/Revert countdown. While applying/migrating, edits and Keep/Revert are briefly disabled and the footer reports progress.
 3. Revert, or timeout, restores previous runtime state and removes the token.
 4. At shell start, a stale token means a crashed preview: roll back immediately with `hyprctl reload`. A `preview` baseline in `workspace-map.json` also restores original window ownership, even if the detached watchdog already consumed the token. Clear this baseline only after Keep or completed recovery.
-5. **The draft stays editable while confirmation is pending** (`draftEditable` = `(idle | previewing) && !previewBusy`): drag, rotate, mode, resolution, refresh, scale and enable join the same session. Role swaps remain idle-only. `previewBefore` and the original per-window baseline are captured once, so Revert returns to the start of the session. Each new apply pauses the countdown until migration completes.
+5. **The topology draft stays editable while confirmation is pending** (`draftEditable` = `(idle | previewing) && !previewBusy`): drag, rotate, mode and enable join the same session. Role swaps and the Scale/Resolution/Refresh side controls remain idle-only. `previewBefore` and the original per-window baseline are captured once, so Revert returns to the start of the session. Each new topology apply pauses the countdown until migration completes.
 
 ### 9.3 Keep is a transaction
 
-preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → atomic write (temp file + rename, refuse symlinks, markers only) → `hyprctl reload` → `hyprctl configerrors`.
+preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → atomic write (temp file + rename, refuse symlinks, markers only) → watched Hyprland apply → `hyprctl configerrors`.
 
 Capture accepted mode/target/enabled settings before writing candidates. Wait for
 both FileView save acknowledgments (unchanged text is already ready), not a fixed
@@ -306,6 +306,12 @@ delay. Monitor/reload events during Keep must not reset the draft or apply the
 previous saved mode. On success commit the captured options, then take a fresh
 snapshot before runtime reconciliation. Earlier rules mentioning the same output
 are not errors: the managed block is deliberately last.
+
+Scale, Resolution, and Refresh use the same backup/atomic-write/error-check
+transaction directly from idle, without applying a temporary runtime preview,
+arming the watchdog, or showing Keep/Revert. The watched `monitors.lua` move is
+their only deliberate compositor apply. Brightness and Text size keep using
+their dedicated Omarchy commands and do not enter this transaction.
 
 - Errors present: restore the backup, reload again, restore runtime state, show the error. Keep has **not** succeeded.
 - Clean: remove the watchdog token, write config.json, **also write `~/.local/state/omarchy/station/monitors-block.plain.lua`** (the same block with geometry/scale/rotation/mode only: no guard, no `disabled`, no `mirror`; used by the removal cleanup in §10.2), return to `idle`; Station re-applies after the reload event.
@@ -357,7 +363,7 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 Displays tab:
 
 - Left: **Layout** canvas (logical coordinates, §5.9; drag and snap; wheel/button zoom and background pan; selected outlined; hover-only rotation controls at the selected monitor's upper corners; role-number menu inside each enabled monitor; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2). A red layout error appears below the canvas.
-- Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders; Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
+- Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders and save immediately through the direct §9.3 transaction; they never open the Keep/Revert footer. Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
 

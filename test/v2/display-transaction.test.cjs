@@ -21,6 +21,7 @@ function harness() {
   Object.assign(c, {
     state: 'idle', gen: 0, previewBusy: false, previewAbortReason: '', previewBaseline: null,
     previewApplied: null, previewBefore: [], pendingDisplayConfig: null, keepOptions: null,
+    layoutWriteKind: '',
     keepFilesPending: false, candidateReady: false, plainCandidateReady: false,
     config: Object.assign(c.Store.configDefaults(), { enabled: ['A', 'B'] }),
     persisted: c.Store.stateDefaults(), configLoaded: true, dirsReady: true, stateLoaded: true,
@@ -92,12 +93,24 @@ function harness() {
       const monitor = live.find(m => m.name === name);
       const disabled = fields.match(/disabled = (true|false)/);
       const mirror = fields.match(/mirror = "([^"]*)"/);
+      const scale = fields.match(/scale = ([0-9.]+)/);
+      const mode = fields.match(/mode = "(\d+)x(\d+)@(\d+(?:\.\d+)?)Hz"/);
+      const position = fields.match(/position = "(-?\d+)x(-?\d+)"/);
+      const transform = fields.match(/transform = (\d+)/);
       const old = monitor.disabled;
       // A geometry-only declaration makes its output active during reload.
       // A combined declaration applies its final disabled state atomically.
       if (!disabled && /mode = /.test(fields)) monitor.disabled = false;
       else if (disabled) monitor.disabled = disabled[1] === 'true';
       if (mirror) monitor.mirrorOf = mirror[1] || 'none';
+      if (scale) monitor.scale = Number(scale[1]);
+      if (mode) {
+        monitor.width = Number(mode[1]);
+        monitor.height = Number(mode[2]);
+        monitor.refreshRate = Number(mode[3]);
+      }
+      if (position) { monitor.x = Number(position[1]); monitor.y = Number(position[2]); }
+      if (transform) monitor.transform = Number(transform[1]);
       monitorCalls.push({ name, disabled: monitor.disabled, mirror: monitor.mirrorOf });
       order.push('monitor:' + name + ':' + (monitor.disabled ? 'off' : (monitor.mirrorOf !== 'none' ? 'mirror' : 'on')));
       assert.ok(live.some(m => !m.disabled && m.mirrorOf === 'none'), 'never remove the last real output');
@@ -181,6 +194,22 @@ test('Single preview migrates immediately, transfers panel, then Keep survives r
     'Keep does not remove or re-add an output after the accepted preview');
   assert.equal(h.monitorCalls.length - callsBeforeKeep, 2,
     'the watched config applies one final rule per output without a runtime replay');
+});
+
+test('scale side control saves directly with one watched apply and no preview countdown', () => {
+  const h = harness(), c = h.c;
+  assert.equal(c.applyDisplaySetting('A', 'scale', 2), 'started');
+  assert.equal(c.state, 'applyingLayout');
+  assert.equal(c.layoutWriteKind, 'control');
+  assert.equal(c.previewCountdown.running, false);
+  assert.equal(c.workspaceData.preview || null, null);
+  h.drain();
+  assert.equal(c.state, 'idle');
+  assert.equal(c.displayDraft.find(display => display.name === 'A').scale, 2);
+  assert.equal(h.order.filter(item => item === 'autoreload').length, 1);
+  assert.equal(h.order.filter(item => item === 'reload').length, 0,
+    'the direct write relies on the watched apply and never forces another reload');
+  assert.equal(c.previewSeconds || 0, 0);
 });
 
 test('Single HDMI Keep preserves the accepted topology without re-announcing eDP', () => {

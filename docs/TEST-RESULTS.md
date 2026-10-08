@@ -195,3 +195,22 @@ reports zero violations across 19 runtime sources; manifest validation and the
 Wayland QML component check pass. The QML check emits only the existing portal
 registration warning. Physical toggle and uninstall restoration remain for
 interactive confirmation.
+
+## Direct display-side controls (2026-10-08)
+
+Scale, Resolution, and Refresh no longer enter the topology preview or show
+Keep/Revert. The service transaction double verifies that a Scale choice goes
+straight from idle to the atomic candidate write, receives exactly one watched
+configuration apply, returns to idle with the chosen value, creates no preview
+journal/countdown, and never forces an additional reload. Layout drag,
+rotation, Mode, and monitor on/off retain the preview watchdog and confirmation.
+
+The live investigation also confirmed why Omarchy's stock Display scale
+control reverted: its runtime `1.6` apply was followed by a generic-variable
+edit of `monitors.lua`, whose later explicit per-output and Station rules still
+declared scale `1`. The last rule won on autoreload. No packaged Omarchy source
+was modified.
+
+All 16 Node/M0 suites and the 16-case Qt layout suite pass. Theme scanning has
+zero violations across 19 runtime sources; manifest validation and live-Wayland
+QML compilation pass with only the existing portal registration warning.

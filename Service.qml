@@ -86,6 +86,7 @@ Item {
   property string previewAbortReason: ""
   property var previewBaseline: null
   property var keepOptions: null
+  property string layoutWriteKind: ""
   property bool keepFilesPending: false
   property bool candidateReady: false
   property bool plainCandidateReady: false
@@ -666,6 +667,38 @@ Item {
     return "ok"
   }
 
+  function applyDisplaySetting(name, key, value) {
+    // Side controls are deliberate, discrete choices and do not need the
+    // safety countdown used for topology edits. Persist first and let
+    // Hyprland's watched config apply the new value once; previewing it first
+    // would reconfigure the output, then the old file could win on a reload,
+    // and Keep would reconfigure it a third time.
+    if (state !== "idle" || workspaceData.pending || migrationPhase) return "busy"
+    if (["scale", "mode"].indexOf(key) === -1) return "invalid"
+    var before = displayDraft
+    if (setDisplayValue(name, key, value) !== "ok") return "invalid"
+    try {
+      var options = { mode: draftMode, singleTarget: draftSingleTarget,
+        enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
+      var generated = MonitorsLua.generate(displayDraft, options)
+      var source = MonitorsLua.replaceManagedBlock(monitorsSource || "", generated.block)
+      pendingDisplayConfig = generated
+      keepOptions = JSON.parse(JSON.stringify(options))
+      layoutError = ""
+      if (panelWanted) panelTransferUntil = Date.now() + 3000
+      removalGrace.stop()
+      reloadDebounce.stop()
+      startKeepFiles(source, generated.plain, "control")
+      return "started"
+    } catch (error) {
+      displayDraft = before
+      pendingDisplayConfig = null
+      keepOptions = null
+      layoutError = String(error.message || error)
+      return "invalid"
+    }
+  }
+
   function setDisplayEnabled(name, enabled) {
     if (!draftEditable) return "busy"
     if (!enabled && displayDraft.filter(function(d) { return d.enabled && d.name !== name }).length === 0) {
@@ -1140,7 +1173,7 @@ Item {
       // mentioning an output earlier in the file is not a configuration error.
       keepOptions = JSON.parse(JSON.stringify(previewApplied.options))
       previewCountdown.stop()
-      startKeepFiles(merged, pendingDisplayConfig.plain)
+      startKeepFiles(merged, pendingDisplayConfig.plain, "preview")
       return "started"
     } catch (error) {
       layoutError = String(error.message || error)
@@ -1148,8 +1181,9 @@ Item {
     }
   }
 
-  function startKeepFiles(source, plain) {
+  function startKeepFiles(source, plain, kind) {
     state = "applyingLayout"
+    layoutWriteKind = kind || "direct"
     keepFilesPending = true
     // Unchanged FileView text produces no saved signal. Everything else must
     // be acknowledged before the transaction can read its candidate files.
@@ -1186,6 +1220,7 @@ Item {
     pendingRevertFocusTarget = ""
     pendingRevertActivateLua = ""
     keepOptions = null
+    layoutWriteKind = ""
     refresh(true, function() {
       root.state = "idle"
       root.syncDisplayDraft()
@@ -1195,10 +1230,17 @@ Item {
 
   function finishKeep(code, errorText) {
     if (code !== 0) {
+      var failedKind = layoutWriteKind
+      layoutWriteKind = ""
       layoutError = code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
         : "Could not save the monitor layout."
       pendingDisplayConfig = null
       if (code === 3) restoreAppliedLayout()
+      else if (failedKind !== "preview") {
+        keepOptions = null
+        state = "idle"
+        syncDisplayDraft()
+      }
       else enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
       return
     }
@@ -1210,16 +1252,16 @@ Item {
     previewApplied = null
     previewBaseline = null
     keepOptions = null
+    layoutWriteKind = ""
     layoutError = ""
     monitorsFile.reload()
     saveConfig()
     refresh(true, function() {
       root.state = "idle"
-      // Keep accepts a preview that is already live. The config-file watcher
-      // has also applied the persisted rules, so replaying monitor state here
-      // creates a third topology operation for no benefit. Only rebuild the
-      // bookkeeping, commit the accepted preview journal, and restore runtime
-      // binds erased by a config reload.
+      // The config-file watcher has applied the persisted rules. Replaying
+      // monitor state here creates another topology operation for no benefit;
+      // only rebuild bookkeeping, commit any preview journal, and restore
+      // runtime binds erased by a config reload.
       root.updateAssignments()
       root.applyBinds()
       root.reconcile()
@@ -1362,7 +1404,7 @@ Item {
       var generated = MonitorsLua.generate(displayDraft, { mode: "extend",
         enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" })
       keepOptions = { mode: "extend", enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" }
-      startKeepFiles(source, generated.plain)
+      startKeepFiles(source, generated.plain, "direct")
       return "started"
     } catch (error) { layoutError = String(error.message || error); return "invalid" }
   }

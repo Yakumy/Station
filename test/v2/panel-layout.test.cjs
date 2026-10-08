@@ -22,6 +22,8 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(displays, /"Selected: " \+ displayTab\.selectedDisplay\.name/);
   assert.match(displays, /text: "RESOLUTION"/);
   assert.match(displays, /text: "REFRESH RATE"/);
+  assert.match(displays, /service\.applyDisplaySetting\(selectedDisplay\.name, key, value\)/);
+  assert.doesNotMatch(displays, /service\.previewLayout\(\)/);
   assert.match(bindings, /bindingGroups/);
   assert.match(settings, /label: "Hide Omarchy's Display icon"/);
   assert.match(settings, /setSetting\("hideDisplay", !checked\)/);

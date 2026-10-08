@@ -60,9 +60,11 @@ explicitly approve **Replace and unbind it**.
 
 Open Station from the bar to arrange displays, choose Extend, Mirror, or Single
 mode, adjust brightness, select an exact resolution and refresh mode, set scale
-and rotation, or swap display roles. Layout changes start as a preview. Choose
-**Keep** within 12 seconds or Station restores the previous runtime layout. A
-detached 20-second watchdog also restores it if the shell crashes.
+and rotation, or swap display roles. Scale, resolution, and refresh choices save
+directly with one watched configuration apply. Topology changes—arrangement,
+rotation, mode, and monitor on/off—start as a preview. Choose **Keep** within 12
+seconds or Station restores the previous runtime layout. A detached 20-second
+watchdog also restores it if the shell crashes.
 
 Kept layouts are written as a marked block at the end of
 `~/.config/hypr/monitors.lua`. Station backs up the file, writes atomically,
