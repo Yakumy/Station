@@ -94,6 +94,21 @@ test('closing the panel cancels any pending reopen', () => {
   assert.match(panel, /function close\(\) \{\n {4}if \(service\) service\.panelTransferUntil = 0/);
 });
 
+test('the surviving widget accepts a transfer while the removed output still has an open copy', () => {
+  let opened = 0;
+  const context = {
+    service: { panelWanted: true, panelScreenName: 'eDP-1', panelTransferUntil: Date.now() + 3000 },
+    bar: { moduleWidgets: () => [{ opened: true, currentScreenName: () => 'HDMI-A-2' }] },
+    Quickshell: { screens: [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }] },
+    currentScreenName: () => 'eDP-1',
+    root: { opened: false, open() { opened++; } },
+  };
+  assert.equal(panelFunction('tryRestorePanel', context)(), true);
+  assert.equal(opened, 1);
+  assert.match(panel, /function onPanelScreenNameChanged\(\)/);
+  assert.match(panel, /function onPanelTransferUntilChanged\(\)/);
+});
+
 test('a popout switch hands the intent to the copy that took over', () => {
   const settle = panel.match(/function settlePopoutSwitch\(svc, barRef\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(settle, 'settlePopoutSwitch is defined');

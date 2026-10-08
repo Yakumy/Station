@@ -12,6 +12,7 @@ for (const reason of ['', 'Preview timed out.']) {
     const c = {
       Model, state: 'previewing', gen: 5, appliedGeneration: 5,
       panelWanted: false, panelTransferUntil: 0, previewApplied: {},
+      previewBusy: false, previewBaseline: null, previewAbortReason: '', keepOptions: null,
       stateDir: '/tmp/station-test', pendingDisplayConfig: {}, layoutError: '',
       config: { mode: 'extend', singleTarget: '', enabled: ['eDP-1', 'HDMI-A-2'] },
       lanes: { 'eDP-1': 1, 'HDMI-A-2': 2 },

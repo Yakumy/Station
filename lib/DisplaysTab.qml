@@ -393,7 +393,7 @@ Column {
       anchors.right: revertButton.left
       anchors.rightMargin: displayTab.gutter
       anchors.verticalCenter: parent.verticalCenter
-      text: "Keep these settings? Reverting in "
+      text: displayTab.service && displayTab.service.previewBusy ? "Applying layout and moving windows…" : "Keep these settings? Reverting in "
         + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
       color: displayTab.panelRoot.textPrimary
       font.family: Style.font.family
@@ -408,6 +408,7 @@ Column {
       height: displayTab.panelRoot.controlHeight
       radius: Style.cornerRadius
       text: "Keep"
+      enabled: displayTab.service && !displayTab.service.previewBusy
       accent: Color.accent
       background: Color.accent
       foreground: Color.popups.background
@@ -422,6 +423,7 @@ Column {
       height: displayTab.panelRoot.controlHeight
       radius: Style.cornerRadius
       text: "Revert"
+      enabled: displayTab.service && !displayTab.service.previewBusy
       bordered: true
       foreground: Color.popups.text
       onClicked: displayTab.service.revertPreview("")

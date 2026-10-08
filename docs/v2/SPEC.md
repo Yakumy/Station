@@ -109,7 +109,10 @@ The committed ordered output list is saved in `workspace-map.json`. Extend
 uses enabled managed displays; Single uses its target (or a surviving fallback);
 Mirror uses its source. Newly connected displays join Extend; explicit Single
 keeps them out of the active map. A zero-display interval preserves the saved
-mapping. Layout previews do not change numbering; Keep starts migration.
+mapping. Mode/enable previews migrate immediately to their temporary mapping.
+The workspace journal retains the original per-window station and display until
+Keep succeeds; Revert, timeout, and restart recovery restore those assignments.
+Windows created during a preview retain their station through recovery.
 
 ### 5.3 Migration and recovery
 
@@ -288,14 +291,21 @@ if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
 ### 9.2 Preview and crash-safe rollback
 
 1. Before any preview, write `~/.local/state/omarchy/station/preview.token` and start a **detached watchdog** from a fixed template with positional arguments only: `sh -c 'sleep "$1"; [ -e "$2" ] || exit 0; age=$(( $(date +%s) - $(stat -c %Y "$2") )); [ "$age" -lt "$1" ] && exit 0; rm -f "$2"; hyprctl reload;' sh 20 <tokenpath>`. No daemon, no root. The watchdog belongs to the preview that armed it: the arm step re-touches the token before every apply, so a token younger than the sleep window means a newer preview owns the session and this one stands down; only a token untouched for the full window reverts. Without that, a session longer than the window would be rolled back by the first preview's watchdog while the user was still editing.
-2. Apply the preview at runtime; show the 12 s Keep/Revert countdown (the UI timer is shorter than the watchdog). The countdown restarts on every apply, so an editing session survives as long as the user keeps editing.
+2. Apply the preview at runtime, snapshot the resulting topology, and run journaled migration using the preview's mode/enable settings. Transfer an open panel to a surviving non-mirrored output. Once migration and focus complete, renew the recovery token/watchdog and show the full 12 s Keep/Revert countdown. While applying/migrating, edits and Keep/Revert are briefly disabled and the footer reports progress.
 3. Revert, or timeout, restores previous runtime state and removes the token.
-4. At shell start, a stale token means a crashed preview: roll back immediately with `hyprctl reload`.
-5. **The draft stays editable while a preview is pending** (`draftEditable` = `idle | previewing`): drag, rotate, mode, resolution, refresh, scale, role and enable are all live, and each change re-runs the preview against the same session. `previewBefore` is captured on the first preview only, so Revert always means "back to the layout this session started from". Only Keep/Revert and unrelated work (block removal, follow focus, runtime binds) stay gated on `idle`.
+4. At shell start, a stale token means a crashed preview: roll back immediately with `hyprctl reload`. A `preview` baseline in `workspace-map.json` also restores original window ownership, even if the detached watchdog already consumed the token. Clear this baseline only after Keep or completed recovery.
+5. **The draft stays editable while confirmation is pending** (`draftEditable` = `(idle | previewing) && !previewBusy`): drag, rotate, mode, resolution, refresh, scale and enable join the same session. Role swaps remain idle-only. `previewBefore` and the original per-window baseline are captured once, so Revert returns to the start of the session. Each new apply pauses the countdown until migration completes.
 
 ### 9.3 Keep is a transaction
 
 preview → **Keep** → backup (`monitors.lua.bak.<unix-ts>`, keep last 5) → atomic write (temp file + rename, refuse symlinks, markers only) → `hyprctl reload` → `hyprctl configerrors`.
+
+Capture accepted mode/target/enabled settings before writing candidates. Wait for
+both FileView save acknowledgments (unchanged text is already ready), not a fixed
+delay. Monitor/reload events during Keep must not reset the draft or apply the
+previous saved mode. On success commit the captured options, then take a fresh
+snapshot before runtime reconciliation. Earlier rules mentioning the same output
+are not errors: the managed block is deliberately last.
 
 - Errors present: restore the backup, reload again, restore runtime state, show the error. Keep has **not** succeeded.
 - Clean: remove the watchdog token, write config.json, **also write `~/.local/state/omarchy/station/monitors-block.plain.lua`** (the same block with geometry/scale/rotation/mode only: no guard, no `disabled`, no `mirror`; used by the removal cleanup in §10.2), return to `idle`; Station re-applies after the reload event.

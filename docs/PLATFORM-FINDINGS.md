@@ -281,6 +281,41 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 
 ## 14. Where evidence lives
 
+### Display transaction repair (2026-10-08)
+
+- **[SRC][QTTEST]** The monitor-card Off handler called `setDisplayValue()` and
+  then `previewLayout()` on its own delegate. Publishing the new Repeater model
+  destroys that delegate before the second call. The service now owns both steps
+  in `setDisplayEnabled()`. The production QML handler is exercised by
+  `tools/v2/check-layout.py`, including destruction during the Off action.
+- **[SRC]** Preview migration was explicitly blocked by `reconcile()`. Single
+  disabled the other output but did not compact/merge its stations until Keep.
+  Preview now uses its own effective mode for journaled migration, retains a
+  durable per-window baseline, and starts the countdown after migration. Revert
+  and restart recovery restore the original station/output assignments.
+- **[LIVE][SRC]** During the user's Keep attempts at 00:19:34, 00:20:01 and
+  00:21:15 local, the Quickshell event log showed HDMI added/removed/re-added
+  during reload. The saved monitor block contained Single on eDP-1, while
+  Station's config and live mapping remained Extend. Hyprland `configerrors`
+  was empty. `monitoradded` could call `updateAssignments()` while
+  `applyingLayout`, reset the draft from old config, and reapply that old mode.
+  Keep now captures accepted options and defers event-driven runtime changes
+  until a fresh post-transaction snapshot. Candidate saves are acknowledged
+  before launching the filesystem transaction.
+- **[SRC]** The "Other monitor rules also mention" text was a nonfatal warning
+  stored in the error field. Older geometry rules above Station's final managed
+  block do not by themselves invalidate it. Keep no longer reports those
+  mentions as an error or removes the user's earlier rules.
+- **[SRC]** An existing widget on the surviving output was never told to reopen:
+  restoration only ran on construction/service binding. The service now chooses
+  a usable destination, and existing panels observe transfer/screen changes.
+  A still-open copy on the output being disabled cannot block the hand-off.
+- **Verification:** `test/v2/display-transaction.test.cjs` executes production
+  service functions with queued compositor events and disk acknowledgments. It
+  covers immediate migration, Keep reload races, repeated mode previews,
+  timeout, Revert, restart recovery, enabling a Single-mode disabled output,
+  and candidate-write failure. These tests do not simulate GPU/Wayland internals.
+
 | Source | Content |
 |---|---|
 | `docs/v2/M0.md` | 13-item gate with observations |

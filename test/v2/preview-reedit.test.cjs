@@ -13,7 +13,7 @@ const tab = read('lib', 'DisplaysTab.qml');
 const panel = read('lib', 'StationPanel.qml');
 
 test('the draft stays editable while a preview is pending', () => {
-  assert.match(service, /readonly property bool draftEditable: state === "idle" \|\| state === "previewing"/);
+  assert.match(service, /readonly property bool draftEditable: \(state === "idle" \|\| state === "previewing"\) && !previewBusy/);
   assert.match(service, /function setDisplayPosition\(name, x, y\) \{\n {4}if \(!draftEditable/);
   assert.match(service, /function previewLayout\(\) \{\n {4}if \(!draftEditable\) return "busy"/);
 });
@@ -38,6 +38,7 @@ test('successive position previews reconfigure only the output being moved', () 
   const calls = [];
   const context = {
     Model, MonitorsLua,
+    previewBaseline: {}, preparePanelTransfer() {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',
     config: { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] },
@@ -45,7 +46,7 @@ test('successive position previews reconfigure only the output being moved', () 
     displayDraft: draft, previewCountdown: { restart() {} },
     evalLua(lua) { calls.push(lua); },
   };
-  const body = service.match(/  function applyPreview\(\) \{([\s\S]*?)\n  \}/);
+  const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
   assert.ok(body);
   const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
   draft[1].x = 2400;
@@ -73,6 +74,7 @@ test('a mode-only preview enables the new single output first without geometry r
   const calls = [];
   const context = {
     Model, MonitorsLua,
+    previewBaseline: {}, preparePanelTransfer() {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',
     config: { mode: 'single', singleTarget: 'eDP-1', enabled: ['eDP-1', 'HDMI-A-2'] },
@@ -80,7 +82,7 @@ test('a mode-only preview enables the new single output first without geometry r
     displayDraft: draft, previewCountdown: { restart() {} },
     evalLua(lua) { calls.push(lua); },
   };
-  const body = service.match(/  function applyPreview\(\) \{([\s\S]*?)\n  \}/);
+  const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
   const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
   context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'HDMI-A-2', enabled: context.config.enabled });
   apply();
@@ -109,7 +111,7 @@ test('every draft control reads the same editable flag', () => {
   assert.match(layout, /enabled: canvas\.service && canvas\.service\.draftEditable/);
   // Role swaps migrate windows and are intentionally gated on idle; card
   // position and rotation previews still use draftEditable.
-  assert.equal((layout.match(/service\.state !== "idle"/g) || []).length, 1);
+  assert.match(layout, /else if \(canvas\.service\.state === "idle"\)/);
   assert.equal((tab.match(/service\.state !== "idle"/g) || []).length, 0);
   assert.match(tab, /if \(!service \|\| !selectedDisplay \|\| !service\.draftEditable\) return/);
   assert.match(panel, /if \(!service \|\| !service\.draftEditable\) return/);

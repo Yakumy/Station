@@ -123,6 +123,7 @@ Ui.BorderSurface {
       required property var modelData
       readonly property var logicalSize: Model.logicalSize(modelData)
       readonly property bool isSelected: canvas.selectedDisplayName === modelData.name
+      readonly property bool outputEnabled: canvas.service ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       property real offsetX: 0
       property real offsetY: 0
       x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom + offsetX
@@ -136,7 +137,7 @@ Ui.BorderSurface {
         : Border.controlSpec("normal", Color.popups.text, Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: Style.cornerRadius
-      opacity: modelData.enabled || !canvas.panelRoot ? 1 : canvas.panelRoot.disabledOpacity
+      opacity: outputEnabled || !canvas.panelRoot ? 1 : canvas.panelRoot.disabledOpacity
       Row {
         anchors.centerIn: parent
         spacing: Style.spacing.sm
@@ -150,28 +151,31 @@ Ui.BorderSurface {
         }
         Station.InlineDropdown {
           id: roleMenu
+          objectName: "monitorRoleMenu"
           visible: canvas.service
-          enabled: canvas.service && canvas.service.state === "idle"
+          enabled: canvas.service && canvas.service.draftEditable
           prefix: "| "
           fontSize: Style.font.body
-          value: !monitorCard.modelData.enabled ? "off"
+          value: !monitorCard.outputEnabled ? "off"
             : (canvas.service ? String(canvas.service.roleOf(monitorCard.modelData.name)) : "")
           options: {
             if (!canvas.service) return []
-            if (!monitorCard.modelData.enabled)
+            if (!monitorCard.outputEnabled)
               return [{ value: "off", label: "Off" }, { value: "on", label: "Enable" }]
-            var count = canvas.displays.filter(function(display) { return display.enabled }).length
+            var count = canvas.displays.filter(function(display) { return canvas.service.displayEnabled(display.name) }).length
             var roles = [1, 2, 3].slice(0, count).map(function(role, index) {
               return { value: String(index), label: String(role) }
             })
+            if (canvas.service.state !== "idle") roles = roles.filter(function(role) { return role.value === roleMenu.value })
             if (count > 1) roles.push({ value: "off", label: "Turn off" })
             return roles
           }
           onChanged: function(value) {
-            if (!canvas.service || canvas.service.state !== "idle") return
+            if (!canvas.service || !canvas.service.draftEditable) return
             if (value === "on" || value === "off") {
-              if (canvas.service.setDisplayValue(monitorCard.modelData.name, "enabled", value === "on") === "ok")
-                canvas.service.previewLayout()
+              // The service owns the entire edit: publishing displayDraft
+              // destroys this delegate synchronously.
+              canvas.service.setDisplayEnabled(monitorCard.modelData.name, value === "on")
             } else if (canvas.service.state === "idle") {
               canvas.service.swapRole(monitorCard.modelData.name, Number(value))
             }

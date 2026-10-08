@@ -326,15 +326,6 @@ Ui.Panel {
   // output, which can differ from the one the user opened before a move.
   function tryRestorePanel() {
     if (!service || !service.panelWanted) return true
-    if (root.opened) return true
-    var widgets = bar && typeof bar.moduleWidgets === "function" ? bar.moduleWidgets("yakumy.station") : []
-    for (var i = 0; i < widgets.length; i++) {
-      if (widgets[i] && widgets[i].opened === true) {
-        // An old copy may still be marked open while its bar slot is being
-        // replaced. Keep polling until that copy goes away.
-        return Date.now() >= service.panelTransferUntil
-      }
-    }
     var mine = currentScreenName()
     if (!mine) return false
     var wanted = service.panelScreenName
@@ -343,6 +334,17 @@ Ui.Panel {
       for (var j = 0; j < Quickshell.screens.length; j++)
         if (Quickshell.screens[j].name === wanted) { stillConnected = true; break }
       if (stillConnected) return false
+    }
+    if (root.opened) return true
+    var widgets = bar && typeof bar.moduleWidgets === "function" ? bar.moduleWidgets("yakumy.station") : []
+    for (var i = 0; i < widgets.length; i++) {
+      if (widgets[i] && widgets[i].opened === true
+          && (!wanted || typeof widgets[i].currentScreenName !== "function"
+            || widgets[i].currentScreenName() === wanted)) {
+        // An old copy may still be marked open while its bar slot is being
+        // replaced. Keep polling until that copy goes away.
+        return Date.now() >= service.panelTransferUntil
+      }
     }
     root.open()
     return true
@@ -362,6 +364,19 @@ Ui.Panel {
 
   onServiceChanged: { flushIntent(); restoreSession(); requestPanelBack() }
   Component.onCompleted: { flushIntent(); restoreSession(); requestPanelBack() }
+
+  // Disabling a different output does not rebuild this surviving widget.
+  // It still has to receive the hand-off and reopen the confirmation panel.
+  Connections {
+    target: root.service
+    function onPanelScreenNameChanged() { root.restoreSession(); root.requestPanelBack() }
+    function onPanelTransferUntilChanged() { root.requestPanelBack() }
+    function onPanelWantedChanged() { root.requestPanelBack() }
+  }
+  Connections {
+    target: Quickshell
+    function onScreensChanged() { root.requestPanelBack() }
+  }
 
   Timer {
     id: reopenTimer

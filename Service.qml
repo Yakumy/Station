@@ -69,7 +69,14 @@ Item {
   // A preview is an editing session, not a lock: the draft stays editable
   // until Keep or Revert, so the user can rearrange again without having to
   // settle the previous attempt first.
-  readonly property bool draftEditable: state === "idle" || state === "previewing"
+  readonly property bool draftEditable: (state === "idle" || state === "previewing") && !previewBusy
+  property bool previewBusy: false
+  property string previewAbortReason: ""
+  property var previewBaseline: null
+  property var keepOptions: null
+  property bool keepFilesPending: false
+  property bool candidateReady: false
+  property bool plainCandidateReady: false
   property var displayDraft: []
   property string draftMode: "extend"
   property string draftSingleTarget: ""
@@ -158,6 +165,13 @@ Item {
     snapshotBusy = false
     if (code !== 0) {
       if (state === "migrating") migrationFailed("could not read compositor state")
+      else if (state === "previewing") {
+        previewBusy = false
+        revertPreview("Could not read the display state; reverting the preview.")
+      } else if (state === "applyingLayout") {
+        layoutError = "Could not read the restored display state."
+        state = "idle"
+      }
     } else if (done) done()
     if (snapshotQueue.length) {
       var next = snapshotQueue[0]
@@ -178,7 +192,7 @@ Item {
     unmanaged = assigned.unmanaged
     config.lanes = assigned.preferences
     saveConfig()
-    if (state !== "previewing") syncDisplayDraft()
+    if (state !== "previewing" && state !== "applyingLayout") syncDisplayDraft()
   }
 
   function syncDisplayDraft() {
@@ -205,7 +219,8 @@ Item {
   }
 
   function targetMapping() {
-    return Grid.mapping(monitors, lanes, config)
+    var options = state === "previewing" && previewApplied ? previewApplied.options : config
+    return Grid.mapping(monitors, lanes, options)
   }
 
   function workspaceFor(station, output) {
@@ -404,24 +419,31 @@ Item {
   }
 
   function reconcile() {
-    if (state === "previewing" || state === "applyingLayout") return
+    if (state === "applyingLayout") return
     if (removalGrace.running) return
     if (migrationPhase || state === "migrating") { topologyDirty = true; return }
-    begin("migrating")
+    var preview = state === "previewing"
+    if (!preview) begin("migrating")
     refresh(true, function() {
       updateAssignments()
       var target = targetMapping()
-      if (!Grid.valid(target)) { state = "idle"; return }
+      if (!Grid.valid(target)) {
+        if (preview) migrationFailed("No usable display after the layout change.")
+        else state = "idle"
+        return
+      }
       try {
         var old = workspaceMap || (persisted.legacyWorkspaceGrid ? Grid.legacy(lanes) : target)
         var pending = workspaceData.pending
         var plan = pending ? Grid.resume(pending, target, clients) : Grid.plan(old, target, clients, currentStation)
+        if (!preview && previewBaseline) plan = Grid.restorePreview(previewBaseline, plan, clients)
         var focused = focusedClient()
         migrationFocus = focused ? Grid.identity(focused) : null
         // FileView does not emit saved when setText receives identical text.
         // A revision makes every journal attempt an acknowledged disk write,
         // including recovery of an otherwise unchanged plan after restart.
-        workspaceData = { mapping: old, pending: plan, revision: Number(workspaceData.revision || 0) + 1 }
+        workspaceData = { mapping: old, pending: plan, preview: previewBaseline,
+          revision: Number(workspaceData.revision || 0) + 1 }
         topologyDirty = false
         migrationPhase = "journal"
         workspaceFile.setText(JSON.stringify(workspaceData, null, 2) + "\n")
@@ -431,10 +453,12 @@ Item {
 
   function migrationFailed(message) {
     migrationPhase = ""
-    state = "idle"
+    var preview = state === "previewing"
+    if (!preview) state = "idle"
     layoutError = "Workspace migration: " + message
     // Keep the journal for a later retry; never decode partially moved IDs again.
     if (++migrationAttempts <= 3) migrationRetry.restart()
+    else if (preview) { previewBusy = false; revertPreview(layoutError) }
   }
 
   function migrationSaved() {
@@ -450,6 +474,14 @@ Item {
       persisted.legacyWorkspaceGrid = false
       persisted.lastStation = currentStation
       saveState()
+      if (state === "previewing") {
+        if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
+        evalLua(Hypr.batch(stationFocusStatements(currentStation, panelScreenName)), function() {
+          root.finishPreviewApply()
+        })
+        return
+      }
+      previewBaseline = null
       state = "idle"
       if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
       showStation(currentStation)
@@ -486,7 +518,9 @@ Item {
       if (code !== 0 || (output && output.trim() !== "ok")) { migrationFailed("compositor rejected the move batch"); return }
       refresh(true, function() {
         if (topologyDirty || !Grid.equal(plan.to, targetMapping())) {
-          migrationPhase = ""; state = "idle"; reconcile(); return
+          migrationPhase = ""
+          if (state !== "previewing") state = "idle"
+          reconcile(); return
         }
         var failed = plan.windows.some(function(row) {
           var client = clients.find(function(c) { return Grid.sameClient(row, c) })
@@ -494,7 +528,8 @@ Item {
         })
         if (failed) { migrationFailed("destination verification failed"); return }
         currentStation = plan.station
-        migrationCommit = { mapping: plan.to, pending: null, revision: workspaceData.revision + 1 }
+        migrationCommit = { mapping: plan.to, pending: null,
+          preview: state === "previewing" ? previewBaseline : null, revision: workspaceData.revision + 1 }
         migrationPhase = "commit"
         workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
       })
@@ -563,6 +598,8 @@ Item {
   }
 
   function applyRuntime() {
+    // A config reload/hotplug during Keep must not reapply the old saved mode.
+    if (state === "previewing" || state === "applyingLayout") return
     updateAssignments()
     try {
       var monitorRules = MonitorsLua.runtimeModeRules(Object.keys(lanes).map(function(name) {
@@ -578,7 +615,9 @@ Item {
   }
 
   function setDisplayValue(name, key, value) {
+    if (!draftEditable) return "busy"
     try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
+    if (!displayDraft.some(function(d) { return d.name === name })) return "invalid"
     if (["mode", "x", "y", "scale", "transform", "enabled"].indexOf(key) === -1) return "invalid"
     var next = displayDraft.map(function(display) {
       if (display.name !== name) return display
@@ -588,6 +627,29 @@ Item {
     })
     displayDraft = next
     return "ok"
+  }
+
+  function setDisplayEnabled(name, enabled) {
+    if (!draftEditable) return "busy"
+    if (!enabled && displayDraft.filter(function(d) { return d.enabled && d.name !== name }).length === 0) {
+      layoutError = "At least one display must remain enabled."
+      return "invalid"
+    }
+    if (setDisplayValue(name, "enabled", enabled) !== "ok") return "invalid"
+    if (enabled && draftMode === "single" && draftSingleTarget !== name) {
+      draftMode = "extend"
+      draftSingleTarget = ""
+    }
+    // Turning off the Single target must select a surviving target.
+    if (draftMode === "single" && (!enabled && draftSingleTarget === name))
+      draftSingleTarget = displayDraft.find(function(d) { return d.enabled }).name
+    return previewLayout()
+  }
+
+  function displayEnabled(name) {
+    var states = MonitorsLua.runtimeModeStates(displayDraft, { mode: draftMode, singleTarget: draftSingleTarget,
+      enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) })
+    return states.some(function(d) { return d.name === name && !d.disabled })
   }
 
   function setDisplayPosition(name, x, y) {
@@ -601,10 +663,12 @@ Item {
   }
 
   function setModeValue(mode, target) {
+    if (!draftEditable) return "busy"
     if (["extend", "mirror", "single"].indexOf(mode) === -1) return "invalid"
     if (mode === "single") {
       try { MonitorsLua.connector(target) } catch (error) { return "invalid" }
       if (!displayDraft.some(function(display) { return display.name === target })) return "invalid"
+      setDisplayValue(target, "enabled", true)
     }
     draftMode = mode
     draftSingleTarget = mode === "single" ? target : ""
@@ -642,15 +706,17 @@ Item {
   }
 
   function roleOf(name) {
-    var roles = displayDraft.filter(function(display) { return display.enabled && lanes[display.name] })
+    var roles = displayDraft.filter(function(display) { return root.displayEnabled(display.name) && lanes[display.name] })
       .map(function(display) { return lanes[display.name] }).sort(function(a, b) { return a - b })
     return roles.indexOf(lanes[name])
   }
 
   function previewLayout() {
     if (!draftEditable) return "busy"
+    if (workspaceData.pending || migrationPhase) return "busy"
     try {
-      if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")
+      if (draftMode === "extend" && Model.layoutOverlaps(displayDraft.filter(function(d) { return d.enabled })).length)
+        throw new Error("Displays overlap")
       var generated = MonitorsLua.generate(displayDraft, {
         mode: draftMode, enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }),
         singleTarget: draftSingleTarget
@@ -662,7 +728,11 @@ Item {
       pendingDisplayConfig = generated
       layoutError = ""
       if (panelWanted) panelTransferUntil = Date.now() + 3000
+      removalGrace.stop()
+      reloadDebounce.stop()
       begin("previewing")
+      previewBusy = true
+      previewCountdown.stop()
       previewArm.running = true
       return "started"
     } catch (error) {
@@ -673,9 +743,48 @@ Item {
 
   function applyPreview() {
     if (state !== "previewing" || !pendingDisplayConfig) return
+    refresh(true, function() { root.applyPreviewSnapshot() })
+  }
+
+  function preparePanelTransfer(options) {
+    if (!panelWanted) return
+    var states = MonitorsLua.runtimeModeStates(displayDraft, options)
+    var usable = states.filter(function(d) { return !d.disabled && !d.mirror })
+    if (usable.length && !usable.some(function(d) { return d.name === panelScreenName }))
+      panelScreenName = usable[0].name
+    panelTransferUntil = Date.now() + 3000
+  }
+
+  function finishPreviewApply() {
+    if (state !== "previewing") return
+    if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
+    if (previewAbortReason) {
+      var reason = previewAbortReason
+      previewAbortReason = ""
+      previewBusy = false
+      revertPreview(reason)
+      return
+    }
+    // Give the user the full confirmation interval after migration, even if
+    // the compositor was slow. The original watchdog still protects the apply.
+    enqueue(["touch", stateDir + "/preview.token"], function(code) {
+      if (root.state !== "previewing") return
+      root.previewBusy = false
+      if (code !== 0) { root.revertPreview("Could not renew preview recovery."); return }
+      Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", stateDir + "/preview.token"])
+      root.previewSeconds = 12
+      previewCountdown.restart()
+      if (root.panelWanted) root.panelTransferUntil = Date.now() + 3000
+    })
+  }
+
+  function applyPreviewSnapshot() {
+    if (state !== "previewing" || !pendingDisplayConfig) return
+    if (!previewBaseline && Grid.valid(workspaceMap)) {
+      previewBaseline = Grid.plan(workspaceMap, workspaceMap, clients, currentStation)
+      previewBaseline.panelScreenName = panelScreenName
+    }
     Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", stateDir + "/preview.token"])
-    previewSeconds = 12
-    previewCountdown.restart()
     var lua = pendingDisplayConfig.block.split("\n").filter(function(line) {
       return line !== MonitorsLua.START && line !== MonitorsLua.END
     }).join("\n")
@@ -688,6 +797,7 @@ Item {
     }
     var nextOptions = { mode: draftMode, singleTarget: draftSingleTarget,
       enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
+    preparePanelTransfer(nextOptions)
     var positionRules = MonitorsLua.positionOnlyRules(previous, pendingDisplayConfig.displays,
       previewApplied ? previewApplied.mode : config.mode, draftMode)
     if (positionRules !== null) lua = positionRules.join("; ")
@@ -705,16 +815,26 @@ Item {
         pendingDisplayConfig.displays, nextOptions, previewBefore, true)
     expect = { kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 }
     previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode, options: nextOptions }
-    evalLua(lua)
+    evalLua(lua, function(code, output) {
+      if (root.state !== "previewing") return
+      if (code !== 0 || (output && output.trim() !== "ok")) {
+        root.previewBusy = false
+        root.revertPreview("Could not apply the display preview.")
+        return
+      }
+      root.reconcile()
+    })
   }
 
   function revertPreview(reason) {
     if (state !== "previewing") return "idle"
+    if (previewBusy) return "busy"
     if (panelWanted) panelTransferUntil = Date.now() + 3000
     gen += 1
     state = "applyingLayout"
     previewCountdown.stop()
     pendingDisplayConfig = null
+    if (previewBaseline && previewBaseline.panelScreenName) panelScreenName = previewBaseline.panelScreenName
     enqueue(["rm", "-f", stateDir + "/preview.token"], function() {
       root.enqueue(["hyprctl", "reload"], function(code) {
         if (code !== 0) root.layoutError = "Could not reload the saved monitor layout."
@@ -727,18 +847,16 @@ Item {
 
   function keepPreview() {
     if (state !== "previewing" || !pendingDisplayConfig) return "idle"
+    if (previewBusy || workspaceData.pending) return "busy"
     try {
       if (panelWanted) panelTransferUntil = Date.now() + 3000
       var source = monitorsSource || ""
       var merged = MonitorsLua.replaceManagedBlock(source, pendingDisplayConfig.block)
-      var conflicts = MonitorsLua.externalRuleConflicts(source,
-        pendingDisplayConfig.displays.map(function(display) { return display.name }))
-      if (conflicts.length) layoutError = "Other monitor rules also mention: " + conflicts.join(", ")
-      candidateFile.setText(merged)
-      plainCandidateFile.setText(pendingDisplayConfig.plain)
+      // The managed block is appended last and overrides older rules. Merely
+      // mentioning an output earlier in the file is not a configuration error.
+      keepOptions = JSON.parse(JSON.stringify(previewApplied.options))
       previewCountdown.stop()
-      state = "applyingLayout"
-      keepDelay.restart()
+      startKeepFiles(merged, pendingDisplayConfig.plain)
       return "started"
     } catch (error) {
       layoutError = String(error.message || error)
@@ -746,11 +864,38 @@ Item {
     }
   }
 
+  function startKeepFiles(source, plain) {
+    state = "applyingLayout"
+    keepFilesPending = true
+    // Unchanged FileView text produces no saved signal. Everything else must
+    // be acknowledged before the transaction can read its candidate files.
+    candidateReady = candidateFile.text() === source
+    plainCandidateReady = plainCandidateFile.text() === plain
+    if (!candidateReady) candidateFile.setText(source)
+    if (!plainCandidateReady) plainCandidateFile.setText(plain)
+    maybeStartKeep()
+  }
+
+  function maybeStartKeep() {
+    if (!keepFilesPending || !candidateReady || !plainCandidateReady) return
+    keepFilesPending = false
+    keepTransaction.running = true
+  }
+
+  function keepFileFailed() {
+    if (!keepFilesPending) return
+    keepFilesPending = false
+    finishKeep(2, "")
+  }
+
   function restoreAppliedLayout() {
     // Our configreloaded event is suppressed while applyingLayout. Explicitly
     // rebuild the draft from the fresh compositor snapshot and restore binds.
     appliedGeneration = -1
     previewApplied = null
+    previewBusy = false
+    previewAbortReason = ""
+    keepOptions = null
     refresh(true, function() {
       root.state = "idle"
       root.syncDisplayDraft()
@@ -763,19 +908,25 @@ Item {
       layoutError = code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
         : "Could not save the monitor layout."
       pendingDisplayConfig = null
-      restoreAppliedLayout()
+      if (code === 3) restoreAppliedLayout()
+      else enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
       return
     }
-    config.enabled = displayDraft.filter(function(display) { return display.enabled }).map(function(display) { return display.name })
-    config.mode = draftMode
-    config.singleTarget = draftSingleTarget
+    config.enabled = keepOptions.enabled.slice()
+    config.mode = keepOptions.mode
+    config.singleTarget = keepOptions.singleTarget || ""
     config = Object.assign({}, config)
     pendingDisplayConfig = null
     previewApplied = null
+    previewBaseline = null
+    keepOptions = null
+    layoutError = ""
     monitorsFile.reload()
     saveConfig()
-    state = "idle"
-    applyRuntime()
+    refresh(true, function() {
+      root.state = "idle"
+      root.applyRuntime()
+    })
   }
 
   function maybeStart() {
@@ -874,10 +1025,8 @@ Item {
       if (source === monitorsSource) return "absent"
       var generated = MonitorsLua.generate(displayDraft, { mode: "extend",
         enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" })
-      candidateFile.setText(source)
-      plainCandidateFile.setText(generated.plain)
-      state = "applyingLayout"
-      keepDelay.restart()
+      keepOptions = { mode: "extend", enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" }
+      startKeepFiles(source, generated.plain)
       return "started"
     } catch (error) { layoutError = String(error.message || error); return "invalid" }
   }
@@ -923,9 +1072,23 @@ Item {
   function handleEvent(event) {
     var name = String(event && event.name || "").toLowerCase()
     if (!name) return
+    // These events are part of our display transaction. Its completion takes
+    // a fresh snapshot; applying saved config here races Keep and resets drafts.
+    if ((state === "previewing" || state === "applyingLayout")
+        && (name.indexOf("monitoradded") === 0 || name.indexOf("monitorremoved") === 0)) {
+      topologyDirty = true
+      if (state === "previewing" && !previewBusy && !eventExpected(event))
+        revertPreview("Display connection changed; preview reverted.")
+      return
+    }
     if (name === "configreloaded") {
       configGeneration += 1
       if (state === "applyingLayout") return
+      if (state === "previewing") {
+        if (previewBusy) previewAbortReason = "Display configuration reloaded; preview reverted."
+        else revertPreview("Display configuration reloaded; preview reverted.")
+        return
+      }
       reloadDebounce.restart()
       return
     }
@@ -985,8 +1148,16 @@ Item {
     onFileChanged: reload()
   }
 
-  FileView { id: candidateFile; path: root.candidatePath; atomicWrites: true; printErrors: false }
-  FileView { id: plainCandidateFile; path: root.plainCandidatePath; atomicWrites: true; printErrors: false }
+  FileView {
+    id: candidateFile; path: root.candidatePath; atomicWrites: true; printErrors: false
+    onSaved: { root.candidateReady = true; root.maybeStartKeep() }
+    onSaveFailed: root.keepFileFailed()
+  }
+  FileView {
+    id: plainCandidateFile; path: root.plainCandidatePath; atomicWrites: true; printErrors: false
+    onSaved: { root.plainCandidateReady = true; root.maybeStartKeep() }
+    onSaveFailed: root.keepFileFailed()
+  }
 
   FileView {
     id: personalBindings
@@ -1020,6 +1191,7 @@ Item {
         return
       }
       root.workspaceData = data
+      root.previewBaseline = data.preview || null
       root.mappingLoaded = true
       root.maybeStart()
     }
@@ -1056,7 +1228,7 @@ Item {
     command: ["touch", root.stateDir + "/preview.token"]
     onExited: function(code) {
       if (code === 0) root.applyPreview()
-      else { root.layoutError = "Could not arm preview recovery."; root.state = "idle" }
+      else { root.layoutError = "Could not arm preview recovery."; root.previewBusy = false; root.state = "idle" }
     }
   }
 
@@ -1158,7 +1330,6 @@ Item {
   Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
   Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
   Timer { id: leaseVerify; interval: 600; onTriggered: if (!pluginList.running) pluginList.running = true }
-  Timer { id: keepDelay; interval: 150; onTriggered: keepTransaction.running = true }
   Timer {
     id: previewCountdown
     interval: 1000
@@ -1196,7 +1367,8 @@ Item {
     function keepPreview(): string { return root.keepPreview() }
     function revertPreview(): string { return root.revertPreview("") }
     function setMode(value: string): string {
-      return root.setModeValue(value, "")
+      return value.indexOf("single:") === 0 ? root.setModeValue("single", value.substring(7))
+        : root.setModeValue(value, "")
     }
     function setDirection(value: string): string {
       return root.setDirectionValue(value)
@@ -1208,6 +1380,8 @@ Item {
       migrationPhase: root.migrationPhase, layoutError: root.layoutError,
       lastWindowAction: root.lastWindowAction,
       monitors: root.monitors, bindStatuses: root.bindStatuses, panelWanted: root.panelWanted,
+      panelScreenName: root.panelScreenName, previewBusy: root.previewBusy, previewSeconds: root.previewSeconds,
+      draftMode: root.draftMode, savedMode: root.config.mode, singleTarget: root.draftSingleTarget,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
       stockDisableRunning: stockDisable.running }) }
   }

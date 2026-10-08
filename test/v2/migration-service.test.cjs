@@ -9,7 +9,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 function harness({ from = { outputs: ['A'] }, to = { outputs: ['A', 'B'] }, pending = null } = {}) {
   const writes = [], evals = [];
   const context = {
-    Grid, Hypr, state: 'idle', gen: 0, migrationPhase: '', migrationCommit: null,
+    Grid, Hypr, state: 'idle', gen: 0, migrationPhase: '', migrationCommit: null, previewBaseline: null,
     topologyDirty: false, migrationAttempts: 0, migrationFocus: null, currentStation: 3,
     layoutError: '', persisted: { legacyWorkspaceGrid: false }, expect: {},
     workspaceData: { mapping: from, pending }, removalGrace: { running: false },

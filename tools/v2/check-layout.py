@@ -14,6 +14,10 @@ service = (repo / 'Service.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
+for name in ('setDisplayValue', 'setDisplayEnabled', 'displayEnabled'):
+    start = service.index('  function ' + name + '(')
+    end = service.index('\n  function ', start + 1)
+    setter += service[start:end]
 # The setter gates on the same editable flag the service declares, so the
 # probe has to declare it too or the real function throws.
 editable = next(line for line in service.splitlines() if 'property bool draftEditable' in line).strip()
@@ -66,6 +70,10 @@ Item {
   QtObject {
     id: service
     property string state: "idle"
+    property bool previewBusy: false
+    property string draftMode: "extend"
+    property string draftSingleTarget: ""
+    property string layoutError: ""
     ''' + editable + '''
     property var displayDraft: []
     property int previews: 0
@@ -94,6 +102,7 @@ Item {
     function initTestCase() { failOnWarning(/.*/) }
     function init() {
       service.state = "idle"
+      layout.zoomFactor = 1; layout.panX = 0; layout.panY = 0
       service.displayDraft = [
         {name:"eDP-1", x:0, y:1200, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
         {name:"HDMI-A-2", x:0, y:0, width:1920, height:1200, scale:1, transform:0, enabled:true, lane:2}
@@ -108,7 +117,7 @@ Item {
     }
     function move(name, x, y) {
       var target = card(name), display = target.modelData
-      mouseDrag(layout, target.x + target.width / 2, target.y + target.height / 2,
+      mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
         (x - display.x) * layout.zoom, (y - display.y) * layout.zoom, Qt.LeftButton, Qt.NoModifier, 5)
       compare(service.writes, 1, "Both axes must publish in one model update")
       compare(service.previews, 1, "Preview must survive rebuilding the delegate")
@@ -128,6 +137,14 @@ Item {
       mouseClick(target, target.width / 2, target.height / 2)
       compare(service.previews, 0); compare(service.writes, 0)
     }
+    function test_card_off_survives_delegate_destruction() {
+      var menu = findChild(card("HDMI-A-2"), "monitorRoleMenu")
+      verify(menu !== null)
+      menu.changed("off")
+      compare(service.previews, 1, "Off must start preview even when the model destroys its menu")
+      compare(service.writes, 1)
+      compare(service.displayDraft[1].enabled, false)
+    }
     function test_drag_after_revert() {
       move("HDMI-A-2", 1920, 1200)
       init() // the service republishes the old geometry on Revert
@@ -137,7 +154,7 @@ Item {
     function moveNearEdge() {
       var target = card("HDMI-A-2")
       var dx = 1920 * layout.zoom - 7, dy = 1200 * layout.zoom + 5
-      mouseDrag(layout, target.x + target.width/2, target.y + target.height/2,
+      mouseDrag(layout, target.x + target.width/2, target.y + target.height * 0.8,
         dx, dy, Qt.LeftButton, Qt.NoModifier, 5)
       compare(service.displayDraft[1].x, 1920); compare(service.displayDraft[1].y, 1200)
       compare(service.previews, 1)
@@ -197,7 +214,7 @@ Item {
       move("HDMI-A-2", 1920, 1200)
       compare(service.state, "previewing")
       var target = card("HDMI-A-2"), display = target.modelData
-      mouseDrag(layout, target.x + target.width / 2, target.y + target.height / 2,
+      mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
         (-1920 - display.x) * layout.zoom, (1200 - display.y) * layout.zoom,
         Qt.LeftButton, Qt.NoModifier, 5)
       compare(service.previews, 2, "A re-arrangement joins the pending preview")
