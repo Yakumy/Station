@@ -9,7 +9,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 // acknowledgments. Monitor events during reload are delivered before Keep's
 // completion, exactly where the draft-reset regression occurred.
 function harness() {
-  const jobs = [], writes = [], monitorCalls = [];
+  const jobs = [], writes = [], monitorCalls = [], order = [], topologyEvents = [];
   const c = {};
   for (const name of ['Model', 'Grid', 'Hypr', 'MonitorsLua', 'Store', 'Transactions', 'Events'])
     c[name] = require('../../lib/' + name + '.js');
@@ -29,12 +29,22 @@ function harness() {
     migrationPhase: '', migrationAttempts: 0, migrationCommit: null, migrationFocus: null,
     topologyDirty: false, currentStation: 2, layoutError: '', expect: {},
     panelWanted: true, panelScreenName: 'B', panelTransferUntil: 0,
-    stateDir: '/fake-state', monitorsSource: 'hl.monitor({ output = "B", mode = "preferred" })\n',
+    panelEvacuationSerial: 0, panelEvacuationWaiting: 0,
+    panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
+    previewApplyLua: '', previewApplyStaged: false, previewApplyExpectedOutputs: [],
+    previewApplyFocusTarget: '', previewApplyActivateLua: '',
+    previewApplyMigrateFirst: false,
+    previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
+    pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
+    pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
+    stateDir: '/fake-state', monitorsSource: '',
     configGeneration: 0, appliedGeneration: 0, lastTopologyMs: 0,
     previewCountdown: { running: false, restart() { this.running = true; }, stop() { this.running = false; } },
     removalGrace: { running: false, stop() { this.running = false; } },
     reloadDebounce: { stop() {}, restart() { jobs.push(() => c.applyRuntime()); } },
     migrationRetry: { restart() { jobs.push(() => c.reconcile()); } },
+    panelEvacuationTimeout: { running: false,
+      restart() { this.running = true; }, stop() { this.running = false; } },
     Quickshell: { execDetached() {} },
     candidateFile: { text: () => c.candidate || '', setText(text) {
       jobs.push(() => { c.candidate = text; c.candidateReady = true; c.maybeStartKeep(); });
@@ -51,21 +61,45 @@ function harness() {
   Object.defineProperty(c, 'draftEditable', { get: () => ['idle', 'previewing'].includes(c.state) && !c.previewBusy });
   for (const match of source.matchAll(/^  function (\w+)\([^\n]*\{\n[^]*?^  \}/gm))
     c[match[1]] = runInNewContext('(' + match[0].trim() + ')', c);
+  let evacuationSerial = 0;
+  Object.defineProperty(c, 'panelEvacuationSerial', {
+    configurable: true,
+    get: () => evacuationSerial,
+    set(value) {
+      evacuationSerial = value;
+      if (value) jobs.push(() => {
+        order.push('panel-closed:' + c.panelEvacuationFrom);
+        c.acknowledgePanelEvacuation(value, c.panelEvacuationFrom);
+      });
+    },
+  });
   c.applyBinds = () => {};
   c.refresh = (_clients, done) => jobs.push(() => {
     c.monitors = copy(live); c.clients = copy(windows); if (done) done();
   });
-  function event(name, output) { c.handleEvent({ name, data: output }); }
+  function event(name, output) {
+    if (name === 'monitoradded' || name === 'monitorremoved') topologyEvents.push(`${name}:${output}`);
+    c.handleEvent({ name, data: output });
+  }
   function apply(lua) {
+    const focused = lua.match(/hl\.dsp\.focus\(\{ monitor = "([AB])"/);
+    if (focused) {
+      live.forEach(monitor => { monitor.focused = monitor.name === focused[1]; });
+      order.push('focus:' + focused[1]);
+    }
     for (const match of lua.matchAll(/hl\.monitor\(\{ ([^}]+) \}\)/g)) {
       const fields = match[1], name = fields.match(/output = "([AB])"/)[1];
       const monitor = live.find(m => m.name === name);
       const disabled = fields.match(/disabled = (true|false)/);
       const mirror = fields.match(/mirror = "([^"]*)"/);
       const old = monitor.disabled;
-      if (disabled) monitor.disabled = disabled[1] === 'true';
+      // A geometry-only declaration makes its output active during reload.
+      // A combined declaration applies its final disabled state atomically.
+      if (!disabled && /mode = /.test(fields)) monitor.disabled = false;
+      else if (disabled) monitor.disabled = disabled[1] === 'true';
       if (mirror) monitor.mirrorOf = mirror[1] || 'none';
       monitorCalls.push({ name, disabled: monitor.disabled, mirror: monitor.mirrorOf });
+      order.push('monitor:' + name + ':' + (monitor.disabled ? 'off' : (monitor.mirrorOf !== 'none' ? 'mirror' : 'on')));
       assert.ok(live.some(m => !m.disabled && m.mirrorOf === 'none'), 'never remove the last real output');
       if (old !== monitor.disabled) event(monitor.disabled ? 'monitorremoved' : 'monitoradded', name);
       if (monitor.disabled || monitor.mirrorOf !== 'none') {
@@ -78,10 +112,14 @@ function harness() {
       window.workspace = { id: Number(match[2]), name: match[2] };
     }
     for (const match of lua.matchAll(/workspace\.move\(\{ workspace = (\d+), monitor = "([AB])"/g))
-      windows.filter(w => w.workspace.id === Number(match[1])).forEach(w => { w.monitor = match[2]; });
+      windows.filter(w => w.workspace.id === Number(match[1])).forEach(w => {
+        w.monitor = match[2];
+        order.push('workspace:' + match[1] + ':' + match[2]);
+      });
   }
   c.evalLua = (lua, done) => jobs.push(() => { apply(lua); if (done) done(0, 'ok'); });
   function reload() {
+    order.push('reload');
     live.forEach(m => { m.disabled = false; m.mirrorOf = 'none'; event('monitoradded', m.name); });
     event('configreloaded', '');
   }
@@ -93,7 +131,12 @@ function harness() {
   Object.defineProperty(c.previewArm, 'running', { set(value) { if (value) jobs.push(() => c.applyPreview()); } });
   c.keepTransaction = {};
   Object.defineProperty(c.keepTransaction, 'running', { set(value) {
-    if (value) { c.keepStarted = true; jobs.push(() => { reload(); jobs.push(() => c.finishKeep(0, '')); }); }
+    if (value) { c.keepStarted = true; jobs.push(() => {
+      order.push('autoreload');
+      apply(c.candidate);
+      event('configreloaded', '');
+      jobs.push(() => c.finishKeep(0, ''));
+    }); }
   } });
   c.syncDisplayDraft();
   function drain(error = '') {
@@ -102,7 +145,7 @@ function harness() {
     assert.ok(limit, 'transaction converges');
     assert.equal(c.layoutError, error, 'transaction reports the expected result');
   }
-  return { c, drain, writes, monitorCalls, windows: () => copy(windows),
+  return { c, drain, writes, monitorCalls, order, topologyEvents, windows: () => copy(windows),
     setWindows(value) { windows = copy(value); } };
 }
 
@@ -115,12 +158,16 @@ test('Single preview migrates immediately, transfers panel, then Keep survives r
   assert.equal(c.state, 'previewing');
   assert.equal(c.previewBusy, false);
   assert.equal(c.panelScreenName, 'A');
+  assert.ok(h.order.indexOf('panel-closed:B') < h.order.indexOf('monitor:B:off'),
+    'the focused panel surface closes before its output is disabled');
   assert.deepEqual(h.windows().map(w => [w.workspace.id, w.monitor]), [[1, 'A'], [1, 'A'], [2, 'A'], [2, 'A']]);
   assert.equal(c.previewCountdown.running, true);
   assert.equal(c.previewSeconds, 12);
   assert.equal(h.writes[0].preview.windows.length, 4, 'original ownership is durable before migration');
   assert.equal(c.keepPreview(), 'started');
   assert.equal(c.keepStarted, undefined, 'Keep waits for both file acknowledgments');
+  const callsBeforeKeep = h.monitorCalls.length;
+  const eventsBeforeKeep = h.topologyEvents.slice();
   // Even an unrelated draft reset cannot change the accepted choice.
   c.draftMode = 'extend';
   h.drain();
@@ -130,6 +177,82 @@ test('Single preview migrates immediately, transfers panel, then Keep survives r
   assert.equal(c.workspaceData.preview, null);
   assert.equal(c.previewBaseline, null);
   assert.equal(c.state, 'idle');
+  assert.deepEqual(h.topologyEvents, eventsBeforeKeep,
+    'Keep does not remove or re-add an output after the accepted preview');
+  assert.equal(h.monitorCalls.length - callsBeforeKeep, 2,
+    'the watched config applies one final rule per output without a runtime replay');
+});
+
+test('Single HDMI Keep preserves the accepted topology without re-announcing eDP', () => {
+  const h = harness(), c = h.c;
+  c.panelScreenName = 'A';
+  c.setModeValue('single', 'B');
+  h.drain();
+  const eventsBeforeKeep = h.topologyEvents.slice();
+  const callsBeforeKeep = h.monitorCalls.length;
+  assert.equal(c.keepPreview(), 'started');
+  h.drain();
+  assert.deepEqual(h.topologyEvents, eventsBeforeKeep);
+  assert.equal(h.monitorCalls.length - callsBeforeKeep, 2);
+  assert.equal(c.config.singleTarget, 'B');
+});
+
+test('Single HDMI evacuates an eDP panel and focuses HDMI before disabling eDP', () => {
+  const h = harness(), c = h.c;
+  c.panelScreenName = 'A';
+  assert.equal(c.setModeValue('single', 'B'), 'started');
+  h.drain();
+  const closed = h.order.indexOf('panel-closed:A');
+  const focused = h.order.indexOf('focus:B');
+  const disabled = h.order.indexOf('monitor:A:off');
+  assert.ok(closed !== -1 && focused !== -1 && disabled !== -1);
+  assert.ok(closed < focused, 'release the panel focus grab first');
+  assert.ok(focused < disabled, 'focus the surviving output before monitor removal');
+  assert.equal(c.panelScreenName, 'B', 'reopen is published only after the monitor rule succeeds');
+});
+
+test('saved Single eDP -> Single HDMI migrates windows before removing eDP', () => {
+  const h = harness(), c = h.c;
+  c.config = Object.assign({}, c.config, { mode: 'single', singleTarget: 'A' });
+  c.applyRuntime();
+  h.drain();
+  c.syncDisplayDraft();
+  c.panelScreenName = 'A';
+  h.order.length = 0;
+  assert.match(c.activationRule('B'), /mode = .*position = .*disabled = false/,
+    'a disabled destination needs a full rule that overrides persisted Single state');
+
+  assert.equal(c.setModeValue('single', 'B'), 'started');
+  h.drain();
+
+  const enabled = h.order.indexOf('monitor:B:on');
+  const focused = h.order.indexOf('focus:B');
+  const migrated = h.order.findIndex(item => item.endsWith(':B') && item.startsWith('workspace:'));
+  const disabled = h.order.indexOf('monitor:A:off');
+  assert.ok(enabled !== -1 && focused !== -1 && migrated !== -1 && disabled !== -1);
+  assert.ok(enabled < focused, 'enable HDMI before focusing it');
+  assert.ok(focused < migrated, 'focus HDMI before migrating its windows');
+  assert.ok(migrated < disabled, 'migrate every client before removing eDP');
+  assert.equal(c.panelScreenName, 'B');
+  assert.equal(c.state, 'previewing');
+});
+
+test('Revert to a different saved Single target prepares that output before reload', () => {
+  const h = harness(), c = h.c;
+  c.panelScreenName = 'A';
+  c.setModeValue('single', 'B');
+  h.drain();
+  c.config = Object.assign({}, c.config, { mode: 'single', singleTarget: 'A', enabled: ['A', 'B'] });
+  h.order.length = 0;
+  assert.equal(c.revertPreview(''), 'started');
+  h.drain();
+  const closed = h.order.indexOf('panel-closed:B');
+  const enabled = h.order.indexOf('monitor:A:on');
+  const focused = h.order.indexOf('focus:A');
+  const reloaded = h.order.indexOf('reload');
+  assert.ok(closed !== -1 && enabled !== -1 && focused !== -1 && reloaded !== -1);
+  assert.ok(closed < enabled && enabled < focused && focused < reloaded,
+    'rollback releases the panel, enables and focuses the saved output, then reloads');
 });
 
 test('card Off previews and migrates; Revert restores original window ownership', () => {

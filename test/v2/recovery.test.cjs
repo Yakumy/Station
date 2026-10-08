@@ -21,6 +21,11 @@ test('preview and Keep templates use positional arguments and rollback on config
   assert.match(T.keep, /\[ ! -L "\$monitors" \]/);
   assert.match(T.keep, /hyprctl configerrors/);
   assert.match(T.keep, /cp -- "\$backup" "\$monitors"/);
+  const successPath = T.keep.slice(0, T.keep.indexOf('if [ -n "$errors" ]'));
+  assert.doesNotMatch(successPath, /hyprctl reload/,
+    'Keep must not force a second reload after accepting an already-live preview');
+  assert.match(T.keep.slice(T.keep.indexOf('if [ -n "$errors" ]')), /hyprctl reload/,
+    'an invalid candidate still forces the restored backup to load');
   assert.match(T.keep, /NR > 5/);
 });
 

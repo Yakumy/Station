@@ -11,7 +11,14 @@ for (const reason of ['', 'Preview timed out.']) {
     let snapshot, runtimeCalls = 0;
     const c = {
       Model, state: 'previewing', gen: 5, appliedGeneration: 5,
-      panelWanted: false, panelTransferUntil: 0, previewApplied: {},
+      panelWanted: false, panelScreenName: '', panelTransferUntil: 0, previewApplied: {},
+      panelEvacuationWaiting: 0, panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
+      previewApplyLua: '', previewApplyStaged: false, previewApplyExpectedOutputs: [],
+      previewApplyFocusTarget: '', previewApplyActivateLua: '',
+      previewApplyMigrateFirst: false,
+      previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
+      pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
+      pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
       previewBusy: false, previewBaseline: null, previewAbortReason: '', keepOptions: null,
       stateDir: '/tmp/station-test', pendingDisplayConfig: {}, layoutError: '',
       config: { mode: 'extend', singleTarget: '', enabled: ['eDP-1', 'HDMI-A-2'] },
@@ -20,16 +27,21 @@ for (const reason of ['', 'Preview timed out.']) {
       draftMode: 'mirror', draftSingleTarget: 'HDMI-A-2',
       validConnector() { return true; },
       previewCountdown: { stop() { c.timerStopped = true; } },
+      panelEvacuationTimeout: { stop() {} },
       enqueue(args, done) { commands.push({ args, done }); },
       refresh(includeClients, done) { assert.equal(includeClients, true); snapshot = done; },
       applyRuntime() { runtimeCalls++; },
     };
     c.root = c;
-    for (const name of ['revertPreview', 'restoreAppliedLayout', 'syncDisplayDraft']) {
+    for (const name of ['clearPanelEvacuation', 'clearPreviewApplyStage', 'revertPreview',
+      'continueRevertPreview', 'restoreAppliedLayout', 'syncDisplayDraft']) {
       const start = source.indexOf('  function ' + name + '(');
       const end = source.indexOf('\n  function ', start + 1);
       c[name] = runInNewContext('(' + source.slice(start, end).trim() + ')', c);
     }
+    c.panelTransferTarget = () => '';
+    c.previewFocusTarget = () => '';
+    c.activationRule = () => '';
     assert.equal(c.revertPreview(reason), 'started');
     assert.equal(c.timerStopped, true);
     assert.equal(c.pendingDisplayConfig, null);

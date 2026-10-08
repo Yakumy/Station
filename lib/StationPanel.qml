@@ -32,6 +32,10 @@ Ui.Panel {
   readonly property var textSizeStops: [9, 10, 11, 12, 14, 16, 20]
   property int textSizePreviewIndex: -1
   property int queuedTextSize: -1
+  property bool monitorTransferClosing: false
+  property int monitorTransferSerial: 0
+  property string monitorTransferScreen: ""
+  property int handledEvacuationSerial: 0
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
@@ -267,6 +271,27 @@ Ui.Panel {
     Qt.callLater(function() { popoutSwitchClosing = false })
   }
 
+  function closeForMonitorTransfer(serial, screenName) {
+    monitorTransferClosing = true
+    monitorTransferSerial = serial
+    monitorTransferScreen = screenName
+    // Skip the 140 ms fade so the focus grab and layer surface are gone well
+    // before Hyprland receives the monitor-disable rule.
+    popoutSwitchClosing = true
+    controller.hide()
+    monitorTransferAck.restart()
+  }
+
+  function handlePanelEvacuation() {
+    if (!service || !service.panelEvacuationWaiting) return
+    var serial = Number(service.panelEvacuationSerial)
+    if (!serial || serial <= handledEvacuationSerial) return
+    var mine = currentScreenName()
+    if (!mine || mine !== service.panelEvacuationFrom) return
+    handledEvacuationSerial = serial
+    closeForMonitorTransfer(serial, mine)
+  }
+
   function flushIntent() {
     if (!service || !intentPending) return
     intentPending = false
@@ -302,6 +327,9 @@ Ui.Panel {
       refreshBrightness()
       intentPending = true
       flushIntent()
+    } else if (monitorTransferClosing) {
+      // The explicit acknowledgment timer owns this close. Do not publish a
+      // dismissal or let another widget reopen until the monitor rule lands.
     } else if (popoutSwitchClosing) {
       var svc = service, barRef = bar, settle = settlePopoutSwitch
       if (svc) Qt.callLater(function() { settle(svc, barRef) })
@@ -362,8 +390,8 @@ Ui.Panel {
     })
   }
 
-  onServiceChanged: { flushIntent(); restoreSession(); requestPanelBack() }
-  Component.onCompleted: { flushIntent(); restoreSession(); requestPanelBack() }
+  onServiceChanged: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
+  Component.onCompleted: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
 
   // Disabling a different output does not rebuild this surviving widget.
   // It still has to receive the hand-off and reopen the confirmation panel.
@@ -372,6 +400,7 @@ Ui.Panel {
     function onPanelScreenNameChanged() { root.restoreSession(); root.requestPanelBack() }
     function onPanelTransferUntilChanged() { root.requestPanelBack() }
     function onPanelWantedChanged() { root.requestPanelBack() }
+    function onPanelEvacuationSerialChanged() { root.handlePanelEvacuation() }
   }
   Connections {
     target: Quickshell
@@ -386,6 +415,21 @@ Ui.Panel {
       if (!root.service || !root.service.panelWanted) { attempts = 0; return }
       if (root.tryRestorePanel()) { attempts = 0; return }
       if (attempts < 100) { attempts += 1; restart() } else attempts = 0
+    }
+  }
+
+  Timer {
+    id: monitorTransferAck
+    // The host popup normally fades for 140 ms. We suppress that animation,
+    // then still allow several Wayland commit cycles before acknowledging.
+    interval: 180
+    onTriggered: {
+      var svc = root.service
+      var serial = root.monitorTransferSerial
+      var screenName = root.monitorTransferScreen
+      root.monitorTransferClosing = false
+      root.popoutSwitchClosing = false
+      if (svc) svc.acknowledgePanelEvacuation(serial, screenName)
     }
   }
 
@@ -436,7 +480,6 @@ Ui.Panel {
     }
   }
 
-  readonly property color barFg: bar ? bar.barForeground : Color.bar.text
   // The Omarchy menu mark is an icon-font glyph whose ink box is exactly one
   // `Style.font.body` em, so deriving from the same token keeps this mark
   // pixel-matched to it at any theme font size.
@@ -483,7 +526,9 @@ Ui.Panel {
         anchors.centerIn: parent
         width: root.stationLogoSize
         height: root.stationLogoSize
-        tint: root.barFg
+        // Use the exact foreground property that Ui.WidgetButton uses for the
+        // Omarchy menu glyph, including transparent-bar theme transitions.
+        tint: logoButton.foreground
       }
       Rectangle {
         visible: root.opened

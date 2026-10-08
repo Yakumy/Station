@@ -38,7 +38,7 @@ test('successive position previews reconfigure only the output being moved', () 
   const calls = [];
   const context = {
     Model, MonitorsLua,
-    previewBaseline: {}, preparePanelTransfer() {},
+    previewBaseline: {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',
     config: { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] },
@@ -46,6 +46,7 @@ test('successive position previews reconfigure only the output being moved', () 
     displayDraft: draft, previewCountdown: { restart() {} },
     evalLua(lua) { calls.push(lua); },
   };
+  context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
   const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
   assert.ok(body);
   const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
@@ -74,7 +75,7 @@ test('a mode-only preview enables the new single output first without geometry r
   const calls = [];
   const context = {
     Model, MonitorsLua,
-    previewBaseline: {}, preparePanelTransfer() {},
+    previewBaseline: {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',
     config: { mode: 'single', singleTarget: 'eDP-1', enabled: ['eDP-1', 'HDMI-A-2'] },
@@ -82,6 +83,7 @@ test('a mode-only preview enables the new single output first without geometry r
     displayDraft: draft, previewCountdown: { restart() {} },
     evalLua(lua) { calls.push(lua); },
   };
+  context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
   const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
   const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
   context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'HDMI-A-2', enabled: context.config.enabled });

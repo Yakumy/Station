@@ -86,6 +86,25 @@ test('native monitor crossing synchronizes displays and explicitly focuses the m
   assert.ok(sync.endsWith(Hypr.focusWindow('0xabc')));
 });
 
+test('native monitor crossing preserves its station after a display reconnect', () => {
+  const h = harness({ native: c => {
+    // A reconnected monitor may still advertise an unrelated active workspace.
+    c.monitor = 1;
+    c.workspace = { id: 12, name: '12' };
+  } });
+  h.c.shiftWindow('up');
+  h.settle();
+  assert.equal(h.live.monitor, 1);
+  assert.equal(h.live.workspace.id, 2);
+  assert.equal(h.c.currentStation, 1);
+  assert.equal(h.c.persisted.lastStation, 1);
+  assert.equal(h.c.lastWindowAction.result, 'moved');
+  assert.equal(h.c.lastWindowAction.afterWorkspace, 2);
+  assert.match(h.calls[1], /workspace = 2, follow = true/);
+  assert.doesNotMatch(h.calls.at(-1), /workspace = "11"/);
+  assert.doesNotMatch(h.calls.at(-1), /workspace = "12"/);
+});
+
 test('vertical station crossing preserves the current display and updates both workspaces', () => {
   const h = harness({ monitor: 1, workspace: 2 });
   h.c.shiftWindow('right');

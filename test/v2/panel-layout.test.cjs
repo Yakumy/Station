@@ -38,6 +38,14 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
   assert.ok(Number(width[1]) >= 996, `panel requests ${width[1]} theme units`);
 });
 
+test('bar logo shares the Omarchy menu foreground and size token', () => {
+  const panel = read('lib/StationPanel.qml');
+
+  assert.match(panel, /stationLogoSize:\s*Style\.font\.body/);
+  assert.match(panel, /tint:\s*logoButton\.foreground/);
+  assert.doesNotMatch(panel, /readonly property color barFg/);
+});
+
 test('popout owner closes through root, never through the KeyboardPanel id', () => {
   const panel = read('lib/StationPanel.qml');
   const owner = panel.match(/QtObject\s*\{\s*id: popoutOwner([\s\S]*?)\n {2}\}/);

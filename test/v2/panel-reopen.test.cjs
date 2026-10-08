@@ -109,6 +109,28 @@ test('the surviving widget accepts a transfer while the removed output still has
   assert.match(panel, /function onPanelTransferUntilChanged\(\)/);
 });
 
+test('a monitor removal closes and acknowledges the old output before reopening elsewhere', () => {
+  assert.match(service, /function requestPanelEvacuation\(from, to, purpose\)/);
+  assert.match(service, /panelEvacuationWaiting = panelEvacuationSerial \+ 1/);
+  assert.match(service, /panelEvacuationSerial = panelEvacuationWaiting/);
+  assert.match(service, /evalLua\(Hypr\.focusMonitor\(focusTarget\)/);
+  assert.ok(service.indexOf('root.panelScreenName = target') > service.indexOf('root.evalLua(lua'),
+    'the destination panel is not reopened until the monitor rule succeeds');
+  assert.match(panel, /function closeForMonitorTransfer\(serial, screenName\)/);
+  assert.match(panel, /popoutSwitchClosing = true\n {4}controller\.hide\(\)/);
+  assert.match(panel, /interval: 180/);
+  assert.match(panel, /svc\.acknowledgePanelEvacuation\(serial, screenName\)/);
+  const handler = panel.match(/onOpenedChanged: \{([\s\S]*?)\n {2}\}/);
+  assert.match(handler[1], /else if \(monitorTransferClosing\)/,
+    'the safety close must not be recorded as a user dismissal');
+});
+
+test('Revert uses the same safe close when the saved Single target differs', () => {
+  assert.match(service, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(config\) : ""/);
+  assert.match(service, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);
+  assert.match(service, /if \(purpose === "revert"\) continueRevertPreview\(\)/);
+});
+
 test('a popout switch hands the intent to the copy that took over', () => {
   const settle = panel.match(/function settlePopoutSwitch\(svc, barRef\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(settle, 'settlePopoutSwitch is defined');
