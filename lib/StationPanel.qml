@@ -480,10 +480,9 @@ Ui.Panel {
     }
   }
 
-  // The Omarchy menu mark is an icon-font glyph whose ink box is exactly one
-  // `Style.font.body` em, so deriving from the same token keeps this mark
-  // pixel-matched to it at any theme font size.
-  readonly property real stationLogoSize: Style.font.body
+  // The open-cornered Station mark needs one theme-scaled pixel of optical
+  // enlargement beyond the denser Omarchy menu glyph.
+  readonly property real stationLogoSize: Style.font.body + Style.space(1)
   readonly property real barControlMargin: Style.spaceReal(7.5)
 
   implicitWidth: barRow.implicitWidth
@@ -548,6 +547,8 @@ Ui.Panel {
       tooltipText: "Station"
       horizontalMargin: 7.5
       fontSize: Style.font.body
+      // The font's painted bracket row sits one pixel above both bar marks.
+      transform: Translate { y: Style.space(1) }
       onPressed: root.toggle()
     }
   }

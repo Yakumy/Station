@@ -185,7 +185,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Popups | `Color.popups.background`, `.text`, `.border` |
 | Menus | `Color.menu.background`, `.text`, `.border`, `.scrim`, `.selectedBackground`, `.selectedText`, `.selectedBorder` |
 | Global | `Color.foreground`, `Color.accent`, `Color.urgent` |
-| Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). `Ui.WidgetButton.foreground` resolves to the injected host's `bar.barForeground`; fall back to `Color.bar.text`. The stock Omarchy menu glyph and Station's top-bar mark both use `Style.font.body`; Station binds its mark directly to its `WidgetButton.foreground`. With the user's current 10px base-font override, both request a 10×10 logical-pixel mark inside the 22px-high bar. |
+| Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). `Ui.WidgetButton.foreground` resolves to the injected host's `bar.barForeground`; fall back to `Color.bar.text`. The stock Omarchy menu glyph uses `Style.font.body`; Station binds its mark directly to its `WidgetButton.foreground` and uses `Style.font.body + Style.space(1)` for optical sizing. With the user's current 10px base-font override, Omarchy requests 10px and Station 11×11 logical pixels inside the unchanged 22px-high bar. |
 | Geometry/type | `Style.cornerRadius`, `Style.space(px)`, `Style.spacing.*`, `Style.font.*`, `Border.surfaceSpec(...)`, `BorderSurface` |
 
 Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; CI for Station fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
@@ -208,6 +208,13 @@ Omarchy. Increasing the source stroke from 50 to 54 restores comparable visual
 weight while retaining the same `Style.font.body` size and bar-slot geometry.
 The installed result measured 44.28 equivalent full-color pixels versus 44.41
 for Omarchy (about 0.3% apart), while preserving the exact bar foreground.
+The user's visual follow-up preferred a slightly larger mark, so its frame is
+now one theme-scaled pixel larger (11×11 with the current font setting). A live
+capture also showed `[S1]` at y=5…14 while both marks occupied y=6…15; Station
+translates that label down by `Style.space(1)` to align their painted bounds.
+After installation, the current capture scale painted Omarchy at 20×20 and
+Station at 22×22 physical pixels with the same 21.5 vertical center; `[S1]`
+centered at 22.0, within half a physical pixel of both marks.
 
 ### 8.7 Brightness
 

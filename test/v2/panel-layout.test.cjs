@@ -42,8 +42,9 @@ test('bar logo shares the Omarchy menu foreground and size token', () => {
   const panel = read('lib/StationPanel.qml');
   const mark = read('assets/station.svg');
 
-  assert.match(panel, /stationLogoSize:\s*Style\.font\.body/);
+  assert.match(panel, /stationLogoSize:\s*Style\.font\.body \+ Style\.space\(1\)/);
   assert.match(panel, /tint:\s*logoButton\.foreground/);
+  assert.match(panel, /id:\s*stationButton[\s\S]*?transform:\s*Translate\s*\{\s*y:\s*Style\.space\(1\)\s*\}/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
   // MultiEffect colorization multiplies the requested tint by source
   // luminance. A white source makes the SVG a pure alpha mask, so a fully
