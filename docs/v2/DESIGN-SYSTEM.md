@@ -40,6 +40,11 @@ This matches `Style.cornerRadius`'s own flat language and is already the rule fo
 
 **One narrow, named exception [V, host-precedented, RESOLVED].** The ban in this section is on *elevation effects* specifically — not on the `QtQuick.Effects` import as a whole. A `MultiEffect` whose only properties set are `colorization`-related (tinting a monochrome icon, such as the Station logo, to match a theme token) is icon theming, not depth, and is allowed; Omarchy's own Tray widget does exactly this. A `MultiEffect` is still banned the moment it also sets any shadow/blur/glow-family property (`shadowEnabled`, `blurEnabled`, etc.) alongside colorization — **the exception covers a colorization-only instance, not any instance that merely includes colorization among other properties.** `DropShadow`, `Glow`, `Blur` and any gradient property remain banned outright, on any element, not just inside an `Effects` import.
 
+An SVG used as the source of that colorization effect must be a fully opaque
+white alpha mask. `MultiEffect` preserves source luminance during
+colorization, so a beige or gray source silently darkens the requested theme
+token even when `colorization` is 1.0.
+
 ## 4. Color tokens
 
 No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `PLATFORM-FINDINGS.md` §8.6]:

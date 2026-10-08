@@ -190,6 +190,15 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 
 Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; CI for Station fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
 
+**[LIVE][SRC] Bar-logo tint:** a captured Miasma bar showed fully covered
+Omarchy-logo and `[S1]` pixels at the requested `#c2c2b0`, while Station's
+fully covered pixels were `#979789`. No QML opacity was applied. Qt
+`MultiEffect` colorization was multiplying the tint by the beige SVG stroke's
+luminance. The SVG is now a white, fully opaque alpha mask; its visible color
+continues to come exclusively from `WidgetButton.foreground`. A fresh live bar
+capture after installation contains exact `#c2c2b0` pixels in the Station mark
+and no pixels at the former `#979789` peak.
+
 ### 8.7 Brightness
 
 | Fact | Tag |

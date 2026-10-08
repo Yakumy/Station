@@ -40,10 +40,16 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
 
 test('bar logo shares the Omarchy menu foreground and size token', () => {
   const panel = read('lib/StationPanel.qml');
+  const mark = read('assets/station.svg');
 
   assert.match(panel, /stationLogoSize:\s*Style\.font\.body/);
   assert.match(panel, /tint:\s*logoButton\.foreground/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
+  // MultiEffect colorization multiplies the requested tint by source
+  // luminance. A white source makes the SVG a pure alpha mask, so a fully
+  // covered pixel is exactly the WidgetButton foreground instead of dimmer.
+  assert.match(mark, /stroke="white"/);
+  assert.doesNotMatch(mark, /(?:stroke-)?opacity=/);
 });
 
 test('popout owner closes through root, never through the KeyboardPanel id', () => {
