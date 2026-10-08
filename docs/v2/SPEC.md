@@ -312,12 +312,15 @@ are not errors: the managed block is deliberately last.
 
 ## 10. Bar widget and removal
 
-### 10.1 Stock widget lease
+### 10.1 Stock widget leases
 
 `state.stockLease = { wasEnabled, section, index, disabledByStation }`.
+`state.displayLease` has the same shape for `omarchy.monitor`.
 
 - On each activation (if Settings "Hide Omarchy's workspace indicator" is on, default): if `omarchy.workspaces` is enabled, capture its current placement (`section`, `index`), set `wasEnabled=true`, `omarchy plugin disable omarchy.workspaces`, `disabledByStation=true`. If it is already disabled and no lease exists, record `wasEnabled=false`; **Station never enables it.** If a lease exists, keep it.
 - Restore only when `disabledByStation && wasEnabled`: `omarchy plugin enable omarchy.workspaces`, then `omarchy bar move omarchy.workspaces --after yakumy.station` so it comes back **behind** the Station widget rather than in the pre-lease spot between the Omarchy menu mark and Station (re-enabling alone lands in `center` index 4 [V]). If `--after` fails because Station is off the bar, fall back to `omarchy bar move omarchy.workspaces --section <s> --index <i>`, the captured pre-lease placement. Clear the lease afterwards. **M0 correction:** `bar put` deliberately leaves an already-present widget in place; after enable, use `bar move` to restore placement.
+- Settings "Hide Omarchy's Display icon" is off by default. When enabled, Station applies the same ownership rule to `omarchy.monitor`: record whether it was enabled and its exact section/index, then disable it. Turning the setting off or removing Station enables and moves the widget back only if Station disabled it. A widget that was already disabled remains disabled.
+- Changing either hide setting gives an open Station panel a short transfer window while the bar layout rebuilds. On startup, a saved lease whose setting is now off is restored, covering interruption between saving the setting and completing the enable/move commands.
 - Do **not** use `clonedFrom` as a replacement mechanism; Station is not a clone of that plugin.
 
 ### 10.2 Cleanup after disable/remove
@@ -326,7 +329,7 @@ are not errors: the managed block is deliberately last.
 
 1. Sleep 3 s; wait up to ~15 s for `omarchy-shell shell ping` (the shell may be restarting).
 2. If the shell answers and `listPlugins` shows `yakumy.station` with `enabled` true: do nothing (restart case).
-3. If it is absent or disabled: restore the stock widget per the lease; **neutralise the managed `monitors.lua` block** (replace everything between the markers with `~/.local/state/omarchy/station/monitors-block.plain.lua`, the geometry-only copy Station keeps in sync in §9.3, using a fixed `awk` template, a timestamped backup and an atomic `mv`; do nothing if the markers or the plain file are missing). This keeps the user's arranged layout but removes every `disabled`/`mirror` rule and the guard, so Single or Mirror mode cannot outlive the plugin. **Then run `hyprctl reload`**. Runtime binds and workspace rules outlive the QML objects until a reload; `omarchy plugin remove yakumy.station` must leave `SUPER+number` and normal Hyprland behaviour working immediately.
+3. If it is absent or disabled: restore each stock widget Station leased (`omarchy.workspaces` and optionally `omarchy.monitor`); **neutralise the managed `monitors.lua` block** (replace everything between the markers with `~/.local/state/omarchy/station/monitors-block.plain.lua`, the geometry-only copy Station keeps in sync in §9.3, using a fixed `awk` template, a timestamped backup and an atomic `mv`; do nothing if the markers or the plain file are missing). This keeps the user's arranged layout but removes every `disabled`/`mirror` rule and the guard, so Single or Mirror mode cannot outlive the plugin. **Then run `hyprctl reload`**. Runtime binds and workspace rules outlive the QML objects until a reload; `omarchy plugin remove yakumy.station` must leave `SUPER+number` and normal Hyprland behaviour working immediately.
 4. If the shell never answers, do nothing. Troubleshooting note in the docs: run `hyprctl reload`.
 
 [A] exact `listPlugins` JSON shape and presence of `jq`: M0.
@@ -360,7 +363,7 @@ Displays tab:
 
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 
-Settings tab: Hide Omarchy's workspace indicator, Follow focus, Grace delay, Minimum stations, installed version.
+Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Grace delay, Minimum stations, installed version.
 
 **Theme tokens** (`import qs.Commons`, `import qs.Ui`):
 
@@ -384,12 +387,12 @@ CI check: fail on any hex colour (including short and alpha forms) and on symlin
 | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Install | `omarchy plugin add https://github.com/yakumy/station.git --enable`. Station works immediately.                                                                                                                                                                                                                                                                                                                                                                            |
 | Update  | `omarchy plugin update yakumy.station`, then `omarchy restart shell`. Station shows its installed version only. Schema changes migrate by `version` in config/state.                                                                                                                                                                                                                                                                                                       |
-| Delete  | `omarchy plugin remove yakumy.station`. The cleanup script (§10.2) restores the stock widget if appropriate and reloads Hyprland. The cleanup also rewrites the managed `monitors.lua` block to plain geometry (no disable/mirror/guard), so the user's layout stays but no Station mode survives. Left behind: config.json, state.json and `monitors.lua` backups (inert files). Settings offers "Remove Station block" to delete the block entirely before uninstalling. |
+| Delete  | `omarchy plugin remove yakumy.station`. The cleanup script (§10.2) restores each stock widget Station hid, including the optional Omarchy Display widget, and reloads Hyprland. The cleanup also rewrites the managed `monitors.lua` block to plain geometry (no disable/mirror/guard), so the user's layout stays but no Station mode survives. Left behind: config.json, state.json and `monitors.lua` backups (inert files). Settings offers "Remove Station block" to delete the block entirely before uninstalling. |
 
 Files:
 
-- `~/.config/omarchy/station/config.json`: identities and preferred lanes, mode preferences, enabled set, direction, follow-focus, grace delay, minStations, custom keybindings, hideNative.
-- `~/.local/state/omarchy/station/state.json`: last station, applied binds, stock lease, pending transaction, version.
+- `~/.config/omarchy/station/config.json`: identities and preferred lanes, mode preferences, enabled set, direction, follow-focus, grace delay, minStations, custom keybindings, hideNative, hideDisplay.
+- `~/.local/state/omarchy/station/state.json`: last station, applied binds, workspace/display stock leases, pending transaction, version.
 - `~/.local/state/omarchy/station/preview.token`.
 
 ## 13. Security

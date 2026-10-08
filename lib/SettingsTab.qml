@@ -30,6 +30,23 @@ Column {
   Ui.Toggle {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
+    label: "Hide Omarchy's Display icon"
+    titleSize: Style.font.body
+    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.hideDisplay
+    foreground: settingsTab.panelRoot.textPrimary
+    onClicked: if (settingsTab.panelRoot.service)
+      settingsTab.panelRoot.service.setSetting("hideDisplay", !checked)
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  Ui.Toggle {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
     label: "Follow focus (keep monitors on the same station)"
     titleSize: Style.font.body
     checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.followFocus

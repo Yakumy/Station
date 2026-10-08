@@ -48,6 +48,7 @@ Item {
   property string hyprBindingsText: ""
   property string personalBindingsText: ""
   property int stockDisableAttempts: 0
+  property int displayDisableAttempts: 0
   // The bar rebuilds our widget when its layout entries change (a plugin
   // enable/disable, a widget move) and whenever an output reconfigures, and
   // the panel window dies with the widget. The widget writes its open state
@@ -1236,7 +1237,9 @@ Item {
     refresh(true, function() {
       updateAssignments()
       applyRuntime()
-      acquireStockLease()
+      if (!config.hideNative && persisted.stockLease) restoreStockLease()
+      if (!config.hideDisplay && persisted.displayLease) restoreDisplayLease()
+      acquireStockLeases()
       if (!persisted.activeNoticeShown) {
         Quickshell.execDetached(["notify-send", "Station", "Station is active. SUPER+1…0 now switch stations."])
         persisted.activeNoticeShown = true
@@ -1257,8 +1260,8 @@ Item {
     return null
   }
 
-  function acquireStockLease() {
-    if (!config.hideNative || pluginList.running) return
+  function acquireStockLeases() {
+    if ((!config.hideNative && !config.hideDisplay) || pluginList.running) return
     pluginList.running = true
   }
 
@@ -1293,13 +1296,50 @@ Item {
     }
   }
 
+  function restoreDisplayLease() {
+    var lease = persisted.displayLease
+    if (!lease) return
+    if (lease.disabledByStation && lease.wasEnabled) {
+      enqueue(["omarchy", "plugin", "enable", "omarchy.monitor"], function(code) {
+        if (code !== 0) return
+        root.enqueue(["omarchy", "bar", "move", "omarchy.monitor", "--section", lease.section,
+          "--index", String(lease.index)], function(moveCode) {
+          if (moveCode !== 0) return
+          root.persisted.displayLease = null
+          root.saveState()
+        })
+      })
+    } else {
+      persisted.displayLease = null
+      saveState()
+    }
+  }
+
   function setSetting(name, value) {
     if (name === "hideNative") {
       if (panelWanted) panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
       config = Object.assign({}, config)
       saveConfig()
-      if (config.hideNative) acquireStockLease(); else restoreStockLease()
+      if (config.hideNative) {
+        stockDisableAttempts = 0
+        acquireStockLeases()
+      } else {
+        restoreStockLease()
+      }
+      return "ok"
+    }
+    if (name === "hideDisplay") {
+      if (panelWanted) panelTransferUntil = Date.now() + 3000
+      config.hideDisplay = !!value
+      config = Object.assign({}, config)
+      saveConfig()
+      if (config.hideDisplay) {
+        displayDisableAttempts = 0
+        acquireStockLeases()
+      } else {
+        restoreDisplayLease()
+      }
       return "ok"
     }
     if (name === "followFocus") config.followFocus = !!value
@@ -1329,23 +1369,48 @@ Item {
 
   function handleStockPlugins(raw) {
     var list = parseJson(raw, [])
-    var entry = list.find(function(item) { return item.id === "omarchy.workspaces" })
-    var enabled = !!(entry && entry.enabled)
-    if (persisted.stockLease) {
-      if (persisted.stockLease.disabledByStation && enabled && stockDisableAttempts < 3 && !stockDisable.running) {
-        stockDisableAttempts += 1
-        stockDisable.running = true
+    var changed = false
+    if (config.hideNative) {
+      var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
+      var workspaceEnabled = !!(workspaceEntry && workspaceEntry.enabled)
+      if (persisted.stockLease) {
+        if (persisted.stockLease.disabledByStation && workspaceEnabled
+            && stockDisableAttempts < 3 && !stockDisable.running && !displayDisable.running) {
+          stockDisableAttempts += 1
+          stockDisable.running = true
+        }
+      } else {
+        var workspacePlace = barPlacement("omarchy.workspaces") || { section: "left", index: 1 }
+        persisted.stockLease = { wasEnabled: workspaceEnabled, section: workspacePlace.section,
+          index: workspacePlace.index, disabledByStation: workspaceEnabled }
+        changed = true
+        if (workspaceEnabled && !stockDisable.running && !displayDisable.running) {
+          stockDisableAttempts += 1
+          stockDisable.running = true
+        }
       }
-      return
     }
-    var place = barPlacement("omarchy.workspaces") || { section: "left", index: 1 }
-    persisted.stockLease = { wasEnabled: enabled, section: place.section, index: place.index,
-      disabledByStation: enabled }
-    saveState()
-    if (enabled && !stockDisable.running) {
-      stockDisableAttempts += 1
-      stockDisable.running = true
+    if (config.hideDisplay) {
+      var displayEntry = list.find(function(item) { return item.id === "omarchy.monitor" })
+      var displayEnabled = !!(displayEntry && displayEntry.enabled)
+      if (persisted.displayLease) {
+        if (persisted.displayLease.disabledByStation && displayEnabled
+            && displayDisableAttempts < 3 && !displayDisable.running && !stockDisable.running) {
+          displayDisableAttempts += 1
+          displayDisable.running = true
+        }
+      } else {
+        var displayPlace = barPlacement("omarchy.monitor") || { section: "right", index: 5 }
+        persisted.displayLease = { wasEnabled: displayEnabled, section: displayPlace.section,
+          index: displayPlace.index, disabledByStation: displayEnabled }
+        changed = true
+        if (displayEnabled && !displayDisable.running && !stockDisable.running) {
+          displayDisableAttempts += 1
+          displayDisable.running = true
+        }
+      }
     }
+    if (changed) saveState()
   }
 
   function togglePanel() {
@@ -1419,10 +1484,18 @@ Item {
   Component.onDestruction: {
     var lease = persisted.stockLease || { section: "left", index: 0, wasEnabled: false, disabledByStation: false }
     if (["left", "center", "right"].indexOf(lease.section) === -1
-        || !Number.isInteger(lease.index) || lease.index < 0) return
+        || !Number.isInteger(lease.index) || lease.index < 0)
+      lease = { section: "left", index: 0, wasEnabled: false, disabledByStation: false }
+    var displayLease = persisted.displayLease
+      || { section: "right", index: 0, wasEnabled: false, disabledByStation: false }
+    if (["left", "center", "right"].indexOf(displayLease.section) === -1
+        || !Number.isInteger(displayLease.index) || displayLease.index < 0)
+      displayLease = { section: "right", index: 0, wasEnabled: false, disabledByStation: false }
     var restore = lease.disabledByStation && lease.wasEnabled ? "1" : "0"
+    var restoreDisplay = displayLease.disabledByStation && displayLease.wasEnabled ? "1" : "0"
     Quickshell.execDetached(["sh", "-c", Recovery.cleanup, "sh", stateDir,
-      monitorsPath, lease.section, String(lease.index), restore])
+      monitorsPath, lease.section, String(lease.index), restore,
+      displayLease.section, String(displayLease.index), restoreDisplay])
   }
 
   FileView {
@@ -1613,6 +1686,13 @@ Item {
     onExited: leaseVerify.restart()
   }
 
+  Process {
+    id: displayDisable
+    command: ["omarchy", "plugin", "disable", "omarchy.monitor"]
+    stdout: StdioCollector { waitForEnd: true }
+    onExited: leaseVerify.restart()
+  }
+
   Timer {
     id: nativeMoveSettle
     property var before: null
@@ -1685,6 +1765,7 @@ Item {
       panelEvacuationWaiting: root.panelEvacuationWaiting,
       draftMode: root.draftMode, savedMode: root.config.mode, singleTarget: root.draftSingleTarget,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
-      stockDisableRunning: stockDisable.running }) }
+      stockDisableRunning: stockDisable.running, displayLease: root.persisted.displayLease,
+      displayDisableAttempts: root.displayDisableAttempts, displayDisableRunning: displayDisable.running }) }
   }
 }

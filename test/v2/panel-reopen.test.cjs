@@ -171,3 +171,10 @@ test('a real switch to another popup still dismisses Station during a transfer w
 test('display hotplug does not summon a panel the user closed', () => {
   assert.doesNotMatch(service, /updateAssignments\(\); applyRuntime\(\); openPanel\(\)/);
 });
+
+test('hiding either stock bar widget preserves an open panel through the rebuild', () => {
+  const setter = service.match(/function setSetting\(name, value\) \{([\s\S]*?)\n {2}\}/);
+  assert.ok(setter, 'setSetting is defined');
+  assert.match(setter[1], /name === "hideNative"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
+  assert.match(setter[1], /name === "hideDisplay"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
+});

@@ -23,6 +23,8 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(displays, /text: "RESOLUTION"/);
   assert.match(displays, /text: "REFRESH RATE"/);
   assert.match(bindings, /bindingGroups/);
+  assert.match(settings, /label: "Hide Omarchy's Display icon"/);
+  assert.match(settings, /setSetting\("hideDisplay", !checked\)/);
   assert.match(settings, /Installed version/);
 });
 

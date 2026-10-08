@@ -91,8 +91,9 @@ omarchy restart shell
 omarchy plugin remove yakumy.station
 ```
 
-Removal restores the stock workspace widget, neutralizes any saved Single or
-Mirror rule to plain display geometry, and reloads Hyprland so Station bindings
+Removal restores the stock workspace widget and the Omarchy Display widget if
+Station hid it, neutralizes any saved Single or Mirror rule to plain display
+geometry, and reloads Hyprland so Station bindings
 and workspace rules do not linger. If the shell is unavailable throughout the
 cleanup window, run `hyprctl reload` once it returns.
 

@@ -179,3 +179,19 @@ unmap acknowledgement and ensure it is not mistaken for user dismissal. All
 16 Node/M0 suites, the 16-case Qt layout suite, and the theme-token scan pass.
 Live reproduction was deliberately deferred until the installed plugin is
 updated; physical confirmation remains pending.
+
+## Optional stock Display-widget lease (2026-10-08)
+
+Settings now exposes a default-off toggle for the preinstalled
+`omarchy.monitor` bar widget. Automated coverage verifies config/state schema
+migration, settings wiring, ownership-aware workspace and Display leases,
+serialized bar-layout writes, panel transfer during either widget rebuild,
+exact section/index restoration, and removal cleanup clearing both leases.
+An interrupted restore is retried at the next service start when its setting is
+off.
+
+All 16 Node/M0 suites and the 16-case Qt layout suite pass. Theme scanning
+reports zero violations across 19 runtime sources; manifest validation and the
+Wayland QML component check pass. The QML check emits only the existing portal
+registration warning. Physical toggle and uninstall restoration remain for
+interactive confirmation.
