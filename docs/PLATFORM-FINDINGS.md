@@ -279,9 +279,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   the local checkout while the shell is stopped avoids that reload sequence;
   this is a precaution, not proof of the crash's root cause.
 
-## 14. Where evidence lives
-
-### Display transaction repair (2026-10-08)
+## 14. Display transaction repair (2026-10-08)
 
 - **[SRC][QTTEST]** The monitor-card Off handler called `setDisplayValue()` and
   then `previewLayout()` on its own delegate. Publishing the new Repeater model
@@ -315,6 +313,27 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   covers immediate migration, Keep reload races, repeated mode previews,
   timeout, Revert, restart recovery, enabling a Single-mode disabled output,
   and candidate-write failure. These tests do not simulate GPU/Wayland internals.
+- **[LIVE] Installed repair `103a6de`:** a Single-on-eDP-1 preview moved all
+  eight eligible windows to their compact single-display station IDs. A panel
+  opened on HDMI-A-2 transferred to eDP-1; `hyprctl layers -j` confirmed the
+  visible keyboard-panel surface there, with 12 seconds remaining. Revert
+  restored every checked window's original workspace and physical monitor.
+- **[LIVE] Keep:** repeating that Single preview and pressing Keep persisted
+  `single`/`eDP-1`, retained the single-output map, and produced no layout error.
+  The verification then saved Extend and restored original window ownership,
+  monitor geometry, focus, and the initially closed panel state. This also
+  repaired the earlier saved-block/config mismatch. A subsequent Mirror
+  preview migrated all seven then-present eligible windows and passed Revert.
+- **[LIVE] Final state:** idle, saved/draft mode Extend, two-output workspace
+  map, no pending migration, empty layout error, and empty Hyprland
+  `configerrors`. No crash or zero-output warning appeared during these checks.
+  Temporary snapshots: `/tmp/station-display-live-FZjoI9` (Single/Revert),
+  `/tmp/station-display-live-qozfEr` (Single/Keep/restoration), and
+  `/tmp/station-display-live-rCG0QJ` (Mirror/Revert). These contain local window
+  metadata and are not committed. The automated suite (16 test files), 16 Qt
+  layout tests, and installed-component QML compilation also passed.
+
+## 15. Where evidence lives
 
 | Source | Content |
 |---|---|
