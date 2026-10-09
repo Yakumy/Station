@@ -623,8 +623,8 @@ Ui.Panel {
           Column {
             anchors.left: logo.right
             anchors.leftMargin: root.space3
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: root.space1
+            anchors.verticalCenter: logo.verticalCenter
+            spacing: Style.spacing.xxs
             Text {
               text: "Station"
               color: root.textPrimary
