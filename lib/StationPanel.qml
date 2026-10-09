@@ -620,26 +620,15 @@ Ui.Panel {
             anchors.leftMargin: root.regionPadH
             anchors.verticalCenter: parent.verticalCenter
           }
-          Column {
+          Text {
             anchors.left: logo.right
             anchors.leftMargin: root.space3
             anchors.verticalCenter: logo.verticalCenter
-            spacing: Style.spacing.xxs
-            Text {
-              text: "Station"
-              color: root.textPrimary
-              font.family: Style.font.family
-              font.pixelSize: Style.font.title
-              font.weight: Font.DemiBold
-            }
-            Text {
-              text: "v" + root.pluginVersion
-              color: root.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              font.weight: Font.Medium
-              font.letterSpacing: root.space1
-            }
+            text: "Station"
+            color: root.textPrimary
+            font.family: Style.font.family
+            font.pixelSize: Style.font.title
+            font.weight: Font.DemiBold
           }
         }
 

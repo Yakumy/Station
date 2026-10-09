@@ -354,7 +354,7 @@ The open tab rides along the same way: `rememberedTab` is written on every tab s
 
 ## 11. GUI
 
-Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plugin: header icon + title + small uppercase theme-name subtitle; hairline-separated sections; small uppercase labels with right-aligned values; segmented boxes; list with a check on the right.
+Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plugin: header icon + vertically centered title; hairline-separated sections; small uppercase labels with right-aligned values; segmented boxes; list with a check on the right.
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
@@ -369,7 +369,7 @@ Displays tab:
 
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 
-Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Follow focus, Grace delay, Minimum stations, installed version. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
+Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Grace delay, Minimum stations, installed version with a GitHub link. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
 
 **Theme tokens** (`import qs.Commons`, `import qs.Ui`):
 

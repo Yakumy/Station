@@ -218,14 +218,34 @@ Column {
       font.family: Style.font.family
       font.pixelSize: Style.font.body
     }
-    Text {
+    Item {
       anchors.right: parent.right
       anchors.rightMargin: settingsTab.panelRoot.space3
       anchors.verticalCenter: parent.verticalCenter
-      text: settingsTab.panelRoot.pluginVersion
-      color: settingsTab.panelRoot.textDim
-      font.family: Style.font.family
-      font.pixelSize: Style.font.caption
+      width: githubLink.implicitWidth + settingsTab.panelRoot.space1 + versionLabel.implicitWidth
+      height: Math.max(githubLink.implicitHeight, versionLabel.implicitHeight)
+      Ui.PanelActionButton {
+        id: githubLink
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        iconText: "\uf09b"
+        fontSize: Style.font.iconLarge
+        tooltipText: "Open Station on GitHub"
+        foreground: settingsTab.panelRoot.textDim
+        hoverColor: settingsTab.panelRoot.textPrimary
+        focusable: true
+        onClicked: Qt.openUrlExternally("https://github.com/Yakumy/Station")
+      }
+      Text {
+        id: versionLabel
+        anchors.left: githubLink.right
+        anchors.leftMargin: settingsTab.panelRoot.space1
+        anchors.verticalCenter: parent.verticalCenter
+        text: "v" + settingsTab.panelRoot.pluginVersion
+        color: settingsTab.panelRoot.textDim
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+      }
     }
   }
 
