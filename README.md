@@ -66,10 +66,14 @@ rotation, mode, and monitor on/off—start as a preview. Choose **Keep** within 
 seconds or Station restores the previous runtime layout. A detached 20-second
 watchdog also restores it if the shell crashes.
 
+Text size is global: it changes Omarchy shell, GTK, and terminal fonts on all
+displays. Use Scale to change the size of text and UI on only the selected monitor.
+
 Kept layouts are written as a marked block at the end of
 `~/.config/hypr/monitors.lua`. Station backs up the file, writes atomically,
-reloads Hyprland, checks `hyprctl configerrors`, and restores the backup if the
-new configuration fails. Settings can remove the managed block entirely.
+lets Hyprland's file watcher apply it, checks `hyprctl configerrors`, and
+restores the backup if the new configuration fails. Settings can remove the
+managed block entirely.
 
 ## State and removal
 
@@ -88,10 +92,13 @@ Keep commits the mode and then migrates them.
 
 ```bash
 omarchy plugin update yakumy.station
-omarchy restart shell
 
 omarchy plugin remove yakumy.station
 ```
+
+If the panel still shows the old layout after an update, run
+`omarchy restart shell` once. A plugin rescan can leave an already-loaded
+Quickshell panel component in memory.
 
 Removal restores the stock workspace widget and the Omarchy Display widget if
 Station hid it, neutralizes any saved Single or Mirror rule to plain display

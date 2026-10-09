@@ -27,8 +27,8 @@ Ui.Panel {
   }
   property int brightness: 0
   property bool brightnessAvailable: false
-  property int pendingBrightness: 0
-  property bool brightnessQueued: false
+  readonly property bool brightnessLoading: brightnessRead.running
+  property var pendingBrightnessRequest: null
   readonly property var textSizeStops: [9, 10, 11, 12, 14, 16, 20]
   property int textSizePreviewIndex: -1
   property int queuedTextSize: -1
@@ -162,7 +162,11 @@ Ui.Panel {
   function selectDisplay(name) {
     if (!service || !service.displayDraft.some(function(display) { return display.name === name })) return
     service.rememberedDisplayName = name
-    refreshBrightness(name)
+  }
+
+  onSelectedDisplayNameChanged: {
+    brightnessAvailable = false
+    refreshBrightness()
   }
 
   function changeMode(value) {
@@ -202,12 +206,15 @@ Ui.Panel {
   function refreshBrightness(name) {
     var target = name || selectedDisplayName
     if (!target || brightnessRead.running) return
+    brightnessRead.monitorName = target
     brightnessRead.command = ["omarchy-brightness-display", "--monitor", target]
     brightnessRead.running = true
   }
 
   function queueBrightness(value) {
+    if (!brightnessAvailable || !selectedDisplayName) return
     brightnessDebounce.pending = Math.round(value)
+    brightnessDebounce.monitorName = selectedDisplayName
     brightnessDebounce.restart()
   }
 
@@ -230,20 +237,23 @@ Ui.Panel {
 
   function setTextSizeIndex(index) {
     if (index < 0 || index >= textSizeStops.length) return
+    if (index === currentTextIndex()) return
     textSizePreviewIndex = index
     if (textSizeWrite.running) { queuedTextSize = textSizeStops[index]; return }
     textSizeWrite.command = ["omarchy-display-text-size", String(textSizeStops[index])]
     textSizeWrite.running = true
   }
 
-  function setBrightness(value) {
-    if (!brightnessAvailable || !selectedDisplayName) return
-    pendingBrightness = Math.max(1, Math.min(100, Math.round(value)))
-    brightness = pendingBrightness
-    if (brightnessWrite.running) { brightnessQueued = true; return }
-    brightnessQueued = false
+  function setBrightness(value, monitorName) {
+    if (!monitorName) return
+    var level = Math.max(1, Math.min(100, Math.round(value)))
+    if (monitorName === selectedDisplayName) brightness = level
+    if (brightnessWrite.running) {
+      pendingBrightnessRequest = { value: level, monitorName: monitorName }
+      return
+    }
     brightnessWrite.command = ["omarchy", "brightness", "display", "--no-osd", "--monitor",
-      selectedDisplayName, pendingBrightness + "%"]
+      monitorName, level + "%"]
     brightnessWrite.running = true
   }
 
@@ -435,12 +445,17 @@ Ui.Panel {
 
   Process {
     id: brightnessRead
+    property string monitorName: ""
     property string captured: ""
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: brightnessRead.captured = text }
     onRunningChanged: if (running) captured = ""
     onExited: {
+      if (monitorName !== root.selectedDisplayName) {
+        root.refreshBrightness()
+        return
+      }
       var first = captured.split("\n")[0].trim()
-      root.brightnessAvailable = first !== "" && first !== "unavailable" && isFinite(Number(first))
+      root.brightnessAvailable = exitCode === 0 && first !== "" && first !== "unavailable" && isFinite(Number(first))
       root.brightness = root.brightnessAvailable ? Number(first) : 0
     }
   }
@@ -448,20 +463,26 @@ Ui.Panel {
   Timer {
     id: brightnessDebounce
     property int pending: 0
+    property string monitorName: ""
     interval: 180
-    onTriggered: root.setBrightness(pending)
+    onTriggered: root.setBrightness(pending, monitorName)
   }
 
   Process {
     id: brightnessWrite
     stdout: StdioCollector { waitForEnd: true }
-    onExited: if (root.brightnessQueued) root.setBrightness(root.pendingBrightness)
+    onExited: {
+      var pending = root.pendingBrightnessRequest
+      root.pendingBrightnessRequest = null
+      if (pending) root.setBrightness(pending.value, pending.monitorName)
+    }
   }
 
   Process {
     id: textSizeWrite
     stdout: StdioCollector { waitForEnd: true }
     onExited: {
+      if (exitCode !== 0) root.textSizePreviewIndex = -1
       if (root.queuedTextSize >= 0) {
         var next = root.queuedTextSize
         root.queuedTextSize = -1

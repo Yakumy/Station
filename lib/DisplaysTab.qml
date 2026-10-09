@@ -29,6 +29,26 @@ Column {
   }
   readonly property var scaleOptions: [1, 1.25, 1.6, 2, 3, 4]
 
+  function unavailableMessage(supported) {
+    if (!selectedDisplay) return "Select a monitor."
+    if (!selectedDisplay.enabled) return "Turn on this monitor."
+    return supported ? "" : "Not available for this monitor."
+  }
+
+  component ControlMessage: Text {
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: displayTab.panelRoot.space1
+    width: parent.width - displayTab.gutter * 2
+    visible: text !== ""
+    horizontalAlignment: Text.AlignHCenter
+    wrapMode: Text.NoWrap
+    elide: Text.ElideRight
+    color: displayTab.panelRoot.textDim
+    font.family: Style.font.family
+    font.pixelSize: Style.font.caption
+  }
+
   function choiceIndex(options, value) {
     for (var i = 0; i < options.length; i++)
       if (String(options[i].value) === String(value)) return i
@@ -164,9 +184,8 @@ Column {
             }
             Ui.PanelSlider {
               width: parent.width - displayTab.pad * 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: displayTab.gutter
+              height: implicitHeight
+              anchors.centerIn: parent
               bar: displayTab.panelRoot.bar
               minimum: 1
               maximum: 100
@@ -177,6 +196,10 @@ Column {
               opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
               onMoved: function(value) { displayTab.panelRoot.brightness = Math.round(value) }
               onReleased: function(value) { displayTab.panelRoot.queueBrightness(value) }
+            }
+            ControlMessage {
+              text: displayTab.panelRoot.brightnessLoading ? ""
+                : displayTab.unavailableMessage(displayTab.panelRoot.brightnessAvailable)
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
           }
@@ -189,7 +212,7 @@ Column {
               anchors.leftMargin: displayTab.gutter
               anchors.top: parent.top
               anchors.topMargin: displayTab.gutter
-              text: "TEXT SIZE"
+              text: "TEXT SIZE (ALL DISPLAYS)"
               color: displayTab.panelRoot.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -206,9 +229,8 @@ Column {
             }
             Ui.PanelSlider {
               width: parent.width - displayTab.pad * 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: displayTab.gutter
+              height: implicitHeight
+              anchors.centerIn: parent
               bar: displayTab.panelRoot.bar
               minimum: 0
               maximum: displayTab.panelRoot.textSizeStops.length - 1
@@ -216,7 +238,12 @@ Column {
               integer: true
               tickCount: displayTab.panelRoot.textSizeStops.length
               value: displayTab.panelRoot.currentTextIndex()
+              enabled: displayTab.panelRoot.textSizeStops.length > 1
+              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
               onReleased: function(value) { displayTab.panelRoot.setTextSizeIndex(Math.round(value)) }
+            }
+            ControlMessage {
+              text: displayTab.panelRoot.textSizeStops.length > 1 ? "" : "Not available."
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
           }
@@ -246,9 +273,8 @@ Column {
             }
             Ui.PanelSlider {
               width: parent.width - displayTab.pad * 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: displayTab.gutter
+              height: implicitHeight
+              anchors.centerIn: parent
               bar: displayTab.panelRoot.bar
               minimum: 0
               maximum: displayTab.scaleOptions.length - 1
@@ -259,9 +285,14 @@ Column {
                 ? Math.max(0, displayTab.scaleOptions.indexOf(Number(displayTab.selectedDisplay.scale))) : 0
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
+                && displayTab.scaleOptions.length > 1
+              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
               onReleased: function(value) {
                 displayTab.applyDisplayValue("scale", displayTab.scaleOptions[Math.round(value)])
               }
+            }
+            ControlMessage {
+              text: displayTab.unavailableMessage(displayTab.scaleOptions.length > 1)
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
           }
@@ -294,9 +325,8 @@ Column {
             }
             Ui.PanelSlider {
               width: parent.width - displayTab.pad * 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: displayTab.gutter
+              height: implicitHeight
+              anchors.centerIn: parent
               bar: displayTab.panelRoot.bar
               minimum: 0
               maximum: Math.max(0, displayTab.resolutionOptions.length - 1)
@@ -309,7 +339,8 @@ Column {
               }
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-                && displayTab.resolutionOptions.length > 0
+                && displayTab.resolutionOptions.length > 1
+              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
               onReleased: function(value) {
                 var choice = displayTab.resolutionOptions[Math.round(value)]
                 if (!choice || !displayTab.selectedDisplay) return
@@ -317,6 +348,9 @@ Column {
                   choice.value, displayTab.selectedDisplay.mode)
                 displayTab.applyDisplayValue("mode", exact)
               }
+            }
+            ControlMessage {
+              text: displayTab.unavailableMessage(displayTab.resolutionOptions.length > 1)
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
           }
@@ -349,9 +383,8 @@ Column {
             }
             Ui.PanelSlider {
               width: parent.width - displayTab.pad * 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: displayTab.gutter
+              height: implicitHeight
+              anchors.centerIn: parent
               bar: displayTab.panelRoot.bar
               minimum: 0
               maximum: Math.max(0, displayTab.refreshOptions.length - 1)
@@ -362,21 +395,15 @@ Column {
                 ? displayTab.choiceIndex(displayTab.refreshOptions, displayTab.selectedDisplay.mode) : 0
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-                && displayTab.refreshOptions.length > 0
+                && displayTab.refreshOptions.length > 1
+              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
               onReleased: function(value) {
                 var choice = displayTab.refreshOptions[Math.round(value)]
                 if (choice) displayTab.applyDisplayValue("mode", choice.value)
               }
             }
-            Text {
-              visible: !displayTab.panelRoot.brightnessAvailable
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.bottom: parent.bottom
-              text: "Brightness not available for this display"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
+            ControlMessage {
+              text: displayTab.unavailableMessage(displayTab.refreshOptions.length > 1)
             }
           }
         }

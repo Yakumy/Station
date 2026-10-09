@@ -640,12 +640,11 @@ Item {
     if (state === "previewing" || state === "applyingLayout") return
     updateAssignments()
     try {
-      var monitorRules = MonitorsLua.runtimeModeRules(Object.keys(lanes).map(function(name) {
+      var displays = Object.keys(lanes).map(function(name) {
         return { name: name, lane: lanes[name] }
-      }), config)
-      var outputs = MonitorsLua.changedOutputs(Object.keys(lanes).map(function(name) {
-        return { name: name, lane: lanes[name] }
-      }), config, monitors, false)
+      })
+      var outputs = MonitorsLua.changedOutputs(displays, config, monitors, false)
+      var monitorRules = MonitorsLua.runtimeModeRules(displays, config, outputs)
       expect = { kinds: ["monitor", "workspace"], outputs: outputs, until: Date.now() + 2000 }
       evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
     } catch (error) { console.warn("Station monitor mode:", error) }
@@ -675,6 +674,8 @@ Item {
     // and Keep would reconfigure it a third time.
     if (state !== "idle" || workspaceData.pending || migrationPhase) return "busy"
     if (["scale", "mode"].indexOf(key) === -1) return "invalid"
+    var display = displayDraft.find(function(item) { return item.name === name })
+    if (display && display[key] === value) return "ok"
     var before = displayDraft
     if (setDisplayValue(name, key, value) !== "ok") return "invalid"
     try {
@@ -1277,7 +1278,6 @@ Item {
       Quickshell.execDetached(["hyprctl", "reload"])
     }
     refresh(true, function() {
-      updateAssignments()
       applyRuntime()
       if (!config.hideNative && persisted.stockLease) restoreStockLease()
       if (!config.hideDisplay && persisted.displayLease) restoreDisplayLease()
@@ -1500,7 +1500,7 @@ Item {
       lastTopologyMs = Date.now()
       removalGrace.stop()
       if (state === "migrating") topologyDirty = true
-      refresh(true, function() { updateAssignments(); applyRuntime() })
+      refresh(true, function() { applyRuntime() })
       return
     }
     if (name.indexOf("monitorremoved") === 0) {
@@ -1511,7 +1511,6 @@ Item {
         gen += 1
         state = "idle"
       }
-      if (state === "previewing") Quickshell.execDetached(["hyprctl", "reload"])
       removalGrace.interval = config.graceMs
       removalGrace.restart()
       return

@@ -206,10 +206,32 @@ test('scale side control saves directly with one watched apply and no preview co
   h.drain();
   assert.equal(c.state, 'idle');
   assert.equal(c.displayDraft.find(display => display.name === 'A').scale, 2);
+  assert.equal(c.displayDraft.find(display => display.name === 'B').scale, 1);
   assert.equal(h.order.filter(item => item === 'autoreload').length, 1);
   assert.equal(h.order.filter(item => item === 'reload').length, 0,
     'the direct write relies on the watched apply and never forces another reload');
   assert.equal(c.previewSeconds || 0, 0);
+});
+
+test('an unchanged side control performs no write or compositor apply', () => {
+  const h = harness();
+  assert.equal(h.c.applyDisplaySetting('A', 'scale', 1), 'ok');
+  h.drain();
+  assert.equal(h.c.keepStarted, undefined);
+  assert.deepEqual(h.order, []);
+});
+
+test('runtime reconciliation leaves matching monitor rules alone', () => {
+  const h = harness();
+  h.c.applyRuntime(); h.drain();
+  assert.deepEqual(h.monitorCalls, []);
+  h.c.config.mode = 'single';
+  h.c.config.singleTarget = 'A';
+  h.c.applyRuntime(); h.drain();
+  assert.deepEqual(h.monitorCalls.map(call => call.name), ['B']);
+  h.monitorCalls.length = 0;
+  h.c.applyRuntime(); h.drain();
+  assert.deepEqual(h.monitorCalls, []);
 });
 
 test('Single HDMI Keep preserves the accepted topology without re-announcing eDP', () => {
