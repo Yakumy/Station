@@ -13,7 +13,8 @@ preserve work already in progress.
 - [Platform findings](docs/PLATFORM-FINDINGS.md): observed Omarchy, Hyprland,
   Quickshell, and hardware behavior. Read §0 for evidence tags and §11 for
   known traps. Check §13's stack fingerprint before relying on old findings.
-  Do not repeat a `[LIVE]` experiment just to rediscover a documented result.
+  Do not repeat a `[LIVE]` experiment just to rediscover a documented result,
+  unless a changed code path needs a regression check.
   `[SRC]` is a source observation, `[QTTEST]` uses an isolated Qt harness,
   and `[INFER]` is not a confirmed hardware result.
 - [Architecture](docs/ARCHITECTURE.md) and [README](README.md): current module
@@ -23,9 +24,10 @@ preserve work already in progress.
   routine tests.
 
 Some examples and early plans in the spec predate later findings and repairs.
-Use the verified findings and current implementation/tests for those details;
-preserve the spec's behavioral and safety contracts. If a change invalidates a
-documented fact or contract, update the relevant document in the same change.
+The spec's behavioral and safety contracts remain authoritative. If a verified
+later finding, the current implementation, or a test disagrees with the spec,
+do not silently choose one: determine whether it is a documented revision or a
+bug, then reconcile the affected documents in the same change.
 
 ## Repository shape and invariants
 
@@ -39,9 +41,10 @@ documented fact or contract, update the relevant document in the same change.
   `Recovery.js` contain fixed shell templates with positional arguments.
 - A station has one workspace per active managed output:
   `(station - 1) * activeOutputCount + outputIndex + 1`. A saved output mapping
-  decodes existing workspace IDs. Single and Mirror have one active output;
-  at most three independent outputs are managed. Physical identity, preferred
-  lane, current output slot, and displayed role are different concepts.
+  decodes existing workspace IDs. Single and Mirror have one station-bearing
+  output (a mirrored sink may still be physically enabled); at most three
+  independent outputs are managed. Physical identity, preferred lane, current
+  output slot, and displayed role are different concepts.
 - Window migrations are journaled in `workspace-map.json`. Wait for the
   FileView save acknowledgment before moving windows; preserve the old mapping
   until verification and commit. Resume interrupted migrations by saved window
@@ -54,10 +57,11 @@ documented fact or contract, update the relevant document in the same change.
   focusing a survivor, and receiving the panel acknowledgment. Never leave
   zero real outputs. Scale, Resolution, and Refresh are discrete side controls
   that save directly through the safe file transaction without a preview.
-- Keep writes only Station's marked block at the end of
-  `~/.config/hypr/monitors.lua`: backup, atomic replacement, watched Hyprland
-  apply, `hyprctl configerrors`, rollback on failure. A successful watched
-  apply must not also force a second reload or replay unchanged monitor rules.
+- Keep changes only Station's marked block at the end of
+  `~/.config/hypr/monitors.lua`, while the transaction atomically replaces the
+  whole file: backup, marker-checked replacement, watched Hyprland apply,
+  `hyprctl configerrors`, rollback on failure. A successful watched apply must
+  not also force a second reload or replay unchanged monitor rules.
   Recovery/rollback and removal still reload when required. `configreloaded`
   clears runtime binds and workspace rules; reapply them once per generation,
   with the existing debounce and expected-event handling.
@@ -132,6 +136,9 @@ documented fact or contract, update the relevant document in the same change.
    backups before changing it. Keep the preview watchdog and rollback path
    intact. Record what was actually tested versus inferred; restore the
    original desktop state after an experiment.
+4. Before a requested commit, inspect the complete diff, stage only the files
+   belonging to the task, and inspect the staged diff. Commit or amend only
+   when the user requested it; never push.
 
 ## Installed plugin workflow on this machine
 
@@ -141,13 +148,21 @@ documented fact or contract, update the relevant document in the same change.
   current origin is a local `file://` URL to this repository; verify that
   before using it. Keep both on `dev` and do not push.
 - When the user asks for an installed update, finish and verify the source
-  change first, commit if requested, then run
-  `omarchy plugin update yakumy.station --yes` for a clean fast-forwardable
-  installed checkout.
-  Copying uncommitted files there makes it dirty and blocks that updater. An
-  amended source commit is not fast-forwardable: inspect/clean only known
-  agent-created edits, fetch the local `dev`, then move the clean installed
-  `dev` checkout to that exact commit. Never discard unknown installed edits.
+  change first. The stock updater can install only committed source: it fetches
+  the source checkout's current `HEAD` and runs `merge --ff-only`. If the user
+  has not also authorized a commit, explain that requirement and ask rather
+  than copying uncommitted files into the installed checkout. For an ordinary
+  committed descendant, run
+  `omarchy plugin update yakumy.station --yes`, then verify both revisions and
+  statuses again.
+- Never amend merely to make installation convenient. If the user explicitly
+  requests both an amend and an installed update, the installed checkout's old
+  commit will normally diverge and the stock updater will refuse it. Verify
+  that the installed checkout is clean, still uses the expected local origin,
+  and contains no unknown work; fetch that origin and obtain any approval
+  required by the harness before moving **only the installed checkout's**
+  `dev` branch to the exact fetched source commit. Never discard unknown edits,
+  delete/reclone the checkout, or use a broad destructive command as a shortcut.
 - A plugin rescan or file watch may leave an old Quickshell component cached.
   If the UI still shows old text/geometry, compare installed files to source,
   inspect the running shell's start time, then run `omarchy restart shell`

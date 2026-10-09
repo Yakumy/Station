@@ -87,8 +87,9 @@ displays. Windows from a removed display merge into a survivor in the same
 station. Workspace numbers compact or expand; a returning display starts with
 empty workspaces. For example, single-display workspace 3 becomes workspace 5
 on the original display when extending to two displays. Explicit Single and
-Mirror modes use one workspace per station. Preview does not renumber windows;
-Keep commits the mode and then migrates them.
+Mirror modes use one workspace per station. A topology preview immediately
+migrates windows to the temporary compact mapping; Revert restores the original
+mapping, while Keep commits the accepted one.
 
 ```bash
 omarchy plugin update yakumy.station
