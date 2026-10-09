@@ -19,6 +19,9 @@ Pure modules under `lib/` isolate policy from QML:
   determines their meaning.
 - `Model.js` owns stable display preferences, monitor-ID normalization, direction
   navigation, monitor geometry, and exact display mode selection.
+- `PanelPosition.js` computes the host KeyboardPanel gap needed to center the
+  panel card on the selected output while keeping its existing focus and
+  dismissal behavior.
 - `Hypr.js` validates connectors, addresses, and workspace numbers before
   producing Lua. It is the only module that generates workspace and window
   dispatches.

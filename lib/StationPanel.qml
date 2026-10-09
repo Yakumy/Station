@@ -7,6 +7,7 @@ import qs.Ui as Ui
 import qs.Commons
 import "Model.js" as Model
 import "Binds.js" as Binds
+import "PanelPosition.js" as PanelPosition
 import "." as Station
 
 Ui.Panel {
@@ -40,6 +41,7 @@ Ui.Panel {
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
   readonly property string pluginVersion: "2.0.0"
+  readonly property real desiredPanelWidth: Style.space(996)
 
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
   // these; nothing below this block hardcodes a colour, radius or step.
@@ -579,12 +581,17 @@ Ui.Panel {
     anchorItem: logoButton
     owner: popoutOwner
     bar: root.bar
+    centerOnBar: root.service && root.service.config.panelPosition === "center"
+    gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barW, barH,
+      root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
+        ? content.implicitHeight + verticalContentInset : 0,
+      margin, Style.gapsOut) : Style.gapsOut
     open: root.opened
     focusTarget: keyCatcher
     padding: 0
     // The reference's wider two-column canvas is approximately 830 logical
     // pixels at the current font scale. The host still caps this to the screen.
-    contentWidth: panel.fittedContentWidth(Style.space(996))
+    contentWidth: panel.fittedContentWidth(root.desiredPanelWidth)
     contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     Ui.PanelKeyCatcher {

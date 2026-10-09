@@ -369,7 +369,7 @@ Displays tab:
 
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 
-Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Grace delay, Minimum stations, installed version.
+Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Follow focus, Grace delay, Minimum stations, installed version. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
 
 **Theme tokens** (`import qs.Commons`, `import qs.Ui`):
 
@@ -397,7 +397,7 @@ CI check: fail on any hex colour (including short and alpha forms) and on symlin
 
 Files:
 
-- `~/.config/omarchy/station/config.json`: identities and preferred lanes, mode preferences, enabled set, direction, follow-focus, grace delay, minStations, custom keybindings, hideNative, hideDisplay.
+- `~/.config/omarchy/station/config.json`: identities and preferred lanes, mode preferences, enabled set, direction, follow-focus, grace delay, minStations, custom keybindings, hideNative, hideDisplay, panelPosition.
 - `~/.local/state/omarchy/station/state.json`: last station, applied binds, workspace/display stock leases, pending transaction, version.
 - `~/.local/state/omarchy/station/preview.token`.
 

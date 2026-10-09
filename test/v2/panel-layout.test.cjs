@@ -52,9 +52,10 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
   assert.match(displays, /scaleOptions: \[1, 1\.25, 1\.6, 2, 3, 4\]/);
   assert.match(displays, /resolutionOptions\.length/);
   assert.match(displays, /refreshOptions\.length/);
-  const width = panel.match(/fittedContentWidth\(Style\.space\((\d+)\)\)/);
+  const width = panel.match(/desiredPanelWidth:\s*Style\.space\((\d+)\)/);
   assert.ok(width, 'panel width is a Style.space request');
   assert.ok(Number(width[1]) >= 996, `panel requests ${width[1]} theme units`);
+  assert.match(panel, /fittedContentWidth\(root\.desiredPanelWidth\)/);
 });
 
 test('bar logo shares the Omarchy menu foreground and size token', () => {

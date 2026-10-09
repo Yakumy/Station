@@ -68,6 +68,8 @@ watchdog also restores it if the shell crashes.
 
 Text size is global: it changes Omarchy shell, GTK, and terminal fonts on all
 displays. Use Scale to change the size of text and UI on only the selected monitor.
+In Settings, **Panel opening position** chooses whether the Station panel opens
+beside its bar icon (Left) or in the center of that monitor (Center).
 
 Kept layouts are written as a marked block at the end of
 `~/.config/hypr/monitors.lua`. Station backs up the file, writes atomically,

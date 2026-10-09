@@ -101,6 +101,43 @@ Column {
       anchors.left: parent.left
       anchors.leftMargin: settingsTab.panelRoot.space3
       anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - settingsTab.panelRoot.space6 - panelPositionValue.width
+      text: "Panel opening position"
+      elide: Text.ElideRight
+      color: settingsTab.panelRoot.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+    }
+    Ui.Dropdown {
+      id: panelPositionValue
+      anchors.right: parent.right
+      anchors.rightMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: Style.space(130)
+      showLabel: false
+      value: settingsTab.panelRoot.service ? settingsTab.panelRoot.service.config.panelPosition : "left"
+      options: [{ value: "left", label: "Left" }, { value: "center", label: "Center" }]
+      foreground: settingsTab.panelRoot.textPrimary
+      onChanged: function(value) {
+        if (settingsTab.panelRoot.service) settingsTab.panelRoot.service.setSetting("panelPosition", value)
+      }
+    }
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  Item {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    height: Style.space(48)
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
       width: parent.width - settingsTab.panelRoot.space6 - graceValue.width
       text: "Grace delay before merging windows after unplug"
       elide: Text.ElideRight

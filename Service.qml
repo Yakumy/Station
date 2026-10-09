@@ -1400,7 +1400,11 @@ Item {
       }
       return "ok"
     }
-    if (name === "followFocus") config.followFocus = !!value
+    if (name === "panelPosition") {
+      if (value !== "left" && value !== "center") return "invalid"
+      config.panelPosition = value
+    }
+    else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
       var grace = Number(value)
       config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 5000
@@ -1829,6 +1833,7 @@ Item {
       lastWindowAction: root.lastWindowAction,
       monitors: root.monitors, bindStatuses: root.bindStatuses, panelWanted: root.panelWanted,
       panelScreenName: root.panelScreenName, previewBusy: root.previewBusy, previewSeconds: root.previewSeconds,
+      panelPosition: root.config.panelPosition,
       panelEvacuationWaiting: root.panelEvacuationWaiting,
       draftMode: root.draftMode, savedMode: root.config.mode, singleTarget: root.draftSingleTarget,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
