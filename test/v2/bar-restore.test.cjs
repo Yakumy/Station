@@ -14,7 +14,7 @@ function restoreBody() {
 }
 
 function restoreDisplayBody() {
-  const match = service.match(/function restoreDisplayLease\(\) \{([\s\S]*?)\n {2}\}/);
+  const match = service.match(/function restoreDisplayLease\(forceShow\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(match, 'restoreDisplayLease is defined');
   return match[1];
 }
@@ -52,13 +52,77 @@ test('unload cleanup returns the indicator to its recorded spot', () => {
 test('Display widget returns only through its recorded lease', () => {
   const body = restoreDisplayBody();
   assert.match(body, /"enable", "omarchy\.monitor"/);
-  assert.match(body, /"move", "omarchy\.monitor", "--section", lease\.section/);
-  assert.match(body, /"--index", String\(lease\.index\)/);
-  assert.match(body, /if \(moveCode !== 0\) return/);
-  assert.ok(body.indexOf('moveCode !== 0') < body.indexOf('displayLease = null'),
-    'the lease remains available when placement restoration fails');
+  assert.match(body, /"move", "omarchy\.monitor", "--section", place\.section/);
+  assert.match(body, /"--index", String\(place\.index\)/);
+  assert.match(body, /if \(moveCode === 0 && lease\)/);
   assert.match(R.cleanup,
     /omarchy bar move omarchy\.monitor --section "\$display_section" --index "\$display_index"/);
+});
+
+test('explicit Show enables a previously hidden Display without creating a removal lease', () => {
+  const commands = [];
+  let stateSaves = 0;
+  const context = {
+    config: { hideDisplay: false },
+    persisted: { displayLease: null },
+    displayDisable: { running: false },
+    displayShowPending: false,
+    leaseVerify: { restart() {} },
+    enqueue(command, done) { commands.push(command); done(0); },
+    saveState() { stateSaves++; },
+  };
+  context.root = context;
+  const restore = serviceFunction('restoreDisplayLease', context);
+  restore();
+  assert.equal(commands.length, 0, 'startup does not enable an unleased widget');
+  restore(true);
+  assert.deepEqual(JSON.parse(JSON.stringify(commands)), [
+    ['omarchy', 'plugin', 'enable', 'omarchy.monitor'],
+    ['omarchy', 'bar', 'move', 'omarchy.monitor', '--section', 'right', '--index', '5'],
+  ]);
+  assert.equal(context.persisted.displayLease, null);
+  assert.equal(stateSaves, 0, 'explicit Show creates no removal lease');
+});
+
+test('explicit Show overrides a disabled-before-Station Display lease', () => {
+  const commands = [];
+  const lease = { wasEnabled: false, disabledByStation: false, section: 'left', index: 2 };
+  const context = {
+    config: { hideDisplay: false },
+    persisted: { displayLease: lease },
+    displayDisable: { running: false },
+    displayShowPending: false,
+    leaseVerify: { restart() {} },
+    enqueue(command, done) { commands.push(command); done(0); },
+    saveState() {},
+  };
+  context.root = context;
+  serviceFunction('restoreDisplayLease', context)(true);
+  assert.deepEqual(JSON.parse(JSON.stringify(commands[1])),
+    ['omarchy', 'bar', 'move', 'omarchy.monitor', '--section', 'left', '--index', '2']);
+  assert.equal(context.persisted.displayLease, null);
+});
+
+test('explicit Show waits for an in-flight Display disable', () => {
+  const commands = [];
+  const context = {
+    config: { hideDisplay: false },
+    persisted: { displayLease: null },
+    displayDisable: { running: true },
+    displayShowPending: false,
+    leaseVerify: { restart() {} },
+    enqueue(command, done) { commands.push(command); done(0); },
+    saveState() {},
+  };
+  context.root = context;
+  const restore = serviceFunction('restoreDisplayLease', context);
+  restore(true);
+  assert.equal(context.displayShowPending, true);
+  assert.equal(commands.length, 0);
+  context.displayDisable.running = false;
+  restore(true);
+  assert.equal(commands.length, 2);
+  assert.equal(context.displayShowPending, false);
 });
 
 test('workspace and Display leases preserve ownership and serialize bar rebuilds', () => {
@@ -76,6 +140,7 @@ test('workspace and Display leases preserve ownership and serialize bar rebuilds
     displayDisable: { running: false },
     stockDisableAttempts: 0,
     displayDisableAttempts: 0,
+    displayWidgetEnabled: null,
     saveState() { saves++; },
   };
   const handle = serviceFunction('handleStockPlugins', context);
@@ -98,4 +163,32 @@ test('workspace and Display leases preserve ownership and serialize bar rebuilds
   ]));
   assert.equal(context.displayDisable.running, true);
   assert.equal(context.displayDisableAttempts, 1);
+});
+
+test('Display presence is observed even when Station is not hiding it', () => {
+  const context = {
+    config: { hideNative: false, hideDisplay: false },
+    persisted: { stockLease: null, displayLease: null },
+    parseJson: JSON.parse,
+    displayWidgetEnabled: null,
+    saveState() { throw new Error('no lease should be saved'); },
+  };
+  serviceFunction('handleStockPlugins', context)(JSON.stringify([
+    { id: 'omarchy.monitor', enabled: false },
+  ]));
+  assert.equal(context.displayWidgetEnabled, false);
+  assert.equal(context.persisted.displayLease, null);
+});
+
+test('Settings can refresh Display presence only after Station starts', () => {
+  const context = {
+    started: false,
+    pluginList: { running: false },
+  };
+  const refresh = serviceFunction('acquireStockLeases', context);
+  refresh();
+  assert.equal(context.pluginList.running, false);
+  context.started = true;
+  refresh();
+  assert.equal(context.pluginList.running, true);
 });

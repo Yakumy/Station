@@ -49,6 +49,8 @@ Item {
   property string personalBindingsText: ""
   property int stockDisableAttempts: 0
   property int displayDisableAttempts: 0
+  property var displayWidgetEnabled: null
+  property bool displayShowPending: false
   // The bar rebuilds our widget when its layout entries change (a plugin
   // enable/disable, a widget move) and whenever an output reconfigures, and
   // the panel window dies with the widget. The widget writes its open state
@@ -1303,7 +1305,7 @@ Item {
   }
 
   function acquireStockLeases() {
-    if ((!config.hideNative && !config.hideDisplay) || pluginList.running) return
+    if (!started || pluginList.running) return
     pluginList.running = true
   }
 
@@ -1338,17 +1340,28 @@ Item {
     }
   }
 
-  function restoreDisplayLease() {
+  function restoreDisplayLease(forceShow) {
+    if (forceShow) displayShowPending = true
+    if (displayDisable.running) return
     var lease = persisted.displayLease
-    if (!lease) return
-    if (lease.disabledByStation && lease.wasEnabled) {
+    if (!lease && !forceShow) return
+    if (forceShow || (lease && lease.disabledByStation && lease.wasEnabled)) {
+      var place = lease || { section: "right", index: 5 }
       enqueue(["omarchy", "plugin", "enable", "omarchy.monitor"], function(code) {
-        if (code !== 0) return
-        root.enqueue(["omarchy", "bar", "move", "omarchy.monitor", "--section", lease.section,
-          "--index", String(lease.index)], function(moveCode) {
-          if (moveCode !== 0) return
-          root.persisted.displayLease = null
-          root.saveState()
+        if (code !== 0) { root.displayShowPending = false; leaseVerify.restart(); return }
+        if (root.config.hideDisplay) {
+          root.displayShowPending = false
+          root.acquireStockLeases()
+          return
+        }
+        root.enqueue(["omarchy", "bar", "move", "omarchy.monitor", "--section", place.section,
+          "--index", String(place.index)], function(moveCode) {
+          if (moveCode === 0 && lease) {
+            root.persisted.displayLease = null
+            root.saveState()
+          }
+          root.displayShowPending = false
+          leaseVerify.restart()
         })
       })
     } else {
@@ -1377,10 +1390,13 @@ Item {
       config = Object.assign({}, config)
       saveConfig()
       if (config.hideDisplay) {
+        displayShowPending = false
         displayDisableAttempts = 0
         acquireStockLeases()
       } else {
-        restoreDisplayLease()
+        // A deliberate Show also enables a widget that was hidden before
+        // Station acquired it. Startup/removal still respect lease ownership.
+        restoreDisplayLease(true)
       }
       return "ok"
     }
@@ -1412,6 +1428,8 @@ Item {
   function handleStockPlugins(raw) {
     var list = parseJson(raw, [])
     var changed = false
+    var displayEntry = list.find(function(item) { return item.id === "omarchy.monitor" })
+    if (displayEntry) displayWidgetEnabled = !!displayEntry.enabled
     if (config.hideNative) {
       var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
       var workspaceEnabled = !!(workspaceEntry && workspaceEntry.enabled)
@@ -1433,9 +1451,14 @@ Item {
       }
     }
     if (config.hideDisplay) {
-      var displayEntry = list.find(function(item) { return item.id === "omarchy.monitor" })
       var displayEnabled = !!(displayEntry && displayEntry.enabled)
       if (persisted.displayLease) {
+        if (!persisted.displayLease.disabledByStation && displayEnabled) {
+          var renewedPlace = barPlacement("omarchy.monitor") || persisted.displayLease
+          persisted.displayLease = { wasEnabled: true, section: renewedPlace.section,
+            index: renewedPlace.index, disabledByStation: true }
+          changed = true
+        }
         if (persisted.displayLease.disabledByStation && displayEnabled
             && displayDisableAttempts < 3 && !displayDisable.running && !stockDisable.running) {
           displayDisableAttempts += 1
@@ -1731,7 +1754,10 @@ Item {
     id: displayDisable
     command: ["omarchy", "plugin", "disable", "omarchy.monitor"]
     stdout: StdioCollector { waitForEnd: true }
-    onExited: leaseVerify.restart()
+    onExited: {
+      if (root.displayShowPending && !root.config.hideDisplay) root.restoreDisplayLease(true)
+      leaseVerify.restart()
+    }
   }
 
   Timer {
@@ -1807,6 +1833,7 @@ Item {
       draftMode: root.draftMode, savedMode: root.config.mode, singleTarget: root.draftSingleTarget,
       stockLease: root.persisted.stockLease, stockDisableAttempts: root.stockDisableAttempts,
       stockDisableRunning: stockDisable.running, displayLease: root.persisted.displayLease,
-      displayDisableAttempts: root.displayDisableAttempts, displayDisableRunning: displayDisable.running }) }
+      displayDisableAttempts: root.displayDisableAttempts, displayDisableRunning: displayDisable.running,
+      displayWidgetEnabled: root.displayWidgetEnabled }) }
   }
 }

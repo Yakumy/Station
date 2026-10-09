@@ -7,6 +7,8 @@ Column {
   required property var panelRoot
   readonly property real inset: panelRoot.regionPadH
   spacing: 0
+  onVisibleChanged: if (visible && panelRoot && panelRoot.service)
+    panelRoot.service.acquireStockLeases()
 
   component PlainToggleRow: Item {
     property string label: ""
@@ -66,7 +68,8 @@ Column {
 
   PlainToggleRow {
     label: "Hide Omarchy's Display icon"
-    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.hideDisplay
+    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideDisplay
+      || settingsTab.panelRoot.service.displayWidgetEnabled === false)
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("hideDisplay", !checked)
   }
