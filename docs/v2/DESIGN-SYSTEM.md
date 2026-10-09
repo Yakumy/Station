@@ -102,7 +102,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
 
-**Toggle** (Settings: Hide indicator, Follow focus): **[V] Resolved — `Ui.Toggle` exists and Settings already uses it correctly.** No further action needed here; do not replace it with a chip or anything else.
+**Toggle** (Settings: Hide indicator, Follow focus): use the host `Ui.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses the same `Style.space(48)` height and body label style as dropdown rows. Set the switch track to `Style.spacing.controlHeight` so it matches the dropdown trigger height; the row owns clicks and keyboard activation. Do not replace the switch with a chip.
 
 **[DECISION, signed off] Secondary vs. primary Action.** §1 says every Action is filled, but a screen can have more than one Action at once (Keep + Revert; Pick another key + Replace and unbind it), and making both equally heavy loses the sense of which one actually commits. Settled rule: the *one* action that commits a consequential change (Keep; Apply; Replace and unbind it) is filled per §1; a same-row action that only cancels or defers (Revert; Pick another key) is neutral-bordered — `Border.controlSpec("normal", …)` border, `Color.popups.text`, no fill — so the eye finds the committing action first. This is now final: one filled commit Action per screen, its cancel/defer partner neutral.
 

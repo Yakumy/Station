@@ -8,15 +8,52 @@ Column {
   readonly property real inset: panelRoot.regionPadH
   spacing: 0
 
-  Item { width: 1; height: settingsTab.inset }
+  component PlainToggleRow: Item {
+    property string label: ""
+    property bool checked: false
+    signal clicked()
 
-  Ui.Toggle {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
+    height: Style.space(48)
+    activeFocusOnTab: true
+    Keys.onReturnPressed: clicked()
+    Keys.onEnterPressed: clicked()
+    Keys.onSpacePressed: clicked()
+
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - settingsTab.panelRoot.space6 - toggleSwitch.width
+      text: parent.label
+      elide: Text.ElideRight
+      color: settingsTab.panelRoot.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+    }
+    Ui.ToggleSwitch {
+      id: toggleSwitch
+      anchors.right: parent.right
+      anchors.rightMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
+      trackHeight: Style.spacing.controlHeight
+      checked: parent.checked
+      foreground: settingsTab.panelRoot.textPrimary
+      interactive: false
+    }
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: parent.clicked()
+    }
+  }
+
+  Item { width: 1; height: settingsTab.inset }
+
+  PlainToggleRow {
     label: "Hide Omarchy's workspace indicator"
-    titleSize: Style.font.body
     checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.hideNative
-    foreground: settingsTab.panelRoot.textPrimary
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("hideNative", !checked)
   }
@@ -27,13 +64,9 @@ Column {
     foreground: Color.popups.text
   }
 
-  Ui.Toggle {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
+  PlainToggleRow {
     label: "Hide Omarchy's Display icon"
-    titleSize: Style.font.body
     checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.hideDisplay
-    foreground: settingsTab.panelRoot.textPrimary
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("hideDisplay", !checked)
   }
@@ -44,13 +77,9 @@ Column {
     foreground: Color.popups.text
   }
 
-  Ui.Toggle {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
+  PlainToggleRow {
     label: "Follow focus (keep monitors on the same station)"
-    titleSize: Style.font.body
     checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.followFocus
-    foreground: settingsTab.panelRoot.textPrimary
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("followFocus", !checked)
   }

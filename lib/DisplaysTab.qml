@@ -36,14 +36,25 @@ Column {
   }
 
   component ControlMessage: Text {
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.left: parent.left
+    anchors.leftMargin: displayTab.gutter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: displayTab.panelRoot.space1
     width: parent.width - displayTab.gutter * 2
     visible: text !== ""
-    horizontalAlignment: Text.AlignHCenter
+    horizontalAlignment: Text.AlignLeft
     wrapMode: Text.NoWrap
     elide: Text.ElideRight
+    color: displayTab.panelRoot.textDim
+    font.family: Style.font.family
+    font.pixelSize: Style.font.caption
+  }
+
+  component ControlLabel: Text {
+    anchors.left: parent.left
+    anchors.leftMargin: displayTab.gutter
+    anchors.top: parent.top
+    anchors.topMargin: displayTab.gutter
     color: displayTab.panelRoot.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
@@ -162,15 +173,8 @@ Column {
           Item {
             width: parent.width
             height: controlFrame.height / 5
-            Text {
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.top: parent.top
-              anchors.topMargin: displayTab.gutter
+            ControlLabel {
               text: "BRIGHTNESS"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
             }
             Text {
               anchors.right: parent.right
@@ -207,15 +211,8 @@ Column {
           Item {
             width: parent.width
             height: controlFrame.height / 5
-            Text {
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.top: parent.top
-              anchors.topMargin: displayTab.gutter
+            ControlLabel {
               text: "TEXT SIZE (ALL DISPLAYS)"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
             }
             Text {
               anchors.right: parent.right
@@ -251,15 +248,8 @@ Column {
           Item {
             width: parent.width
             height: controlFrame.height / 5
-            Text {
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.top: parent.top
-              anchors.topMargin: displayTab.gutter
+            ControlLabel {
               text: "SCALE"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
             }
             Text {
               anchors.right: parent.right
@@ -300,15 +290,8 @@ Column {
           Item {
             width: parent.width
             height: controlFrame.height / 5
-            Text {
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.top: parent.top
-              anchors.topMargin: displayTab.gutter
+            ControlLabel {
               text: "RESOLUTION"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
             }
             Text {
               anchors.right: parent.right
@@ -358,15 +341,8 @@ Column {
           Item {
             width: parent.width
             height: controlFrame.height / 5
-            Text {
-              anchors.left: parent.left
-              anchors.leftMargin: displayTab.gutter
-              anchors.top: parent.top
-              anchors.topMargin: displayTab.gutter
+            ControlLabel {
               text: "REFRESH RATE"
-              color: displayTab.panelRoot.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
             }
             Text {
               anchors.right: parent.right

@@ -260,7 +260,7 @@ Ui.BorderSurface {
     spacing: Style.spacing.sm
     z: 5
     Repeater {
-      model: [{ glyph: "󰍴", factor: 1 / 1.2 }, { glyph: "󰍶", factor: 1.2 }]
+      model: [{ glyph: "-", factor: 1 / 1.2 }, { glyph: "+", factor: 1.2 }]
       delegate: Item {
         required property var modelData
         width: Style.space(23)

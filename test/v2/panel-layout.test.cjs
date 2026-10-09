@@ -30,6 +30,20 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(settings, /Installed version/);
 });
 
+test('display notices, labels, zoom buttons and settings switches share the intended alignment and size', () => {
+  const displays = read('lib/DisplaysTab.qml');
+  const layout = read('lib/DisplayLayout.qml');
+  const settings = read('lib/SettingsTab.qml');
+
+  assert.match(displays, /component ControlMessage: Text \{[\s\S]*?anchors\.left: parent\.left[\s\S]*?horizontalAlignment: Text\.AlignLeft/);
+  assert.equal((displays.match(/ControlLabel \{\s*text: "(?:BRIGHTNESS|TEXT SIZE \(ALL DISPLAYS\)|SCALE|RESOLUTION|REFRESH RATE)"/g) || []).length, 5);
+  assert.match(layout, /glyph: "-", factor: 1 \/ 1\.2 \}, \{ glyph: "\+", factor: 1\.2/);
+  assert.match(settings, /component PlainToggleRow: Item \{/);
+  assert.match(settings, /height: Style\.space\(48\)/);
+  assert.match(settings, /Ui\.ToggleSwitch \{[\s\S]*?trackHeight: Style\.spacing\.controlHeight[\s\S]*?interactive: false/);
+  assert.doesNotMatch(settings, /Ui\.Toggle\s*\{/);
+});
+
 test('larger panel reserves the reference canvas and discrete slider stops', () => {
   const panel = read('lib/StationPanel.qml');
   const displays = read('lib/DisplaysTab.qml');
