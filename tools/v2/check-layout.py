@@ -37,10 +37,10 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var spacing: ({xs: 3, sm: 4, md: 8, xxs: 2, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
+  property var spacing: ({xs: 3, sm: 4, md: 8, xxs: 2, xxl: 12, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
   property int cornerRadius: 0
   property int normalBorderWidth: 1
-  property var font: ({family: "monospace", caption: 12, body: 12, title: 14})
+  property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
   function space(n) { return n * 5 / 6 }
 }
 ''')
@@ -102,6 +102,9 @@ Item {
     function initTestCase() { failOnWarning(/.*/) }
     function init() {
       service.state = "idle"
+      panelScroll.cancelFlick()
+      panelScroll.contentY = 0
+      layout.selectedDisplayName = ""
       layout.zoomFactor = 1; layout.panX = 0; layout.panY = 0
       service.displayDraft = [
         {name:"eDP-1", x:0, y:1200, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
@@ -180,6 +183,101 @@ Item {
         verify(target.y >= layout.inset - 0.01)
         verify(target.y + target.height <= layout.height - layout.inset + 0.01)
       }
+    }
+    function test_rotation_handles_hover_diagonally_outside_all_four_corners() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      layout.selectedDisplayName = "eDP-1"
+      wait(10)
+      var selected = card("eDP-1"), neighbor = card("HDMI-A-2")
+      var toolbar = findChild(layout, "rotationTools")
+      var corners = ["rotateTopLeft", "rotateTopRight", "rotateBottomLeft", "rotateBottomRight"]
+      var handles = corners.map(function(name) { return findChild(toolbar, name) })
+      for (var handle of handles) verify(handle !== null)
+      verify(toolbar.z > selected.z && toolbar.z > neighbor.z,
+        "Rotation controls must paint above neighboring cards")
+      mouseMove(layout, 10, 10)
+      for (var handle of handles) verify(!findChild(handle, "rotationIcon").visible,
+        "Icons must stay hidden away from corners")
+      for (var i = 0; i < handles.length; i++) {
+        if (i === 2) {
+          panelScroll.contentY = Math.max(0,
+            selected.y + selected.height + toolbar.outerExtent - panelScroll.height + 10)
+          wait(10)
+        }
+        var handle = handles[i]
+        var icon = findChild(handle, "rotationIcon")
+        var iconTop = icon.mapToItem(layout, 0, 0)
+        var right = i % 2 === 1, bottom = i >= 2
+        if (right) verify(iconTop.x >= selected.x + selected.width,
+          "Right rotation icon belongs diagonally outside the card")
+        else verify(iconTop.x + icon.width <= selected.x,
+          "Left rotation icon belongs diagonally outside the card")
+        if (bottom) verify(iconTop.y >= selected.y + selected.height,
+          "Bottom rotation icon belongs diagonally outside the card")
+        else verify(iconTop.y + icon.height <= selected.y,
+          "Top rotation icon belongs diagonally outside the card")
+        verify(iconTop.y >= 0 && iconTop.y + icon.height <= layout.height,
+          "Rotation icon must stay within the canvas at fit zoom")
+        var corner = Qt.point(
+          selected.x + (right ? selected.width - toolbar.reachX / 2 : toolbar.reachX / 2),
+          selected.y + (bottom ? selected.height - toolbar.reachY / 2 : toolbar.reachY / 2))
+        mouseMove(layout, corner.x, corner.y)
+        verify(icon.visible, corners[i] + " should reveal on hover")
+        var iconCenter = icon.mapToItem(layout, icon.width / 2, icon.height / 2)
+        mouseMove(layout, iconCenter.x, iconCenter.y)
+        verify(icon.visible, "Icon stays visible while moving diagonally out to click it")
+        mouseMove(layout, 10, panelScroll.contentY + 10)
+        verify(!icon.visible, "Icon hides again when the pointer leaves")
+      }
+      panelScroll.contentY = 0
+      wait(10)
+      var clockwise = handles[1]
+      var clockwiseIcon = findChild(clockwise, "rotationIcon")
+      var hit = clockwiseIcon.mapToItem(layout, clockwiseIcon.width / 2, clockwiseIcon.height / 2)
+      mouseMove(layout, selected.x + selected.width - toolbar.reachX / 2,
+        selected.y + toolbar.reachY / 2)
+      mouseMove(layout, hit.x, hit.y)
+      verify(clockwiseIcon.visible)
+      mouseClick(layout, hit.x, hit.y)
+      compare(service.previews, 1, "External handle remains clickable")
+      compare(service.displayDraft[0].transform, 1)
+      compare(toolbar.selectedCard, card("eDP-1"),
+        "Rotation overlay must follow a replaced monitor delegate")
+    }
+    function test_rotation_handle_over_taller_neighbor_remains_clickable() {
+      service.displayDraft = [
+        {name:"HDMI-A-2", x:0, y:0, width:1920, height:2160, scale:1, transform:0, enabled:true, lane:1},
+        {name:"eDP-1", x:1920, y:800, width:720, height:1280, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      layout.selectedDisplayName = "eDP-1"
+      wait(10)
+      var selected = card("eDP-1"), neighbor = card("HDMI-A-2")
+      var counterclockwise = findChild(layout, "rotateTopLeft")
+      var icon = findChild(counterclockwise, "rotationIcon")
+      var toolbar = findChild(layout, "rotationTools")
+      var corner = Qt.point(selected.x + toolbar.reachX / 2,
+        selected.y + toolbar.reachY / 2)
+      mouseMove(layout, corner.x, corner.y)
+      verify(icon.visible)
+      verify(!findChild(findChild(layout, "rotateTopRight"), "rotationIcon").visible,
+        "Narrow monitor corners must not reveal both icons at once")
+      var hit = icon.mapToItem(layout, icon.width / 2, icon.height / 2)
+      verify(hit.x < neighbor.x + neighbor.width,
+        "Narrow card's external handle must cross the neighbor's edge")
+      verify(hit.y > neighbor.y && hit.y < neighbor.y + neighbor.height,
+        "Handle must overlap the taller neighbor vertically")
+      verify(hit.y < selected.y, "Handle remains above the selected card")
+      compare(layout.childAt(hit.x, hit.y), findChild(layout, "rotationTools"),
+        "Rotation toolbar must be the top hit target")
+      var local = toolbar.mapFromItem(layout, hit.x, hit.y)
+      compare(toolbar.childAt(local.x, local.y), counterclockwise,
+        "Rotation icon must be inside the toolbar hit target")
+      mouseClick(layout, hit.x, hit.y)
+      compare(service.displayDraft[1].transform, 3)
+      compare(service.previews, 1, "Handle must win the hit test over the neighbor")
     }
     function test_zoom_keeps_pointer_position_stable() {
       var target = card("HDMI-A-2")

@@ -117,6 +117,7 @@ Ui.BorderSurface {
   }
 
   Repeater {
+    id: monitorRepeater
     model: canvas.displays
     delegate: Ui.BorderSurface {
       id: monitorCard
@@ -215,39 +216,111 @@ Ui.BorderSurface {
           wheel.accepted = true
         }
       }
-      Repeater {
-        model: [{ label: "↶", delta: -1, right: false }, { label: "↷", delta: 1, right: true }]
-        delegate: Ui.BorderSurface {
-          id: rotationHandle
-          required property var modelData
-          anchors.top: parent.top
-          anchors.topMargin: canvas.panelRoot ? canvas.panelRoot.space1 : Style.spacing.xs
-          anchors.left: modelData.right ? undefined : parent.left
-          anchors.right: modelData.right ? parent.right : undefined
-          anchors.leftMargin: canvas.panelRoot ? canvas.panelRoot.space1 : Style.spacing.xs
-          anchors.rightMargin: canvas.panelRoot ? canvas.panelRoot.space1 : Style.spacing.xs
-          width: Style.space(20)
-          height: Style.space(20)
-          visible: monitorCard.isSelected
-          opacity: rotationPointer.containsMouse ? 1 : 0
-          color: canvas.cardBackground
-          borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-          radius: Style.cornerRadius
-          z: 3
-          Text {
-            anchors.centerIn: parent
-            text: rotationHandle.modelData.label
-            color: Color.popups.text
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
+    }
+  }
+
+  // Controls must be siblings of the cards: QML does not deliver pointer
+  // events to a card's children outside that card's bounds.
+  Item {
+    id: rotationTools
+    objectName: "rotationTools"
+    readonly property var selectedCard: {
+      for (var i = 0; i < monitorRepeater.count; i++) {
+        var card = monitorRepeater.itemAt(i)
+        if (card && card.modelData.name === canvas.selectedDisplayName) return card
+      }
+      return null
+    }
+    readonly property real handleSize: Style.space(32)
+    readonly property real cornerReach: Style.space(30)
+    readonly property real gap: Style.spacing.sm * 0.6
+    readonly property real outerExtent: handleSize + gap
+    readonly property real reachX: Math.min(cornerReach, selectedCard ? selectedCard.width / 2 : cornerReach)
+    readonly property real reachY: Math.min(cornerReach, selectedCard ? selectedCard.height / 2 : cornerReach)
+    width: selectedCard ? selectedCard.width + outerExtent * 2 : 0
+    height: selectedCard ? selectedCard.height + outerExtent * 2 : 0
+    x: selectedCard ? selectedCard.x - outerExtent : 0
+    y: selectedCard ? selectedCard.y - outerExtent : 0
+    visible: selectedCard !== null
+    z: 4
+    Repeater {
+      model: [
+        { delta: -1, right: false, bottom: false, name: "rotateTopLeft" },
+        { delta: 1, right: true, bottom: false, name: "rotateTopRight" },
+        { delta: -1, right: false, bottom: true, name: "rotateBottomLeft" },
+        { delta: 1, right: true, bottom: true, name: "rotateBottomRight" }
+      ]
+      delegate: Item {
+        id: rotationHandle
+        required property var modelData
+        objectName: modelData.name
+        anchors.left: modelData.right ? undefined : parent.left
+        anchors.right: modelData.right ? parent.right : undefined
+        anchors.top: modelData.bottom ? undefined : parent.top
+        anchors.bottom: modelData.bottom ? parent.bottom : undefined
+        width: rotationTools.outerExtent + rotationTools.reachX
+        height: rotationTools.outerExtent + rotationTools.reachY
+        Canvas {
+          objectName: "rotationIcon"
+          anchors.left: rotationHandle.modelData.right ? undefined : parent.left
+          anchors.right: rotationHandle.modelData.right ? parent.right : undefined
+          anchors.top: rotationHandle.modelData.bottom ? undefined : parent.top
+          anchors.bottom: rotationHandle.modelData.bottom ? parent.bottom : undefined
+          width: rotationTools.handleSize
+          height: rotationTools.handleSize
+          visible: rotationPointer.containsMouse
+          property color iconColor: Color.popups.text
+          readonly property real artworkScale: 0.7
+          onIconColorChanged: requestPaint()
+          onPaint: {
+            var context = getContext("2d")
+            context.clearRect(0, 0, width, height)
+            context.save()
+            // Face the arc's open side toward this monitor corner.
+            if (rotationHandle.modelData.right) {
+              context.translate(width, 0)
+              context.scale(-1, 1)
+            }
+            if (rotationHandle.modelData.bottom) {
+              context.translate(0, height)
+              context.scale(1, -1)
+            }
+            // Shrink the artwork while keeping its closest edges to the card fixed.
+            context.translate(width * 0.84 * (1 - artworkScale), height * 0.84 * (1 - artworkScale))
+            context.scale(artworkScale, artworkScale)
+            context.strokeStyle = iconColor
+            context.fillStyle = iconColor
+            context.lineWidth = Math.max(2, Style.normalBorderWidth)
+            context.lineCap = "round"
+            context.lineJoin = "round"
+            // A curved stem with an arrowhead at each end, as in the rotate cursor.
+            context.beginPath()
+            context.moveTo(width * 0.28, height * 0.72)
+            context.lineTo(width * 0.28, height * 0.55)
+            context.quadraticCurveTo(width * 0.28, height * 0.27, width * 0.57, height * 0.27)
+            context.lineTo(width * 0.76, height * 0.27)
+            context.stroke()
+            context.beginPath()
+            context.moveTo(width * 0.14, height * 0.67)
+            context.lineTo(width * 0.28, height * 0.84)
+            context.lineTo(width * 0.42, height * 0.67)
+            context.closePath()
+            context.fill()
+            context.beginPath()
+            context.moveTo(width * 0.66, height * 0.13)
+            context.lineTo(width * 0.84, height * 0.27)
+            context.lineTo(width * 0.66, height * 0.41)
+            context.closePath()
+            context.fill()
+            context.restore()
           }
-          MouseArea {
-            id: rotationPointer
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: canvas.rotateDisplay(monitorCard.modelData, rotationHandle.modelData.delta)
-          }
+        }
+        MouseArea {
+          id: rotationPointer
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: canvas.rotateDisplay(rotationTools.selectedCard.modelData, rotationHandle.modelData.delta)
         }
       }
     }
