@@ -49,9 +49,10 @@ monitor before the grace expires cancels compaction. The first upgrade from
 state version 1 explicitly decodes the previous three-slot grid.
 
 The Keep path writes candidates inside Station's state directory, backs up
-`monitors.lua`, atomically replaces it, reloads Hyprland, and checks
-`hyprctl configerrors`. Failure restores the backup. Disable and removal start
-a detached cleanup that waits through shell restart, distinguishes a still
+`monitors.lua`, atomically replaces it, lets Hyprland's file watcher apply it,
+and checks `hyprctl configerrors`. Failure restores the backup and reloads
+Hyprland for recovery. Disable and removal start a detached cleanup that waits
+through shell restart, distinguishes a still
 enabled plugin, restores the stock widget, replaces mode rules with plain
 geometry, clears the lease, and reloads Hyprland.
 
