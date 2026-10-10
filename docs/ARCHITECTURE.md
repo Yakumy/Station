@@ -28,7 +28,10 @@ Pure modules under `lib/` isolate policy from QML:
 - `Binds.js` defines actions, normalizes key combinations, parses conflict
   sources, and emits idempotent runtime bindings.
 - `MonitorsLua.js` validates layouts and produces the guarded managed block and
-  geometry-only cleanup copy.
+  geometry-only cleanup copy. If cold discovery is empty or the saved survivor
+  is absent, an exclusive fallback applies saved geometry with outputs enabled
+  and unmirrored. Warm reload executes only the combined final-state rules, so
+  a disabled output is not briefly re-enabled by a geometry prepass.
 - `Store.js` owns versioned defaults and bounded migrations.
 - `Transactions.js` and `Recovery.js` contain fixed shell templates. Dynamic
   values reach them only as validated positional arguments.

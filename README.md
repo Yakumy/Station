@@ -111,6 +111,9 @@ cleanup window, run `hyprctl reload` once it returns.
 
 ## Development
 
+The Node tests require `lua` on PATH to execute generated monitor configuration
+with a mocked compositor (CI installs Lua 5.4).
+
 ```bash
 node --test test/m0/*.test.mjs test/v2/*.test.cjs
 node tools/v2/check-theme-tokens.mjs

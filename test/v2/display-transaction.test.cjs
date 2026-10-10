@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
+const { monitorRules } = require('./helpers/monitor-lua.cjs');
 const source = readFileSync('Service.qml', 'utf8');
 const copy = value => JSON.parse(JSON.stringify(value));
 
@@ -146,7 +147,8 @@ function harness() {
   Object.defineProperty(c.keepTransaction, 'running', { set(value) {
     if (value) { c.keepStarted = true; jobs.push(() => {
       order.push('autoreload');
-      apply(c.candidate);
+      const connected = live.filter(m => !m.disabled).map(m => `{name=${JSON.stringify(m.name)}}`).join(',');
+      apply(monitorRules(c.candidate, `function() return {${connected}} end`).join('\n'));
       event('configreloaded', '');
       jobs.push(() => c.finishKeep(0, ''));
     }); }

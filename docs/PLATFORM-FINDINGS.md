@@ -437,6 +437,35 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   on workspace 2 (S1's second-display slot), retain Station 1, and never focus
   workspaces 11 or 12.
 
+### 14.3 Cold-start geometry regression (2026-10-10)
+
+- **[SRC]** The October 8 combined-rule repair moved geometry inside the
+  survivor guard as well as disable/mirror state. With the already documented
+  empty cold-start discovery (§7), it emitted no saved geometry. The inspected
+  user fallback selected scale 2 and automatic placement; the saved block
+  selected scale 1 and an external display above the laptop. An isolated Lua
+  evaluation of that actual file emitted only the fallback at cold start and
+  both saved rules with warm discovery.
+- **[SRC]** `Service.applyRuntime()` restores mode/enablement, not saved
+  geometry. Shell logs showed startup within seconds, so there is no deliberate
+  one-minute geometry recovery timer. A later reload evaluates the guard with
+  monitors present. Saved-file backups show additional display writes around
+  one minute after login, including external scale 4, then scale 1 and restored
+  vertical placement; the initiating user action was not established.
+- **[SRC]** The generator now emits an exclusive `else` branch with saved
+  geometry and explicit enabled/unmirrored state when the survivor is unknown
+  or absent. Single/Mirror still defer restrictive state until discovery. Warm
+  reload retains one combined rule per output, preserving §14.1's repair.
+- **Verification:** the generator tests execute real Lua with mocked discovery
+  for empty, missing, throwing and malformed results; missing saved survivors;
+  and warm Extend, Off, both Single targets and Mirror. The transaction harness
+  now evaluates Lua branches before applying monitor declarations, rather than
+  treating every declaration in the source as executed. This is isolated
+  verification, not a new physical reboot or Single/Mirror hardware test.
+- **[INFER]** The temporary scale 2 explains the reported enlarged startup
+  cursor; the installed defaults still set cursor size 24. No separate cursor
+  defect has been demonstrated.
+
 ## 15. Where evidence lives
 
 | Source | Content |

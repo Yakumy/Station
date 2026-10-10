@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const L = require('../../lib/MonitorsLua.js');
+const { monitorRules } = require('./helpers/monitor-lua.cjs');
 
 function displays() {
   return [
@@ -8,6 +9,58 @@ function displays() {
     { name: 'HDMI-A-2', mode: '1920x1080@60.00Hz', availableModes: ['1920x1080@60.00Hz'], x: 1920, y: 0, scale: 1.25, transform: 0, lane: 2 },
   ];
 }
+
+const savedModes = [
+  { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] },
+  { mode: 'extend', enabled: ['eDP-1'] },
+  { mode: 'single', singleTarget: 'eDP-1' },
+  { mode: 'single', singleTarget: 'HDMI-A-2' },
+  { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] },
+];
+
+test('cold or failed discovery preserves saved geometry without disabling or mirroring', () => {
+  const saved = displays();
+  saved[1].x = 0;
+  saved[1].y = -864;
+  for (const options of savedModes) {
+    const block = L.generate(saved, options).block;
+    for (const discovery of [
+      'function() return {} end', 'nil',
+      'function() error("discovery unavailable") end',
+      'function() return "invalid" end',
+      'function() return {{}, {name=false}} end',
+    ]) {
+      const rules = monitorRules(block, discovery);
+      assert.deepEqual(rules, saved.map(d => L.monitorRule(d, { disabled: false, mirror: '' })),
+        `${JSON.stringify(options)} with ${discovery}`);
+    }
+  }
+});
+
+test('warm reload applies each final display state once with no fallback replay', () => {
+  for (const options of savedModes) {
+    const saved = displays();
+    const rules = monitorRules(L.generate(saved, options).block);
+    const expected = L.runtimeModeStates(saved, options).map(state => {
+      const display = saved.find(d => d.name === state.name);
+      return L.monitorRule(display, { disabled: state.disabled, mirror: state.mirror });
+    });
+    assert.deepEqual(rules.slice().sort(), expected.sort(), JSON.stringify(options));
+  }
+});
+
+test('missing saved survivor leaves the remaining display enabled with saved geometry', () => {
+  for (const options of [
+    { mode: 'single', singleTarget: 'HDMI-A-2' },
+    { mode: 'mirror', enabled: ['HDMI-A-2'] },
+    { mode: 'extend', enabled: ['HDMI-A-2'] },
+  ]) {
+    const saved = displays();
+    const rules = monitorRules(L.generate(saved, options).block,
+      'function() return {{name="eDP-1"}} end');
+    assert.deepEqual(rules, saved.map(d => L.monitorRule(d, { disabled: false, mirror: '' })));
+  }
+});
 
 test('generator requires allowlisted modes and safe connector names', () => {
   const badMode = displays(); badMode[0].mode = 'preferred';
@@ -18,7 +71,7 @@ test('generator requires allowlisted modes and safe connector names', () => {
 
 test('single mode guards the layout with its survivor and persists disabled outputs', () => {
   const output = L.generate(displays(), { mode: 'single', singleTarget: 'HDMI-A-2', enabled: ['eDP-1', 'HDMI-A-2'] });
-  const rules = output.block.split('\n').filter(line => /hl\.monitor/.test(line));
+  const rules = monitorRules(output.block);
   assert.match(output.block, /pcall\(hl\.get_monitors\)/);
   assert.match(output.block, /if up\["HDMI-A-2"\] then/);
   assert.equal(rules.length, 2, 'persist exactly one final rule per output');
@@ -56,7 +109,7 @@ test('runtime mode always emits explicit disabled and mirror state', () => {
 
 test('mode switches establish their surviving output before mirroring or disabling the old one', () => {
   const single = L.generate(displays(), { mode: 'single', singleTarget: 'HDMI-A-2', enabled: ['eDP-1', 'HDMI-A-2'] }).block;
-  const singleRules = single.split('\n').filter(line => /hl\.monitor/.test(line));
+  const singleRules = monitorRules(single);
   assert.match(singleRules[0], /output = "HDMI-A-2".*disabled = false/);
   assert.match(singleRules[1], /output = "eDP-1".*disabled = true/);
   const mirror = L.runtimeModeRules([{ name: 'eDP-1', lane: 2 }, { name: 'HDMI-A-2', lane: 1 }],
@@ -65,7 +118,7 @@ test('mode switches establish their surviving output before mirroring or disabli
   assert.match(mirror[1], /output = "eDP-1", disabled = false, mirror = "HDMI-A-2"/);
   const persistedMirror = L.generate(displays().map((display, i) => ({ ...display, lane: 2 - i })),
     { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] }).block;
-  const mirrorRules = persistedMirror.split('\n').filter(line => /hl\.monitor/.test(line));
+  const mirrorRules = monitorRules(persistedMirror);
   assert.match(mirrorRules[0], /output = "HDMI-A-2".*disabled = false, mirror = ""/);
   assert.match(mirrorRules[1], /output = "eDP-1".*disabled = false, mirror = "HDMI-A-2"/);
 });

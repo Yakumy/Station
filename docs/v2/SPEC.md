@@ -276,10 +276,15 @@ if type(hl.get_monitors) == "function" then
     end
   end
 end
-hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1, transform = 0 })
-hl.monitor({ output = "HDMI-A-2", mode = "2560x1440@144", position = "1920x0", scale = 1, transform = 0 })
--- Single mode on HDMI-A-2: disable others only when the target is up
-if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
+-- Single mode on HDMI-A-2: one combined rule per output on either path.
+if up["HDMI-A-2"] then
+  hl.monitor({ output = "HDMI-A-2", mode = "2560x1440@144.00Hz", position = "1920x0", scale = 1, transform = 0, disabled = false, mirror = "" })
+  hl.monitor({ output = "eDP-1", mode = "1920x1200@60.00Hz", position = "0x0", scale = 1, transform = 0, disabled = true, mirror = "" })
+else
+  -- Empty cold discovery or missing survivor: saved geometry in safe Extend.
+  hl.monitor({ output = "eDP-1", mode = "1920x1200@60.00Hz", position = "0x0", scale = 1, transform = 0, disabled = false, mirror = "" })
+  hl.monitor({ output = "HDMI-A-2", mode = "2560x1440@144.00Hz", position = "1920x0", scale = 1, transform = 0, disabled = false, mirror = "" })
+end
 -- <<< station <<<
 ```
 
@@ -287,6 +292,13 @@ if up["HDMI-A-2"] then hl.monitor({ output = "eDP-1", disabled = true }) end
 - Output names must match `^[A-Za-z0-9_.:-]{1,64}$` and are emitted through an escaping serialiser. EDID text never goes into the file. `mode` values must be an exact element of the monitor's `availableModes`; the spelling `hl.monitor` accepts is an M0 item, not inferred from JSON.
 - [V, M0] Last rule for an output wins; place the block at the end. If rules for the same outputs exist outside the block, tell the user.
 - [V, M0] Cold evaluation can return an empty `hl.get_monitors()` table even when displays are connected. In that case the block emits no guarded `disabled = true`; the service applies the saved runtime mode after monitor discovery. This safety fallback may briefly start in Extend rather than risking a black screen.
+- **2026-10-10 repair:** every saved layout has a mutually exclusive fallback
+  that applies its saved resolution, position, scale and transform with outputs
+  enabled and unmirrored when its survivor guard fails. Geometry must not wait
+  for a later reload. On warm reload, execute only the combined final-state
+  rules, never a geometry prepass followed by disabling/mirroring. Existing
+  managed blocks need regeneration through the safe file transaction; updating
+  the generator alone does not rewrite an already saved block.
 
 ### 9.2 Preview and crash-safe rollback
 

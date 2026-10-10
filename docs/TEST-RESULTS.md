@@ -1,5 +1,18 @@
 # Station v2 test results
 
+## Cold-start geometry repair — 2026-10-10
+
+All 119 Node/M0 tests pass, including real Lua evaluation of generated monitor
+blocks with mocked cold, failed, missing-survivor and warm discovery. Warm
+Single Keep tests still assert no output reannouncement. Theme scanning reports
+zero violations across 20 runtime sources; manifest validation and
+`git diff --check` pass. Lua subprocesses timed out inside the execution sandbox;
+the isolated suite passed outside it. No live monitor changes or reboot were
+performed for this verification. Existing saved blocks require regeneration
+when installing this fix.
+
+## Earlier validation
+
 Validated on 2026-10-05 with Omarchy 4 and Hyprland 0.56.x.
 
 ## Automated
