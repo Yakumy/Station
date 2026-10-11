@@ -116,7 +116,7 @@ Column {
       width: Style.space(130)
       showLabel: false
       value: settingsTab.panelRoot.service ? settingsTab.panelRoot.service.config.panelPosition : "left"
-      options: [{ value: "left", label: "Left" }, { value: "center", label: "Center" }]
+      options: [{ value: "left", label: "Bar" }, { value: "center", label: "Center" }]
       foreground: settingsTab.panelRoot.textPrimary
       onChanged: function(value) {
         if (settingsTab.panelRoot.service) settingsTab.panelRoot.service.setSetting("panelPosition", value)

@@ -40,6 +40,7 @@ import QtQuick
 QtObject { function fileUrl(path) { return path ? "file://" + path : "" } }
 ''')
     (root / "image.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1000"><path fill="red" d="M0 0h1000v1000H0z"/><path fill="blue" d="M1000 0h1000v1000H1000z"/></svg>')
+    (root / "image-copy.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1000"><path fill="red" d="M0 0h1000v1000H0z"/><path fill="blue" d="M1000 0h1000v1000H1000z"/></svg>')
     qml = '''import QtQuick
 import QtTest
 import "Probe" as Station
@@ -115,11 +116,25 @@ Item {
       compare(grabImage(desktopCrop).pixel(50, 50), Qt.color("blue"))
       desktopCrop.visible = false
     }
+    function test_same_size_source_handoff_keeps_the_arranged_group_in_place() {
+      controller.frame({zoom: 2, x: 0.78, y: 0.35})
+      var first = findChild(canvas, "wallpaperMonitor-A")
+      verify(first !== null)
+      var oldX = first.x, oldY = first.y, oldWidth = first.width
+      controller.draft = Object.assign({}, controller.draft, {source: COPY_PATH})
+      compare(first.x, oldX)
+      compare(first.y, oldY)
+      tryVerify(function() { return canvas.sourceSize.width === 2000 })
+      compare(first.x, oldX)
+      compare(first.y, oldY)
+      compare(first.width, oldWidth)
+    }
   }
 }
 '''
     import json
-    (root / "tst_wallpaper.qml").write_text(qml.replace("IMAGE_PATH", json.dumps(str(root / "image.svg"))))
+    (root / "tst_wallpaper.qml").write_text(qml.replace("IMAGE_PATH", json.dumps(str(root / "image.svg")))
+                                                   .replace("COPY_PATH", json.dumps(str(root / "image-copy.svg"))))
     result = subprocess.run(["/usr/lib/qt6/bin/qmltestrunner", "-import", str(root), "-input", str(root)],
                             env=dict(os.environ, QT_QPA_PLATFORM="offscreen", QT_QPA_PLATFORMTHEME="", QT_QUICK_CONTROLS_STYLE="Basic"),
                             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)

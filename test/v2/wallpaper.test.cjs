@@ -41,7 +41,8 @@ test('default follows Omarchy, theme profiles return, pinned images ignore backg
   const s = {mode: 'span', profiles: {'theme-A': {source: '/saved.jpg', framing: {zoom: 3}}}, pinned: {source: '/pinned.jpg'}};
   assert.equal(W.resolve(s, 'theme-A', '/a.jpg').framing.zoom, 3);
   assert.equal(W.resolve(s, 'theme-B', '/b.jpg').source, '/b.jpg');
-  assert.equal(W.resolve(s, 'theme-A', '/a.jpg').source, '/saved.jpg');
+  assert.equal(W.resolve(s, 'theme-A', '/a.jpg', '17:42').source, '/a.jpg');
+  assert.equal(W.resolve(s, 'theme-A', '/a.jpg', '17:42').revision, '17:42');
   assert.equal(W.resolve({...s, followTheme: false}, 'theme-B', '/b.jpg').source, '/pinned.jpg');
 });
 test('per-display images follow physical identity, with a shared fallback on new displays', () => {

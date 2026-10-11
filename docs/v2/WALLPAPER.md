@@ -2,7 +2,9 @@
 
 The panel tabs are Displays, Wallpaper, Keybindings, Settings. Wallpaper follows
 the existing two-column composition: layout on the left, controls on the right,
-notice at lower left, Cancel/Apply at lower right. All chrome uses installed
+notice at lower left, Cancel/Apply at lower right. The layout and settings frames
+are the same 370-unit height used by Displays, and the layout reuses its dotted
+grid. All chrome uses installed
 `qs.Ui` components and `qs.Commons` tokens. The sole filled action is Apply.
 
 Modes are Same on all, Per monitor, and Span. Default is Same on all with Follow
@@ -22,14 +24,16 @@ Span preserves logical output positions, gaps, rotations and relative dimensions
 The whole image is fitted into the canvas with side space as needed. The group
 is uniformly scaled and translated over that fixed image; it cannot be split,
 rotated or rearranged here. Pan is clamped to keep every crop inside the image.
-Zoom 1 fits the group; zoom 1–8 selects smaller regions. The native recommendation
+Zoom 1 fits the group; wheel zoom up to 8 selects smaller regions. The native recommendation
 is logical bounds × maximum output scale × crop zoom, rounded upward. It is a
 quality recommendation, never a minimum file-size restriction. This preserves
 logical continuity; it does not estimate physical DPI or bezel thickness.
 
-Follow mode uses a profile keyed by the current theme name and canonical
-background pathname. Returning to an existing pair recalls its saved local image
-choices and framing; a new pair uses Omarchy's image with centered framing. Mode
+Follow mode uses the live Omarchy background and a profile keyed by the current
+theme name and canonical background pathname. Returning to an existing pair
+recalls its framing while still reading Omarchy's current image; a new pair uses
+centered framing. A short poll fingerprints the target as well as the path, so an
+image replaced in place refreshes the panel and desktop surfaces. Mode
 is global. The newest 64 profiles are retained; users can replace a recalled
 choice with Use Omarchy wallpaper. When follow is off, a saved pinned profile
 ignores theme/background changes. Turning follow off requires Apply to snapshot

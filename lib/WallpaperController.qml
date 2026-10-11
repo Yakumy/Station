@@ -16,9 +16,11 @@ Item {
   readonly property var preferences: Wallpaper.settings(station.config.wallpaper)
   property string themePath: ""
   property string themeName: ""
+  property string themeRevision: ""
   readonly property string themeKey: JSON.stringify([themeName, themePath])
-  readonly property var applied: Wallpaper.resolve(preferences, themeKey, themePath)
-  property var draft: Wallpaper.resolve({}, "", "")
+  readonly property string themeToken: JSON.stringify([themeName, themePath, themeRevision])
+  readonly property var applied: Wallpaper.resolve(preferences, themeKey, themePath, themeRevision)
+  property var draft: Wallpaper.resolve({}, "", "", "")
   property bool dirty: false
   property bool busy: false
   property string notice: ""
@@ -29,13 +31,19 @@ Item {
   property string pickerTarget: ""
   readonly property bool pickerBusy: picker.running || pickerDelay.running
   onAppliedChanged: if (!dirty && !busy) reset()
-  onThemeKeyChanged: {
+  onThemeTokenChanged: {
     // A theme switch wins over an in-flight Apply only while following it.
     if (busy && pending && !pendingSave && pending.scene.followTheme) {
       serial++; busy = false; pending = null
       notice = "Wallpaper changed with Omarchy. Review your selection and apply again."
     }
-    if (dirty) notice = "Omarchy's background changed. Your unapplied selection is still here."
+    if (draft.followTheme) {
+      var next = dirty ? JSON.parse(JSON.stringify(draft)) : JSON.parse(JSON.stringify(applied))
+      next.source = themePath
+      next.revision = themeRevision
+      draft = next
+      if (dirty) notice = "Omarchy's wallpaper changed. Your crop edits are still here."
+    }
   }
 
   function reset() { draft = JSON.parse(JSON.stringify(applied)); dirty = false; notice = "" }
@@ -138,7 +146,7 @@ Item {
   }
   Process {
     id: themeRead
-    command: ["bash", "-c", 'readlink -f -- "$1"; cat -- "$2"', "station-background",
+    command: ["bash", "-c", 'readlink -f -- "$1"; cat -- "$2"; stat -Lc "%i:%s:%y" -- "$1"', "station-background",
       Quickshell.env("HOME") + "/.local/state/omarchy/current/background",
       Quickshell.env("HOME") + "/.local/state/omarchy/current/theme.name"]
     stdout: StdioCollector {
@@ -146,10 +154,11 @@ Item {
         var lines = text.trim().split("\n")
         root.themeName = lines.length > 1 ? lines[1] : ""
         root.themePath = Wallpaper.path(lines[0])
+        root.themeRevision = lines.length > 2 ? lines[2] : ""
       }
     }
   }
-  Timer { interval: 1500; repeat: true; running: root.station.configLoaded; triggeredOnStart: true; onTriggered: if (!themeRead.running) themeRead.running = true }
+  Timer { interval: 250; repeat: true; running: root.station.configLoaded; triggeredOnStart: true; onTriggered: if (!themeRead.running) themeRead.running = true }
   Process {
     id: picker
     command: ["omarchy", "file", "select", "--title", "Choose wallpaper", "--extensions", "png jpg jpeg webp bmp gif"]

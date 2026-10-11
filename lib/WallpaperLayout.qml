@@ -13,14 +13,16 @@ Ui.BorderSurface {
   readonly property var scene: controller.draft
   readonly property bool spanning: scene.mode === "span"
   readonly property real inset: Style.space(16)
-  readonly property real imageFit: Math.min((width - inset * 2) / Math.max(1, background.sourceSize.width),
-    (height - inset * 2) / Math.max(1, background.sourceSize.height))
-  readonly property var crop: Wallpaper.composition(layout, background.sourceSize.width, background.sourceSize.height, scene.framing)
+  readonly property real gridStep: Style.space(16)
+  property size readySourceSize: Qt.size(1, 1)
+  readonly property real imageFit: Math.min((width - inset * 2) / Math.max(1, readySourceSize.width),
+    (height - inset * 2) / Math.max(1, readySourceSize.height))
+  readonly property var crop: Wallpaper.composition(layout, readySourceSize.width, readySourceSize.height, scene.framing)
   readonly property real fit: spanning ? crop.unit * imageFit
     : Math.min((width - inset * 2) / layout.width, (height - inset * 2) / layout.height)
   readonly property real groupX: spanning ? background.x + crop.x * imageFit : (width - layout.width * fit) / 2
   readonly property real groupY: spanning ? background.y + crop.y * imageFit : (height - layout.height * fit) / 2
-  readonly property size sourceSize: background.sourceSize
+  readonly property size sourceSize: readySourceSize
   color: Color.popups.background
   borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
   radius: Style.cornerRadius
@@ -38,22 +40,46 @@ Ui.BorderSurface {
   Keys.onRightPressed: if (spanning) nudge(0.02, 0)
   Keys.onUpPressed: if (spanning) nudge(0, -0.02)
   Keys.onDownPressed: if (spanning) nudge(0, 0.02)
+  Canvas {
+    anchors.fill: parent
+    opacity: 0.22
+    property color dotColor: Color.popups.text
+    onDotColorChanged: requestPaint()
+    onWidthChanged: requestPaint()
+    onHeightChanged: requestPaint()
+    onPaint: {
+      var context = getContext("2d")
+      context.clearRect(0, 0, width, height)
+      context.fillStyle = dotColor
+      var radius = Math.max(Style.space(0.7), 0.5)
+      for (var x = root.gridStep; x < width; x += root.gridStep)
+        for (var y = root.gridStep; y < height; y += root.gridStep) {
+          context.beginPath()
+          context.arc(x, y, radius, 0, Math.PI * 2)
+          context.fill()
+        }
+    }
+  }
   Image {
     id: background
     source: Util.fileUrl(root.scene.source)
+      + (root.scene.revision ? "?station=" + encodeURIComponent(root.scene.revision) : "")
     asynchronous: true
-    width: sourceSize.width * root.imageFit
-    height: sourceSize.height * root.imageFit
+    width: root.readySourceSize.width * root.imageFit
+    height: root.readySourceSize.height * root.imageFit
     x: (root.width - width) / 2
     y: (root.height - height) / 2
     visible: root.spanning
     fillMode: Image.PreserveAspectFit
+    onStatusChanged: if (status === Image.Ready && sourceSize.width > 0 && sourceSize.height > 0)
+      root.readySourceSize = sourceSize
   }
   Repeater {
     model: root.layout.displays
     delegate: Item {
       id: monitor
       required property var modelData
+      objectName: "wallpaperMonitor-" + modelData.name
       x: root.groupX + modelData.x * root.fit
       y: root.groupY + modelData.y * root.fit
       width: modelData.width * root.fit

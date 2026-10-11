@@ -6,9 +6,11 @@
   validation, copy failure, stale completion, preference-save failure, literal
   hostile filenames, and exclusive snapshot publication. The existing Lua
   subprocess tests require execution outside the sandbox on this machine.
-- Offscreen Wallpaper pointer/renderer harness: 7 checks pass. It exercises
+- Offscreen Wallpaper pointer/renderer harness exercises
   production QML, verifies fixed-group movement and zoom, and samples the actual
-  rendered crops for two adjacent outputs. Existing Displays harness: 18 pass.
+  rendered crops for two adjacent outputs. It also verifies that an Apply-style
+  switch to an identical saved copy retains every monitor's preview coordinates.
+  Existing Displays harness: 18 pass.
 - Theme-token scan: 25 sources, zero violations. Manifest validation, QML
   compilation against installed modules, and whitespace checks pass.
 - Isolated production tab renders were inspected with dark and light palettes

@@ -9,6 +9,7 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   const displays = read('lib/DisplaysTab.qml');
   const bindings = read('lib/KeybindingsTab.qml');
   const settings = read('lib/SettingsTab.qml');
+  const wallpaper = read('lib/WallpaperTab.qml');
   const runtime = [panel, displays, bindings, settings].join('\n');
 
   assert.doesNotMatch(runtime, /\b(?:ScrollView|Flickable|ListView)\s*\{/);
@@ -29,6 +30,10 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(settings, /displayWidgetEnabled === false/);
   assert.match(settings, /setSetting\("hideDisplay", !checked\)/);
   assert.match(settings, /Installed version/);
+  assert.match(wallpaper, /height: Style\.space\(370\)/);
+  assert.match(wallpaper, /text: "DRAG TO ARRANGE"/);
+  assert.match(wallpaper, /id: controlFrame[\s\S]*?height: Style\.space\(370\)/);
+  assert.doesNotMatch(wallpaper, /text: "(?:−|\+|Fit)"/);
 });
 
 test('display notices, labels, zoom buttons and settings switches share the intended alignment and size', () => {

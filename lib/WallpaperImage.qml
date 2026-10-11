@@ -9,6 +9,10 @@ Item {
   required property var layout
   required property var display
   readonly property alias status: picture.status
+  function imageUrl(path) {
+    var url = Util.fileUrl(path)
+    return path === scene.source && scene.revision ? url + "?station=" + encodeURIComponent(scene.revision) : url
+  }
   clip: true
 
   Image {
@@ -16,7 +20,7 @@ Item {
     readonly property bool spanning: root.scene.mode === "span"
     readonly property var crop: Wallpaper.composition(root.layout, sourceSize.width, sourceSize.height, root.scene.framing)
     readonly property real unit: root.width / Math.max(1, root.display.width * crop.unit)
-    source: Util.fileUrl(Wallpaper.sourceFor(root.scene, root.display))
+    source: root.imageUrl(Wallpaper.sourceFor(root.scene, root.display))
     asynchronous: true
     cache: true
     x: spanning ? -(crop.x + root.display.x * crop.unit) * unit : 0

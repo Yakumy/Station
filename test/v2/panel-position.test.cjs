@@ -10,7 +10,7 @@ const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8')
 const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
 const settings = readFileSync(join(__dirname, '..', '..', 'lib', 'SettingsTab.qml'), 'utf8');
 
-test('Left remains the default; saved position accepts only Left or Center', () => {
+test('Bar remains the default; saved position accepts only Bar or Center', () => {
   assert.equal(Store.configDefaults().panelPosition, 'left');
   assert.equal(Store.loadConfig({}).panelPosition, 'left');
   assert.equal(Store.loadConfig({ panelPosition: 'center' }).panelPosition, 'center');
@@ -55,7 +55,7 @@ test('Center keeps the panel clear of the bar when the screen is too small', () 
 
 test('Settings and the live panel bind to the persisted position', () => {
   assert.match(settings, /text: "Panel opening position"/);
-  assert.match(settings, /value: "left", label: "Left"/);
+  assert.match(settings, /value: "left", label: "Bar"/);
   assert.match(settings, /value: "center", label: "Center"/);
   assert.match(settings, /setSetting\("panelPosition", value\)/);
   assert.match(panel, /centerOnBar: root\.service && root\.service\.config\.panelPosition === "center"/);
