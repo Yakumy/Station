@@ -477,3 +477,26 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 | `docs/ARCHITECTURE.md` | how the service is structured |
 | `tools/v2/probe-platform.mjs`, `live-m0.py`, `cold-login.py` | read-only probes and the live runner |
 | `archive/dev-before-v2-20261004` | abandoned v1-era history; read-only reference, never merge |
+
+## 16. Wallpaper integration (2026-10-11)
+
+- [SRC] Omarchy 4.0.3-1 renders its wallpaper with background-layer PanelWindows.
+  `omarchy theme bg set` changes `~/.local/state/omarchy/current/background` and
+  calls the background IPC target. Theme application can regenerate the same
+  current-theme image pathname. Station must snapshot pinned images, not retain
+  that pathname as an immutable source.
+- [SRC] `omarchy file select --title ... --extensions ...` uses the desktop portal
+  and prints a local filename; exit 1 means no selection, exit 2 chooser failure.
+  There is no need for Zenity or a private chooser dependency.
+- [SRC] The host's `Ui.ScreenMoveRemap` remaps layer surfaces after output origin
+  changes. Wallpaper surfaces reuse it and have an empty input region and no
+  keyboard focus. Their lifetime follows the persistent service.
+- [SRC] [Wallpaper Cutter](https://github.com/renanmt/omarchy-wallpaper-cutter)
+  documents per-output bottom-layer surfaces above stock, crop preview and
+  native-resolution exports. Station uses the layering approach, but renders
+  shared source-space crops directly and installs no theme hook or image processor.
+- [QTTEST] Production WallpaperLayout pointer tests preserve output topology,
+  clamp pan, keep the image fixed while zooming, and support keyboard nudges.
+  Isolated Quickshell renders use installed UI tokens with dark and light
+  palettes; they do not establish three-display hardware behavior or theme
+  transition animation equivalence.

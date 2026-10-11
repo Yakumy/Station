@@ -33,6 +33,18 @@ Pure modules under `lib/` isolate policy from QML:
   and unmirrored. Warm reload executes only the combined final-state rules, so
   a disabled output is not briefly re-enabled by a geometry prepass.
 - `Store.js` owns versioned defaults and bounded migrations.
+- `Wallpaper.js` validates wallpaper preferences and owns logical crop geometry,
+  native-resolution recommendations, and theme/background profile resolution.
+  `WallpaperController.qml`, owned by the persistent service, retains the draft,
+  opens Omarchy's native file chooser, validates image decoding, snapshots source
+  files, and saves `config.wallpaper`. Success waits for the config FileView save
+  acknowledgment; failure restores the previous in-memory wallpaper settings.
+  `WallpaperLayout.qml` and desktop `WallpaperImage.qml` share the same crop
+  transform. Click-through, keyboard-unfocused bottom-layer surfaces sit above
+  Omarchy's stock background and disappear with the service. The default same-image
+  theme mode leaves the stock surface visible. No theme hooks or external daemon
+  are installed. A 1.5-second read-only poll observes the current theme/background;
+  theme changes invalidate an unfinished snapshot job while following Omarchy.
 - `Transactions.js` and `Recovery.js` contain fixed shell templates. Dynamic
   values reach them only as validated positional arguments.
 

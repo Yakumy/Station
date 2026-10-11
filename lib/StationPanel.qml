@@ -40,7 +40,7 @@ Ui.Panel {
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
-  readonly property string pluginVersion: "2.0.0"
+  readonly property string pluginVersion: "2.1.0"
   readonly property real desiredPanelWidth: Style.space(996)
 
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
@@ -359,7 +359,7 @@ Ui.Panel {
   function restoreSession() {
     if (!service) return
     var remembered = Number(service.rememberedTab)
-    if (remembered >= 0 && remembered <= 2 && selectedTab !== remembered) selectedTab = remembered
+    if (remembered >= 0 && remembered <= 3 && selectedTab !== remembered) selectedTab = remembered
   }
 
   // Open this output's copy directly: shell.summon routes to the focused
@@ -599,7 +599,7 @@ Ui.Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onTabRequested: function(direction) {
-        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 2)) % 3
+        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 3)) % 4
       }
 
       Column {
@@ -642,12 +642,12 @@ Ui.Panel {
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
-              model: ["Displays", "Keybindings", "Settings"]
+              model: ["Displays", "Wallpaper", "Keybindings", "Settings"]
               delegate: Item {
                 id: tab
                 required property int index
                 required property string modelData
-                readonly property bool conflicted: index === 1 && root.conflictCount > 0
+                readonly property bool conflicted: index === 2 && root.conflictCount > 0
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
@@ -730,8 +730,9 @@ Ui.Panel {
 
         Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
         Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
-        Station.KeybindingsTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
-        Station.SettingsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
+        Station.WallpaperTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
+        Station.KeybindingsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
+        Station.SettingsTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
       }
     }
   }

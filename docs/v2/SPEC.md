@@ -13,6 +13,9 @@ Non-goals: no binary, no `install.sh`, no standalone CLI, no v1 migration, no mo
 
 ## 2. Principles
 
+**2026-10-11 addition:** Wallpaper is a service-owned, independent feature;
+see [WALLPAPER.md](WALLPAPER.md). It adds no workspace or monitor policy.
+
 1. Install, update, remove are the stock `omarchy plugin add|update|remove`. Omarchy owns updates and review. Station performs no network access.
 2. The plugin works when enabled. No init button, no wizard.
 3. Station writes only: its own config and state files, and (on Keep) a marked block in `~/.config/hypr/monitors.lua`, with backup. It never edits `hyprland.lua` or `bindings.lua`.
@@ -64,7 +67,7 @@ yakumy.station/
 ├── manifest.json        # id yakumy.station, kinds ["bar-widget","service"]; copy key names from the Display manifest and PluginRegistry.qml; Panel.qml is the widget's popout entry, as in Display
 ├── Service.qml          # root item: IPC methods, state machine, event loop
 ├── BarWidget.qml        # logo + [S n]; click toggles the popout
-├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Keybindings | Settings
+├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Wallpaper | Keybindings | Settings
 ├── lib/
 │   ├── Model.js         # lanes, roles, planners (pure)
 │   ├── Hypr.js          # the only place hyprctl/eval is called; validation; Lua generators
@@ -370,7 +373,7 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
+**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
 
 Displays tab:
 

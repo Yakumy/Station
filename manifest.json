@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "yakumy.station",
   "name": "Station",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": "Yakumy",
   "license": "Apache-2.0",
-  "description": "Synchronized workspaces and display management for Omarchy",
+  "description": "Synchronized workspaces, displays, and wallpapers for Omarchy",
   "kinds": ["bar-widget", "service"],
   "entryPoints": {
     "barWidget": "Panel.qml",

@@ -77,6 +77,36 @@ lets Hyprland's file watcher apply it, checks `hyprctl configerrors`, and
 restores the backup if the new configuration fails. Settings can remove the
 managed block entirely.
 
+## Wallpaper
+
+The Wallpaper tab uses the same layout canvas and settings sidebar as Displays:
+
+- **Same on all** (default): Omarchy's wallpaper on every monitor, or a local image you choose.
+- **Per monitor**: select a monitor in the canvas or menu and choose its image.
+- **Span**: fit one image inside the canvas, then drag the fixed monitor group
+  over it. Scroll or use −/+ to zoom the crop; Fit resets it. Arrow keys nudge
+  the focused canvas. Monitor positions themselves are changed only in Displays.
+
+The native desktop file chooser selects local images. Choose **Apply** to save;
+Cancel restores the applied selection. Only active, independent outputs appear;
+mirrored sinks inherit their source. The size suggestion under Span accounts for
+layout gaps, rotation, the highest display scale, and zoom. Smaller images still
+work. For stacked 1920×1080 and 1920×1200 displays at scale 1, Fit suggests
+1920×2280 pixels.
+
+**Follow Omarchy wallpaper** defaults on. Theme changes and Omarchy's background
+switcher update the image while retaining the selected mode. Station remembers
+your saved image choices and crop for each theme/background pair (up to 64), so
+returning to that pair restores them. Turn the switch off and Apply to keep your
+chosen images across theme changes. Panel colors always follow the theme.
+
+Applied images are copied into `~/.local/state/omarchy/station/wallpapers/`, so
+theme regeneration or moving the original file does not break a saved choice.
+Station never alters Omarchy's background link, theme files, or background
+history. Disabling/removing Station reveals the current stock wallpaper; saved
+preferences and image copies are retained. Old image copies are not automatically
+deleted. This version uses still images, with the first frame of animated files.
+
 ## State and removal
 
 Station stores preferences in `~/.config/omarchy/station/config.json` and
@@ -117,9 +147,15 @@ with a mocked compositor (CI installs Lua 5.4).
 ```bash
 node --test test/m0/*.test.mjs test/v2/*.test.cjs
 node tools/v2/check-theme-tokens.mjs
+python3 tools/v2/check-layout.py
+python3 tools/v2/check-wallpaper-layout.py
 omarchy plugin validate .
 python3 tools/v2/check-qml.py .
 ```
+
+`python3 tools/v2/check-wallpaper.py` opens a short-lived isolated preview using
+the installed UI components and captures dark/light examples under `/tmp`.
+It does not change wallpapers, monitor configuration, or saved preferences.
 
 The implementation contract and hardware evidence are in
 [`docs/v2/SPEC.md`](docs/v2/SPEC.md) and [`docs/v2/M0.md`](docs/v2/M0.md). Visual

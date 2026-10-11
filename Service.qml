@@ -11,6 +11,7 @@ import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
 import "lib/Events.js" as Events
 import "lib/Grid.js" as Grid
+import "lib" as Station
 
 Item {
   id: root
@@ -18,6 +19,8 @@ Item {
   property var shell: null
   property var manifest: null
   property var config: Store.configDefaults()
+  readonly property alias wallpaper: wallpaperController
+  Station.WallpaperController { id: wallpaperController; station: root }
   property var persisted: Store.stateDefaults()
   property var monitors: []
   property var clients: []
@@ -1573,6 +1576,8 @@ Item {
     printErrors: false
     onLoaded: { if (!root.configLoaded) { root.config = Store.loadConfig(root.parseJson(text(), {})); root.configLoaded = true; root.maybeStart() } }
     onLoadFailed: { if (!root.configLoaded) { root.config = Store.configDefaults(); root.configLoaded = true; root.maybeStart() } }
+    onSaved: wallpaperController.preferenceSaved()
+    onSaveFailed: wallpaperController.preferenceFailed()
   }
 
   FileView {

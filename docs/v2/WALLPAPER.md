@@ -1,0 +1,58 @@
+# Wallpaper contract — 2026-10-11
+
+The panel tabs are Displays, Wallpaper, Keybindings, Settings. Wallpaper follows
+the existing two-column composition: layout on the left, controls on the right,
+notice at lower left, Cancel/Apply at lower right. All chrome uses installed
+`qs.Ui` components and `qs.Commons` tokens. The sole filled action is Apply.
+
+Modes are Same on all, Per monitor, and Span. Default is Same on all with Follow
+Omarchy wallpaper enabled. A local file is chosen through `omarchy file select`;
+close the keyboard-focused popout before opening the portal chooser, then reopen
+Wallpaper when it exits. The service retains the draft through panel rebuilds.
+Selecting a file or changing a crop affects the preview until Apply. Decode and
+snapshot errors retain previous settings. Preference save failure restores them.
+
+Active non-mirrored outputs come from observed Hyprland monitors, not the editable
+Displays draft or workspace lanes. Disabled outputs vanish. Per-output choices
+use the same physical identities as Model.js. A returning output recovers its
+choice; a new one falls back to the common image. Mirror sinks inherit the source
+image through the compositor. Wallpaper never emits monitor/workspace commands.
+
+Span preserves logical output positions, gaps, rotations and relative dimensions.
+The whole image is fitted into the canvas with side space as needed. The group
+is uniformly scaled and translated over that fixed image; it cannot be split,
+rotated or rearranged here. Pan is clamped to keep every crop inside the image.
+Zoom 1 fits the group; zoom 1–8 selects smaller regions. The native recommendation
+is logical bounds × maximum output scale × crop zoom, rounded upward. It is a
+quality recommendation, never a minimum file-size restriction. This preserves
+logical continuity; it does not estimate physical DPI or bezel thickness.
+
+Follow mode uses a profile keyed by the current theme name and canonical
+background pathname. Returning to an existing pair recalls its saved local image
+choices and framing; a new pair uses Omarchy's image with centered framing. Mode
+is global. The newest 64 profiles are retained; users can replace a recalled
+choice with Use Omarchy wallpaper. When follow is off, a saved pinned profile
+ignores theme/background changes. Turning follow off requires Apply to snapshot
+the selected source; the theme may regenerate files in place, so a mere path
+would not suffice. Panel tokens always follow Omarchy independently.
+
+Polling is read-only, every 1.5 seconds. Stock theme transitions are not reproduced
+by the per-output surfaces. Station does not rewrite Omarchy's symlink or infer
+private wallpaper history. Omarchy remains authoritative for the current pair.
+Changes during an unfinished follow-mode snapshot invalidate its callback; an
+unapplied draft remains available with a notice. A finished commit may retain
+the old pair's profile without replacing the newly selected pair's wallpaper.
+
+Snapshots use a fresh private directory under Station state, quoted positional
+argv, and no interpolation of filenames or EDID text into scripts. Image copies
+are retained after mode changes, failed saves, disable and removal; there is no
+automatic cache eviction in this version. Preferences live under `config.wallpaper`
+without changing the enclosing config schema. Missing/invalid settings normalize
+to defaults. No external image processor, network access or extra package is needed.
+
+The persistent service draws non-interactive bottom-layer surfaces above the
+stock background. Default Same on all defers to stock; missing images also reveal
+stock. Surface lifetime handles disable/removal and shell restart, with no hook
+cleanup or background-daemon replacement. ScreenMoveRemap follows the host's
+position-change workaround. Animated images are static first frames; HDR, video,
+bezel correction, physical-DPI matching and image export are out of scope.

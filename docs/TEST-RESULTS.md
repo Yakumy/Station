@@ -1,5 +1,25 @@
 # Station v2 test results
 
+## Wallpaper — 2026-10-11
+
+- Node suite: 129 tests, including wallpaper geometry, profile recall, input
+  validation, copy failure, stale completion, preference-save failure, literal
+  hostile filenames, and exclusive snapshot publication. The existing Lua
+  subprocess tests require execution outside the sandbox on this machine.
+- Offscreen Wallpaper pointer/renderer harness: 7 checks pass. It exercises
+  production QML, verifies fixed-group movement and zoom, and samples the actual
+  rendered crops for two adjacent outputs. Existing Displays harness: 18 pass.
+- Theme-token scan: 25 sources, zero violations. Manifest validation, QML
+  compilation against installed modules, and whitespace checks pass.
+- Isolated production tab renders were inspected with dark and light palettes
+  using the installed components. No theme, monitor layout, or user wallpaper
+  was changed by these probes. The live monitor snapshot confirms the current
+  stacked pair's Fit recommendation is 1920×2280.
+- Full native chooser interaction, physical hotplug with wallpaper active,
+  shell-restart persistence of a user-selected wallpaper, actual theme switching,
+  and three-display hardware remain user acceptance tests. Automated geometry
+  and mocked lifecycle checks do not establish those hardware results.
+
 ## Cold-start geometry repair — 2026-10-10
 
 All 119 Node/M0 tests pass, including real Lua evaluation of generated monitor
