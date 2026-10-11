@@ -4,7 +4,9 @@ The panel tabs are Displays, Wallpaper, Keybindings, Settings. Wallpaper follows
 the existing two-column composition: layout on the left, controls on the right,
 notice at lower left, Cancel/Apply at lower right. The layout and settings frames
 are the same 370-unit height used by Displays, and the layout reuses its dotted
-grid. All chrome uses installed
+grid. `WALLPAPER` sits above the settings frame, parallel to `LAYOUT`, while a
+full-width segmented Mode control leads the frame; the remaining rows contain
+only the image actions and Follow Omarchy switch. All chrome uses installed
 `qs.Ui` components and `qs.Commons` tokens. The sole filled action is Apply.
 
 Modes are Same on all, Per monitor, and Span. Default is Same on all with Follow

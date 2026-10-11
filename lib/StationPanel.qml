@@ -40,7 +40,7 @@ Ui.Panel {
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
-  readonly property string pluginVersion: "2.1.1"
+  readonly property string pluginVersion: "2.1.2"
   readonly property real desiredPanelWidth: Style.space(996)
 
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads

@@ -21,6 +21,48 @@ Column {
     font.pixelSize: Style.font.caption
     wrapMode: Text.WordWrap
   }
+  component ModeSelector: Ui.BorderSurface {
+    id: selector
+    property string value: ""
+    property var options: []
+    signal changed(string value)
+    color: Color.popups.background
+    borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+    radius: Style.cornerRadius
+    clip: true
+
+    Row {
+      anchors.fill: parent
+      anchors.margins: Math.max(1, Style.normalBorderWidth)
+      spacing: 0
+      Repeater {
+        model: selector.options
+        delegate: Item {
+          required property var modelData
+          required property int index
+          width: (selector.width - Math.max(1, Style.normalBorderWidth) * 2) / selector.options.length
+          height: parent.height
+          Ui.Button {
+            anchors.fill: parent
+            text: modelData.label
+            selected: selector.value === modelData.value
+            focusable: true
+            foreground: Color.popups.text
+            background: Color.popups.background
+            accent: Color.accent
+            onClicked: selector.changed(modelData.value)
+          }
+          Rectangle {
+            visible: index > 0
+            anchors.left: parent.left
+            height: parent.height
+            width: Math.max(1, Style.normalBorderWidth)
+            color: Border.color(Border.controlSpec("normal", Color.popups.text, Color.accent))
+          }
+        }
+      }
+    }
+  }
   Row {
     width: parent.width
     height: Style.space(428)
@@ -72,6 +114,11 @@ Column {
       enabled: root.controller && !root.controller.busy
       Item {
         width: parent.width; height: Style.space(28)
+        Ui.PanelSectionHeader {
+          anchors.left: parent.left; anchors.leftMargin: Style.space(28)
+          anchors.verticalCenter: parent.verticalCenter
+          text: "WALLPAPER"; foreground: Color.popups.text
+        }
       }
       Ui.BorderSurface {
         id: controlFrame
@@ -85,37 +132,34 @@ Column {
           anchors.fill: parent
           spacing: 0
           Item {
-            width: parent.width; height: Style.space(45)
-            Ui.PanelSectionHeader {
+            width: parent.width; height: controlFrame.height / 3
+            Caption {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
-              text: "WALLPAPER"; foreground: Color.popups.text
-            }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
-          }
-          Item {
-            width: parent.width; height: Style.space(52)
-            Station.InlineDropdown {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
-              prefix: "Mode: "
-              value: root.scene.mode
-              options: [{ value: "same", label: "Same on all" }, { value: "individual", label: "Per monitor" }, { value: "span", label: "Span" }]
-              onChanged: function(value) { root.controller.change("mode", value) }
+              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space3
+              text: "MODE"
             }
             Station.InlineDropdown {
               anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
+              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space2
               visible: root.scene.mode === "individual"
               prefix: "Monitor: "
               value: root.selectedDisplay ? root.selectedDisplay.name : ""
               options: root.controller ? root.controller.layout.displays.map(function(d) { return { value: d.name, label: d.name } }) : []
               onChanged: function(value) { root.selectedName = value }
             }
+            ModeSelector {
+              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
+              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
+              anchors.bottom: parent.bottom; anchors.bottomMargin: root.panelRoot.space3
+              height: Style.space(58)
+              value: root.scene.mode
+              options: [{ value: "span", label: "Span" }, { value: "individual", label: "Per monitor" }, { value: "same", label: "Same on all" }]
+              onChanged: function(value) { root.controller.change("mode", value) }
+            }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
-            width: parent.width; height: Style.space(70)
+            width: parent.width; height: controlFrame.height / 3
             Row {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
               anchors.verticalCenter: parent.verticalCenter
@@ -139,18 +183,7 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
-            width: parent.width; height: Style.space(78)
-            Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
-              text: root.scene.mode === "span" ? "Drag the monitor group over the fixed image. Scroll to zoom."
-                : root.scene.mode === "individual" ? "Select a monitor, then choose its image." : "One image, fitted separately on every monitor."
-            }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
-          }
-          Item {
-            width: parent.width; height: Style.space(55)
+            width: parent.width; height: controlFrame.height / 3
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
               anchors.verticalCenter: parent.verticalCenter
@@ -163,17 +196,6 @@ Column {
               trackHeight: Style.spacing.controlHeight
               foreground: Color.popups.text
               onToggled: root.controller.change("followTheme", !checked)
-            }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
-          }
-          Item {
-            width: parent.width; height: controlFrame.height - Style.space(300)
-            Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
-              text: root.scene.followTheme ? "Updates with Omarchy theme and background changes."
-                : "Keeps these images when the theme or background changes."
             }
           }
         }

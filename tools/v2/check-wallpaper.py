@@ -7,11 +7,26 @@ Hyprland. Screenshots are retained in the requested /tmp output directory.
 from pathlib import Path
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+display = os.environ.get("WAYLAND_DISPLAY", "")
+runtime = os.environ.get("XDG_RUNTIME_DIR", "")
+address = Path(display) if display else None
+if address and not address.is_absolute():
+    address = Path(runtime) / address if runtime else None
+try:
+    if address is None:
+        raise OSError("WAYLAND_DISPLAY or XDG_RUNTIME_DIR is unset")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(1)
+        connection.connect(str(address))
+except OSError as error:
+    raise SystemExit(f"Wallpaper render check needs access to the Wayland socket ({error}); run it with session access.")
+
 output = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="station-wallpaper-renders-"))
 output.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix="station-wallpaper-probe-") as directory:
