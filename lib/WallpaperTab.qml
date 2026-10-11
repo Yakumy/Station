@@ -132,26 +132,18 @@ Column {
           anchors.fill: parent
           spacing: 0
           Item {
-            width: parent.width; height: controlFrame.height / 3
+            id: modeRow
+            width: parent.width; height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space3
-              text: "MODE"
-            }
-            Station.InlineDropdown {
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
               anchors.top: parent.top; anchors.topMargin: root.panelRoot.space2
-              visible: root.scene.mode === "individual"
-              prefix: "Monitor: "
-              value: root.selectedDisplay ? root.selectedDisplay.name : ""
-              options: root.controller ? root.controller.layout.displays.map(function(d) { return { value: d.name, label: d.name } }) : []
-              onChanged: function(value) { root.selectedName = value }
+              text: "MODE"
             }
             ModeSelector {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
               anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.panelRoot.space3
-              height: Style.space(58)
+              anchors.bottom: parent.bottom; anchors.bottomMargin: root.panelRoot.space2
+              height: Style.spacing.controlHeight
               value: root.scene.mode
               options: [{ value: "span", label: "Span" }, { value: "individual", label: "Per monitor" }, { value: "same", label: "Same on all" }]
               onChanged: function(value) { root.controller.change("mode", value) }
@@ -159,10 +151,21 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 3
+            id: imageRow
+            width: parent.width; height: controlFrame.height / 5
+            Station.InlineDropdown {
+              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
+              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space1
+              visible: root.scene.mode === "individual"
+              prefix: "Monitor: "
+              value: root.selectedDisplay ? root.selectedDisplay.name : ""
+              options: root.controller ? root.controller.layout.displays.map(function(d) { return { value: d.name, label: d.name } }) : []
+              onChanged: function(value) { root.selectedName = value }
+            }
             Row {
+              id: imageActions
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
+              y: root.scene.mode === "individual" ? parent.height - height - root.panelRoot.space1 : (parent.height - height) / 2
               spacing: root.panelRoot.space2
               Ui.Button {
                 text: "Choose image…"; bordered: true
@@ -183,7 +186,8 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 3
+            id: followRow
+            width: parent.width; height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
               anchors.verticalCenter: parent.verticalCenter
@@ -197,6 +201,14 @@ Column {
               foreground: Color.popups.text
               onToggled: root.controller.change("followTheme", !checked)
             }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+          }
+          Item {
+            width: parent.width; height: controlFrame.height / 5
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+          }
+          Item {
+            width: parent.width; height: controlFrame.height / 5
           }
         }
       }

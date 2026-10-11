@@ -6,7 +6,9 @@ notice at lower left, Cancel/Apply at lower right. The layout and settings frame
 are the same 370-unit height used by Displays, and the layout reuses its dotted
 grid. `WALLPAPER` sits above the settings frame, parallel to `LAYOUT`, while a
 full-width segmented Mode control leads the frame; the remaining rows contain
-only the image actions and Follow Omarchy switch. All chrome uses installed
+only the image actions and Follow Omarchy switch. The frame follows Displays'
+five equal row heights, leaving the unused rows empty. In Per monitor mode the
+monitor selector appears with the image actions, not in the Mode row. All chrome uses installed
 `qs.Ui` components and `qs.Commons` tokens. The sole filled action is Apply.
 
 Modes are Same on all, Per monitor, and Span. Default is Same on all with Follow

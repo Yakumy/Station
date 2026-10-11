@@ -35,6 +35,9 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.match(wallpaper, /id: controlFrame[\s\S]*?height: Style\.space\(370\)/);
   assert.match(wallpaper, /component ModeSelector: Ui\.BorderSurface/);
   assert.match(wallpaper, /value: "span", label: "Span"[\s\S]*?value: "individual", label: "Per monitor"[\s\S]*?value: "same", label: "Same on all"/);
+  assert.equal((wallpaper.match(/height: controlFrame\.height \/ 5/g) || []).length, 5);
+  assert.match(wallpaper, /id: imageRow[\s\S]*?prefix: "Monitor: "/);
+  assert.doesNotMatch(wallpaper, /id: modeRow[\s\S]*?prefix: "Monitor: "[\s\S]*?id: imageRow/);
   assert.doesNotMatch(wallpaper, /prefix: "Mode: "/);
   assert.doesNotMatch(wallpaper, /Drag the monitor group|Updates with Omarchy theme|Keeps these images/);
   assert.doesNotMatch(wallpaper, /text: "(?:−|\+|Fit)"/);
