@@ -1,34 +1,114 @@
-# Station
+<div align="center">
+  <img src="assets/station-main-logo.svg" alt="Station logo" width="144">
+  <h1>Station</h1>
+  <p><strong>One workspace system for every monitor.</strong></p>
+  <p>
+    Station synchronizes Hyprland workspaces, safely manages display layouts,<br>
+    and gives Omarchy a proper multi-monitor wallpaper workflow.
+  </p>
+  <p>
+    <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=for-the-badge&amp;logo=github&amp;label=Stars&amp;color=A6B465" alt="GitHub stars"></a>
+    <a href="https://github.com/Yakumy/Station/releases"><img src="https://img.shields.io/github/v/tag/Yakumy/Station?style=for-the-badge&amp;label=Version&amp;color=A6B465" alt="Latest tag"></a>
+    <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=for-the-badge" alt="Omarchy 4"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/Yakumy/Station?style=for-the-badge&amp;color=A6B465" alt="Apache 2.0"></a>
+  </p>
+</div>
 
-Station makes up to three Hyprland displays behave as one workspace system. A
-station contains one workspace per active managed display. With two displays,
-station 1 uses workspaces 1–2, station 2 uses 3–4, and so on. With one display,
-station numbers and workspace numbers are identical. Switching a station changes every display
-together. Sending a window to another station keeps it on the same physical
-display.
+![Station display panel](docs/assets/station-display.png)
 
-Station v2 is a pure Omarchy 4 plugin. It has no installer, binary, standalone
-CLI, network access, or initialization step. Enabling the plugin starts it.
+## Why Station?
 
-![Station panel reference](docs/v2/reference/panel.png)
+Multiple monitors should feel like one desktop, not several unrelated piles of
+workspaces. Station groups one workspace from each active display into a
+**station** and switches the whole group together.
 
-## Requirements
+![Station bar indicator](docs/assets/station-bar.png)
+
+The compact bar indicator shows the active station at a glance and follows the
+current Omarchy theme without competing with the rest of the bar.
+
+With two displays, station 1 contains workspaces 1 and 2, station 2 contains 3
+and 4, and so on. Moving a window to another station keeps it on the same
+physical display. Disconnect a monitor and the grid compacts without losing the
+station each window belongs to; reconnect it and Station expands the grid again.
+
+Station is a native Omarchy 4 plugin. There is no installer script, compiled
+binary, background daemon, network service, or initialization command. Enable
+the plugin and it is ready.
+
+## Highlights
+
+| | |
+| --- | --- |
+| **Synchronized workspaces** | Switch every active display together with the familiar `SUPER + 1…0` workflow. |
+| **Spatial window movement** | Move naturally within a display, across neighboring displays, and across station edges. |
+| **Safe display control** | Arrange, rotate, mirror, disable, scale, and select exact modes with guarded previews and automatic rollback. |
+| **Multi-monitor wallpaper** | Use one image everywhere, choose one per monitor, or frame a single image across the complete layout. |
+| **Hot-plug recovery** | Preserve station identity while docks and displays appear, disappear, or change roles. |
+| **Native Omarchy design** | Uses the installed shell components, theme colors, typography, spacing, and live theme updates. |
+
+## Install
+
+Requirements:
 
 - Omarchy 4 (Quattro)
 - Hyprland 0.56 or newer with Lua configuration
-- One to three managed displays; a fourth display stays unmanaged until you
-  mirror or disable it
+- One to three managed independent displays
 
-## Install
+Install and enable Station with one command:
 
 ```bash
 omarchy plugin add https://github.com/Yakumy/Station.git --enable
 ```
 
-Station immediately replaces Omarchy's numbered workspace bindings and the
-rarely used grouped-window focus bindings on `CTRL + SUPER + Left/Right`. It
-records and hides Omarchy's workspace bar widget, then restores the widget and
-default bindings when Station is disabled or removed.
+Open Station from its bar icon. The panel starts in Extend mode, discovers the
+current display arrangement, and activates the synchronized station bindings.
+No additional dependencies are required beyond the standard Omarchy system.
+
+> [!NOTE]
+> Station manages at most three independent displays. A fourth display remains
+> untouched and is reported as unmanaged until you mirror or disable one.
+
+## Displays that fail safely
+
+The Displays tab combines a visual layout editor with per-monitor controls for
+brightness, global text size, scale, resolution, and refresh rate. Exact modes
+come from the selected monitor rather than being interpolated.
+
+Topology edits—arrangement, rotation, Extend/Mirror/Single mode, and monitor
+on/off—open a 12-second Keep/Revert preview. A detached 20-second watchdog
+restores the previous layout even if the shell crashes. Station never permits a
+zero-output configuration, and it hands an open panel to a surviving display
+before disabling the display that owns it.
+
+Scale, resolution, and refresh changes use the same checked file transaction
+without an unnecessary preview. Station writes only its marked block at the end
+of `~/.config/hypr/monitors.lua`, validates the result through Hyprland, and
+restores the backup on failure.
+
+## Wallpaper, built for real monitor layouts
+
+![Station span wallpaper mode](docs/assets/station-wallpaper-real-layout.png)
+
+Station supports three wallpaper modes:
+
+- **Same on all** — Omarchy's wallpaper or one local image on every display.
+- **Per monitor** — choose a different local image for each active display.
+- **Span** — position the complete fixed monitor group over one large image;
+  drag to frame it and use the mouse wheel to zoom the crop.
+
+Span respects monitor positions, gaps, rotation, logical size, and scale. The
+panel calculates a recommended source resolution for the current layout, while
+still allowing smaller images.
+
+**Follow Omarchy wallpaper** is enabled by default. Theme and background changes
+then update Station automatically. Turn it off to pin your own images across
+theme changes. Station remembers wallpaper choices and Span framing per Omarchy
+theme/background pair, so returning to a previous theme restores the view you
+used with it.
+
+Chosen files are copied into Station's private state directory. Station never
+rewrites Omarchy's background link, theme files, or wallpaper history.
 
 ## Keybindings
 
@@ -36,113 +116,69 @@ default bindings when Station is disabled or removed.
 | --- | --- |
 | Switch station | `SUPER + 1…0` |
 | Move window to station and follow | `SUPER + SHIFT + 1…0` |
-| Move window without following | `SUPER + SHIFT + ALT + 1…0` |
+| Move window to station without following | `SUPER + SHIFT + ALT + 1…0` |
 | Previous/next existing station | `CTRL + SUPER + Left/Right` |
 | Move across displays and station edges | `SHIFT + CTRL + SUPER + arrows` |
 
-Arrow movement follows v1's sequence: try normal Hyprland window movement first,
-then a neighboring display, then an adjacent station at the outer edge. A tiled
-window may therefore move within the current display before crossing it. Station
-crossings synchronize all displays and restore focus to the moved window. With
-vertically stacked displays, Left/Right station crossings keep the same display;
-with horizontally arranged displays, they enter the opposite edge. Single mode
-also allows station crossing after native movement reaches an edge.
+Directional movement tries normal Hyprland movement first, then a neighboring
+display, then an adjacent station at the outer edge. The Keybindings tab shows
+personal conflicts before applying them. A conflicting binding remains inactive
+until you choose another combination or explicitly approve replacement.
 
-Bindings use direct Lua `hl.bind`/`hl.dsp.exec_cmd` dispatchers. The v2 service
-registers them at activation and after Hyprland reloads, calling its IPC endpoint.
-It does not require the v1 `station-bindings.lua` include or a Station binary.
+Station intentionally replaces Omarchy's numbered workspace bindings and the
+rarely used grouped-window focus bindings on `CTRL + SUPER + Left/Right`. It
+records the stock workspace widget before hiding it and restores the widget and
+default bindings when Station is disabled or removed.
 
-The Keybindings tab identifies personal conflicts before applying them. A
-conflicting binding stays inactive until you choose another combination or
-explicitly approve **Replace and unbind it**.
+## Settings and state
 
-## Displays
+Settings include follow-focus behavior, the station grace delay, minimum station
+count, whether to show Omarchy's Workspace and Display widgets, and whether the
+panel opens beside the bar icon or centered on the current monitor.
 
-Open Station from the bar to arrange displays, choose Extend, Mirror, or Single
-mode, adjust brightness, select an exact resolution and refresh mode, set scale
-and rotation, or swap display roles. Scale, resolution, and refresh choices save
-directly with one watched configuration apply. Topology changes—arrangement,
-rotation, mode, and monitor on/off—start as a preview. Choose **Keep** within 12
-seconds or Station restores the previous runtime layout. A detached 20-second
-watchdog also restores it if the shell crashes.
+| Data | Location |
+| --- | --- |
+| Preferences | `~/.config/omarchy/station/config.json` |
+| Runtime state and recovery | `~/.local/state/omarchy/station/` |
+| Saved wallpaper copies | `~/.local/state/omarchy/station/wallpapers/` |
+| Managed display block | `~/.config/hypr/monitors.lua` |
 
-Text size is global: it changes Omarchy shell, GTK, and terminal fonts on all
-displays. Use Scale to change the size of text and UI on only the selected monitor.
-In Settings, **Panel opening position** chooses whether the Station panel opens
-beside its bar icon (Bar) or in the center of that monitor (Center).
+Station journals workspace migrations before moving windows and resumes an
+interrupted migration by saved window identity and station. Disabling or removing
+the plugin restores only the stock widgets Station leased, removes runtime
+bindings and workspace rules, and neutralizes saved Single/Mirror rules.
 
-Kept layouts are written as a marked block at the end of
-`~/.config/hypr/monitors.lua`. Station backs up the file, writes atomically,
-lets Hyprland's file watcher apply it, checks `hyprctl configerrors`, and
-restores the backup if the new configuration fails. Settings can remove the
-managed block entirely.
-
-## Wallpaper
-
-The Wallpaper tab uses the same layout canvas and settings sidebar as Displays:
-
-- **Same on all** (default): Omarchy's wallpaper on every monitor, or a local image you choose.
-- **Per monitor**: select a monitor in the canvas or menu and choose its image.
-- **Span**: fit one image inside the canvas, then drag the fixed monitor group
-  over it. Scroll or use −/+ to zoom the crop; Fit resets it. Arrow keys nudge
-  the focused canvas. Monitor positions themselves are changed only in Displays.
-
-The native desktop file chooser selects local images. Choose **Apply** to save;
-Cancel restores the applied selection. Only active, independent outputs appear;
-mirrored sinks inherit their source. The size suggestion under Span accounts for
-layout gaps, rotation, the highest display scale, and zoom. Smaller images still
-work. For stacked 1920×1080 and 1920×1200 displays at scale 1, Fit suggests
-1920×2280 pixels.
-
-**Follow Omarchy wallpaper** defaults on. Theme changes and Omarchy's background
-switcher update the image while retaining the selected mode. Station remembers
-your saved image choices and crop for each theme/background pair (up to 64), so
-returning to that pair restores them. Turn the switch off and Apply to keep your
-chosen images across theme changes. Panel colors always follow the theme.
-
-Applied images are copied into `~/.local/state/omarchy/station/wallpapers/`, so
-theme regeneration or moving the original file does not break a saved choice.
-Station never alters Omarchy's background link, theme files, or background
-history. Disabling/removing Station reveals the current stock wallpaper; saved
-preferences and image copies are retained. Old image copies are not automatically
-deleted. This version uses still images, with the first frame of animated files.
-
-## State and removal
-
-Station stores preferences in `~/.config/omarchy/station/config.json` and
-runtime bookkeeping in `~/.local/state/omarchy/station/state.json`. The saved
-workspace mapping and recoverable migration journal live beside it in
-`workspace-map.json`.
-
-When displays change, windows keep their station and stay on surviving physical
-displays. Windows from a removed display merge into a survivor in the same
-station. Workspace numbers compact or expand; a returning display starts with
-empty workspaces. For example, single-display workspace 3 becomes workspace 5
-on the original display when extending to two displays. Explicit Single and
-Mirror modes use one workspace per station. A topology preview immediately
-migrates windows to the temporary compact mapping; Revert restores the original
-mapping, while Keep commits the accepted one.
+## Update or remove
 
 ```bash
 omarchy plugin update yakumy.station
+```
 
+If an updated panel is still cached, refresh the shell once:
+
+```bash
+omarchy restart shell
+```
+
+Remove Station through Omarchy:
+
+```bash
 omarchy plugin remove yakumy.station
 ```
 
-If the panel still shows the old layout after an update, run
-`omarchy restart shell` once. A plugin rescan can leave an already-loaded
-Quickshell panel component in memory.
-
-Removal restores the stock workspace widget and the Omarchy Display widget if
-Station hid it, neutralizes any saved Single or Mirror rule to plain display
-geometry, and reloads Hyprland so Station bindings
-and workspace rules do not linger. If the shell is unavailable throughout the
-cleanup window, run `hyprctl reload` once it returns.
+Saved preferences and wallpaper copies are retained so a later reinstall can
+recover them. If the shell was unavailable for the entire removal cleanup window,
+run `hyprctl reload` once it returns.
 
 ## Development
 
-The Node tests require `lua` on PATH to execute generated monitor configuration
-with a mocked compositor (CI installs Lua 5.4).
+Station's behavior, transaction guarantees, and verified platform findings are
+documented in [the v2 specification](docs/v2/SPEC.md),
+[architecture guide](docs/ARCHITECTURE.md), and
+[platform findings](docs/PLATFORM-FINDINGS.md). UI work follows the
+[Station design system](docs/v2/DESIGN-SYSTEM.md).
+
+Run the standard checks from the repository root:
 
 ```bash
 node --test test/m0/*.test.mjs test/v2/*.test.cjs
@@ -153,11 +189,10 @@ omarchy plugin validate .
 python3 tools/v2/check-qml.py .
 ```
 
-`python3 tools/v2/check-wallpaper.py` opens a short-lived isolated preview using
-the installed UI components and captures dark/light examples under `/tmp`.
-It does not change wallpapers, monitor configuration, or saved preferences.
+`check-qml.py` needs access to the live Wayland session but does not instantiate
+Station or change the desktop configuration. Hardware topology changes remain
+manual release checks; the offscreen tests do not pretend to prove real hardware.
 
-The implementation contract and hardware evidence are in
-[`docs/v2/SPEC.md`](docs/v2/SPEC.md) and [`docs/v2/M0.md`](docs/v2/M0.md). Visual
-tokens, spacing, typography, and component rules are in
-[`docs/v2/DESIGN-SYSTEM.md`](docs/v2/DESIGN-SYSTEM.md).
+## License
+
+Station is available under the [Apache License 2.0](LICENSE).
