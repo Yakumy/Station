@@ -195,7 +195,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). `Ui.WidgetButton.foreground` resolves to the injected host's `bar.barForeground`; fall back to `Color.bar.text`. The stock Omarchy menu glyph uses `Style.font.body`; Station binds its mark directly to its `WidgetButton.foreground` and uses `Style.font.body + Style.space(1)` for optical sizing. With the user's current 10px base-font override, Omarchy requests 10px and Station 11×11 logical pixels inside the unchanged 22px-high bar. |
 | Geometry/type | `Style.cornerRadius`, `Style.space(px)`, `Style.spacing.*`, `Style.font.*`, `Border.surfaceSpec(...)`, `BorderSurface` |
 
-Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; CI for Station fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
+Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; Station's theme-token check fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
 
 **[LIVE][SRC] Bar-logo tint:** a captured Miasma bar showed fully covered
 Omarchy-logo and `[S1]` pixels at the requested `#c2c2b0`, while Station's

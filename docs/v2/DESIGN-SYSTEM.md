@@ -125,7 +125,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 ## 10. Functional bugs found during audit (fix with priority — not cosmetic)
 
-**[V] Both fixed in this revision** (§8 CI now guards the token choices, so they cannot regress):
+**[V] Both fixed in this revision** (§8 the theme check now guards the token choices, so they cannot regress):
 
 1. **Conflict rows never render red.** See the `Color.urgent` entry in §4: the fallback argument of `Border.surfaceSpec` is masked by a primary value `shell.toml` always supplies. A user got no visual warning that a keybinding they were about to apply conflicted with an existing one. Fix directly (`Border.flat(Color.urgent, Style.normalBorderWidth)`), don't pass it as an unreachable fallback.
 2. Every Settings/Keybindings row rendered with an accent-blue border because it was built from `Color.popups.border`, which is not neutral (§4). Fixing the token choice (to `Ui.PanelSeparator` / `Border.controlSpec("normal", …)`) fixes this as a side effect of §4, not a separate task.

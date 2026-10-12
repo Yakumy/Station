@@ -400,7 +400,7 @@ Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, F
 | Spacing, fonts                   | `Style.space(px)`, `Style.spacing.*`, `Style.font.*`                                                                                                      |
 | Buttons, dropdowns, tab strips   | reuse `qs.Ui` controls                                                                                                                                    |
 
-CI check: fail on any hex colour (including short and alpha forms) and on symlinks. Copy Display's **component structure**, not its raw numeric spacing or font values: wrap dimensions in `Style.space`, use `Style.font` and `Style.spacing`, and keep the shared `BorderSurface`/`Border` model. Token names above were read from the installed `Color.qml` in M0.
+Theme-token check (`node tools/v2/check-theme-tokens.mjs`): fail on any hex colour (including short and alpha forms) and on symlinks. Copy Display's **component structure**, not its raw numeric spacing or font values: wrap dimensions in `Style.space`, use `Style.font` and `Style.spacing`, and keep the shared `BorderSurface`/`Border` model. Token names above were read from the installed `Color.qml` in M0.
 
 ## 12. Install, update, delete
 

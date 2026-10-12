@@ -123,7 +123,7 @@ and Preview compositor calls doubled. Ten cases pass (12 QtTest passes
 including setup/cleanup), without warnings: horizontal right/left (including
 negative coordinates), vertical, click-only selection, repeated drag after Revert, nearby
 edge snapping, selected-mode/scale/rotation geometry, three-display fit, and
-invalid/busy position rejection. The CI workflow includes this check.
+invalid/busy position rejection.
 
 After the first live test failed, the harness was corrected to put the layout
 inside the same kind of scrolling `Flickable` used by the panel. That reproduced
@@ -145,7 +145,7 @@ global Mode and Direction dropdowns, a two-column Displays view, grouped
 keybindings, and compact settings. The layout canvas has theme-token dots and
 per-monitor rotation controls. There is no panel `ScrollView`, `Flickable`, or
 `ListView`; content height follows the selected tab and the panel requests the
-space it needs. A static CI test guards the fixed, non-scrollable structure.
+space it needs. A static test guards the fixed, non-scrollable structure.
 
 All eleven Node test files, the 12-case Qt pointer suite, theme-token scan,
 manifest validation, and component-by-component QML compilation pass. The QML
