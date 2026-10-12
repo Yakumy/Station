@@ -241,7 +241,7 @@ Column {
         anchors.left: githubLink.right
         anchors.leftMargin: settingsTab.panelRoot.space1
         anchors.verticalCenter: parent.verticalCenter
-        text: "v" + settingsTab.panelRoot.pluginVersion
+        text: settingsTab.panelRoot.pluginVersion ? "v" + settingsTab.panelRoot.pluginVersion : "unknown"
         color: settingsTab.panelRoot.textDim
         font.family: Style.font.family
         font.pixelSize: Style.font.bodySmall
