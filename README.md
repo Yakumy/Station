@@ -8,7 +8,7 @@
   </p>
   <p>
     <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=for-the-badge&amp;logo=github&amp;label=Stars&amp;color=A6B465" alt="GitHub stars"></a>
-    <a href="https://github.com/Yakumy/Station/tags"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FYakumy%2FStation%2Fmain%2Fmanifest.json&amp;query=%24.version&amp;style=for-the-badge&amp;label=Version&amp;color=A6B465" alt="Version"></a>
+    <a href="https://github.com/Yakumy/Station/commits/main"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FYakumy%2FStation%2Fmain%2Fmanifest.json&amp;query=%24.version&amp;style=for-the-badge&amp;label=Version&amp;color=A6B465" alt="Version"></a>
     <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=for-the-badge" alt="Omarchy 4"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/Yakumy/Station?style=for-the-badge&amp;color=A6B465" alt="Apache 2.0"></a>
   </p>
