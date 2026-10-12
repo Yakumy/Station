@@ -17,6 +17,9 @@ close the keyboard-focused popout before opening the portal chooser, then reopen
 Wallpaper when it exits. The service retains the draft through panel rebuilds.
 Selecting a file or changing a crop affects the preview until Apply. Decode and
 snapshot errors retain previous settings. Preference save failure restores them.
+While Follow Omarchy wallpaper is enabled, Choose image leaves the panel open
+and shows an urgent notice telling the user to turn Follow off; Omarchy remains
+authoritative and no picker opens until the switch is disabled.
 
 Active non-mirrored outputs come from observed Hyprland monitors, not the editable
 Displays draft or workspace lanes. Disabled outputs vanish. Per-output choices

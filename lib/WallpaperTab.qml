@@ -173,8 +173,7 @@ Column {
                 onClicked: {
                   var target = root.scene.mode === "individual" ? root.selectedDisplay.identity : ""
                   var owner = root.controller
-                  root.panelRoot.close()
-                  owner.choose(target)
+                  if (owner.choose(target)) root.panelRoot.close()
                 }
               }
               Ui.Button {
@@ -221,6 +220,7 @@ Column {
       x: root.pad; anchors.verticalCenter: parent.verticalCenter
       width: parent.width - actions.width - root.pad * 3
       text: root.controller ? root.controller.notice : ""
+      color: root.controller && root.controller.noticeError ? Color.urgent : root.panelRoot.textDim
     }
     Row {
       id: actions

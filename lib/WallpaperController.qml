@@ -24,6 +24,7 @@ Item {
   property bool dirty: false
   property bool busy: false
   property string notice: ""
+  property bool noticeError: false
   property var pending: null
   property bool pendingSave: false
   property var previousPreferences: null
@@ -35,49 +36,60 @@ Item {
     // A theme switch wins over an in-flight Apply only while following it.
     if (busy && pending && !pendingSave && pending.scene.followTheme) {
       serial++; busy = false; pending = null
-      notice = "Wallpaper changed with Omarchy. Review your selection and apply again."
+      showNotice("Wallpaper changed with Omarchy. Review your selection and apply again.")
     }
     if (draft.followTheme) {
       var next = dirty ? JSON.parse(JSON.stringify(draft)) : JSON.parse(JSON.stringify(applied))
       next.source = themePath
       next.revision = themeRevision
       draft = next
-      if (dirty) notice = "Omarchy's wallpaper changed. Your crop edits are still here."
+      if (dirty) showNotice("Omarchy's wallpaper changed. Your crop edits are still here.")
     }
   }
 
-  function reset() { draft = JSON.parse(JSON.stringify(applied)); dirty = false; notice = "" }
+  function showNotice(message, error) { notice = message; noticeError = error === true }
+  function clearNotice() { notice = ""; noticeError = false }
+  function reset() { draft = JSON.parse(JSON.stringify(applied)); dirty = false; clearNotice() }
   function preferenceSaved() {
     if (!pendingSave) return
     pendingSave = false; pending = null; busy = false; dirty = false
-    reset(); notice = "Wallpaper applied."
+    reset(); showNotice("Wallpaper applied.")
   }
   function preferenceFailed() {
     if (!pendingSave) return
     pendingSave = false; pending = null; busy = false
     station.config = Object.assign({}, station.config, {wallpaper: previousPreferences})
-    notice = "Could not save preferences. Your previous wallpaper has been restored."
+    showNotice("Could not save preferences. Your previous wallpaper has been restored.", true)
   }
   function change(key, value) {
     if (busy) return
     var next = JSON.parse(JSON.stringify(draft))
     next[key] = value
-    draft = next; dirty = true; notice = ""
+    draft = next; dirty = true; clearNotice()
   }
   function frame(value) { change("framing", Wallpaper.framing(value)) }
   function select(path) {
-    if (!Wallpaper.path(path)) { notice = "Choose a local image file."; return }
+    if (draft.followTheme) {
+      showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
+      return
+    }
+    if (!Wallpaper.path(path)) { showNotice("Choose a local image file.", true); return }
     if (pickerTarget) {
       var map = Object.assign({}, draft.perDisplay); map[pickerTarget] = path
       change("perDisplay", map)
     } else { change("source", path); frame({}) }
   }
   function choose(identity) {
-    if (pickerBusy || busy) return
+    if (pickerBusy || busy) return false
+    if (draft.followTheme) {
+      showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
+      return false
+    }
     pickerTarget = identity || ""
     // The picker is a separate native window: release the panel's focus grab.
     station.panelWanted = false
     pickerDelay.restart()
+    return true
   }
   function useTheme() {
     change("source", themePath); change("perDisplay", {}); frame({})
@@ -89,8 +101,8 @@ Item {
     if (scene.mode === "individual") Object.keys(scene.perDisplay).forEach(function(key) {
       if (paths.indexOf(scene.perDisplay[key]) < 0) paths.push(scene.perDisplay[key])
     })
-    if (paths.some(function(p) { return !Wallpaper.path(p) })) { notice = "Choose a local wallpaper first."; return }
-    serial++; busy = true; notice = "Checking wallpaper…"
+    if (paths.some(function(p) { return !Wallpaper.path(p) })) { showNotice("Choose a local wallpaper first.", true); return }
+    serial++; busy = true; showNotice("Checking wallpaper…")
     pending = { scene: scene, paths: paths, key: themeKey, serial: serial }
     validation.model = paths
     Qt.callLater(checkImages)
@@ -101,7 +113,7 @@ Item {
       var img = validation.objectAt(i)
       if (!img || img.status === Image.Loading || img.status === Image.Null) return
       if (img.status === Image.Error) {
-        busy = false; pending = null; notice = "An image could not be opened. Choose another file."; return
+        busy = false; pending = null; showNotice("An image could not be opened. Choose another file.", true); return
       }
     }
     if (pending.copying) return
@@ -116,7 +128,7 @@ Item {
     job.paths.forEach(function(p, i) { args.push(p, destinations[i]) })
     station.enqueue(args, function(code) {
       if (!root.pending || job.serial !== root.serial) return
-      if (code !== 0) { root.busy = false; root.notice = "Could not save the wallpaper. Your previous wallpaper is unchanged."; root.pending = null; return }
+      if (code !== 0) { root.busy = false; root.showNotice("Could not save the wallpaper. Your previous wallpaper is unchanged.", true); root.pending = null; return }
       var p = Wallpaper.profile(job.scene)
       p.source = destinations[job.paths.indexOf(p.source)]
       Object.keys(p.perDisplay).forEach(function(key) {
@@ -167,7 +179,7 @@ Item {
     stdout: StdioCollector { onStreamFinished: picker.result = text.replace(/\n$/, "") }
     onExited: function(code) {
       if (code === 0) root.select(result)
-      else if (code !== 1) root.notice = "The desktop file picker could not open."
+      else if (code !== 1) root.showNotice("The desktop file picker could not open.", true)
       root.station.rememberedTab = 1
       root.station.panelWanted = true
     }

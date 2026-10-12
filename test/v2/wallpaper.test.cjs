@@ -60,18 +60,36 @@ test('malformed settings are bounded; remote and control-character paths are rej
 
 function controller() {
   const source = fs.readFileSync('lib/WallpaperController.qml', 'utf8');
-  const methods = source.slice(source.indexOf('  function reset()'), source.indexOf('\n  Instantiator'));
+  const methods = source.slice(source.indexOf('  function showNotice('), source.indexOf('\n  Instantiator'));
   const c = {Wallpaper: W, Qt: {callLater: () => {}}, Image: {Ready: 1, Loading: 2, Null: 0, Error: 3},
     draft: {mode: 'span', followTheme: true, source: '/tmp/image.png', perDisplay: {}, framing: W.framing({})},
-    dirty: true, busy: false, pendingSave: false, serial: 0, themeKey: 'original', preferences: W.settings({}),
+    dirty: true, busy: false, pickerBusy: false, pendingSave: false, serial: 0,
+    themeKey: 'original', preferences: W.settings({}),
     layout: layout([monitor('A')]), validation: {count: 1, objectAt: () => ({status: 1})},
     station: {stateDir: '/tmp/station-test', config: {}, saveConfig() {this.saved = true},
       enqueue(argv, done) {this.argv = argv; this.done = done}},
-    picker: {running: false}, pickerDelay: {restart() {}}, applied: {source: '/tmp/image.png'}};
+    picker: {running: false}, pickerDelay: {restarts: 0, restart() {this.restarts++}},
+    applied: {source: '/tmp/image.png'}};
   c.root = c;
   vm.createContext(c); vm.runInContext(methods, c);
   return c;
 }
+test('Follow Omarchy blocks local selection and keeps the panel open with an error', () => {
+  const c = controller();
+  c.station.panelWanted = true;
+  assert.equal(c.choose('A'), false);
+  assert.equal(c.notice, 'Turn off Follow Omarchy wallpaper to select your own wallpaper.');
+  assert.equal(c.noticeError, true);
+  assert.equal(c.station.panelWanted, true);
+  assert.equal(c.pickerDelay.restarts, 0);
+
+  c.change('followTheme', false);
+  assert.equal(c.notice, '');
+  assert.equal(c.noticeError, false);
+  assert.equal(c.choose('A'), true);
+  assert.equal(c.station.panelWanted, false);
+  assert.equal(c.pickerDelay.restarts, 1);
+});
 test('Apply snapshots through positional arguments and commits only after a successful copy', () => {
   const c = controller(); c.draft.source = '/tmp/$(touch bad); " image.png';
   c.apply(); c.checkImages();

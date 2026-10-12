@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "yakumy.station",
   "name": "Station",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "author": "Yakumy",
   "license": "Apache-2.0",
   "description": "Synchronized workspaces, displays, and wallpapers for Omarchy",
