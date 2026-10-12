@@ -74,17 +74,20 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
 
 test('bar logo shares the Omarchy menu foreground and size token', () => {
   const panel = read('lib/StationPanel.qml');
-  const mark = read('assets/station.svg');
+  const mark = read('assets/station-main-logo-mask.svg');
+  const master = read('assets/station-main-logo.svg');
 
   assert.match(panel, /stationLogoSize:\s*Style\.font\.body \+ Style\.space\(1\)/);
+  assert.match(panel, /assets\/station-main-logo-mask\.svg/);
   assert.match(panel, /tint:\s*logoButton\.foreground/);
   assert.match(panel, /id:\s*stationButton[\s\S]*?transform:\s*Translate\s*\{\s*y:\s*Style\.space\(1\)\s*\}/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
-  // MultiEffect colorization multiplies the requested tint by source
-  // luminance. A white source makes the SVG a pure alpha mask, so a fully
-  // covered pixel is exactly the WidgetButton foreground instead of dimmer.
+  // Keep the supplied green master for public artwork, but use its white
+  // geometry twin at runtime. MultiEffect preserves source luminance, so only
+  // the white mask can reproduce WidgetButton.foreground exactly.
+  assert.match(master, /#A6B465/);
   assert.match(mark, /stroke="white"/);
-  assert.match(mark, /stroke-width="54"/);
+  assert.match(mark, /stroke-width="35"/);
   assert.doesNotMatch(mark, /(?:stroke-)?opacity=/);
 });
 

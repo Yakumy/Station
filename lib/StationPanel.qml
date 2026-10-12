@@ -75,7 +75,9 @@ Ui.Panel {
       id: markImage
       anchors.fill: parent
       fillMode: Image.PreserveAspectFit
-      source: Qt.resolvedUrl("../assets/station.svg")
+      // The public mark is green. Its geometry-identical white mask keeps
+      // MultiEffect colorization at the exact Omarchy foreground token.
+      source: Qt.resolvedUrl("../assets/station-main-logo-mask.svg")
       sourceSize.width: Math.round(width * Screen.devicePixelRatio)
       sourceSize.height: Math.round(height * Screen.devicePixelRatio)
       visible: false
