@@ -15,8 +15,11 @@ Modes are Same on all, Per monitor, and Span. Default is Same on all with Follow
 Omarchy wallpaper enabled. A local file is chosen through `omarchy file select`;
 close the keyboard-focused popout before opening the portal chooser, then reopen
 Wallpaper when it exits. The service retains the draft through panel rebuilds.
-Selecting a file or changing a crop affects the preview until Apply. Decode and
-snapshot errors retain previous settings. Preference save failure restores them.
+The picker result is not a preview source: Station first streams it into a fresh
+private directory through its bounded sanitizer, then updates the draft with
+that prepared path. Selecting a file or changing a crop affects the preview
+until Apply. Sanitization, decode, and snapshot errors retain previous settings.
+Preference save failure restores them.
 While Follow Omarchy wallpaper is enabled, Choose image leaves the panel open
 and shows an urgent notice telling the user to turn Follow off; Omarchy remains
 authoritative and no picker opens until the switch is disabled.
@@ -54,12 +57,21 @@ Changes during an unfinished follow-mode snapshot invalidate its callback; an
 unapplied draft remains available with a notice. A finished commit may retain
 the old pair's profile without replacing the newly selected pair's wallpaper.
 
-Snapshots use a fresh private directory under Station state, quoted positional
-argv, and no interpolation of filenames or EDID text into scripts. Image copies
-are retained after mode changes, failed saves, disable and removal; there is no
-automatic cache eviction in this version. Preferences live under `config.wallpaper`
-without changing the enclosing config schema. Missing/invalid settings normalize
-to defaults. No external image processor, network access or extra package is needed.
+Imports and snapshots use fresh private directories under Station state, quoted
+positional argv, and no interpolation of filenames or EDID text into scripts.
+The import helper recognizes PNG, JPEG, GIF, BMP, and WebP by magic bytes and
+enforces a 128 MiB input limit. PNG parsing is streaming, with a 4,096-chunk and
+256 MiB decoded-raster budget; only IHDR, PLTE, IDAT, IEND, and small rendering
+chunks are retained. Text, ICC, EXIF, animation, suggested-palette, and unknown
+ancillary chunks are discarded without decompression. The safe marker is valid
+only for paths under Station's private wallpaper directory. Older unmarked pinned
+choices remain absent from QML Images until the helper prepares replacement
+copies and the config save is acknowledged. Image copies are retained after mode
+changes, failed saves, disable and removal; there is no automatic cache eviction
+in this version. Preferences live under `config.wallpaper` without changing the
+enclosing config schema. Missing/invalid settings normalize to defaults. The
+helper uses core Perl, already required by Omarchy; no external image processor,
+network access, or extra package is needed.
 
 The persistent service draws non-interactive bottom-layer surfaces above the
 stock background. Default Same on all defers to stock; missing images also reveal

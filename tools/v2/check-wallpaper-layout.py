@@ -53,7 +53,7 @@ Item {
     property var layout: Wallpaper.topology([
       {name: "A", width: 1000, height: 1000, x: 0, y: 0},
       {name: "B", width: 1000, height: 1000, x: 1000, y: 0}], ["A", "B"])
-    property var draft: ({mode: "span", source: IMAGE_PATH, perDisplay: {}, framing: Wallpaper.framing({})})
+    property var draft: ({mode: "span", source: IMAGE_PATH, perDisplay: {}, framing: Wallpaper.framing({}), safe: true})
     function frame(value) { draft = Object.assign({}, draft, {framing: Wallpaper.framing(value)}) }
   }
   Station.WallpaperLayout { id: canvas; anchors.fill: parent; controller: controller }

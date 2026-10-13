@@ -39,10 +39,18 @@ Pure modules under `lib/` isolate policy from QML:
 - `Store.js` owns versioned defaults and bounded migrations.
 - `Wallpaper.js` validates wallpaper preferences and owns logical crop geometry,
   native-resolution recommendations, and theme/background profile resolution.
-  `WallpaperController.qml`, owned by the persistent service, retains the draft,
-  opens Omarchy's native file chooser, validates image decoding, snapshots source
-  files, and saves `config.wallpaper`. Success waits for the config FileView save
-  acknowledgment; failure restores the previous in-memory wallpaper settings.
+  `WallpaperController.qml`, owned by the persistent service, retains the draft
+  and opens Omarchy's native file chooser. A picker result is never assigned to
+  a QML Image: the fixed-argv `SanitizeWallpaper.pl` helper first streams it into
+  a fresh private directory with input, PNG chunk-count, and raster bounds. The
+  helper recognizes content rather than extensions and retains only bounded PNG
+  rendering chunks, so compressed text/profile metadata is never decoded in the
+  shared shell. Perl is an Omarchy package dependency; the helper uses only core
+  modules and is not an image decoder. Previously saved unmarked local choices
+  remain hidden while they pass through the same boundary. The controller then
+  validates safe image decoding, snapshots source files, and saves
+  `config.wallpaper`. Success waits for the config FileView save acknowledgment;
+  failure restores the previous in-memory wallpaper settings.
   `WallpaperLayout.qml` and desktop `WallpaperImage.qml` share the same crop
   transform. Click-through, keyboard-unfocused bottom-layer surfaces sit above
   Omarchy's stock background and disappear with the service. The default same-image

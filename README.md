@@ -107,7 +107,10 @@ theme changes. Station remembers wallpaper choices and Span framing per Omarchy
 theme/background pair, so returning to a previous theme restores the view you
 used with it.
 
-Chosen files are copied into Station's private state directory. Station never
+Chosen files are streamed through a bounded format check before any preview.
+PNG text, profile, EXIF, and other non-rendering ancillary chunks are removed,
+then only the private Station copy is shown or saved. Older saved choices are
+prepared through the same boundary before they can render. Station never
 rewrites Omarchy's background link, theme files, or wallpaper history.
 
 ## Keybindings

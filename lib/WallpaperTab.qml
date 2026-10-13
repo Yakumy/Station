@@ -111,7 +111,7 @@ Column {
       id: rightColumn
       width: parent.width - left.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
-      enabled: root.controller && !root.controller.busy
+      enabled: root.controller && !root.controller.busy && !root.controller.importBusy
       Item {
         width: parent.width; height: Style.space(28)
         Ui.PanelSectionHeader {
@@ -229,15 +229,17 @@ Column {
       spacing: root.panelRoot.space2
       Ui.Button {
         text: "Cancel"; bordered: true
-        enabled: root.controller && root.controller.dirty && !root.controller.busy
+        enabled: root.controller && root.controller.dirty && !root.controller.busy && !root.controller.importBusy
         onClicked: root.controller.reset()
       }
       Ui.Button {
-        text: root.controller && root.controller.busy ? "Applying…" : "Apply"
+        text: root.controller && root.controller.importBusy ? "Preparing…"
+          : root.controller && root.controller.busy ? "Applying…" : "Apply"
         accent: Color.accent
         background: Color.accent
         foreground: Color.popups.background
-        enabled: root.controller && root.controller.dirty && !root.controller.busy && root.controller.layout.displays.length > 0
+        enabled: root.controller && root.controller.dirty && !root.controller.busy
+          && !root.controller.importBusy && root.controller.layout.displays.length > 0
         onClicked: root.controller.apply()
       }
     }

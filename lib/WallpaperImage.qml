@@ -10,6 +10,7 @@ Item {
   required property var display
   readonly property alias status: picture.status
   function imageUrl(path) {
+    if (!scene.safe) return ""
     var url = Util.fileUrl(path)
     return path === scene.source && scene.revision ? url + "?station=" + encodeURIComponent(scene.revision) : url
   }

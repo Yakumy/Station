@@ -62,8 +62,9 @@ Ui.BorderSurface {
   }
   Image {
     id: background
-    source: Util.fileUrl(root.scene.source)
+    source: root.scene.safe ? Util.fileUrl(root.scene.source)
       + (root.scene.revision ? "?station=" + encodeURIComponent(root.scene.revision) : "")
+      : ""
     asynchronous: true
     width: root.readySourceSize.width * root.imageFit
     height: root.readySourceSize.height * root.imageFit

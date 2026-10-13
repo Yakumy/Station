@@ -44,6 +44,9 @@ test('default follows Omarchy, theme profiles return, pinned images ignore backg
   assert.equal(W.resolve(s, 'theme-A', '/a.jpg', '17:42').source, '/a.jpg');
   assert.equal(W.resolve(s, 'theme-A', '/a.jpg', '17:42').revision, '17:42');
   assert.equal(W.resolve({...s, followTheme: false}, 'theme-B', '/b.jpg').source, '/pinned.jpg');
+  assert.equal(W.resolve({...s, followTheme: false}, 'theme-B', '/b.jpg').safe, false);
+  assert.equal(W.resolve({...s, followTheme: false, pinned: {...s.pinned, safe: true}},
+    'theme-B', '/b.jpg').safe, true);
 });
 test('per-display images follow physical identity, with a shared fallback on new displays', () => {
   const p = {mode: 'individual', source: '/base.jpg', perDisplay: {'known': '/second.jpg'}};
@@ -62,11 +65,14 @@ function controller() {
   const source = fs.readFileSync('lib/WallpaperController.qml', 'utf8');
   const methods = source.slice(source.indexOf('  function showNotice('), source.indexOf('\n  Instantiator'));
   const c = {Wallpaper: W, Qt: {callLater: () => {}}, Image: {Ready: 1, Loading: 2, Null: 0, Error: 3},
-    draft: {mode: 'span', followTheme: true, source: '/tmp/image.png', perDisplay: {}, framing: W.framing({})},
-    dirty: true, busy: false, pickerBusy: false, pendingSave: false, serial: 0,
+    draft: {mode: 'span', followTheme: true, source: '/tmp/image.png', perDisplay: {}, framing: W.framing({}), safe: true},
+    dirty: true, busy: false, pickerBusy: false, pendingSave: false, repairPending: false,
+    repairPrevious: null, repairLegacyKey: '', importBusy: false, failedLegacyKey: '',
+    pickerTarget: '', serial: 0,
     themeKey: 'original', preferences: W.settings({}),
     layout: layout([monitor('A')]), validation: {count: 1, objectAt: () => ({status: 1})},
-    station: {stateDir: '/tmp/station-test', config: {}, saveConfig() {this.saved = true},
+    station: {stateDir: '/tmp/station-test', pluginDir: process.cwd(), configLoaded: true,
+      config: {}, saveConfig() {this.saved = true},
       enqueue(argv, done) {this.argv = argv; this.done = done}},
     picker: {running: false}, pickerDelay: {restarts: 0, restart() {this.restarts++}},
     applied: {source: '/tmp/image.png'}};
@@ -89,6 +95,50 @@ test('Follow Omarchy blocks local selection and keeps the panel open with an err
   assert.equal(c.choose('A'), true);
   assert.equal(c.station.panelWanted, false);
   assert.equal(c.pickerDelay.restarts, 1);
+});
+test('a picker result is staged before it can change an Image source', () => {
+  const c = controller(); c.change('followTheme', false);
+  const original = c.draft.source;
+  c.prepareSelection('/tmp/foreign wallpaper.png');
+  assert.equal(c.draft.source, original);
+  assert.equal(c.importBusy, true);
+  assert.deepEqual(Array.from(c.station.argv.slice(0, 3)),
+    ['perl', path.join(process.cwd(), 'lib/SanitizeWallpaper.pl'), '/tmp/foreign wallpaper.png']);
+  assert.ok(!c.station.argv[1].includes(c.station.argv[2]));
+  const prepared = c.station.argv[3] + '/image.png';
+  c.station.done(0, prepared + '\n');
+  assert.equal(c.importBusy, false);
+  assert.equal(c.draft.source, prepared);
+  assert.equal(c.draft.safe, true);
+});
+test('a persisted safety marker is accepted only for Station-private paths', () => {
+  const c = controller();
+  let scene = {followTheme: false, source: '/tmp/foreign.png', perDisplay: {}, safe: true};
+  assert.equal(c.secureStoredScene(scene).safe, false);
+  scene = {followTheme: false, source: '/tmp/station-test/wallpapers/safe/image.png',
+    perDisplay: {}, safe: true};
+  assert.equal(c.secureStoredScene(scene).safe, true);
+});
+test('an older pinned wallpaper is gated and restaged before rendering', () => {
+  const c = controller();
+  c.dirty = false;
+  c.applied = {mode: 'same', followTheme: false, source: '/tmp/old.png',
+    perDisplay: {}, framing: W.framing({}), safe: false};
+  c.preferences = W.settings({mode: 'same', followTheme: false,
+    pinned: {source: '/tmp/old.png'}});
+  c.station.config.wallpaper = c.preferences;
+  c.prepareLegacyWallpaper();
+  assert.equal(c.importBusy, true);
+  assert.equal(c.station.argv[2], '/tmp/old.png');
+  const prepared = c.station.argv[3] + '/image.png';
+  c.station.done(0, prepared + '\n');
+  assert.equal(c.repairPending, true);
+  assert.equal(c.station.config.wallpaper.pinned.safe, true);
+  assert.equal(c.station.config.wallpaper.pinned.source, prepared);
+  c.applied = W.resolve(c.station.config.wallpaper, '', '', '');
+  c.preferenceSaved();
+  assert.equal(c.importBusy, false);
+  assert.equal(c.draft.source, prepared);
 });
 test('Apply snapshots through positional arguments and commits only after a successful copy', () => {
   const c = controller(); c.draft.source = '/tmp/$(touch bad); " image.png';

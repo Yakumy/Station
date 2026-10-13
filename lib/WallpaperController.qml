@@ -19,7 +19,8 @@ Item {
   property string themeRevision: ""
   readonly property string themeKey: JSON.stringify([themeName, themePath])
   readonly property string themeToken: JSON.stringify([themeName, themePath, themeRevision])
-  readonly property var applied: Wallpaper.resolve(preferences, themeKey, themePath, themeRevision)
+  readonly property var resolved: Wallpaper.resolve(preferences, themeKey, themePath, themeRevision)
+  readonly property var applied: secureStoredScene(resolved)
   property var draft: Wallpaper.resolve({}, "", "", "")
   property bool dirty: false
   property bool busy: false
@@ -28,10 +29,18 @@ Item {
   property var pending: null
   property bool pendingSave: false
   property var previousPreferences: null
+  property bool repairPending: false
+  property var repairPrevious: null
+  property string repairLegacyKey: ""
+  property bool importBusy: false
+  property string failedLegacyKey: ""
   property int serial: 0
   property string pickerTarget: ""
-  readonly property bool pickerBusy: picker.running || pickerDelay.running
-  onAppliedChanged: if (!dirty && !busy) reset()
+  readonly property bool pickerBusy: picker.running || pickerDelay.running || importBusy
+  onAppliedChanged: {
+    if (!dirty && !busy && !importBusy) reset()
+    Qt.callLater(prepareLegacyWallpaper)
+  }
   onThemeTokenChanged: {
     // A theme switch wins over an in-flight Apply only while following it.
     if (busy && pending && !pendingSave && pending.scene.followTheme) {
@@ -48,36 +57,128 @@ Item {
   }
 
   function showNotice(message, error) { notice = message; noticeError = error === true }
+  function secureStoredScene(scene) {
+    var next = JSON.parse(JSON.stringify(scene))
+    if (next.followTheme) return next
+    var prefix = station.stateDir + "/wallpapers/"
+    var paths = [next.source]
+    Object.keys(next.perDisplay).forEach(function(key) { paths.push(next.perDisplay[key]) })
+    next.safe = next.safe && paths.every(function(path) { return path.indexOf(prefix) === 0 })
+    return next
+  }
   function clearNotice() { notice = ""; noticeError = false }
   function reset() { draft = JSON.parse(JSON.stringify(applied)); dirty = false; clearNotice() }
   function preferenceSaved() {
+    if (repairPending) {
+      repairPending = false; repairPrevious = null; repairLegacyKey = ""
+      importBusy = false; failedLegacyKey = ""
+      reset(); showNotice("Saved wallpaper prepared safely.")
+      return
+    }
     if (!pendingSave) return
     pendingSave = false; pending = null; busy = false; dirty = false
     reset(); showNotice("Wallpaper applied.")
   }
   function preferenceFailed() {
+    if (repairPending) {
+      repairPending = false; importBusy = false
+      failedLegacyKey = repairLegacyKey; repairLegacyKey = ""
+      station.config = Object.assign({}, station.config, {wallpaper: repairPrevious})
+      repairPrevious = null
+      showNotice("Could not safely prepare the saved wallpaper. Choose it again.", true)
+      return
+    }
     if (!pendingSave) return
     pendingSave = false; pending = null; busy = false
     station.config = Object.assign({}, station.config, {wallpaper: previousPreferences})
     showNotice("Could not save preferences. Your previous wallpaper has been restored.", true)
   }
   function change(key, value) {
-    if (busy) return
+    if (busy || importBusy) return
     var next = JSON.parse(JSON.stringify(draft))
     next[key] = value
     draft = next; dirty = true; clearNotice()
   }
   function frame(value) { change("framing", Wallpaper.framing(value)) }
-  function select(path) {
+  function sanitizedPath(output) {
+    var path = String(output || "").replace(/\n$/, "")
+    var prefix = station.stateDir + "/wallpapers/"
+    return Wallpaper.path(path) && path.indexOf(prefix) === 0 ? path : ""
+  }
+  function stagePath(path, generation, index, done) {
+    if (!Wallpaper.path(path) || !station.pluginDir) { done(1, ""); return }
+    var folder = station.stateDir + "/wallpapers/import-" + Date.now() + "-" + generation + "-" + index
+    station.enqueue(["perl", station.pluginDir + "/lib/SanitizeWallpaper.pl", path, folder], function(code, output) {
+      var prepared = code === 0 ? sanitizedPath(output) : ""
+      done(prepared ? 0 : 1, prepared)
+    })
+  }
+  function stagePaths(paths, generation, done, index, results) {
+    index = index || 0; results = results || ({})
+    if (generation !== serial) { done(1, results); return }
+    if (index >= paths.length) { done(0, results); return }
+    stagePath(paths[index], generation, index, function(code, prepared) {
+      if (generation !== root.serial || code !== 0) { done(1, results); return }
+      results[paths[index]] = prepared
+      root.stagePaths(paths, generation, done, index + 1, results)
+    })
+  }
+  function acceptSanitized(path, target) {
     if (draft.followTheme) {
       showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
       return
     }
-    if (!Wallpaper.path(path)) { showNotice("Choose a local image file.", true); return }
-    if (pickerTarget) {
-      var map = Object.assign({}, draft.perDisplay); map[pickerTarget] = path
+    if (!sanitizedPath(path)) { showNotice("Choose a local image file.", true); return }
+    if (target) {
+      var map = Object.assign({}, draft.perDisplay); map[target] = path
       change("perDisplay", map)
     } else { change("source", path); frame({}) }
+    change("safe", true)
+  }
+  function prepareSelection(path) {
+    if (!Wallpaper.path(path)) { showNotice("Choose a local image file.", true); return }
+    var target = pickerTarget
+    var generation = ++serial
+    importBusy = true; showNotice("Preparing wallpaper safely…")
+    stagePath(path, generation, 0, function(code, prepared) {
+      if (generation !== root.serial) return
+      root.importBusy = false
+      if (code !== 0) { root.showNotice("The image could not be prepared safely. Choose another file.", true); return }
+      root.acceptSanitized(prepared, target)
+    })
+  }
+  function prepareLegacyWallpaper() {
+    if (!station.configLoaded || !station.pluginDir || dirty || busy || importBusy
+        || applied.followTheme || applied.safe || !applied.source) return
+    var paths = [applied.source]
+    Object.keys(applied.perDisplay).forEach(function(key) {
+      if (paths.indexOf(applied.perDisplay[key]) < 0) paths.push(applied.perDisplay[key])
+    })
+    var key = JSON.stringify(paths)
+    if (key === failedLegacyKey) return
+    var generation = ++serial
+    importBusy = true; showNotice("Preparing saved wallpaper safely…")
+    stagePaths(paths, generation, function(code, prepared) {
+      if (generation !== root.serial) return
+      if (code !== 0) {
+        root.importBusy = false; root.failedLegacyKey = key
+        root.showNotice("Could not safely prepare the saved wallpaper. Choose it again.", true)
+        return
+      }
+      var scene = JSON.parse(JSON.stringify(root.applied))
+      scene.source = prepared[scene.source]
+      Object.keys(scene.perDisplay).forEach(function(identity) {
+        scene.perDisplay[identity] = prepared[scene.perDisplay[identity]]
+      })
+      scene.safe = true
+      var settings = Wallpaper.settings(root.preferences)
+      settings.pinned = Wallpaper.profile(scene)
+      root.repairPrevious = root.station.config.wallpaper
+      root.repairLegacyKey = key
+      root.repairPending = true
+      root.station.config = Object.assign({}, root.station.config, {wallpaper: Wallpaper.settings(settings)})
+      root.station.saveConfig()
+    })
   }
   function choose(identity) {
     if (pickerBusy || busy) return false
@@ -92,16 +193,17 @@ Item {
     return true
   }
   function useTheme() {
-    change("source", themePath); change("perDisplay", {}); frame({})
+    change("source", themePath); change("perDisplay", {}); change("safe", true); frame({})
   }
   function apply() {
-    if (busy || !dirty || !layout.displays.length) return
+    if (busy || importBusy || !dirty || !layout.displays.length) return
     var scene = JSON.parse(JSON.stringify(draft))
     var paths = [scene.source]
     if (scene.mode === "individual") Object.keys(scene.perDisplay).forEach(function(key) {
       if (paths.indexOf(scene.perDisplay[key]) < 0) paths.push(scene.perDisplay[key])
     })
     if (paths.some(function(p) { return !Wallpaper.path(p) })) { showNotice("Choose a local wallpaper first.", true); return }
+    if (!scene.safe) { showNotice("Choose the wallpaper again so it can be prepared safely.", true); return }
     serial++; busy = true; showNotice("Checking wallpaper…")
     pending = { scene: scene, paths: paths, key: themeKey, serial: serial }
     validation.model = paths
@@ -178,7 +280,7 @@ Item {
     onStarted: result = ""
     stdout: StdioCollector { onStreamFinished: picker.result = text.replace(/\n$/, "") }
     onExited: function(code) {
-      if (code === 0) root.select(result)
+      if (code === 0) root.prepareSelection(result)
       else if (code !== 1) root.showNotice("The desktop file picker could not open.", true)
       root.station.rememberedTab = 1
       root.station.panelWanted = true

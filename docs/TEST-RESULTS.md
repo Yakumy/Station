@@ -271,3 +271,25 @@ Node's Lua subprocess tests required execution outside this sandbox after
 stdin delivery timed out inside it. QML compilation requires Wayland access. These
 checks do not prove physical Hyprland binding delivery or reproduce a hostile
 clipboard provider on the reviewer's Qt 6.12.0 package.
+
+## Bounded wallpaper import (2026-10-13)
+
+Foreign picker results no longer enter a QML Image before Apply. A fixed-argv,
+core-Perl helper recognizes content by magic bytes, streams a private snapshot,
+and reduces PNGs to bounded rendering chunks without decompressing text, ICC,
+EXIF, or other ancillary metadata. The controller accepts only the helper's
+Station-private output. Previously saved unmarked pinned images remain hidden
+until the same staging and config-save sequence completes.
+
+The regression fixture is a renamed 1×1 PNG under 32 KiB containing 24 zTXt
+chunks that represent 12 MiB of expanded text. The test never submits the raw
+fixture to Qt; it verifies removal of every zTXt chunk, byte-identical IDAT data,
+private directory/file modes, content-based PNG detection, and failure cleanup.
+Controller tests verify the raw picker path cannot change the draft, helper argv
+separation, private-path enforcement, symlink rejection, legacy restaging, and
+save acknowledgment. The complete Node/M0 suite reports 139 passes. The
+wallpaper pointer harness reports 8 passes, the display layout harness reports
+18 passes, theme scanning reports zero violations across 26 runtime sources,
+and manifest validation, live-Wayland QML compilation, Perl syntax, and
+whitespace checks pass. The QML check emits only the existing portal
+registration warning.

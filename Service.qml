@@ -18,6 +18,9 @@ Item {
 
   property var shell: null
   property var manifest: null
+  readonly property string pluginDir: manifest && typeof manifest.__sourceDir === "string"
+    ? manifest.__sourceDir.replace(/\/$/, "") : ""
+  onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }

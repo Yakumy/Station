@@ -7,7 +7,12 @@ GUI reference: open `reference/gui-reference.html` in a browser. It shows layout
 
 ## 1. What Station is
 
-A pure Quickshell plugin (QML + JS, a little generated Lua). One concept, the **Station**: switching station switches every monitor together; sending a window to a station keeps it on the same monitor; unplugging a monitor merges its windows into a surviving monitor without changing their station. A GUI arranges displays.
+A Quickshell plugin (QML + JS, a little generated Lua) with one bounded,
+standard-library Perl helper for safe wallpaper staging. Perl is part of the
+Omarchy package baseline; Station ships no compiled binary. One concept, the
+**Station**: switching station switches every monitor together; sending a window
+to a station keeps it on the same monitor; unplugging a monitor merges its windows
+into a surviving monitor without changing their station. A GUI arranges displays.
 
 Non-goals: no binary, no `install.sh`, no standalone CLI, no v1 migration, no more than 3 managed monitors, no HDR/VRR/colour management, no self-update logic.
 
@@ -428,6 +433,12 @@ Files:
 - No downloaded code, no network access, no `sh -c` with unvalidated data, no `eval` of strings built from device text. The two detached scripts are fixed templates with positional validated arguments.
 - Terminology: a **connector** is the `name` field from hyprctl. It must match `^[A-Za-z0-9_.:-]{1,64}$` and may then be used as a Lua string (escaped) or an argv element (monitor ops, brightness). **EDID-derived fields** (`description`, `make`, `model`, `serial`) are untrusted: matching and display only, never interpolated into Lua, argv or file text without a proper serialiser. (Omarchy itself shipped a fix for USB device names being executed as Hyprland Lua.)
 - `Process`/`execDetached` use argv arrays.
+- A selected wallpaper pathname never reaches a QML Image. The fixed-argv Perl
+  helper opens it once, recognizes allowed magic bytes, enforces aggregate input,
+  PNG chunk-count and decoded-raster budgets, and writes a private snapshot. It
+  strips compressed text, ICC, EXIF, and all other non-rendering PNG ancillary
+  chunks without decoding them. Only marked Station-private paths may render;
+  unmarked saved choices are restaged before use.
 - `monitors.lua`: backup, atomic write, no symlink following, markers only.
 - Logs never contain command lines with unvalidated input.
 

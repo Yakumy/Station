@@ -512,3 +512,14 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   Isolated Quickshell renders use installed UI tokens with dark and light
   palettes; they do not establish three-display hardware behavior or theme
   transition animation equivalence.
+- [SRC] Qt's PNG handler calls `png_read_info()` and copies all PNG text entries
+  into Qt strings before its raster allocation. Libpng's default limits are per
+  ancillary chunk and by chunk count, not by aggregate decompressed text bytes;
+  therefore the QImage raster limit does not bound compressed text metadata in
+  the shared shell process.
+- [SRC] A portal result previously entered `draft.source` immediately, feeding
+  unchanged foreign bytes to `WallpaperLayout.qml` and `WallpaperImage.qml`
+  before Apply. Selection now invokes the core-Perl streaming helper by argv.
+  The helper detects formats by magic bytes, caps total input/chunks/raster, and
+  writes only bounded rendering chunks for PNG. QML receives only the private
+  prepared path. Old unmarked pinned images are gated and restaged before use.
