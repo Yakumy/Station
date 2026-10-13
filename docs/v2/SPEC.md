@@ -262,6 +262,13 @@ Ignore entries whose description starts with `Station:`. Statuses:
 - **Unverified**: source 1 failed or is empty. The fallback can add conflicts but **never** turns unknown into free. Unverified binds are applied with a visible badge.
 
 The Keybindings tab label turns red with a count badge while any conflict is unresolved. Key entry is a modifier-toggle + key picker (raw capture cannot see combos Hyprland already consumes).
+The picker uses ordinary buttons, key events and a non-editable special-key
+menu, never TextInput/TextField/TextEdit or clipboard access. Capture accepts
+an allowlisted key pressed alone; modifier chips define the combination.
+Escape cancels capture, Tab leaves capture, and the special-key menu offers
+both keys. Apply is explicit; capturing Return or Space must not save the edit.
+Hiding the editor, changing tabs, closing the panel or losing capture focus
+stops capture. Cancel discards the edit without changing saved bindings.
 
 ## 9. `monitors.lua` managed block, preview and Keep
 

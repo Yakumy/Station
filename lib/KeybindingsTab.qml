@@ -109,7 +109,8 @@ Column {
                 onClicked: keybindingsTab.panelRoot.service.approveBinding(conflictRow.modelData.combo)
               }
             }
-            Row {
+            Flow {
+              width: parent.width
               visible: keybindingsTab.panelRoot.editingBindingId === conflictRow.modelData.id
               spacing: keybindingsTab.panelRoot.space1
               Repeater {
@@ -121,13 +122,10 @@ Column {
                   onClicked: keybindingsTab.panelRoot.toggleEditingModifier(modelData)
                 }
               }
-              Ui.TextField {
-                width: Style.space(88)
-                text: keybindingsTab.panelRoot.editingKey
-                placeholderText: "KEY"
-                foreground: Color.popups.text
-                onTextChanged: if (activeFocus) keybindingsTab.panelRoot.editingKey = text
-                onAccepted: keybindingsTab.panelRoot.applyBindingEdit()
+              Station.BindingKeyPicker {
+                value: keybindingsTab.panelRoot.editingKey
+                available: keybindingsTab.panelRoot.opened && keybindingsTab.panelRoot.selectedTab === 2
+                onPicked: function(key) { keybindingsTab.panelRoot.editingKey = key }
               }
               Ui.Button {
                 height: keybindingsTab.panelRoot.controlHeight
@@ -137,6 +135,12 @@ Column {
                 background: Color.accent
                 foreground: Color.popups.background
                 onClicked: keybindingsTab.panelRoot.applyBindingEdit()
+              }
+              Ui.Button {
+                text: "Cancel"
+                bordered: true
+                foreground: Color.popups.text
+                onClicked: keybindingsTab.panelRoot.editingBindingId = ""
               }
             }
           }

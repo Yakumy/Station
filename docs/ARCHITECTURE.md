@@ -3,6 +3,10 @@
 Station is loaded twice by Omarchy: `Service.qml` owns persistent behavior and
 IPC, while `Panel.qml` is the bar widget and Display-style popout. The panel
 reads the injected service object and contains no workspace policy.
+`BindingKeyPicker.qml` captures allowlisted key events and offers a static
+special-key menu. It updates only the binding draft; Apply retains the existing
+service validation and conflict policy. Station creates no editable text
+controls, avoiding Qt's automatic clipboard retrieval on clipboard changes.
 
 The service keeps six operation states: `idle`, `applyingLayout`,
 `previewing`, `migrating`, `moving`, and `switching`. Switching uses generations to

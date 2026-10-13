@@ -94,7 +94,7 @@ Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step)
 
 ## 7. Component inventory
 
-Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button`, `Ui.TextField` [V, `Panel.qml`].
+Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button` [V, `Panel.qml`]. Keybinding entry uses `BindingKeyPicker` (buttons and key events), never an editable text control: native text inputs can retrieve clipboard payloads even while hidden.
 
 **Tabs** (Displays / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box.
 

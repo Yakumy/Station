@@ -124,6 +124,10 @@ Directional movement tries normal Hyprland movement first, then a neighboring
 display, then an adjacent station at the outer edge. The Keybindings tab shows
 personal conflicts before applying them. A conflicting binding remains inactive
 until you choose another combination or explicitly approve replacement.
+Choose modifiers with the chips, then click the key button and press the key
+alone. The Special key menu includes Escape and Tab; Escape cancels capture.
+Apply saves the combination, while Cancel discards the edit. The picker does
+not read the clipboard.
 
 Station intentionally replaces Omarchy's numbered workspace bindings and the
 rarely used grouped-window focus bindings on `CTRL + SUPER + Left/Right`. It

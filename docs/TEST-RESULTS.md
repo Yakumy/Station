@@ -249,3 +249,25 @@ was modified.
 All 16 Node/M0 suites and the 16-case Qt layout suite pass. Theme scanning has
 zero violations across 19 runtime sources; manifest validation and live-Wayland
 QML compilation pass with only the existing portal registration warning.
+
+## Clipboard-free binding picker (2026-10-13)
+
+The conflict editor no longer instantiates a native text input, including in
+hidden rows. `BindingKeyPicker.qml` uses key events and a static special-key
+menu; modifiers remain explicit chips and saving remains an explicit Apply.
+The editor wraps its controls when space is limited.
+
+Validation on Qt 6.11.2 / Omarchy 4.0.3: all 133 Node tests pass, including a
+runtime-source guard against editable input/clipboard APIs. The new
+`python3 tools/v2/check-binding-picker.py` offscreen harness reports 14 QtTest
+passes (including setup/cleanup), covering letters, digits, arrows, function
+keys, punctuation, Return/Space, modifiers, cancellation, Tab, focus/visibility
+loss, unavailable state and the actual special-key popup. Host button paint is
+doubled; production capture and popup handlers run unchanged. The existing
+layout harness reports 18 passes; theme checking (26 sources), manifest
+validation, installed-host QML compilation and whitespace checking pass.
+
+Node's Lua subprocess tests required execution outside this sandbox after
+stdin delivery timed out inside it. QML compilation requires Wayland access. These
+checks do not prove physical Hyprland binding delivery or reproduce a hostile
+clipboard provider on the reviewer's Qt 6.12.0 package.

@@ -260,6 +260,18 @@ centered at 22.0, within half a physical pixel of both marks.
 
 ## 11. Known traps (consolidated)
 
+- **[SRC] Clipboard reads from hidden editors:** Qt 6.12.0's
+  `QQuickTextInputPrivate::init()` connects clipboard `dataChanged` to
+  `q_canPasteChanged()`, which retrieves text for writable inputs without a
+  visibility/focus check. Wayland `QWaylandMimeData::readData()` appends data
+  without a total byte cap and creates a fresh one-second deadline each loop.
+  Sources: qtdeclarative `src/quick/items/qquicktextinput.cpp` and qtbase
+  `src/plugins/platforms/wayland/qwaylanddataoffer.cpp`, tag `v6.12.0`.
+  Hiding a native editor or limiting accepted text length does not bound that
+  transfer. Station now uses `BindingKeyPicker.qml` without editable inputs.
+  The local test stack is Qt 6.11.2; no hostile provider experiment has been
+  performed against the reviewer's Arch Qt 6.12.0 package.
+
 1. `hyprctl binds -j` cannot identify `code:` binds. Use `omarchy menu keybindings --print`.
 2. Binding the same combo twice fires both. `hl.unbind` removes every entry on the combo, including the user's.
 3. A reload erases runtime binds, workspace rules, and runtime monitor state.
