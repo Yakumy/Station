@@ -15,9 +15,9 @@ function action(context, name) {
   const end = source.indexOf('\n  function ', start + 1);
   return runInNewContext('(' + source.slice(start, end).trim() + ')', context);
 }
-function harness({ monitors = vertical, monitor = 0, workspace = 1, native = () => {}, pinned = false } = {}) {
+function harness({ monitors = vertical, monitor = 0, workspace = 1, workspaceName = String(workspace), native = () => {}, pinned = false } = {}) {
   const calls = [], requests = [];
-  let live = { address: '0xabc', pid: 7, initialClass: 'test', monitor, workspace: { id: workspace, name: String(workspace) },
+  let live = { address: '0xabc', pid: 7, initialClass: 'test', monitor, workspace: { id: workspace, name: workspaceName },
     pinned, at: [10, 10], size: [800, 600], focusHistoryID: 0 };
   const context = {
     Model, Hypr, Grid, monitors, gen: 0, state: 'idle', currentStation: 1, persisted: {},
@@ -178,4 +178,47 @@ test('numbered send uses the same active window, follows on all displays, and si
   assert.equal(silent.c.currentStation, 1);
   assert.equal(silent.calls.length, 1);
   assert.equal(silent.c.lastWindowAction.result, 'moved-silently');
+});
+
+test('numbered sends retrieve scratchpad windows on their current display with and without follow', () => {
+  for (const monitors of [vertical, vertical.slice(0, 1)]) {
+    for (const monitor of monitors) {
+      for (const follow of [true, false]) {
+        const h = harness({ monitors, monitor: monitor.id, workspace: -98, workspaceName: 'special:scratchpad' });
+        assert.equal(h.c.sendWindow('3', follow), 'started');
+        assert.equal(h.live.workspace.id, 2 * monitors.length + monitor.id + 1);
+        assert.equal(h.live.monitor, monitor.id);
+        assert.equal(h.c.lastWindowAction.beforeWorkspace, -98);
+        assert.equal(h.c.lastWindowAction.result, follow ? 'moved' : 'moved-silently');
+        assert.equal(h.c.currentStation, follow ? 3 : 1);
+        assert.equal(h.calls.length, follow ? 2 : 1);
+        assert.equal(h.c.state, 'idle');
+        if (follow) assert.ok(h.calls.at(-1).endsWith(Hypr.focusWindow('0xabc')));
+      }
+    }
+  }
+});
+
+test('scratchpad retrieval preserves exclusions for pinned, unmanaged, named and other special windows', () => {
+  const scratchpad = { workspace: -98, workspaceName: 'special:scratchpad' };
+  for (const options of [
+    { ...scratchpad, pinned: true },
+    { ...scratchpad, monitor: 99 },
+    { workspace: -99, workspaceName: 'special:other' },
+    { workspace: 1, workspaceName: 'special:scratchpad' },
+    { workspace: 1, workspaceName: 'named' },
+    { workspace: 99 },
+  ]) {
+    for (const follow of [true, false]) {
+      const h = harness(options);
+      h.c.sendWindow('3', follow);
+      assert.equal(h.calls.length, 0);
+      assert.equal(h.c.lastWindowAction.result, 'unmanaged');
+      assert.equal(h.c.state, 'idle');
+    }
+  }
+  const h = harness(scratchpad);
+  h.c.shiftWindow('right');
+  assert.equal(h.calls.length, 0);
+  assert.equal(h.c.lastWindowAction.result, 'unmanaged');
 });

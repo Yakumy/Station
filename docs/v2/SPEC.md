@@ -188,6 +188,12 @@ function step(dirKey, dir) {
 
 - Navigate (`CTRL+SUPER+arrow`): see §5.4.
 - Send (`SUPER+SHIFT+n`): target `ws(n, lane of the window's current monitor)`, follow. `SUPER+SHIFT+ALT+n`: same, no follow.
+  **2026-10-16 scratchpad repair:** explicit numbered sends also accept an
+  unpinned active window in Omarchy's `special:scratchpad` on a managed display,
+  retrieving it into the selected station on that display. Other special,
+  named, pinned and unmanaged windows remain excluded. This exception applies
+  only to numbered sends; automatic migrations and directional moves retain
+  their grid eligibility checks.
 - Move across (`SHIFT+CTRL+SUPER+arrow`), revised to match v1.1.10: read the actual active window, attempt native directional movement, wait 20 ms and re-read that window. If native movement changed position, size, workspace or monitor, do not issue another move. Otherwise try the neighboring managed display in that physical direction. At an outer edge, use `step()` to cross a station; preserve the physical display when crossing perpendicular to the display arrangement, or enter the opposite-edge display when crossing along it. Synchronize every display in the destination station and explicitly focus the moved window. Single mode also permits station-edge fallback. Invalid, pinned, special and unmanaged windows are excluded.
 
 ### 5.8 Switch station

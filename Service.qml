@@ -308,7 +308,7 @@ Item {
       && Grid.equal(workspaceMap, targetMapping()) && !removalGrace.running
   }
 
-  function readActiveWindow(generation, done) {
+  function readActiveWindow(generation, done, allowScratchpad) {
     refresh(true, function() {
       if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
       enqueue(["hyprctl", "activewindow", "-j"], function(code, output) {
@@ -316,7 +316,13 @@ Item {
         var raw = parseJson(output, null)
         if (code !== 0 || !raw || !raw.address) { finishWindowAction(generation, "no-window"); return }
         var client = Model.normalizeClients([raw], monitors)[0]
-        if (workspaceMap.outputs.indexOf(client.monitor) === -1 || !Grid.eligible(client, workspaceMap)) {
+        // Explicit numbered sends can retrieve Omarchy's scratchpad windows.
+        // Grid eligibility remains strict for migrations and directional moves.
+        var scratchpad = allowScratchpad && !client.pinned
+          && Number(client.workspace && client.workspace.id) < 0
+          && client.workspace.name === "special:scratchpad"
+        if (workspaceMap.outputs.indexOf(client.monitor) === -1
+          || (!Grid.eligible(client, workspaceMap) && !scratchpad)) {
           finishWindowAction(generation, "unmanaged"); return
         }
         lastWindowAction = Object.assign({}, lastWindowAction, { address: client.address,
@@ -378,7 +384,7 @@ Item {
     if (!readyForWindows()) return "busy"
     var generation = begin("moving")
     lastWindowAction = { action: follow ? "send" : "silent", station: station, result: "reading", receivedAt: Date.now() }
-    readActiveWindow(generation, function(client) { moveActionWindow(client, station, client.monitor, follow, generation) })
+    readActiveWindow(generation, function(client) { moveActionWindow(client, station, client.monitor, follow, generation) }, true)
     return "started"
   }
 

@@ -478,6 +478,23 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   cursor; the installed defaults still set cursor size 24. No separate cursor
   defect has been demonstrated.
 
+### 14.4 Scratchpad retrieval rejected by Station (2026-10-16)
+
+- **[LIVE][SRC]** On Hyprland 0.56.2, Omarchy's `SUPER+ALT+S` sends windows to
+  `special:scratchpad` and `SUPER+S` toggles it. Station owns the numbered send
+  bindings. The live `yakumy.station status` reported the user's last numbered
+  send as `action: "send", station: 2, result: "unmanaged"`; `hyprctl clients`
+  showed an unpinned foot window on workspace -98, `special:scratchpad`.
+  `hyprctl configerrors` was empty. `readActiveWindow` reused `Grid.eligible`,
+  rejecting special workspaces before dispatching a window move.
+- **[SRC]** Numbered sends now opt into a narrow exception for the active,
+  unpinned `special:scratchpad` window on a managed output. Directional actions
+  and topology migrations keep their existing exclusions.
+- **Verification:** `test/v2/window-actions.test.cjs` exercises retrieval on
+  either display and on a single display, follow and silent sends, and rejection
+  of pinned, unmanaged, named and other special windows. These isolated tests
+  do not prove a physical keypress or the installed compositor path.
+
 ## 15. Where evidence lives
 
 | Source | Content |
