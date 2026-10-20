@@ -1,5 +1,22 @@
 # Station v2 test results
 
+## Replacement-bar bridge — 2026-10-20
+
+- All 150 Node/M0 tests pass, including detached snapshot, closed action
+  allowlist, proxy coverage, stale-service retirement, and panel hand-off tests.
+  The two Lua subprocess files timed out under the restricted execution sandbox
+  and passed when rerun with normal local process access.
+- All 18 offscreen Displays tests pass. Theme-token scanning, manifest
+  validation, live-Wayland component compilation, and whitespace checks pass.
+- The reviewed PR commit was installed through the stock plugin updater. Station
+  remained healthy under the stock bar and under Pill Bar (`bit-dev.bar`), a
+  third-party replacement bar using Omarchy's service-less entry facade. The
+  user confirmed Station's panel and controls worked with the replacement bar
+  on the live two-monitor system.
+- This confirms the replacement-bar bridge and ordinary panel interaction on
+  the tested two-monitor system. Simultaneous hotplug, three/four-monitor
+  hardware, and every Single/Mirror transition remain outside this check.
+
 ## Wallpaper — 2026-10-11
 
 - Node suite: 129 tests, including wallpaper geometry, profile recall, input
