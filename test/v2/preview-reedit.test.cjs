@@ -124,7 +124,7 @@ test('layout edits stay previewable while side controls require idle', () => {
 
 test('the panel remembers its tab across a bar rebuild but not across a close', () => {
   assert.match(service, /property int rememberedTab: 0/);
-  assert.match(panel, /onSelectedTabChanged: if \(service\) service\.rememberedTab = selectedTab/);
-  assert.match(panel, /if \(!opened\) service\.rememberedTab = 0/);
+  assert.match(panel, /onSelectedTabChanged: if \(service\) service\.setRememberedTab\(selectedTab\)/);
+  assert.match(panel, /if \(!opened\) service\.setRememberedTab\(0\)/);
   assert.match(panel, /service\.rememberedTab/);
 });

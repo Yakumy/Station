@@ -15,7 +15,15 @@ Ui.Panel {
   moduleName: "yakumy.station"
   manageIpc: false
 
-  property var service: bar && bar.shell ? bar.shell.serviceFor("yakumy.station") : null
+  readonly property var directService: bar && bar.shell
+    && typeof bar.shell.serviceFor === "function"
+    ? bar.shell.serviceFor("yakumy.station") : null
+  // Supplied by Panel.qml so service and widget share the same script URL.
+  property var bridgeCurrent: function() { return null }
+  property var bridgeApi: null
+  property var bridgeSnapshot: null
+  property string bridgeSnapshotText: ""
+  readonly property var service: directService || (bridgeSnapshot ? bridgeProxy : null)
   property int selectedTab: 0
   property int stationNumber: service ? service.currentStation : 1
   readonly property string selectedDisplayName: {
@@ -120,6 +128,39 @@ Ui.Panel {
       ids: ["shift-left", "shift-right", "shift-up", "shift-down"] }
   ]
 
+  Station.BarServiceProxy {
+    id: bridgeProxy
+    snapshot: root.bridgeSnapshot
+    api: root.bridgeApi
+  }
+
+  Timer {
+    interval: root.opened ? 250 : 1000
+    running: !root.directService
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: root.syncBridge()
+  }
+
+  function syncBridge() {
+    // The trusted bar keeps its existing live-service path without polling.
+    if (directService) return
+    var api = bridgeCurrent()
+    if (!api) {
+      bridgeApi = null
+      bridgeSnapshot = null
+      bridgeSnapshotText = ""
+      return
+    }
+    var next = api.snapshot()
+    bridgeApi = api
+    var serialized = JSON.stringify(next)
+    if (serialized !== bridgeSnapshotText) {
+      bridgeSnapshotText = serialized
+      bridgeSnapshot = next
+    }
+  }
+
   function bindingIds(prefix, count) {
     var ids = []
     for (var i = 1; i <= count; i++) ids.push(prefix + i)
@@ -165,7 +206,7 @@ Ui.Panel {
 
   function selectDisplay(name) {
     if (!service || !service.displayDraft.some(function(display) { return display.name === name })) return
-    service.rememberedDisplayName = name
+    service.setRememberedDisplayName(name)
   }
 
   onSelectedDisplayNameChanged: {
@@ -275,7 +316,13 @@ Ui.Panel {
 
   // An explicit dismissal wins even if a bar rebuild is in progress.
   function close() {
-    if (service) service.panelTransferUntil = 0
+    if (service) {
+      service.setPanelTransferUntil(0)
+      // The proxy may still show the old transfer deadline until its next poll.
+      // Record explicit dismissal now instead of relying on onOpenedChanged.
+      service.setPanelWanted(false)
+      service.setRememberedTab(0)
+    }
     controller.hide()
   }
 
@@ -309,9 +356,9 @@ Ui.Panel {
   function flushIntent() {
     if (!service || !intentPending) return
     intentPending = false
-    service.panelWanted = opened
-    if (opened && currentScreenName()) service.panelScreenName = currentScreenName()
-    if (!opened) service.rememberedTab = 0
+    service.setPanelWanted(opened)
+    if (opened && currentScreenName()) service.setPanelScreenName(currentScreenName())
+    if (!opened) service.setRememberedTab(0)
   }
 
   // A popout switch is not a dismissal. The bar hands the popout to the
@@ -321,18 +368,28 @@ Ui.Panel {
   // switch has not published its new owner yet from inside the close, so
   // decide afterwards whether any copy is still showing. Takes what it
   // reads as arguments: this instance may be gone by the time it runs.
-  function settlePopoutSwitch(svc, barRef) {
-    if (!svc) return
-    var widgets = barRef && typeof barRef.moduleWidgets === "function" ? barRef.moduleWidgets("yakumy.station") : []
+  function settlePopoutSwitch(svc, api, barRef, transferUntil) {
+    if ((!svc && !api) || !barRef) return
+    var widgets = typeof barRef.moduleWidgets === "function"
+      ? barRef.moduleWidgets("yakumy.station") : []
     var up = false
     for (var i = 0; i < widgets.length; i++) {
       if (widgets[i] && widgets[i].opened === true) { up = true; break }
     }
-    if (up) svc.panelWanted = true
-    else if ((barRef && barRef.activePopout && barRef.activePopout.foreign === true)
-        || Date.now() >= svc.panelTransferUntil) {
-      svc.panelWanted = false
-      svc.rememberedTab = 0
+    function setWanted(value) {
+      if (api) api.call("setPanelWanted", [value])
+      else if (svc) svc.setPanelWanted(value)
+    }
+    function setTab(value) {
+      if (api) api.call("setRememberedTab", [value])
+      else if (svc) svc.setRememberedTab(value)
+    }
+    if (up) {
+      setWanted(true)
+    } else if ((barRef.activePopout && barRef.activePopout.foreign === true)
+        || Date.now() >= transferUntil) {
+      setWanted(false)
+      setTab(0)
     }
   }
 
@@ -345,8 +402,11 @@ Ui.Panel {
       // The explicit acknowledgment timer owns this close. Do not publish a
       // dismissal or let another widget reopen until the monitor rule lands.
     } else if (popoutSwitchClosing) {
-      var svc = service, barRef = bar, settle = settlePopoutSwitch
-      if (svc) Qt.callLater(function() { settle(svc, barRef) })
+      // Capture the persistent API, never the widget-owned proxy QObject.
+      var svc = directService, api = directService ? null : bridgeApi
+      var barRef = bar, settle = settlePopoutSwitch
+      var transferUntil = service ? Number(service.panelTransferUntil) : 0
+      if (svc || api) Qt.callLater(function() { settle(svc, api, barRef, transferUntil) })
     } else if (!service || Date.now() >= service.panelTransferUntil) {
       intentPending = true
       flushIntent()
@@ -354,7 +414,7 @@ Ui.Panel {
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
-  onSelectedTabChanged: if (service) service.rememberedTab = selectedTab
+  onSelectedTabChanged: if (service) service.setRememberedTab(selectedTab)
 
   // The bar rebuilds this widget wholesale, so the tab it was showing has to
   // come back from the service instead of from this instance.
@@ -405,7 +465,7 @@ Ui.Panel {
   }
 
   onServiceChanged: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
-  Component.onCompleted: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
+  Component.onCompleted: { syncBridge(); flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
 
   // Disabling a different output does not rebuild this surviving widget.
   // It still has to receive the hand-off and reopen the confirmation panel.

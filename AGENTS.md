@@ -34,6 +34,18 @@ bug, then reconcile the affected documents in the same change.
 - `manifest.json` declares both a bar widget (`Panel.qml`) and a persistent
   service (`Service.qml`). The service owns IPC, Hyprland events, operation
   state, and panel hand-off intent; the UI does not own workspace policy.
+- Replacement bars receive no live service. `lib/BarBridge.js` shares only
+  detached `barSnapshot()` data and a closed action allowlist from the single
+  persistent service; `BarServiceProxy.qml` and `WallpaperProxy.qml` implement
+  the panel's surface. Keep the trusted built-in bar's direct lookup and disable
+  bridge polling there. Import the bridge in top-level `Panel.qml` beside
+  `Service.qml` and pass its reader to `StationPanel`: importing from the nested
+  type produces a separate `qs:///` library under Quickshell. Extend the
+  snapshot, allowlist, proxies, and bridge tests
+  together when adding panel service members. Never expose WallpaperController
+  (its `station` points back to the service), instantiate a second service, or
+  capture a widget-owned proxy in deferred hand-off work: capture the bridge API
+  and scalar values instead. Use setters for panel writes on both paths.
 - `lib/Grid.js` owns compact workspace numbering and migration plans;
   `Model.js` owns display identity, lanes, geometry, and mode choices;
   `Hypr.js`, `Binds.js`, and `MonitorsLua.js` validate and generate runtime
