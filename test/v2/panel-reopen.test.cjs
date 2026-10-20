@@ -30,18 +30,18 @@ test('the selected connector survives a panel rebuild and a temporary draft gap'
   assert.equal(state.rememberedDisplayName, 'HDMI-A-2', 'fallback must not discard the choice');
   state.displayDraft = [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }];
   assert.equal(selected(), 'HDMI-A-2');
-  assert.match(panel, /service\.rememberedDisplayName = name/);
+  assert.match(panel, /service\.setRememberedDisplayName\(name\)/);
   assert.doesNotMatch(panel, /\n {4}selectedDisplayName = name/);
 });
 
 test('the panel records its open state and a rebuilt widget claims it back on the same output', () => {
-  assert.match(panel, /service\.panelWanted = opened/);
+  assert.match(panel, /service\.setPanelWanted\(opened\)/);
   // The record can be made before the service binding resolves, so the
   // transition is held and replayed instead of dropped.
   assert.match(panel, /intentPending = true\n {6}flushIntent\(\)/);
   assert.match(panel, /if \(!service \|\| !intentPending\) return/);
   assert.match(panel, /if \(!service \|\| !service\.panelWanted\) return/);
-  assert.match(panel, /if \(opened && currentScreenName\(\)\) service\.panelScreenName = currentScreenName\(\)/);
+  assert.match(panel, /if \(opened && currentScreenName\(\)\) service\.setPanelScreenName\(currentScreenName\(\)\)/);
   assert.match(panel, /Qt\.callLater\([\s\S]*?if \(root\.tryRestorePanel\(\)\) return/);
   assert.match(panel, /interval: 30/);
   assert.match(panel, /attempts < 100/);
@@ -89,9 +89,9 @@ test('closing the panel cancels any pending reopen', () => {
   assert.match(handler[1], /reopenTimer\.stop\(\)/);
   const flusher = panel.match(/function flushIntent\(\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(flusher, 'flushIntent is defined');
-  assert.match(flusher[1], /service\.panelWanted = opened/);
-  assert.match(flusher[1], /if \(!opened\) service\.rememberedTab = 0/);
-  assert.match(panel, /function close\(\) \{\n {4}if \(service\) service\.panelTransferUntil = 0/);
+  assert.match(flusher[1], /service\.setPanelWanted\(opened\)/);
+  assert.match(flusher[1], /if \(!opened\) service\.setRememberedTab\(0\)/);
+  assert.match(panel, /function close\(\) \{\n {4}if \(service\) \{\n {6}service\.setPanelTransferUntil\(0\)/);
 });
 
 test('the surviving widget accepts a transfer while the removed output still has an open copy', () => {
@@ -132,23 +132,23 @@ test('Revert uses the same safe close when the saved Single target differs', () 
 });
 
 test('a popout switch hands the intent to the copy that took over', () => {
-  const settle = panel.match(/function settlePopoutSwitch\(svc, barRef\) \{([\s\S]*?)\n {2}\}/);
+  const settle = panel.match(/function settlePopoutSwitch\(svc, api, barRef, transferUntil\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(settle, 'settlePopoutSwitch is defined');
   // Any live copy still showing means the panel is up and the switch was a
   // hand-off (a rebuild replacing us), not a dismissal.
   assert.match(settle[1], /moduleWidgets\("yakumy\.station"\)/);
   assert.match(settle[1], /widgets\[i\]\.opened === true/);
-  assert.match(settle[1], /if \(up\) svc\.panelWanted = true/);
+  assert.match(settle[1], /setWanted\(true\)/);
   assert.match(settle[1], /barRef\.activePopout\.foreign === true/);
-  assert.match(settle[1], /Date\.now\(\) >= svc\.panelTransferUntil/);
-  assert.match(settle[1], /svc\.rememberedTab = 0/);
+  assert.match(settle[1], /Date\.now\(\) >= transferUntil/);
+  assert.match(settle[1], /setTab\(0\)/);
 
   const handler = panel.match(/onOpenedChanged: \{([\s\S]*?)\n {2}\}/);
   assert.ok(handler, 'onOpenedChanged is a block handler');
   // The bar has not published the new owner from inside the close, so the
   // decision waits for the switch to finish.
   assert.match(handler[1], /else if \(popoutSwitchClosing\)/);
-  assert.match(handler[1], /Qt\.callLater\(function\(\) \{ settle\(svc, barRef\) \}\)/);
+  assert.match(handler[1], /Qt\.callLater\(function\(\) \{ settle\(svc, api, barRef, transferUntil\) \}\)/);
   // A real close still records immediately.
   assert.match(handler[1], /else if \(!service \|\| Date\.now\(\) >= service\.panelTransferUntil\) \{\n {6}intentPending = true/);
 });
@@ -156,14 +156,16 @@ test('a popout switch hands the intent to the copy that took over', () => {
 test('a real switch to another popup still dismisses Station during a transfer window', () => {
   const settle = panelFunction('settlePopoutSwitch', {});
   const state = { panelWanted: true, rememberedTab: 2, panelTransferUntil: Date.now() + 3000 };
+  state.setPanelWanted = value => { state.panelWanted = value; };
+  state.setRememberedTab = value => { state.rememberedTab = value; };
   const bar = { moduleWidgets: () => [], activePopout: { foreign: true } };
-  settle(state, bar);
+  settle(state, null, bar, state.panelTransferUntil);
   assert.equal(state.panelWanted, false);
   assert.equal(state.rememberedTab, 0);
   state.panelWanted = true;
   state.rememberedTab = 2;
   bar.activePopout = null;
-  settle(state, bar);
+  settle(state, null, bar, state.panelTransferUntil);
   assert.equal(state.panelWanted, true);
   assert.equal(state.rememberedTab, 2);
 });

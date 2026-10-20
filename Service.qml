@@ -12,12 +12,14 @@ import "lib/Transactions.js" as Transactions
 import "lib/Events.js" as Events
 import "lib/Grid.js" as Grid
 import "lib" as Station
+import "lib/BarBridge.js" as BarBridge
 
 Item {
   id: root
 
   property var shell: null
   property var manifest: null
+  property var barBridge: null
   readonly property string pluginDir: manifest && typeof manifest.__sourceDir === "string"
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
@@ -137,6 +139,61 @@ Item {
   readonly property string candidatePath: stateDir + "/monitors.lua.candidate"
   readonly property string plainCandidatePath: stateDir + "/monitors-block.plain.lua.candidate"
   readonly property string plainPath: stateDir + "/monitors-block.plain.lua"
+
+  // Only detached UI data crosses the replacement-bar boundary. In particular,
+  // wallpaperController.station must never be reachable from a snapshot.
+  function barSnapshot() {
+    return JSON.parse(JSON.stringify({
+      currentStation: currentStation,
+      displayDraft: displayDraft,
+      bindStatuses: bindStatuses,
+      config: config,
+      draftMode: draftMode,
+      draftSingleTarget: draftSingleTarget,
+      draftEditable: draftEditable,
+      state: state,
+      layoutError: layoutError,
+      previewBusy: previewBusy,
+      previewSeconds: previewSeconds,
+      panelEvacuationWaiting: panelEvacuationWaiting,
+      panelEvacuationSerial: panelEvacuationSerial,
+      panelEvacuationFrom: panelEvacuationFrom,
+      panelScreenName: panelScreenName,
+      panelTransferUntil: panelTransferUntil,
+      panelWanted: panelWanted,
+      rememberedTab: rememberedTab,
+      rememberedDisplayName: rememberedDisplayName,
+      displayWidgetEnabled: displayWidgetEnabled,
+      pluginVersion: manifest && manifest.version ? String(manifest.version) : "",
+      wallpaper: {
+        draft: wallpaper.draft,
+        layout: wallpaper.layout,
+        busy: wallpaper.busy,
+        importBusy: wallpaper.importBusy,
+        notice: wallpaper.notice,
+        noticeError: wallpaper.noticeError,
+        pickerBusy: wallpaper.pickerBusy,
+        themePath: wallpaper.themePath,
+        dirty: wallpaper.dirty
+      }
+    }))
+  }
+
+  function setPanelWanted(value) {
+    if (typeof value === "boolean") panelWanted = value
+  }
+  function setPanelScreenName(value) {
+    if (typeof value === "string" && (value === "" || validConnector(value))) panelScreenName = value
+  }
+  function setPanelTransferUntil(value) {
+    if (typeof value === "number" && isFinite(value) && value >= 0) panelTransferUntil = value
+  }
+  function setRememberedTab(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 3) rememberedTab = value
+  }
+  function setRememberedDisplayName(value) {
+    if (typeof value === "string" && (value === "" || validConnector(value))) rememberedDisplayName = value
+  }
 
   function begin(nextState) {
     gen += 1
@@ -1559,9 +1616,43 @@ Item {
         && Date.now() - lastTopologyMs > 500) followFocus.restart()
   }
 
-  Component.onCompleted: ensureDirs.running = true
+  Component.onCompleted: {
+    ensureDirs.running = true
+    barBridge = BarBridge.publish(function() { return root.barSnapshot() }, {
+      setSetting: function(name, value) { return root.setSetting(name, value) },
+      setModeValue: function(mode, target) { return root.setModeValue(mode, target) },
+      setDirectionValue: function(value) { return root.setDirectionValue(value) },
+      setBinding: function(id, combo) { return root.setBinding(id, combo) },
+      approveBinding: function(combo) { return root.approveBinding(combo) },
+      setDisplayValue: function(name, key, value) { return root.setDisplayValue(name, key, value) },
+      setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
+      setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
+      applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
+      swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },
+      displayEnabled: function(name) { return root.displayEnabled(name) },
+      roleOf: function(name) { return root.roleOf(name) },
+      previewLayout: function() { return root.previewLayout() },
+      keepPreview: function() { return root.keepPreview() },
+      revertPreview: function(reason) { return root.revertPreview(reason || "") },
+      acquireStockLeases: function() { return root.acquireStockLeases() },
+      acknowledgePanelEvacuation: function(serial, screenName) {
+        return root.acknowledgePanelEvacuation(serial, screenName)
+      },
+      setPanelWanted: function(value) { return root.setPanelWanted(value) },
+      setPanelScreenName: function(value) { return root.setPanelScreenName(value) },
+      setPanelTransferUntil: function(value) { return root.setPanelTransferUntil(value) },
+      setRememberedTab: function(value) { return root.setRememberedTab(value) },
+      setRememberedDisplayName: function(value) { return root.setRememberedDisplayName(value) },
+      wallpaperChange: function(key, value) { return root.wallpaper.change(key, value) },
+      wallpaperFrame: function(value) { return root.wallpaper.frame(value) },
+      wallpaperReset: function() { return root.wallpaper.reset() },
+      wallpaperUseTheme: function() { return root.wallpaper.useTheme() },
+      wallpaperApply: function() { return root.wallpaper.apply() }
+    })
+  }
 
   Component.onDestruction: {
+    BarBridge.clear(barBridge)
     var lease = persisted.stockLease || { section: "left", index: 0, wasEnabled: false, disabledByStation: false }
     if (["left", "center", "right"].indexOf(lease.section) === -1
         || !Number.isInteger(lease.index) || lease.index < 0)

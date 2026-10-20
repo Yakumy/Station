@@ -1,8 +1,22 @@
 # Station v2 architecture
 
-Station is loaded twice by Omarchy: `Service.qml` owns persistent behavior and
-IPC, while `Panel.qml` is the bar widget and Display-style popout. The panel
-reads the injected service object and contains no workspace policy.
+Omarchy loads one persistent `Service.qml` for behavior and IPC, and a
+`Panel.qml` bar widget and Display-style popout per output. Under the trusted
+built-in bar, the panel reads the service directly. Replacement bars receive a
+service-less facade, so the panel falls back to `BarServiceProxy.qml` and
+`WallpaperProxy.qml`: detached snapshots and closed, validated service actions
+published through `lib/BarBridge.js`. There is no second service or workspace
+policy in the widget. The wallpaper controller itself never crosses the bridge
+because its `station` property points back to the service.
+
+`Panel.qml` and `Service.qml` import the bridge from the same directory. The entry
+passes a reader callback into `StationPanel.qml`; importing the script directly
+from that nested QML type creates a separate `qs:///` library in Quickshell,
+while the service uses `file:///`. Only the replacement-bar path polls (250 ms
+open, 1 s closed); unchanged snapshots do not emit property changes. Panel intent
+writes use service setters on both paths. Deferred popout settlement captures
+the persistent API and scalar transfer deadline rather than a proxy destroyed
+by a bar rebuild.
 `BindingKeyPicker.qml` captures allowlisted key events and offers a static
 special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text
