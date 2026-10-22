@@ -1,5 +1,19 @@
 # Station v2 test results
 
+## Bar alignment and vertical indicator — 2026-10-22 (2.1.9)
+
+- All 150 Node/M0 regression tests pass with normal local process access.
+  The two Lua subprocess files fail under the restricted sandbox, as before.
+- New `python3 tools/v2/check-bar-layout.py` harness: 24 combinations of
+  top/bottom/left/right, font sizes 10/12/18, and S1/S10 pass, plus setup/cleanup.
+  It exercises production StationBar and the installed host WidgetButton,
+  checks painted alignment and gaps, vertical bounds, and both click targets.
+- Existing Displays pointer harness: 18 pass, with existing incomplete theme
+  stub warnings. Theme tokens and live-Wayland QML compilation pass.
+- Direct checkout validation encounters ignored video `node_modules` symlinks;
+  validate a clean tracked-file package instead of modifying those local files.
+- Live visual acceptance, including side-bar rebuilds, remains with the user.
+
 ## Replacement-bar bridge — 2026-10-20
 
 - All 150 Node/M0 tests pass, including detached snapshot, closed action

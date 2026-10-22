@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Effects
 import Quickshell.Io
 import Quickshell
 import qs.Ui as Ui
@@ -72,32 +71,6 @@ Ui.Panel {
   readonly property real disabledOpacity: 0.6
   readonly property real tabUnderline: Style.space(2)
   readonly property real controlHeight: Style.spacing.controlHeight
-
-  component StationMark: Item {
-    id: stationMark
-    property color tint: Color.popups.text
-    implicitWidth: Style.space(22)
-    implicitHeight: Style.space(22)
-
-    Image {
-      id: markImage
-      anchors.fill: parent
-      fillMode: Image.PreserveAspectFit
-      // The public mark is green. Its geometry-identical white mask keeps
-      // MultiEffect colorization at the exact Omarchy foreground token.
-      source: Qt.resolvedUrl("../assets/station-main-logo-mask.svg")
-      sourceSize.width: Math.round(width * Screen.devicePixelRatio)
-      sourceSize.height: Math.round(height * Screen.devicePixelRatio)
-      visible: false
-      layer.enabled: true
-    }
-    MultiEffect {
-      anchors.fill: markImage
-      source: markImage
-      colorization: 1.0
-      colorizationColor: stationMark.tint
-    }
-  }
 
   readonly property int conflictCount: service
     ? service.bindStatuses.filter(function(item) { return item.status === "conflict" }).length : 0
@@ -565,16 +538,11 @@ Ui.Panel {
     }
   }
 
-  // The open-cornered Station mark needs one theme-scaled pixel of optical
-  // enlargement beyond the denser Omarchy menu glyph.
-  readonly property real stationLogoSize: Style.font.body + Style.space(1)
-  readonly property real barControlMargin: Style.spaceReal(7.5)
-
-  implicitWidth: barRow.implicitWidth
-  implicitHeight: barRow.implicitHeight
+  implicitWidth: barControls.implicitWidth
+  implicitHeight: barControls.implicitHeight
 
   // Popout coordinator identity stays off the bar slot root so the host's
-  // open-panel dot does not center across logo + [S n]. The underline under
+  // open-panel dot does not center across logo + S1. The underline under
   // the logo is drawn by the logo button itself.
   //
   // KeyboardPanel.close() forwards to owner.close(), and `owner` is this
@@ -591,56 +559,17 @@ Ui.Panel {
     function closeForPopoutSwitch() { root.closeForPopoutSwitch() }
   }
 
-  Row {
-    id: barRow
-    spacing: 0
-
-    Ui.WidgetButton {
-      id: logoButton
-      bar: root.bar
-      text: "Station"
-      tooltipText: "Station"
-      labelVisible: false
-      hasVisualContent: true
-      horizontalMargin: 7.5
-      fixedWidth: Math.round(root.stationLogoSize + root.barControlMargin * 2)
-      fixedHeight: bar ? bar.barSize : Style.bar.sizeHorizontal
-      onPressed: root.toggle()
-      StationMark {
-        anchors.centerIn: parent
-        width: root.stationLogoSize
-        height: root.stationLogoSize
-        // Use the exact foreground property that Ui.WidgetButton uses for the
-        // Omarchy menu glyph, including transparent-bar theme transitions.
-        tint: logoButton.foreground
-      }
-      Rectangle {
-        visible: root.opened
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Math.max(1, Style.space(2))
-        color: Color.accent
-        radius: Style.cornerRadius
-      }
-    }
-
-    Ui.WidgetButton {
-      id: stationButton
-      bar: root.bar
-      text: "[S" + root.stationNumber + "]"
-      tooltipText: "Station"
-      horizontalMargin: 7.5
-      fontSize: Style.font.body
-      // The font's painted bracket row sits one pixel above both bar marks.
-      transform: Translate { y: Style.space(1) }
-      onPressed: root.toggle()
-    }
+  Station.StationBar {
+    id: barControls
+    bar: root.bar
+    stationNumber: root.stationNumber
+    opened: root.opened
+    onPressed: root.toggle()
   }
 
   Ui.KeyboardPanel {
     id: panel
-    anchorItem: logoButton
+    anchorItem: barControls.anchorItem
     owner: popoutOwner
     bar: root.bar
     centerOnBar: root.service && root.service.config.panelPosition === "center"
@@ -673,7 +602,7 @@ Ui.Panel {
         Item {
           width: parent.width
           height: Style.space(67)
-          StationMark {
+          Station.StationMark {
             id: logo
             width: Style.space(34)
             height: Style.space(34)
