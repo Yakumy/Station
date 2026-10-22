@@ -74,13 +74,15 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
 
 test('bar logo shares the Omarchy menu foreground and size token', () => {
   const panel = read('lib/StationPanel.qml');
+  const bar = read('lib/StationBar.qml');
+  const markComponent = read('lib/StationMark.qml');
   const mark = read('assets/station-main-logo-mask.svg');
   const master = read('assets/station-main-logo.svg');
 
-  assert.match(panel, /stationLogoSize:\s*Style\.font\.body \+ Style\.space\(1\)/);
-  assert.match(panel, /assets\/station-main-logo-mask\.svg/);
-  assert.match(panel, /tint:\s*logoButton\.foreground/);
-  assert.match(panel, /id:\s*stationButton[\s\S]*?transform:\s*Translate\s*\{\s*y:\s*Style\.space\(1\)\s*\}/);
+  assert.match(panel, /Station\.StationBar/);
+  assert.match(bar, /logoSize: menuInk\.height/);
+  assert.match(markComponent, /assets\/station-main-logo-mask\.svg/);
+  assert.match(bar, /tint:\s*logoButton\.foreground/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
   // Keep the supplied green master for public artwork, but use its white
   // geometry twin at runtime. MultiEffect preserves source luminance, so only

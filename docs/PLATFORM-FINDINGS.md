@@ -192,7 +192,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Popups | `Color.popups.background`, `.text`, `.border` |
 | Menus | `Color.menu.background`, `.text`, `.border`, `.scrim`, `.selectedBackground`, `.selectedText`, `.selectedBorder` |
 | Global | `Color.foreground`, `Color.accent`, `Color.urgent` |
-| Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). `Ui.WidgetButton.foreground` resolves to the injected host's `bar.barForeground`; fall back to `Color.bar.text`. The stock Omarchy menu glyph uses `Style.font.body`; Station binds its mark directly to its `WidgetButton.foreground` and uses `Style.font.body + Style.space(1)` for optical sizing. With the user's current 10px base-font override, Omarchy requests 10px and Station 11×11 logical pixels inside the unchanged 22px-high bar. |
+| Bar | `Color.bar.background`, `.text`, `.active` (**no** `Color.bar.foreground`). `Ui.WidgetButton.foreground` resolves to the injected host's `bar.barForeground`; fall back to `Color.bar.text`. The stock Omarchy menu glyph uses `Style.font.body`; Station binds its mark directly to its `WidgetButton.foreground`. As of 2.1.9 its frame height follows the Omarchy menu glyph's `TextMetrics.tightBoundingRect.height` at `Style.font.body`; the indicator aligns to the same painted center. |
 | Geometry/type | `Style.cornerRadius`, `Style.space(px)`, `Style.spacing.*`, `Style.font.*`, `Border.surfaceSpec(...)`, `BorderSurface` |
 
 Themes switch live: the shell updates the singletons and bindings repaint. Do not hard-code palette values; Station's theme-token check fails on any hex colour (including short and alpha forms) and on symlinks. Do not copy Display's raw numeric spacing and font values.
@@ -222,6 +222,18 @@ translates that label down by `Style.space(1)` to align their painted bounds.
 After installation, the current capture scale painted Omarchy at 20×20 and
 Station at 22×22 physical pixels with the same 21.5 vertical center; `[S1]`
 centered at 22.0, within half a physical pixel of both marks.
+
+
+**[SRC][QTTEST] 2.1.9 bar geometry revision (2026-10-22):** the preceding
+optical enlargement and fixed label translation are superseded. `StationBar.qml`
+measures the menu glyph with `TextMetrics`, uses its ink height for the mark,
+and aligns the unbracketed `S1` label by its ink bounds. The horizontal gap
+matches the menu-to-mark gap, including the host's rounded label origin.
+`Grid` stacks the two existing buttons on left/right bars and reports their
+combined height; the previous unconditional `Row` put the indicator outside
+the vertical bar's fixed width. An isolated Qt harness using the installed
+`WidgetButton` checks all four positions, fonts 10/12/18, S1/S10, and both click
+targets. Final live rendering and bar-rebuild behavior await user acceptance.
 
 ### 8.7 Brightness
 

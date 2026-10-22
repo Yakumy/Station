@@ -71,7 +71,7 @@ QML for UI and services; plain JS modules for logic. Tests with `node --test` (l
 yakumy.station/
 ├── manifest.json        # id yakumy.station, kinds ["bar-widget","service"]; copy key names from the Display manifest and PluginRegistry.qml; Panel.qml is the widget's popout entry, as in Display
 ├── Service.qml          # root item: IPC methods, state machine, event loop
-├── BarWidget.qml        # logo + [S n]; click toggles the popout
+├── lib/StationBar.qml  # logo + S1; row on horizontal bars, stack on vertical bars
 ├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Wallpaper | Keybindings | Settings
 ├── lib/
 │   ├── Model.js         # lanes, roles, planners (pure)

@@ -17,6 +17,11 @@ open, 1 s closed); unchanged snapshots do not emit property changes. Panel inten
 writes use service setters on both paths. Deferred popout settlement captures
 the persistent API and scalar transfer deadline rather than a proxy destroyed
 by a bar rebuild.
+`StationBar.qml` keeps the logo and unbracketed station label in separate host
+buttons, arranged as a row on top/bottom bars and a column on left/right bars.
+Its painted geometry follows the Omarchy menu glyph metrics; `StationMark.qml`
+shares the themed SVG mark between the bar and panel header.
+
 `BindingKeyPicker.qml` captures allowlisted key events and offers a static
 special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text
