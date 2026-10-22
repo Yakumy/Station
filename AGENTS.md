@@ -46,6 +46,13 @@ bug, then reconcile the affected documents in the same change.
   (its `station` points back to the service), instantiate a second service, or
   capture a widget-owned proxy in deferred hand-off work: capture the bridge API
   and scalar values instead. Use setters for panel writes on both paths.
+- Station 2.2 also declares a full-bar entry for per-monitor presence and
+  position. `Bar.qml` hosts one isolated `lib/MonitorBar.qml` per connected
+  Quickshell screen; the latter is an attributed Omarchy stock-bar adaptation.
+  Keep the shared layout and host capability facade intact. When activating
+  this bar, remove Station's persisted widget row atomically and let the bar
+  inject its virtual Station slot, so plugin disable/remove unloads the service.
+  Never edit `/usr/share/omarchy` to implement per-monitor behavior.
 - `lib/Grid.js` owns compact workspace numbering and migration plans;
   `Model.js` owns display identity, lanes, geometry, and mode choices;
   `Hypr.js`, `Binds.js`, and `MonitorsLua.js` validate and generate runtime

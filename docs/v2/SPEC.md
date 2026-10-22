@@ -72,7 +72,8 @@ yakumy.station/
 ├── manifest.json        # id yakumy.station, kinds ["bar-widget","service"]; copy key names from the Display manifest and PluginRegistry.qml; Panel.qml is the widget's popout entry, as in Display
 ├── Service.qml          # root item: IPC methods, state machine, event loop
 ├── lib/StationBar.qml  # logo + S1; row on horizontal bars, stack on vertical bars
-├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Wallpaper | Keybindings | Settings
+├── Bar.qml              # full-bar host: one isolated Omarchy bar per connected output
+├── Panel.qml            # Display-style popout: Displays | Bar | Wallpaper | Keybindings | Settings
 ├── lib/
 │   ├── Model.js         # lanes, roles, planners (pure)
 │   ├── Hypr.js          # the only place hyprctl/eval is called; validation; Lua generators
@@ -391,7 +392,7 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
+**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Bar | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
 
 Displays tab:
 
@@ -399,6 +400,20 @@ Displays tab:
 - Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders and save immediately through the direct §9.3 transaction; they never open the Keep/Revert footer. Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
+
+Bar tab:
+
+- Left: the current connected-monitor arrangement, read-only. Displays disabled
+  by Station remain visible and dimmed; physically disconnected displays are
+  absent. Every monitor card shows a compact bar preview, four side arrows, and
+  a central on/off switch. Side choices and presence apply immediately.
+- At least one enabled output must retain a bar. A disabled output may keep a
+  remembered bar choice for its next enable, but it cannot satisfy this guard.
+- Right: an intentionally empty control frame headed `BAR`.
+- The first per-monitor edit selects Station's full-bar entry. It preserves the
+  configured widget layout and hosts one Omarchy-derived bar instance per
+  connected output, allowing independent positions without editing packaged
+  Omarchy sources.
 
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 

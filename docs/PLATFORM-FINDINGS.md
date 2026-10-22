@@ -122,7 +122,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Fact | Tag |
 |---|---|
 | `omarchy plugin add <git-url> [--enable]` clones and validates. No install hooks, no package manager, no privileges. Plugins are added **disabled** unless `--enable`. Updates are `omarchy plugin update <id>` (fast-forward with a diff); removal is `omarchy plugin remove <id> [--yes]`. Plugins are unsandboxed and run inside the shell process. | [SRC] |
-| Station's working manifest: `schemaVersion 1`, `id`, `name`, `version`, `kinds: ["bar-widget","service"]`, `entryPoints: { "barWidget": "Panel.qml", "service": "Service.qml" }`, `barWidget: { displayName, description, category, allowMultiple, defaultSection: "left" }`. | [SRC] |
+| Station 2.2's manifest adds the supported `bar` kind and `Bar.qml` entry beside its existing bar-widget and service. The stock host accepts a third-party full bar but exposes only one global position, so independent output positions require one isolated bar instance per screen. | [SRC] |
 | A plugin with both kinds is loaded twice: the service from `Service.qml`, the bar widget and popout from `Panel.qml`. The popout reads the injected service object. | [LIVE] |
 | `omarchy-shell shell listPlugins` prints a JSON **array**; entries have `id, name, kinds, enabled, active, canDisable, firstParty, clonedFrom`. `active` was `false` for every entry, so use **`enabled`**. | [LIVE] |
 | `omarchy-shell shell ping` succeeds when the shell is up (about 80 ms). | [LIVE] |

@@ -22,6 +22,23 @@ buttons, arranged as a row on top/bottom bars and a column on left/right bars.
 Its painted geometry follows the Omarchy menu glyph metrics; `StationMark.qml`
 shares the themed SVG mark between the bar and panel header.
 
+Station 2.2 also declares a full-bar entry. `Bar.qml` creates one
+`MonitorBar.qml` instance per connected Quickshell screen and passes each a
+detached copy of the shared layout with that connector's saved position.
+The wrapper coordinates popouts across those isolated copies so opening a
+panel on one output closes the panel already open on another.
+Presence and position live in both Station's validated `config.bars` preferences
+and the shell bar's `monitors` map; the latter lets the active bar rebuild
+immediately. The service refuses to hide the last bar on an enabled output.
+When Station becomes the active full bar, the service atomically removes its
+persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
+The service also reconciles that row on activation, covering upgrades where
+Omarchy selects the new full-bar kind before the user makes a Bar-tab edit.
+This avoids Omarchy's multi-kind disable ambiguity: resetting the full-bar id
+then removes the last enable reference and unloads the service normally.
+The bundled bar is an MIT-licensed adaptation of Omarchy 4.0.6; provenance is
+recorded in `THIRD_PARTY_NOTICES.md`.
+
 `BindingKeyPicker.qml` captures allowlisted key events and offers a static
 special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text

@@ -394,7 +394,7 @@ Ui.Panel {
   function restoreSession() {
     if (!service) return
     var remembered = Number(service.rememberedTab)
-    if (remembered >= 0 && remembered <= 3 && selectedTab !== remembered) selectedTab = remembered
+    if (remembered >= 0 && remembered <= 4 && selectedTab !== remembered) selectedTab = remembered
   }
 
   // Open this output's copy directly: shell.summon routes to the focused
@@ -590,7 +590,7 @@ Ui.Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onTabRequested: function(direction) {
-        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 3)) % 4
+        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 4)) % 5
       }
 
       Column {
@@ -633,12 +633,12 @@ Ui.Panel {
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
-              model: ["Displays", "Wallpaper", "Keybindings", "Settings"]
+              model: ["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"]
               delegate: Item {
                 id: tab
                 required property int index
                 required property string modelData
-                readonly property bool conflicted: index === 2 && root.conflictCount > 0
+                readonly property bool conflicted: index === 3 && root.conflictCount > 0
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
@@ -721,9 +721,10 @@ Ui.Panel {
 
         Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
         Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
-        Station.WallpaperTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
-        Station.KeybindingsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
-        Station.SettingsTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
+        Station.BarTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
+        Station.WallpaperTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
+        Station.KeybindingsTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
+        Station.SettingsTab { visible: root.selectedTab === 4; width: parent.width; panelRoot: root }
       }
     }
   }

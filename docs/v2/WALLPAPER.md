@@ -1,6 +1,6 @@
 # Wallpaper contract — 2026-10-11
 
-The panel tabs are Displays, Wallpaper, Keybindings, Settings. Wallpaper follows
+The panel tabs are Displays, Bar, Wallpaper, Keybindings, Settings. Wallpaper follows
 the existing two-column composition: layout on the left, controls on the right,
 notice at lower left, Cancel/Apply at lower right. The layout and settings frames
 are the same 370-unit height used by Displays, and the layout reuses its dotted

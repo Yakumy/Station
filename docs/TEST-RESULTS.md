@@ -1,5 +1,24 @@
 # Station v2 test results
 
+## Per-monitor bar control — 2026-10-22 (2.2.0)
+
+- All 156 Node/M0 tests pass, including config migration, full-bar manifest,
+  last-visible-bar protection, read-only monitor geometry, all four positions,
+  and bridge allowlist coverage.
+- The existing bar geometry harness passes all 26 position/font/station cases;
+  the display pointer harness passes all 18 cases with its existing incomplete
+  theme-stub warnings.
+- The production Bar tab renders against the installed Omarchy UI modules with
+  the connected and disabled monitor examples, all four arrows, bar previews,
+  the central switches, and the intentionally empty right panel; no QML layout
+  or binding warnings are emitted.
+- Theme-token scanning, live-Wayland compilation of every QML component,
+  clean-package manifest validation, and whitespace checks pass.
+- The full-bar entry is an MIT-attributed adaptation of Omarchy 4.0.6. It is
+  compiled but has not yet been installed or exercised as the live bar; final
+  multi-monitor rendering, bar hand-off, hotplug, and disable/remove behavior
+  remain user acceptance checks.
+
 ## Bar alignment and vertical indicator — 2026-10-22 (2.1.9)
 
 - All 150 Node/M0 regression tests pass with normal local process access.

@@ -18,6 +18,7 @@ Item {
   id: root
 
   property var shell: null
+  onShellChanged: Qt.callLater(reconcileActiveBarLayout)
   property var manifest: null
   property var barBridge: null
   readonly property string pluginDir: manifest && typeof manifest.__sourceDir === "string"
@@ -189,7 +190,7 @@ Item {
     if (typeof value === "number" && isFinite(value) && value >= 0) panelTransferUntil = value
   }
   function setRememberedTab(value) {
-    if (Number.isInteger(value) && value >= 0 && value <= 3) rememberedTab = value
+    if (Number.isInteger(value) && value >= 0 && value <= 4) rememberedTab = value
   }
   function setRememberedDisplayName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) rememberedDisplayName = value
@@ -211,6 +212,94 @@ Item {
 
   function validConnector(value) {
     try { MonitorsLua.connector(value); return true } catch (error) { return false }
+  }
+
+  function monitorBar(name) {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    var fallback = shellBar ? String(shellBar.position || "top") : "top"
+    if (["top", "bottom", "left", "right"].indexOf(fallback) === -1) fallback = "top"
+    var row = config.bars && config.bars[name]
+    return row && typeof row === "object"
+      ? { enabled: row.enabled !== false,
+          position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback }
+      : { enabled: true, position: fallback }
+  }
+
+  function reconcileActiveBarLayout() {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    if (!shellBar || String(shellBar.id || "") !== "yakumy.station"
+        || !shellBar.layout || typeof shellBar.layout !== "object"
+        || !shell || typeof shell.mutateShellConfig !== "function") return false
+    var found = ["left", "center", "right"].some(function(section) {
+      return Array.isArray(shellBar.layout[section]) && shellBar.layout[section].some(function(entry) {
+        return entry && String(entry.id || "") === "yakumy.station"
+      })
+    })
+    if (!found) return false
+    shell.mutateShellConfig(function(scoped) {
+      if (!scoped.bar || typeof scoped.bar !== "object"
+          || !scoped.bar.layout || typeof scoped.bar.layout !== "object") return
+      ;["left", "center", "right"].forEach(function(section) {
+        if (!Array.isArray(scoped.bar.layout[section])) return
+        scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
+          return !entry || String(entry.id || "") !== "yakumy.station"
+        })
+      })
+    })
+    return true
+  }
+
+  function publishMonitorBar(name, next) {
+    if (!shell || typeof shell.mutateShellConfig !== "function") return false
+    return shell.mutateShellConfig(function(scoped) {
+      if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
+      scoped.bar.id = "yakumy.station"
+      if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
+      scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position }
+      if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
+        ;["left", "center", "right"].forEach(function(section) {
+          if (!Array.isArray(scoped.bar.layout[section])) return
+          scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
+            return !entry || String(entry.id || "") !== "yakumy.station"
+          })
+        })
+      }
+    }) === true
+  }
+
+  function setMonitorBarPosition(name, position) {
+    if (!validConnector(name) || ["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
+    if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var next = monitorBar(name)
+    next.position = position
+    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarEnabled(name, enabled) {
+    if (!validConnector(name) || typeof enabled !== "boolean") return "invalid"
+    var display = displayDraft.find(function(item) { return item.name === name })
+    if (!display) return "invalid"
+    if (!enabled && display.enabled) {
+      var survivor = displayDraft.some(function(item) {
+        return item.name !== name && item.enabled && monitorBar(item.name).enabled
+      })
+      if (!survivor) return "last-bar"
+    }
+    var next = monitorBar(name)
+    next.enabled = enabled
+    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
   }
 
   function saveConfig() {
@@ -1617,6 +1706,7 @@ Item {
   }
 
   Component.onCompleted: {
+    Qt.callLater(reconcileActiveBarLayout)
     ensureDirs.running = true
     barBridge = BarBridge.publish(function() { return root.barSnapshot() }, {
       setSetting: function(name, value) { return root.setSetting(name, value) },
@@ -1627,6 +1717,9 @@ Item {
       setDisplayValue: function(name, key, value) { return root.setDisplayValue(name, key, value) },
       setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
+      setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
+      setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
+      monitorBar: function(name) { return root.monitorBar(name) },
       applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
       swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },
       displayEnabled: function(name) { return root.displayEnabled(name) },

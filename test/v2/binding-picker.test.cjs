@@ -13,7 +13,7 @@ test('Station runtime has no native editable input or clipboard API, including h
 
 test('the conflict picker updates only the draft and is gated by the open Keybindings tab', () => {
   const source = readFileSync('lib/KeybindingsTab.qml', 'utf8');
-  assert.match(source, /available: .*\.opened && .*\.selectedTab === 2/);
+  assert.match(source, /available: .*\.opened && .*\.selectedTab === 3/);
   assert.match(source, /onPicked: function\(key\) \{ .*\.editingKey = key \}/);
   assert.match(source, /text: "Cancel"[\s\S]*?editingBindingId = ""/);
 });

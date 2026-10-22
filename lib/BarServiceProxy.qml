@@ -43,6 +43,13 @@ QtObject {
   function setDisplayValue(name, key, value) { return call("setDisplayValue", [name, key, value]) }
   function setDisplayPosition(name, x, y) { return call("setDisplayPosition", [name, x, y]) }
   function setDisplayEnabled(name, enabled) { return call("setDisplayEnabled", [name, enabled]) }
+  function setMonitorBarEnabled(name, enabled) { return call("setMonitorBarEnabled", [name, enabled]) }
+  function setMonitorBarPosition(name, position) { return call("setMonitorBarPosition", [name, position]) }
+  function monitorBar(name) {
+    var revision = snapshot
+    var value = call("monitorBar", [name])
+    return value && typeof value === "object" ? value : ({ enabled: true, position: "top" })
+  }
   function applyDisplaySetting(name, key, value) { return call("applyDisplaySetting", [name, key, value]) }
   function swapRole(name, roleIndex) { return call("swapRole", [name, roleIndex]) }
   function previewLayout() { return call("previewLayout", []) }
