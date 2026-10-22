@@ -397,6 +397,9 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 Displays tab:
 
 - Left: **Layout** canvas (logical coordinates, §5.9; drag and snap; wheel/button zoom and background pan; selected outlined; borderless rotation controls diagonally outside all four corners of the selected monitor, revealed by broad square hover targets straddling those corners and kept above neighboring cards; role-number menu inside each enabled monitor; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2). A red layout error appears below the canvas.
+- By default, the actual monitor union is fitted inside the central 80% of the
+  canvas, leaving about 10% whitespace on each constraining edge. Bar and
+  Wallpaper use the same framing rule.
 - Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders and save immediately through the direct §9.3 transaction; they never open the Keep/Revert footer. Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
@@ -406,10 +409,17 @@ Bar tab:
 - Left: the current connected-monitor arrangement, read-only. Displays disabled
   by Station remain visible and dimmed; physically disconnected displays are
   absent. Every monitor card shows a compact bar preview, four side arrows, and
-  a central on/off switch. Side choices and presence apply immediately.
+  a central on/off switch. The preview occupies a fixed 58% of its selected
+  side, never fills the monitor, and disappears while that bar is off; no side
+  arrow remains accented while it is off. Side choices and presence apply
+  immediately.
 - At least one enabled output must retain a bar. A disabled output may keep a
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: an intentionally empty control frame headed `BAR`.
+- A blank footer reserves the same action-row space used by Displays and
+  Wallpaper. If changing a side rebuilds the host bar surface, the service
+  restores the open panel directly to Bar instead of allowing the new widget's
+  default Displays tab to overwrite the remembered selection.
 - The first per-monitor edit selects Station's full-bar entry. It preserves the
   configured widget layout and hosts one Omarchy-derived bar instance per
   connected output, allowing independent positions without editing packaged

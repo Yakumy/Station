@@ -24,6 +24,7 @@ Ui.Panel {
   property string bridgeSnapshotText: ""
   readonly property var service: directService || (bridgeSnapshot ? bridgeProxy : null)
   property int selectedTab: 0
+  property bool sessionTabRestored: false
   property int stationNumber: service ? service.currentStation : 1
   readonly property string selectedDisplayName: {
     if (!service) return ""
@@ -387,7 +388,7 @@ Ui.Panel {
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
-  onSelectedTabChanged: if (service) service.setRememberedTab(selectedTab)
+  onSelectedTabChanged: if (service && sessionTabRestored) service.setRememberedTab(selectedTab)
 
   // The bar rebuilds this widget wholesale, so the tab it was showing has to
   // come back from the service instead of from this instance.
@@ -395,6 +396,7 @@ Ui.Panel {
     if (!service) return
     var remembered = Number(service.rememberedTab)
     if (remembered >= 0 && remembered <= 4 && selectedTab !== remembered) selectedTab = remembered
+    sessionTabRestored = true
   }
 
   // Open this output's copy directly: shell.summon routes to the focused
@@ -437,7 +439,10 @@ Ui.Panel {
     })
   }
 
-  onServiceChanged: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
+  onServiceChanged: {
+    sessionTabRestored = false
+    flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack()
+  }
   Component.onCompleted: { syncBridge(); flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
 
   // Disabling a different output does not rebuild this surviving widget.

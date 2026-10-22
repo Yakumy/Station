@@ -114,6 +114,12 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Display node** (Layout canvas): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
 
+**Monitor-canvas framing** (Displays / Bar / Wallpaper): fit the actual monitor
+union proportionally inside the central 80% of the canvas, giving a default 10%
+inset on the constraining width or height. Center the other dimension, whose
+whitespace may therefore be larger. Do not reserve hypothetical disconnected
+arrangements or cap the fit below the available canvas.
+
 ## 8. Do-not list
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.

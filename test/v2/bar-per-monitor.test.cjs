@@ -64,6 +64,26 @@ test('service refuses to hide the last bar on an enabled output', () => {
   assert.equal(context.config.bars['DP-1'].enabled, false);
 });
 
+test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {
+  const context = {
+    displayDraft: [{ name: 'DP-1', enabled: true }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top' } } },
+    validConnector: value => value === 'DP-1',
+    shell: null,
+    panelWanted: true,
+    panelTransferUntil: 0,
+    rememberedTab: 0,
+    saveConfig() {},
+    publishMonitorBar() { return true; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setPosition = qmlFunction(service, 'setMonitorBarPosition', context);
+
+  assert.equal(setPosition('DP-1', 'right'), 'ok');
+  assert.equal(context.rememberedTab, 1);
+  assert.ok(context.panelTransferUntil > Date.now());
+});
+
 test('first bar edit activates Station and retires its persisted widget atomically', () => {
   const shellConfig = { bar: {
     id: 'omarchy.bar',
@@ -116,6 +136,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const panel = read('lib/StationPanel.qml');
   const tab = read('lib/BarTab.qml');
   const layout = read('lib/BarLayout.qml');
+  const displayLayout = read('lib/DisplayLayout.qml');
+  const wallpaperLayout = read('lib/WallpaperLayout.qml');
   const host = read('Bar.qml');
   const monitorBar = read('lib/MonitorBar.qml');
 
@@ -125,6 +147,17 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(layout, /Ui\.ToggleSwitch/);
   for (const side of ['top', 'right', 'bottom', 'left'])
     assert.match(layout, new RegExp('position: "' + side + '"'));
+  for (const canvas of [layout, displayLayout, wallpaperLayout]) {
+    assert.match(canvas, /horizontalInset: width \* 0\.1/);
+    assert.match(canvas, /verticalInset: height \* 0\.1/);
+  }
+  const preview = layout.slice(layout.indexOf('id: barPreview'), layout.indexOf('\n      Text {', layout.indexOf('id: barPreview')));
+  assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
+  assert.match(preview, /parent\.width \* 0\.58/);
+  assert.match(preview, /parent\.height \* 0\.58/);
+  assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
+  assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
+  assert.match(panel, /sessionTabRestored/);
   assert.doesNotMatch(layout, /setDisplayPosition|previewLayout|drag/i);
   assert.match(host, /Variants\s*\{[\s\S]*?model: Quickshell\.screens/);
   assert.match(host, /configuredEnabledCount\(\) > 0/);

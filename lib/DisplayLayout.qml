@@ -19,28 +19,25 @@ Ui.BorderSurface {
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
-  readonly property real inset: canvas.panelRoot ? canvas.panelRoot.space4 : Style.spacing.md
+  readonly property real horizontalInset: width * 0.1
+  readonly property real verticalInset: height * 0.1
   readonly property color cardBackground: Color.popups.background
   readonly property var displays: service ? service.displayDraft : []
   readonly property var bounds: {
-    if (!displays.length) return { x: 0, y: 0, width: 1, height: 1, sumWidth: 1, sumHeight: 1 }
+    if (!displays.length) return { x: 0, y: 0, width: 1, height: 1 }
     var left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
-    var sumWidth = 0, sumHeight = 0, maxWidth = 0, maxHeight = 0
     displays.forEach(function(display) {
       var size = Model.logicalSize(display)
       left = Math.min(left, display.x); top = Math.min(top, display.y)
       right = Math.max(right, display.x + size.width); bottom = Math.max(bottom, display.y + size.height)
-      sumWidth += size.width; sumHeight += size.height
-      maxWidth = Math.max(maxWidth, size.width); maxHeight = Math.max(maxHeight, size.height)
     })
-    return { x: left, y: top, width: right - left, height: bottom - top,
-      sumWidth: Math.max(sumWidth, maxWidth * 2.5), sumHeight: Math.max(sumHeight, maxHeight * 2.5) }
+    return { x: left, y: top, width: right - left, height: bottom - top }
   }
-  // Reserve room for both horizontal and vertical arrangements. Keep this
-  // transform unchanged throughout a gesture by committing only on release.
-  readonly property real fitZoom: Math.max(0.001, Math.min(0.06,
-    (width - 2 * inset) * 0.85 / Math.max(bounds.width, bounds.sumWidth),
-    (height - 2 * inset) * 0.85 / Math.max(bounds.height, bounds.sumHeight)))
+  // Default framing keeps about ten percent clear on every canvas edge. Keep
+  // this transform unchanged throughout a gesture by committing only on release.
+  readonly property real fitZoom: Math.max(0.001, Math.min(
+    (width - 2 * horizontalInset) / Math.max(1, bounds.width),
+    (height - 2 * verticalInset) / Math.max(1, bounds.height)))
   property real zoomFactor: 1
   property real panX: 0
   property real panY: 0

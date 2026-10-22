@@ -272,7 +272,10 @@ Item {
     if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
     var next = monitorBar(name)
     next.position = position
-    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
     var bars = Object.assign({}, config.bars || {})
     bars[name] = next
     config.bars = bars
@@ -293,7 +296,10 @@ Item {
     }
     var next = monitorBar(name)
     next.enabled = enabled
-    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
     var bars = Object.assign({}, config.bars || {})
     bars[name] = next
     config.bars = bars

@@ -9,29 +9,26 @@ Ui.BorderSurface {
   required property var panelRoot
   readonly property var service: panelRoot.service
   readonly property var displays: service ? service.displayDraft : []
-  readonly property real inset: panelRoot.space4
+  readonly property real horizontalInset: width * 0.1
+  readonly property real verticalInset: height * 0.1
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
   radius: Style.cornerRadius
 
   readonly property var bounds: {
-    if (!displays.length) return { x: 0, y: 0, width: 1, height: 1, sumWidth: 1, sumHeight: 1 }
+    if (!displays.length) return { x: 0, y: 0, width: 1, height: 1 }
     var left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
-    var sumWidth = 0, sumHeight = 0, maxWidth = 0, maxHeight = 0
     displays.forEach(function(display) {
       var size = Model.logicalSize(display)
       left = Math.min(left, display.x); top = Math.min(top, display.y)
       right = Math.max(right, display.x + size.width); bottom = Math.max(bottom, display.y + size.height)
-      sumWidth += size.width; sumHeight += size.height
-      maxWidth = Math.max(maxWidth, size.width); maxHeight = Math.max(maxHeight, size.height)
     })
-    return { x: left, y: top, width: right - left, height: bottom - top,
-      sumWidth: Math.max(sumWidth, maxWidth * 2.5), sumHeight: Math.max(sumHeight, maxHeight * 2.5) }
+    return { x: left, y: top, width: right - left, height: bottom - top }
   }
-  readonly property real zoom: Math.max(0.001, Math.min(0.06,
-    (width - 2 * inset) * 0.85 / Math.max(bounds.width, bounds.sumWidth),
-    (height - 2 * inset) * 0.85 / Math.max(bounds.height, bounds.sumHeight)))
+  readonly property real zoom: Math.max(0.001, Math.min(
+    (width - 2 * horizontalInset) / Math.max(1, bounds.width),
+    (height - 2 * verticalInset) / Math.max(1, bounds.height)))
   readonly property real originX: (width - bounds.width * zoom) / 2
   readonly property real originY: (height - bounds.height * zoom) / 2
 
@@ -81,12 +78,12 @@ Ui.BorderSurface {
           || monitorCard.barSetting.position === "right"
         width: side ? Math.max(2, Style.space(3)) : parent.width * 0.58
         height: side ? parent.height * 0.58 : Math.max(2, Style.space(3))
-        anchors.horizontalCenter: side ? undefined : parent.horizontalCenter
-        anchors.verticalCenter: side ? parent.verticalCenter : undefined
-        anchors.left: monitorCard.barSetting.position === "left" ? parent.left : undefined
-        anchors.right: monitorCard.barSetting.position === "right" ? parent.right : undefined
-        anchors.top: monitorCard.barSetting.position === "top" ? parent.top : undefined
-        anchors.bottom: monitorCard.barSetting.position === "bottom" ? parent.bottom : undefined
+        x: monitorCard.barSetting.position === "left" ? 0
+          : monitorCard.barSetting.position === "right" ? parent.width - width
+          : (parent.width - width) / 2
+        y: monitorCard.barSetting.position === "top" ? 0
+          : monitorCard.barSetting.position === "bottom" ? parent.height - height
+          : (parent.height - height) / 2
       }
 
       Text {
@@ -117,7 +114,8 @@ Ui.BorderSurface {
           Text {
             anchors.centerIn: parent
             text: parent.modelData.glyph
-            color: monitorCard.barSetting.position === parent.modelData.position
+            color: monitorCard.barSetting.enabled
+              && monitorCard.barSetting.position === parent.modelData.position
               ? Commons.Color.accent : Commons.Color.popups.text
             font.family: Style.font.family
             font.pixelSize: Style.font.title

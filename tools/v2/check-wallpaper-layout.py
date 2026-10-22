@@ -82,6 +82,16 @@ Item {
       compare(canvas.fit, unit)
       compare(JSON.stringify(controller.layout), before)
     }
+    function test_default_zoom_fits_monitor_union_with_ten_percent_inset() {
+      controller.frame({zoom: 1, x: 0.5, y: 0.5})
+      var first = findChild(canvas, "wallpaperMonitor-A")
+      var second = findChild(canvas, "wallpaperMonitor-B")
+      verify(first !== null && second !== null)
+      fuzzyCompare(first.x, canvas.horizontalInset, 0.01)
+      fuzzyCompare(second.x + second.width, canvas.width - canvas.horizontalInset, 0.01)
+      verify(first.y >= canvas.verticalInset - 0.01)
+      verify(first.y + first.height <= canvas.height - canvas.verticalInset + 0.01)
+    }
     function test_edges_clamp_and_zoom_keeps_image_fixed() {
       controller.frame({zoom: 2, x: 100, y: -100})
       compare(controller.draft.framing.x, 1)

@@ -12,14 +12,22 @@ Ui.BorderSurface {
   readonly property var layout: controller.layout
   readonly property var scene: controller.draft
   readonly property bool spanning: scene.mode === "span"
-  readonly property real inset: Style.space(16)
+  readonly property real horizontalInset: width * 0.1
+  readonly property real verticalInset: height * 0.1
   readonly property real gridStep: Style.space(16)
   property size readySourceSize: Qt.size(1, 1)
-  readonly property real imageFit: Math.min((width - inset * 2) / Math.max(1, readySourceSize.width),
-    (height - inset * 2) / Math.max(1, readySourceSize.height))
+  readonly property real layoutFit: Math.min(
+    (width - horizontalInset * 2) / Math.max(1, layout.width),
+    (height - verticalInset * 2) / Math.max(1, layout.height))
+  readonly property real baseCropUnit: Math.max(0.001, Math.min(
+    readySourceSize.width / Math.max(1, layout.width),
+    readySourceSize.height / Math.max(1, layout.height)))
+  // At the default zoom, fit the monitor union rather than the whole source
+  // image. Wider/taller source context may extend beyond the clipped canvas.
+  readonly property real imageFit: layoutFit / baseCropUnit
   readonly property var crop: Wallpaper.composition(layout, readySourceSize.width, readySourceSize.height, scene.framing)
   readonly property real fit: spanning ? crop.unit * imageFit
-    : Math.min((width - inset * 2) / layout.width, (height - inset * 2) / layout.height)
+    : layoutFit
   readonly property real groupX: spanning ? background.x + crop.x * imageFit : (width - layout.width * fit) / 2
   readonly property real groupY: spanning ? background.y + crop.y * imageFit : (height - layout.height * fit) / 2
   readonly property size sourceSize: readySourceSize

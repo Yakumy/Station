@@ -2,22 +2,27 @@
 
 ## Per-monitor bar control — 2026-10-22 (2.2.0)
 
-- All 156 Node/M0 tests pass, including config migration, full-bar manifest,
+- All 157 Node/M0 tests pass, including config migration, full-bar manifest,
   last-visible-bar protection, read-only monitor geometry, all four positions,
-  and bridge allowlist coverage.
+  panel-tab restoration, and bridge allowlist coverage.
 - The existing bar geometry harness passes all 26 position/font/station cases;
   the display pointer harness passes all 18 cases with its existing incomplete
   theme-stub warnings.
 - The production Bar tab renders against the installed Omarchy UI modules with
   the connected and disabled monitor examples, all four arrows, bar previews,
   the central switches, and the intentionally empty right panel; no QML layout
-  or binding warnings are emitted.
+  or binding warnings are emitted. Displays, Bar, and Wallpaper now fit the
+  actual monitor union with a 10% default canvas inset. Bar previews remain at
+  58% of one side, disappear when off, and leave no accented arrow when off.
 - Theme-token scanning, live-Wayland compilation of every QML component,
   clean-package manifest validation, and whitespace checks pass.
-- The full-bar entry is an MIT-attributed adaptation of Omarchy 4.0.6. It is
-  compiled but has not yet been installed or exercised as the live bar; final
-  multi-monitor rendering, bar hand-off, hotplug, and disable/remove behavior
-  remain user acceptance checks.
+- The full-bar entry is an MIT-attributed adaptation of Omarchy 4.0.6. Commit
+  `25f0627` was installed and active on the two-monitor system; the user
+  confirmed independent per-monitor position and presence controls work.
+  A live stock-versus-Station comparison measured identical reserved thickness:
+  26 logical pixels horizontally and 28 vertically, with matching icon/menu
+  centering. The UI refinements and Bar-tab restoration remain user acceptance
+  checks; hotplug and disable/remove behavior remain outside this check.
 
 ## Bar alignment and vertical indicator — 2026-10-22 (2.1.9)
 

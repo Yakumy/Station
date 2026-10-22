@@ -178,10 +178,10 @@ Item {
       wait(10)
       for (var i=0;i<3;i++) {
         var target=card("DP-"+(i+1))
-        verify(target.x >= layout.inset - 0.01)
-        verify(target.x + target.width <= layout.width - layout.inset + 0.01)
-        verify(target.y >= layout.inset - 0.01)
-        verify(target.y + target.height <= layout.height - layout.inset + 0.01)
+        verify(target.x >= layout.horizontalInset - 0.01)
+        verify(target.x + target.width <= layout.width - layout.horizontalInset + 0.01)
+        verify(target.y >= layout.verticalInset - 0.01)
+        verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
       }
     }
     function test_rotation_handles_hover_diagonally_outside_all_four_corners() {
@@ -312,6 +312,12 @@ Item {
       move("HDMI-A-2", 1920, 1200)
       compare(service.state, "previewing")
       var target = card("HDMI-A-2"), display = target.modelData
+      // The 10%-inset default fit makes cards intentionally larger. Scroll
+      // the compact harness viewport so the second drag begins on a visible
+      // point while still exercising the production MouseArea.
+      panelScroll.contentY = Math.max(0,
+        target.y + target.height * 0.8 - panelScroll.height / 2)
+      wait(10)
       mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
         (-1920 - display.x) * layout.zoom, (1200 - display.y) * layout.zoom,
         Qt.LeftButton, Qt.NoModifier, 5)
