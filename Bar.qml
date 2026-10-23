@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
 import "lib" as Station
+import "lib/BarBridge.js" as BarBridge
 
 // Station's full-bar entry. Each connected output owns an isolated copy of
 // Omarchy's bar, so position and presence can differ without patching the
@@ -18,6 +19,13 @@ Item {
   property var shell: null
   property var manifest: null
   property var instances: []
+  // The persistent service owns per-monitor policy. Read its detached snapshot
+  // directly from this top-level entry point (the same .pragma-library context
+  // as Panel.qml and Service.qml) so an open panel can move its bar without
+  // making the host reload shell.json. The service mirrors the choice there
+  // after the panel closes.
+  property var stationBars: ({})
+  property string stationBarsKey: ""
 
   readonly property string focusedScreenName: Hyprland.focusedMonitor
     ? String(Hyprland.focusedMonitor.name || "") : ""
@@ -37,6 +45,9 @@ Item {
   }
 
   function monitorEntry(name) {
+    var live = stationBars && typeof stationBars === "object"
+      ? stationBars[String(name || "")] : null
+    if (live && typeof live === "object") return live
     var rows = barConfig && barConfig.monitors
     var row = rows && typeof rows === "object" ? rows[String(name || "")] : null
     return row && typeof row === "object" ? row : ({})
@@ -62,6 +73,26 @@ Item {
     copy.position = validPosition(entry.position || copy.position)
     return copy
   }
+
+  function refreshStationBars() {
+    var api = BarBridge.current()
+    var snapshot = api && typeof api.snapshot === "function" ? api.snapshot() : null
+    var bars = snapshot && snapshot.config && snapshot.config.bars
+    if (!bars || typeof bars !== "object") bars = ({})
+    var key = JSON.stringify(bars)
+    if (key === stationBarsKey) return
+    stationBarsKey = key
+    stationBars = JSON.parse(key)
+  }
+
+  Timer {
+    interval: 100
+    repeat: true
+    running: true
+    onTriggered: root.refreshStationBars()
+  }
+
+  Component.onCompleted: refreshStationBars()
 
   function registerInstance(instance) {
     if (!instance || instances.indexOf(instance) !== -1) return

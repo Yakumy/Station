@@ -1318,13 +1318,31 @@ Item {
     WlrLayershell.namespace: "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
 
-    Loader {
+    // One always-present arrangement: Left starts at the top of a vertical bar
+    // and at the left edge of a horizontal one. Positioning flips with
+    // `root.vertical` instead of swapping Loader components, so a side change
+    // reflows the bar without tearing down modules — any open plugin panel
+    // survives the flip and re-anchors with it.
+    Item {
       anchors.fill: parent
-      sourceComponent: root.vertical ? verticalBar : horizontalBar
 
-      // A child of the loader, not a sibling of the sections: an ancestor stays
-      // hovered while the pointer is over a widget, where a sibling would lose
-      // hover to the section the pointer entered.
+      CenterModules { anchors.fill: parent }
+
+      LeftModules {
+        x: root.vertical ? (parent.width - width) / 2 : Style.space(8)
+        y: root.vertical ? Style.space(8) : (parent.height - height) / 2
+      }
+
+      RightModules {
+        x: root.vertical ? (parent.width - width) / 2
+          : parent.width - width - Style.space(8)
+        y: root.vertical ? parent.height - height - Style.space(8)
+          : (parent.height - height) / 2
+      }
+
+      // A child of the container, not a sibling of the sections: an ancestor
+      // stays hovered while the pointer is over a widget, where a sibling
+      // would lose hover to the section the pointer entered.
       HoverHandler {
         onHoveredChanged: root.setBarHovered(hovered)
         // Unplugging a monitor destroys its bar without a leave event, which
@@ -1397,49 +1415,6 @@ Item {
       }
     }
 
-    Component {
-      id: horizontalBar
-
-      Item {
-        anchors.fill: parent
-
-        CenterModules { anchors.fill: parent }
-
-        LeftModules {
-          anchors.left: parent.left
-          anchors.leftMargin: Style.space(8)
-          anchors.verticalCenter: parent.verticalCenter
-        }
-
-        RightModules {
-          anchors.right: parent.right
-          anchors.rightMargin: Style.space(8)
-          anchors.verticalCenter: parent.verticalCenter
-        }
-      }
-    }
-
-    Component {
-      id: verticalBar
-
-      Item {
-        anchors.fill: parent
-
-        CenterModules { anchors.fill: parent }
-
-        LeftModules {
-          anchors.top: parent.top
-          anchors.topMargin: Style.space(8)
-          anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        RightModules {
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: Style.space(8)
-          anchors.horizontalCenter: parent.horizontalCenter
-        }
-      }
-    }
   }
 
   Component { id: emptyModuleComponent; Item { implicitWidth: 0; implicitHeight: 0; visible: false } }
@@ -1588,99 +1563,56 @@ Item {
     readonly property bool hasAnchor: root.entryIndex(entries, root.centerAnchor) !== -1
     readonly property var anchorEntry: root.findCenterAnchorEntry()
 
-    Loader {
-      anchors.fill: parent
-      sourceComponent: root.vertical ? verticalCenterModules : horizontalCenterModules
+    // One arrangement for both orientations: the unanchored list centers in
+    // the section, the anchor module centers, and the before/after lists sit
+    // relative to it — left/right on a horizontal bar, above/below on a
+    // vertical one. Positioning flips with `root.vertical` instead of
+    // swapping Loader components, so open panels survive a side change.
+    // The swap it replaces relied on Loader `active` to avoid mounting the
+    // duplicate arrangement twice; here that is achieved by gating `entries` so
+    // exactly one arrangement mounts modules at a time.
+    CenterGestureArea { anchors.fill: parent }
+
+    HoverHandler {
+      onHoveredChanged: root.setCenterSectionHovered(hovered)
     }
 
-    Component {
-      id: horizontalCenterModules
-
-      Item {
-        anchors.fill: parent
-
-        CenterGestureArea { anchors.fill: parent }
-
-        HoverHandler {
-          onHoveredChanged: root.setCenterSectionHovered(hovered)
-        }
-
-        ModuleList {
-          visible: !centerRoot.hasAnchor
-          entries: centerRoot.entries
-          region: "center"
-          anchors.centerIn: parent
-        }
-
-        ModuleList {
-          visible: centerRoot.hasAnchor
-          entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
-          region: "center"
-          anchors.right: centerAnchorModule.left
-          anchors.verticalCenter: centerAnchorModule.verticalCenter
-        }
-
-        ModuleSlot {
-          id: centerAnchorModule
-          visible: centerRoot.hasAnchor
-          entry: centerRoot.anchorEntry
-          region: "center"
-          anchors.centerIn: parent
-        }
-
-        ModuleList {
-          visible: centerRoot.hasAnchor
-          entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
-          region: "center"
-          anchors.left: centerAnchorModule.right
-          anchors.verticalCenter: centerAnchorModule.verticalCenter
-        }
-      }
+    ModuleSlot {
+      id: centerAnchorModule
+      visible: centerRoot.hasAnchor
+      entry: centerRoot.anchorEntry
+      region: "center"
+      anchors.centerIn: parent
     }
 
-    Component {
-      id: verticalCenterModules
+    ModuleList {
+      entries: centerRoot.hasAnchor ? [] : centerRoot.entries
+      region: "center"
+      anchors.centerIn: parent
+    }
 
-      Item {
-        anchors.fill: parent
+    ModuleList {
+      entries: centerRoot.hasAnchor
+        ? root.entriesBefore(centerRoot.entries, root.centerAnchor) : []
+      region: "center"
+      x: root.vertical
+        ? centerAnchorModule.x + (centerAnchorModule.width - width) / 2
+        : centerAnchorModule.x - width
+      y: root.vertical
+        ? centerAnchorModule.y - height
+        : centerAnchorModule.y + (centerAnchorModule.height - height) / 2
+    }
 
-        CenterGestureArea { anchors.fill: parent }
-
-        HoverHandler {
-          onHoveredChanged: root.setCenterSectionHovered(hovered)
-        }
-
-        ModuleList {
-          visible: !centerRoot.hasAnchor
-          entries: centerRoot.entries
-          region: "center"
-          anchors.centerIn: parent
-        }
-
-        ModuleList {
-          visible: centerRoot.hasAnchor
-          entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
-          region: "center"
-          anchors.bottom: centerAnchorModule.top
-          anchors.horizontalCenter: centerAnchorModule.horizontalCenter
-        }
-
-        ModuleSlot {
-          id: centerAnchorModule
-          visible: centerRoot.hasAnchor
-          entry: centerRoot.anchorEntry
-          region: "center"
-          anchors.centerIn: parent
-        }
-
-        ModuleList {
-          visible: centerRoot.hasAnchor
-          entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
-          region: "center"
-          anchors.top: centerAnchorModule.bottom
-          anchors.horizontalCenter: centerAnchorModule.horizontalCenter
-        }
-      }
+    ModuleList {
+      entries: centerRoot.hasAnchor
+        ? root.entriesAfter(centerRoot.entries, root.centerAnchor) : []
+      region: "center"
+      x: root.vertical
+        ? centerAnchorModule.x + (centerAnchorModule.width - width) / 2
+        : centerAnchorModule.x + centerAnchorModule.width
+      y: root.vertical
+        ? centerAnchorModule.y + centerAnchorModule.height
+        : centerAnchorModule.y + (centerAnchorModule.height - height) / 2
     }
   }
 
@@ -1766,56 +1698,60 @@ Item {
     }
   }
 
-  component ModuleList: Loader {
+  // Orientation-agnostic module positioner. The Loader over Row/Column
+  // components it replaces destroyed every ModuleSlot on a side change, taking
+  // the widget subtree — and any open plugin panel — with it. This hosts the
+  // same ModuleSlot instances through both orientations and re-lays them out
+  // synchronously on flips, model changes and size changes, so a flip only
+  // reflays the bar. Children keep insertion (model) order like Row/Column.
+  component ModuleList: Item {
     id: moduleListRoot
 
     property var entries: []
     property string region: ""
+    readonly property bool vertical: root.vertical
 
     visible: entries.length > 0
-    // A hidden list must not build its modules. The center section declares
-    // both an anchored and an unanchored arrangement and shows whichever
-    // fits, so leaving the other one loaded mounts every center module
-    // twice — two IPC handlers registered for the same target, two clocks
-    // ticking, two of every timer and fetch behind them.
-    active: visible && entries.length > 0
-    sourceComponent: root.vertical ? verticalModuleList : horizontalModuleList
-    width: item ? item.implicitWidth : 0
-    height: item ? item.implicitHeight : 0
+    width: implicitWidth
+    height: implicitHeight
 
-    Component {
-      id: horizontalModuleList
-
-      Row {
-        spacing: 0
-
-        Repeater {
-          model: moduleListRoot.entries
-
-          ModuleSlot {
-            required property var modelData
-            entry: modelData
-            region: moduleListRoot.region
-          }
-        }
+    function applyLayout() {
+      var kids = children
+      var items = []
+      for (var i = 0; i < kids.length; i++) {
+        var slot = kids[i]
+        items.push(slot
+          ? { visible: slot.visible !== false, width: slot.width, height: slot.height }
+          : { visible: false })
       }
+      var plan = BarModel.positionModules(items, moduleListRoot.vertical)
+      for (var j = 0; j < kids.length; j++) {
+        var position = plan.positions[j]
+        if (!position) continue
+        kids[j].x = position.x
+        kids[j].y = position.y
+      }
+      implicitWidth = plan.width
+      implicitHeight = plan.height
     }
 
-    Component {
-      id: verticalModuleList
+    onEntriesChanged: applyLayout()
+    onVerticalChanged: applyLayout()
+    Component.onCompleted: applyLayout()
 
-      Column {
-        spacing: 0
+    Repeater {
+      model: moduleListRoot.entries
+      onItemAdded: moduleListRoot.applyLayout()
+      onItemRemoved: moduleListRoot.applyLayout()
 
-        Repeater {
-          model: moduleListRoot.entries
+      ModuleSlot {
+        required property var modelData
+        entry: modelData
+        region: moduleListRoot.region
 
-          ModuleSlot {
-            required property var modelData
-            entry: modelData
-            region: moduleListRoot.region
-          }
-        }
+        onWidthChanged: moduleListRoot.applyLayout()
+        onHeightChanged: moduleListRoot.applyLayout()
+        onVisibleChanged: moduleListRoot.applyLayout()
       }
     }
   }
@@ -1967,9 +1903,10 @@ Item {
       // Only the hovered slot needs the hit test; without the guard every
       // slot on every monitor re-ran it on each click target change.
       cursorShape: moduleHover.hovered && root.moduleClickTargetAt(slot, mouseX, mouseY) ? Qt.PointingHandCursor : Qt.ArrowCursor
-      // Do not assign drag.target here: ModuleSlot is owned by Row/Column
-      // positioners, and mutating slot.x/slot.y can leave stale offsets that
-      // make neighboring modules overlap after a small aborted drag.
+      // Do not assign drag.target here: ModuleSlot is positioned by the
+      // ModuleList positioner, and mutating slot.x/slot.y can leave stale
+      // offsets that make neighboring modules overlap after a small aborted
+      // drag. The next layout pass would reset them, but never mid-gesture.
 
       onPressed: function(mouse) {
         dragging = false

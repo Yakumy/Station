@@ -1,5 +1,52 @@
 # Station v2 test results
 
+## Bar side change without a panel reload — 2026-10-23
+
+- Finding: the stock-adapted `MonitorBar` swapped `root.vertical`-keyed Loader
+  components for the section container, the center arrangement, and every module
+  Row/Column. A top→left/bottom→right-style axis flip therefore destroyed every
+  module slot — the Station widget and the open popout with them — and the
+  pre-armed hand-off reopened the panel, which read as a reload. Same-axis flips
+  (top↔bottom, left↔right) kept `vertical` unchanged and rebuilt nothing. The
+  per-monitor asymmetry (reload seen on eDP-1, not on HDMI-A-2) followed from the
+  open panel being hosted on eDP-1: only the edited monitor's bar touched the
+  panel-host copy.
+- Repair: one always-present section arrangement plus one orientation-agnostic
+  synchronous positioner per region now host the same module instances in all
+  four positions; the placement math lives in `lib/BarModel.positionModules`
+  with unit tests, including skips for invisible slots and reflow across flips.
+  A side change reflows those instances in place. Follow-up live testing found
+  a second, intermittent host-level path: some `shell.json` position writes
+  recreated both full-bar surfaces and their widget populations even though
+  the inner layout was stable. The installed log showed changed layer-surface
+  addresses, duplicate IPC registration, and callbacks evaluated against
+  invalid old `MonitorBar` contexts. `Bar.qml` therefore reads the service's
+  detached `config.bars` snapshot as the live authority while the panel is
+  open; the service batches and defers the redundant `shell.json` monitor-map
+  mirror until the panel closes. The §10.3 hand-off remains armed as a fallback
+  for genuinely structural rebuilds.
+  Module positions now come from the positioner on entries/vertical/size
+  changes; module drag-reorder and popout geometry read live slot geometry as
+  before.
+- Checks after the geometry-gating follow-up: 169 Node/M0 tests (including the
+  new positioner, open-panel deferral, one-write flush, bridge-precedence, and
+  retained-screen and geometry-gating coverage), `check-bar-layout.py` 26/26,
+  display pointer harness 18, theme tokens 0 violations, live-Wayland QML
+  compilation, and whitespace checks pass. Live acceptance of flips on both
+  monitors (panel open, no host-surface replacement before close, tab retention,
+  drag reorder, hover, tray drawer, center anchor) remains a user check.
+
+- Follow-up after physical acceptance: same-axis moves remained clean, while
+  horizontal↔vertical moves still produced a shorter panel glitch after the
+  host-write deferral. The panel now retains its Quickshell screen object while
+  open. A second physical check showed that was insufficient: moving the other
+  monitor's bar is clean, while changing the panel-owning bar still glitches.
+  The panel now also withholds the new logical edge until its anchor window has
+  changed to the matching horizontal or vertical geometry, preventing a frame
+  that combines the new edge with the old full-axis dimension. Source coverage
+  verifies the retained-screen and geometry-gating paths; repeated physical
+  cross-axis acceptance remains pending.
+
 ## Per-monitor bar control — 2026-10-22 (2.2.0)
 
 - All 157 Node/M0 tests pass, including config migration, full-bar manifest,

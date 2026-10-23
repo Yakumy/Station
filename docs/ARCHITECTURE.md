@@ -28,8 +28,12 @@ detached copy of the shared layout with that connector's saved position.
 The wrapper coordinates popouts across those isolated copies so opening a
 panel on one output closes the panel already open on another.
 Presence and position live in both Station's validated `config.bars` preferences
-and the shell bar's `monitors` map; the latter lets the active bar rebuild
-immediately. The service refuses to hide the last bar on an enabled output.
+and the shell bar's `monitors` map. While the panel is open, the full bar reads
+the detached `config.bars` snapshot through the top-level bridge and treats it
+as the live authority; the service defers the redundant shell map write until
+the panel closes. This prevents an otherwise harmless host config reload from
+recreating the third-party bar and its panel mid-click. The service refuses to
+hide the last bar on an enabled output.
 When Station becomes the active full bar, the service atomically removes its
 persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
 The service also reconciles that row on activation, covering upgrades where

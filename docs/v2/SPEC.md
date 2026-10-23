@@ -416,9 +416,21 @@ Bar tab:
 - At least one enabled output must retain a bar. A disabled output may keep a
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: an intentionally empty control frame headed `BAR`.
-- A blank footer reserves the same action-row space used by Displays and
-  Wallpaper. If changing a side rebuilds the host bar surface, the service
-  restores the open panel directly to Bar instead of allowing the new widget's
+- A side change reflows the bar in place instead of rebuilding it: each bar
+  region runs through one orientation-agnostic positioner that keeps the same
+  module instances across top/bottom/left/right, so an open panel survives
+  every side choice and re-anchors with the bar. `config.bars` is the live
+  authority during this interaction: the full bar reads its detached service
+  snapshot, while the redundant `shell.json` `bar.monitors` write is deferred
+  until the panel closes. This keeps the host's config reload outside the open
+  panel lifetime. The open KeyboardPanel also retains its selected Quickshell
+  screen through the bar window's horizontal↔vertical layer-shell transition.
+  During that transition, the panel must not combine the new logical edge with
+  the old-axis bar-window dimensions: it retains the last geometrically valid
+  edge until the anchor window reports the requested axis, then moves directly
+  to the new valid geometry. The panel-restoration machinery (§10.3) still arms as a
+  fallback for a coincident structural rebuild (a plugin enable/disable or a
+  widget drag), restoring directly to Bar instead of allowing the new widget's
   default Displays tab to overwrite the remembered selection.
 - The first per-monitor edit selects Station's full-bar entry. It preserves the
   configured widget layout and hosts one Omarchy-derived bar instance per

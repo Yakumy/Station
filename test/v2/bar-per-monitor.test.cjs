@@ -74,6 +74,7 @@ test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {
     panelTransferUntil: 0,
     rememberedTab: 0,
     saveConfig() {},
+    activeStationBar() { return false; },
     publishMonitorBar() { return true; },
   };
   context.monitorBar = qmlFunction(service, 'monitorBar', context);
@@ -82,6 +83,64 @@ test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {
   assert.equal(setPosition('DP-1', 'right'), 'ok');
   assert.equal(context.rememberedTab, 1);
   assert.ok(context.panelTransferUntil > Date.now());
+});
+
+test('an active full bar defers its shell.json mirror while the panel is open', () => {
+  const pending = [];
+  const context = {
+    displayDraft: [{ name: 'DP-1', enabled: true }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top' } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() { throw new Error('must not write shell.json while open'); } },
+    panelWanted: true,
+    panelTransferUntil: 0,
+    rememberedTab: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, next) { pending.push([name, { ...next }]); },
+    publishMonitorBar() { throw new Error('must defer the host write'); },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setPosition = qmlFunction(service, 'setMonitorBarPosition', context);
+
+  assert.equal(setPosition('DP-1', 'right'), 'ok');
+  assert.equal(context.config.bars['DP-1'].position, 'right');
+  assert.deepEqual(pending, [['DP-1', { enabled: true, position: 'right' }]]);
+});
+
+test('closing the panel flushes all deferred monitor rows in one host write', () => {
+  const shellConfig = { bar: { id: 'yakumy.station', monitors: {}, layout: {
+    left: [], center: [], right: [],
+  } } };
+  let writes = 0;
+  const context = {
+    panelWanted: false,
+    pendingMonitorBars: {
+      'DP-1': { enabled: true, position: 'right' },
+      'DP-2': { enabled: false, position: 'bottom' },
+    },
+    shell: {
+      mutateShellConfig(mutator) { writes++; mutator(shellConfig); return true; },
+    },
+  };
+  context.publishMonitorBars = qmlFunction(service, 'publishMonitorBars', context);
+  const flush = qmlFunction(service, 'flushPendingMonitorBars', context);
+
+  assert.equal(flush(), true);
+  assert.equal(writes, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.monitors)), {
+    'DP-1': { enabled: true, position: 'right' },
+    'DP-2': { enabled: false, position: 'bottom' },
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.pendingMonitorBars)), {});
+});
+
+test('full-bar entry reads live service bars before the shell.json mirror', () => {
+  const fullBar = read('Bar.qml');
+  assert.match(fullBar, /import "lib\/BarBridge\.js" as BarBridge/);
+  assert.match(fullBar, /var live = stationBars/);
+  assert.match(fullBar, /snapshot\.config\.bars/);
+  assert.ok(fullBar.indexOf('var live = stationBars') < fullBar.indexOf('var rows = barConfig'));
 });
 
 test('first bar edit activates Station and retires its persisted widget atomically', () => {
@@ -98,6 +157,7 @@ test('first bar edit activates Station and retires its persisted widget atomical
       mutateShellConfig(mutator) { mutator(shellConfig); return true; },
     },
   };
+  context.publishMonitorBars = qmlFunction(service, 'publishMonitorBars', context);
   const publish = qmlFunction(service, 'publishMonitorBar', context);
   assert.equal(publish('DP-1', { enabled: true, position: 'right' }), true);
   assert.equal(shellConfig.bar.id, 'yakumy.station');

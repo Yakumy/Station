@@ -25,6 +25,16 @@ Item {
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
+  // While a panel is open, config.bars is the live authority consumed through
+  // BarBridge. Delay the redundant shell.json mirror write until the panel is
+  // closed: changing that host config can rebuild the complete third-party bar
+  // and every widget even when its logical layout is unchanged.
+  property var pendingMonitorBars: ({})
+  Timer {
+    id: monitorBarPublishDelay
+    interval: 250
+    onTriggered: root.flushPendingMonitorBars()
+  }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
   property var persisted: Store.stateDefaults()
@@ -181,7 +191,10 @@ Item {
   }
 
   function setPanelWanted(value) {
-    if (typeof value === "boolean") panelWanted = value
+    if (typeof value !== "boolean") return
+    panelWanted = value
+    if (!value && Object.keys(pendingMonitorBars).length)
+      monitorBarPublishDelay.restart()
   }
   function setPanelScreenName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) panelScreenName = value
@@ -250,12 +263,21 @@ Item {
   }
 
   function publishMonitorBar(name, next) {
+    var changes = ({})
+    changes[name] = next
+    return publishMonitorBars(changes)
+  }
+
+  function publishMonitorBars(changes) {
     if (!shell || typeof shell.mutateShellConfig !== "function") return false
     return shell.mutateShellConfig(function(scoped) {
       if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
       scoped.bar.id = "yakumy.station"
       if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
-      scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position }
+      Object.keys(changes || {}).forEach(function(name) {
+        var next = changes[name]
+        scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position }
+      })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
         ;["left", "center", "right"].forEach(function(section) {
           if (!Array.isArray(scoped.bar.layout[section])) return
@@ -265,6 +287,25 @@ Item {
         })
       }
     }) === true
+  }
+
+  function activeStationBar() {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    return !!shellBar && String(shellBar.id || "") === "yakumy.station"
+  }
+
+  function deferMonitorBarPublish(name, next) {
+    var pending = Object.assign({}, pendingMonitorBars)
+    pending[name] = { enabled: next.enabled, position: next.position }
+    pendingMonitorBars = pending
+  }
+
+  function flushPendingMonitorBars() {
+    if (panelWanted || !Object.keys(pendingMonitorBars).length) return false
+    var pending = pendingMonitorBars
+    if (!publishMonitorBars(pending)) return false
+    pendingMonitorBars = ({})
+    return true
   }
 
   function setMonitorBarPosition(name, position) {
@@ -281,6 +322,17 @@ Item {
     config.bars = bars
     config = Object.assign({}, config)
     saveConfig()
+    // Once Station's full bar is active, Bar.qml consumes the detached config
+    // snapshot above. Do not feed the same click through shell.json while the
+    // panel is open: the host can recreate the full bar and the panel with it.
+    // Keep shell.json as a durable mirror, but update it after an ordinary
+    // close. The first edit still publishes immediately because it must select
+    // Station's full-bar entry and retire the old widget row atomically.
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
   }
 
