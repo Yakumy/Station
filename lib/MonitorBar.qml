@@ -136,7 +136,12 @@ Item {
 
   Component {
     id: pluginBarApiComponent
-    PluginBarApi { }
+    PluginBarApi {
+      // Third-party widgets normally receive the restricted facade rather
+      // than MonitorBar itself. Content-aware widgets still need the same
+      // per-monitor final size as first-party modules.
+      property real effectiveContentSize: root.effectiveContentSize
+    }
   }
 
   Component {
@@ -2218,6 +2223,11 @@ Item {
     }
     onModuleSettingsChanged: injectProps()
     onRequestedNativeScaleChanged: scheduleNativeContentSize()
+    // Nested Loaders and Repeaters (notably the indicator block) can populate
+    // after the outer widget's onLoaded signal. Their arrival changes the
+    // widget's implicit extent, which gives us a deterministic rescan hook.
+    onBaseContentWidthChanged: scheduleNativeContentSize()
+    onBaseContentHeightChanged: scheduleNativeContentSize()
 
     function walkNativeContent(item, inheritedFontOwner, visitor) {
       if (!item || (item !== activeItem && "visible" in item && item.visible === false)) return
@@ -2241,7 +2251,7 @@ Item {
         if (!inheritedFontOwner && !ownsFontSize && "font" in item && item.font
             && isFinite(Number(item.font.pixelSize)) && Number(item.font.pixelSize) > 0)
           baseline.fontPixelSize = Number(item.font.pixelSize)
-        ;["iconSize", "opticalSize", "slotSize"].forEach(function(name) {
+        ;["iconSize", "opticalSize"].forEach(function(name) {
           if (name in item && isFinite(Number(item[name])) && Number(item[name]) > 0)
             baseline[name] = Number(item[name])
         })
@@ -2264,17 +2274,19 @@ Item {
         baselineContentHeight = Math.max(0, Number(target.implicitHeight) || 0)
 
       captureNativeSizeBaselines(target)
-      var factor = requestedNativeScale
+      var customized = root.requestedContentSize > 0
+        && root.effectiveContentSize > root.defaultContentSize
+      var targetSize = root.effectiveContentSize
       walkNativeContent(target, false, function(item) {
         var baseline = nativeSizeBaselines.get(item)
         if (!baseline) return
         if (baseline.fontSize !== undefined)
-          item.fontSize = Math.max(1, Math.round(baseline.fontSize * factor))
+          item.fontSize = customized ? targetSize : baseline.fontSize
         if (baseline.fontPixelSize !== undefined)
-          item.font.pixelSize = Math.max(1, Math.round(baseline.fontPixelSize * factor))
-        ;["iconSize", "opticalSize", "slotSize"].forEach(function(name) {
+          item.font.pixelSize = customized ? targetSize : baseline.fontPixelSize
+        ;["iconSize", "opticalSize"].forEach(function(name) {
           if (baseline[name] !== undefined)
-            item[name] = Math.max(1, baseline[name] * factor)
+            item[name] = customized ? targetSize : baseline[name]
         })
       })
     }

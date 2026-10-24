@@ -48,9 +48,10 @@ Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
 the bar's parallel monitor edges. The panel's cross-axis stabilization permits
 the half-gap visual extension when validating the remapped bar window; the
 exclusive-zone size exposed to popup placement remains unchanged.
-Content size is stored per monitor as a font-pixel baseline. `MonitorBar`
-propagates the selected ratio into module font and icon primitives so Qt
-renders them at their final resolution, and enlarges only the along-bar slot
+Content size is stored per monitor as a font-pixel target. Above the default,
+`MonitorBar` applies that one absolute target to every module font and icon
+primitive so mixed stock caption/icon tokens do not produce uneven results and
+Qt renders them at their final resolution. It enlarges only the along-bar slot
 used by the overlap calculation, and clips the cross axis to the configured bar
 height. Composite widgets whose geometry comes from non-Item helpers may expose
 `nativeContentSized` and consume the bar's effective size directly. A zero
