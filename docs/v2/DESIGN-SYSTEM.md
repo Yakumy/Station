@@ -112,7 +112,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Slider** (Brightness, Text size, Scale, Resolution, Refresh): host-owned `Ui.PanelSlider` paints the track and knob. The last four use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
 
-**Display node** (Layout canvas): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
+**Display node** (Displays and Bar layout canvases): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
 
 **Monitor-canvas framing** (Displays / Bar / Wallpaper): fit the actual monitor
 union proportionally inside the central 80% of the canvas, giving a default 10%

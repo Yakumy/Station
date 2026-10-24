@@ -409,16 +409,21 @@ Displays tab:
 
 Bar tab:
 
-- Left: the current connected-monitor arrangement, read-only. Displays disabled
+- Left: the current connected-monitor arrangement, selectable but read-only for
+  display geometry. The selected card uses the same selected border and fill as
+  Displays. Displays disabled
   by Station remain visible and dimmed; physically disconnected displays are
   absent. Every monitor card shows a compact bar preview, four side arrows, and
   a central on/off switch. The preview occupies a fixed 58% of its selected
-  side, never fills the monitor, and disappears while that bar is off; no side
-  arrow remains accented while it is off. Side choices and presence apply
-  immediately.
+  side, is inset from that side by `Style.spacing.sm`, never fills the monitor,
+  and disappears while that bar is off; no side arrow remains accented while it
+  is off. Side choices and presence apply immediately.
 - At least one enabled output must retain a bar. A disabled output may keep a
   remembered bar choice for its next enable, but it cannot satisfy this guard.
-- Right: an intentionally empty control frame headed `BAR`.
+- Right: `Selected: <connector>` followed by five equal control rows. The first,
+  **Position**, is a centered segmented selector ordered Top, Right, Bottom,
+  Left and applies immediately. The remaining rows are reserved for the other
+  bar appearance controls.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives

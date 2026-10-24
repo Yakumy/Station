@@ -7,6 +7,8 @@ import "Model.js" as Model
 Ui.BorderSurface {
   id: canvas
   required property var panelRoot
+  property string selectedDisplayName: ""
+  signal displaySelected(string name)
   readonly property var service: panelRoot.service
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
@@ -57,6 +59,7 @@ Ui.BorderSurface {
       id: monitorCard
       required property var modelData
       readonly property var logicalSize: Model.logicalSize(modelData)
+      readonly property bool isSelected: canvas.selectedDisplayName === modelData.name
       readonly property bool outputEnabled: canvas.service
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       readonly property var barSetting: canvas.service
@@ -67,8 +70,12 @@ Ui.BorderSurface {
         + canvas.monitorGap / 2
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
       height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
-      color: Commons.Color.popups.background
-      borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
+      z: isSelected ? 1 : 0
+      color: isSelected ? Commons.Color.menu.selectedBackground : Commons.Color.popups.background
+      borderSpec: Border.flat(isSelected
+        ? Commons.Color.accent
+        : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
+        isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: Style.cornerRadius
       opacity: outputEnabled ? 1 : canvas.panelRoot.disabledOpacity
 
@@ -81,12 +88,18 @@ Ui.BorderSurface {
           || monitorCard.barSetting.position === "right"
         width: side ? Math.max(2, Style.space(3)) : parent.width * 0.58
         height: side ? parent.height * 0.58 : Math.max(2, Style.space(3))
-        x: monitorCard.barSetting.position === "left" ? 0
-          : monitorCard.barSetting.position === "right" ? parent.width - width
+        x: monitorCard.barSetting.position === "left" ? canvas.monitorGap
+          : monitorCard.barSetting.position === "right" ? parent.width - width - canvas.monitorGap
           : (parent.width - width) / 2
-        y: monitorCard.barSetting.position === "top" ? 0
-          : monitorCard.barSetting.position === "bottom" ? parent.height - height
+        y: monitorCard.barSetting.position === "top" ? canvas.monitorGap
+          : monitorCard.barSetting.position === "bottom" ? parent.height - height - canvas.monitorGap
           : (parent.height - height) / 2
+      }
+
+      MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: canvas.displaySelected(monitorCard.modelData.name)
       }
 
       Text {
@@ -126,7 +139,10 @@ Ui.BorderSurface {
           MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: canvas.service.setMonitorBarPosition(monitorCard.modelData.name, parent.modelData.position)
+            onClicked: {
+              canvas.displaySelected(monitorCard.modelData.name)
+              canvas.service.setMonitorBarPosition(monitorCard.modelData.name, parent.modelData.position)
+            }
           }
         }
       }
@@ -137,7 +153,10 @@ Ui.BorderSurface {
         checked: monitorCard.barSetting.enabled
         foreground: Commons.Color.popups.text
         accent: Commons.Color.accent
-        onToggled: canvas.service.setMonitorBarEnabled(monitorCard.modelData.name, !checked)
+        onToggled: {
+          canvas.displaySelected(monitorCard.modelData.name)
+          canvas.service.setMonitorBarEnabled(monitorCard.modelData.name, !checked)
+        }
       }
     }
   }

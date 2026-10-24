@@ -202,8 +202,16 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const monitorBar = read('lib/MonitorBar.qml');
 
   assert.match(panel, /\["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"\]/);
-  assert.match(tab, /text: "BAR"/);
+  assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Station\.BarLayout/);
+  assert.match(tab, /component PositionSelector: Ui\.BorderSurface/);
+  assert.match(tab, /text: "POSITION"/);
+  assert.match(tab, /value: "top", label: "Top"[\s\S]*?value: "right", label: "Right"[\s\S]*?value: "bottom", label: "Bottom"[\s\S]*?value: "left", label: "Left"/);
+  assert.match(tab, /anchors\.verticalCenter: parent\.verticalCenter[\s\S]*?height: Style\.spacing\.controlHeight/);
+  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 2);
+  assert.match(layout, /selectedDisplayName/);
+  assert.match(layout, /displaySelected\(monitorCard\.modelData\.name\)/);
+  assert.match(layout, /Color\.menu\.selectedBackground/);
   assert.match(layout, /Ui\.ToggleSwitch/);
   for (const side of ['top', 'right', 'bottom', 'left'])
     assert.match(layout, new RegExp('position: "' + side + '"'));
@@ -215,6 +223,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
   assert.match(preview, /parent\.width \* 0\.58/);
   assert.match(preview, /parent\.height \* 0\.58/);
+  assert.match(preview, /position === "left" \? canvas\.monitorGap/);
+  assert.match(preview, /parent\.height - height - canvas\.monitorGap/);
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
   assert.match(panel, /sessionTabRestored/);
