@@ -19,6 +19,7 @@ Ui.BorderSurface {
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
+  readonly property real monitorGap: Style.spacing.xxs
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property color cardBackground: Color.popups.background
@@ -124,10 +125,12 @@ Ui.BorderSurface {
       readonly property bool outputEnabled: canvas.service ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       property real offsetX: 0
       property real offsetY: 0
-      x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom + offsetX
-      y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom + offsetY
-      width: logicalSize.width * canvas.zoom
-      height: logicalSize.height * canvas.zoom
+      x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
+        + canvas.monitorGap / 2 + offsetX
+      y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
+        + canvas.monitorGap / 2 + offsetY
+      width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
       color: monitorCard.isSelected ? Color.menu.selectedBackground : canvas.cardBackground
       borderSpec: Border.flat(isSelected

@@ -23,6 +23,7 @@ import QtQuick
 QtObject {
   property int cornerRadius: 0
   property int normalBorderWidth: 1
+  property var spacing: ({xxs: 2})
   property var font: ({family: "monospace", caption: 12, body: 14})
   function space(n) { return n }
 }
@@ -91,6 +92,14 @@ Item {
       fuzzyCompare(second.x + second.width, canvas.width - canvas.horizontalInset, 0.01)
       verify(first.y >= canvas.verticalInset - 0.01)
       verify(first.y + first.height <= canvas.height - canvas.verticalInset + 0.01)
+      fuzzyCompare(second.x - first.x - first.width, 0, 0.01)
+    }
+    function test_non_span_modes_use_the_smallest_monitor_gap() {
+      controller.draft = Object.assign({}, controller.draft, {mode: "individual"})
+      var first = findChild(canvas, "wallpaperMonitor-A")
+      var second = findChild(canvas, "wallpaperMonitor-B")
+      verify(first !== null && second !== null)
+      fuzzyCompare(second.x - first.x - first.width, canvas.monitorGap, 0.01)
     }
     function test_edges_clamp_and_zoom_keeps_image_fixed() {
       controller.frame({zoom: 2, x: 100, y: -100})

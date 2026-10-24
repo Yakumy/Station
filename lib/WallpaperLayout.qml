@@ -15,6 +15,7 @@ Ui.BorderSurface {
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property real gridStep: Style.space(16)
+  readonly property real monitorGap: spanning ? 0 : Style.spacing.xxs
   property size readySourceSize: Qt.size(1, 1)
   readonly property real layoutFit: Math.min(
     (width - horizontalInset * 2) / Math.max(1, layout.width),
@@ -89,10 +90,10 @@ Ui.BorderSurface {
       id: monitor
       required property var modelData
       objectName: "wallpaperMonitor-" + modelData.name
-      x: root.groupX + modelData.x * root.fit
-      y: root.groupY + modelData.y * root.fit
-      width: modelData.width * root.fit
-      height: modelData.height * root.fit
+      x: root.groupX + modelData.x * root.fit + root.monitorGap / 2
+      y: root.groupY + modelData.y * root.fit + root.monitorGap / 2
+      width: Math.max(1, modelData.width * root.fit - root.monitorGap)
+      height: Math.max(1, modelData.height * root.fit - root.monitorGap)
       Station.WallpaperImage {
         anchors.fill: parent
         visible: !root.spanning

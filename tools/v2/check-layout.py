@@ -25,14 +25,23 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     root = Path(directory)
     probe = root / 'Probe'
     probe.mkdir()
-    for name in ('DisplayLayout.qml', 'InlineDropdown.qml', 'Model.js', 'MonitorsLua.js'):
+    for name in ('DisplayLayout.qml', 'BarLayout.qml', 'InlineDropdown.qml', 'Model.js', 'MonitorsLua.js'):
         (probe / name).write_text((repo / 'lib' / name).read_text())
     ui = root / 'qs' / 'Ui'
     commons = root / 'qs' / 'Commons'
     ui.mkdir(parents=True)
     commons.mkdir(parents=True)
-    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\n')
+    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\nToggleSwitch 1.0 ToggleSwitch.qml\n')
     (ui / 'BorderSurface.qml').write_text('import QtQuick\nRectangle { property var borderSpec }\n')
+    (ui / 'ToggleSwitch.qml').write_text('''import QtQuick
+Item {
+  property real trackHeight
+  property bool checked
+  property color foreground
+  property color accent
+  signal toggled()
+}
+''')
     (commons / 'qmldir').write_text('module qs.Commons\nsingleton Style 1.0 Style.qml\nsingleton Color 1.0 Color.qml\nsingleton Border 1.0 Border.qml\n')
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
@@ -83,6 +92,9 @@ Item {
       for (var i = 0; i < displayDraft.length; i++) if (displayDraft[i].name === name) return i
       return -1
     }
+    function monitorBar(name) { return {enabled: true, position: "top"} }
+    function setMonitorBarPosition(name, position) {}
+    function setMonitorBarEnabled(name, enabled) {}
 ''' + setter + '''
     function previewLayout() {
       if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")
@@ -96,6 +108,19 @@ Item {
     contentWidth: width; contentHeight: 420
     clip: true
     Station.DisplayLayout { id: layout; width: panelScroll.width; service: service }
+  }
+  QtObject {
+    id: barPanelRoot
+    property var service: service
+    property real disabledOpacity: 0.5
+    property real space2: 2
+    property real space4: 4
+  }
+  Station.BarLayout {
+    id: barLayout
+    width: 567; height: 370
+    panelRoot: barPanelRoot
+    visible: false
   }
   TestCase {
     name: "DisplayLayout"; when: windowShown
@@ -117,6 +142,11 @@ Item {
       for (var i = 0; i < layout.children.length; i++)
         if (layout.children[i].modelData && layout.children[i].modelData.name === name) return layout.children[i]
       fail("Missing card " + name)
+    }
+    function barCard(name) {
+      for (var i = 0; i < barLayout.children.length; i++)
+        if (barLayout.children[i].modelData && barLayout.children[i].modelData.name === name) return barLayout.children[i]
+      fail("Missing bar card " + name)
     }
     function move(name, x, y) {
       var target = card(name), display = target.modelData
@@ -167,8 +197,8 @@ Item {
       displays[1] = Object.assign({}, displays[1], {mode:"2560x1440@60.00Hz", scale:2, transform:1})
       service.displayDraft = displays
       service.writes = 0; wait(10)
-      compare(card("HDMI-A-2").width / layout.zoom, 720)
-      compare(card("HDMI-A-2").height / layout.zoom, 1280)
+      fuzzyCompare((card("HDMI-A-2").width + layout.monitorGap) / layout.zoom, 720, 0.01)
+      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap) / layout.zoom, 1280, 0.01)
       move("HDMI-A-2", 1920, 1200)
     }
     function test_three_large_displays_fit() {
@@ -183,6 +213,24 @@ Item {
         verify(target.y >= layout.verticalInset - 0.01)
         verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
       }
+    }
+    function test_adjacent_displays_have_the_smallest_visual_gap() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      var first = card("eDP-1"), second = card("HDMI-A-2")
+      fuzzyCompare(second.x - first.x - first.width, layout.monitorGap, 0.01)
+    }
+    function test_adjacent_bar_cards_have_the_smallest_visual_gap() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      var first = barCard("eDP-1"), second = barCard("HDMI-A-2")
+      fuzzyCompare(second.x - first.x - first.width, barLayout.monitorGap, 0.01)
     }
     function test_rotation_handles_hover_diagonally_outside_all_four_corners() {
       service.displayDraft = [

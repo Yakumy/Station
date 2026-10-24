@@ -31,6 +31,10 @@ choice; a new one falls back to the common image. Mirror sinks inherit the sourc
 image through the compositor. Wallpaper never emits monitor/workspace commands.
 
 Span preserves logical output positions, gaps, rotations and relative dimensions.
+Its monitor cards stay edge-to-edge where the logical outputs touch so the
+continuous crop is not interrupted. Same and Per monitor previews paint the
+smallest named theme-space gap between touching monitor cards, matching the
+Displays and Bar canvases.
 The whole image is fitted into the canvas with side space as needed. The group
 is uniformly scaled and translated over that fixed image; it cannot be split,
 rotated or rearranged here. Pan is clamped to keep every crop inside the image.

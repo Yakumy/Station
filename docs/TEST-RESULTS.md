@@ -1,5 +1,23 @@
 # Station v2 test results
 
+## Monitor-card presentation gaps — 2026-10-24
+
+- Displays and Bar now inset each painted monitor card by half of
+  `Style.spacing.xxs`, so logically touching outputs retain the smallest named
+  theme-space gap without changing their saved geometry. Same and Per monitor
+  Wallpaper previews use the same gap; Span remains exactly edge-to-edge so its
+  continuous image crop is unchanged.
+- All 170 Node/M0 tests pass. The offscreen Displays/Bar geometry harness passes
+  20/20 cases, including exact adjacent-card gap coverage; the Wallpaper harness
+  passes 10/10, including separate contiguous Span and gapped non-Span checks.
+  The Station bar harness passes 26/26.
+- Theme scanning reports 35 source files and zero violations. A clean tracked-file
+  package passes plugin validation, live-Wayland QML component compilation
+  reaches `STATION_COMPONENTS_READY`, and whitespace checks pass. Direct checkout
+  validation still encounters the documented ignored
+  `videos/intro/node_modules` symlink. Final visual acceptance remains a user
+  check after installation; no live monitor topology was changed by these tests.
+
 ## Bar side change without a panel reload — 2026-10-23
 
 - Finding: the stock-adapted `MonitorBar` swapped `root.vertical`-keyed Loader

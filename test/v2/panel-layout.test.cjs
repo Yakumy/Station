@@ -59,6 +59,16 @@ test('display notices, labels, zoom buttons and settings switches share the inte
   assert.doesNotMatch(settings, /Ui\.Toggle\s*\{/);
 });
 
+test('monitor canvases use the smallest spacing token except for continuous Span crops', () => {
+  const display = read('lib/DisplayLayout.qml');
+  const bar = read('lib/BarLayout.qml');
+  const wallpaper = read('lib/WallpaperLayout.qml');
+
+  assert.match(display, /monitorGap: Style\.spacing\.xxs/);
+  assert.match(bar, /monitorGap: Style\.spacing\.xxs/);
+  assert.match(wallpaper, /monitorGap: spanning \? 0 : Style\.spacing\.xxs/);
+});
+
 test('larger panel reserves the reference canvas and discrete slider stops', () => {
   const panel = read('lib/StationPanel.qml');
   const displays = read('lib/DisplaysTab.qml');

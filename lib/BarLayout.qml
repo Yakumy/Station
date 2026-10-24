@@ -11,6 +11,7 @@ Ui.BorderSurface {
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
+  readonly property real monitorGap: Style.spacing.xxs
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
@@ -61,9 +62,11 @@ Ui.BorderSurface {
       readonly property var barSetting: canvas.service
         ? canvas.service.monitorBar(modelData.name) : ({ enabled: true, position: "top" })
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
+        + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-      width: logicalSize.width * canvas.zoom
-      height: logicalSize.height * canvas.zoom
+        + canvas.monitorGap / 2
+      width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       color: Commons.Color.popups.background
       borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
       radius: Style.cornerRadius
