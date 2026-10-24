@@ -79,6 +79,7 @@ Item {
   property int requestedWidthPercent: 100
   property int requestedHeight: 0
   property int requestedMaximumHeight: 0
+  property int requestedContentSize: 0
   property real measuredMinimumLength: 1
   // Resolves through fontconfig at paint time (Style.font.family defaults
   // to "monospace"), so changing the system font (via `omarchy-font-set`)
@@ -662,6 +663,10 @@ Item {
   // between the physical monitor edge and the nearest window edge.
   readonly property int edgeCenterOffset: insetPresentation ? Style.gapsOut : 0
   readonly property int panelThickness: barSize + edgeCenterOffset
+  readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
+  readonly property int effectiveContentSize: Math.max(defaultContentSize,
+    Math.min(barSize, requestedContentSize > 0 ? requestedContentSize : defaultContentSize))
+  readonly property real contentScale: effectiveContentSize / defaultContentSize
   readonly property real screenLength: targetScreen
     ? Number(vertical ? targetScreen.height : targetScreen.width) : 1
   readonly property int minimumWidthPercent: Math.max(1, Math.min(100,
@@ -720,6 +725,8 @@ Item {
     var maximumHeight = Number(config.maximumHeight)
     requestedMaximumHeight = isFinite(maximumHeight) && maximumHeight > 0
       ? Math.round(maximumHeight) : 0
+    var contentSize = Number(config.contentSize)
+    requestedContentSize = isFinite(contentSize) && contentSize > 0 ? Math.round(contentSize) : 0
     backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
       ? config.background : (config.transparent === true ? "transparent" : "solid")
     barStyle = ["default", "pill"].indexOf(config.style) !== -1 ? config.style : "default"
@@ -1976,6 +1983,10 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
+    readonly property real baseContentWidth: activeItem && activeItem.visible
+      ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
+    readonly property real baseContentHeight: activeItem && activeItem.visible
+      ? Math.max(0, Number(activeItem.implicitHeight) || 0) : 0
     // Modules bigger than the mark they want (a text label in a padded slot,
     // a multi-line stack on a vertical bar) can say how long the open-panel
     // dot should be along the bar, so it tracks what the module paints
@@ -1986,10 +1997,13 @@ Item {
       if (hint !== undefined && hint !== null && hint > 0) return Math.round(hint)
       return Math.max(Style.space(10), Math.round((root.vertical ? slot.height : slot.width) * 0.55))
     }
-    implicitWidth: activeItem && activeItem.visible ? (root.vertical ? root.barSize : activeItem.implicitWidth) : 0
-    implicitHeight: activeItem && activeItem.visible ? activeItem.implicitHeight : 0
+    implicitWidth: activeItem && activeItem.visible
+      ? (root.vertical ? root.barSize : Math.ceil(baseContentWidth * root.contentScale)) : 0
+    implicitHeight: activeItem && activeItem.visible
+      ? (root.vertical ? Math.ceil(baseContentHeight * root.contentScale) : root.barSize) : 0
     width: implicitWidth
     height: implicitHeight
+    clip: true
     z: modulePointer.dragging ? 100 : 0
 
     Component.onCompleted: root.registerModuleSlot(slot)
@@ -2015,7 +2029,10 @@ Item {
       id: componentLoader
       active: !slot.qmlCustom && !slot.registered
       sourceComponent: slot.commandCustom ? customCommandModuleComponent : emptyModuleComponent
-      anchors.fill: parent
+      anchors.centerIn: parent
+      width: item ? item.implicitWidth : 0
+      height: item ? item.implicitHeight : 0
+      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2027,7 +2044,10 @@ Item {
       id: registryLoader
       active: slot.registered
       sourceComponent: slot.registered ? slot.registryComponent : null
-      anchors.fill: parent
+      anchors.centerIn: parent
+      width: item ? item.implicitWidth : 0
+      height: item ? item.implicitHeight : 0
+      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2039,7 +2059,10 @@ Item {
       id: qmlLoader
       active: slot.qmlCustom
       source: slot.qmlCustom ? root.customModuleSource(slot.entry) : ""
-      anchors.fill: parent
+      anchors.centerIn: parent
+      width: item ? item.implicitWidth : 0
+      height: item ? item.implicitHeight : 0
+      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()

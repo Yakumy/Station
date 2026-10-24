@@ -11,7 +11,7 @@ Column {
   readonly property var selectedDisplay: panelRoot.selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
     ? service.monitorBar(selectedDisplay.name)
-    : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default" })
+    : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
   readonly property int selectedMinimumWidth: selectedDisplay && service
     ? service.monitorBarMinimum(selectedDisplay.name) : 1
   readonly property int selectedMinimumHeight: selectedBar.position === "left" || selectedBar.position === "right"
@@ -21,6 +21,11 @@ Column {
     : selectedMinimumHeight
   readonly property int selectedHeight: Math.max(selectedMinimumHeight, Math.min(selectedMaximumHeight,
     Number(selectedBar.height) > 0 ? Number(selectedBar.height) : selectedMinimumHeight))
+  readonly property int selectedMinimumContentSize: Math.max(1, Math.ceil(Style.font.body))
+  readonly property int selectedRequestedContentSize: Number(selectedBar.contentSize) > 0
+    ? Number(selectedBar.contentSize) : selectedMinimumContentSize
+  readonly property int selectedContentSize: Math.max(selectedMinimumContentSize,
+    Math.min(selectedHeight, selectedRequestedContentSize))
   readonly property real pad: panelRoot.regionPadH
   spacing: 0
 
@@ -28,49 +33,6 @@ Column {
     color: root.panelRoot.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
-  }
-
-  component PositionSelector: Ui.BorderSurface {
-    id: selector
-    property string value: ""
-    property var options: []
-    signal changed(string value)
-    color: Commons.Color.popups.background
-    borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-    radius: Style.cornerRadius
-    clip: true
-
-    Row {
-      anchors.fill: parent
-      anchors.margins: Math.max(1, Style.normalBorderWidth)
-      spacing: 0
-      Repeater {
-        model: selector.options
-        delegate: Item {
-          required property var modelData
-          required property int index
-          width: (selector.width - Math.max(1, Style.normalBorderWidth) * 2) / selector.options.length
-          height: parent.height
-          Ui.Button {
-            anchors.fill: parent
-            text: modelData.label
-            selected: selector.value === modelData.value
-            focusable: true
-            foreground: Commons.Color.popups.text
-            background: Commons.Color.popups.background
-            accent: Commons.Color.accent
-            onClicked: selector.changed(modelData.value)
-          }
-          Rectangle {
-            visible: index > 0
-            anchors.left: parent.left
-            height: parent.height
-            width: Math.max(1, Style.normalBorderWidth)
-            color: Border.color(Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent))
-          }
-        }
-      }
-    }
   }
 
   Row {
@@ -152,6 +114,7 @@ Column {
           spacing: 0
 
           Item {
+            id: contentSizeRow
             width: parent.width
             height: controlFrame.height / 5
             Caption {
@@ -159,28 +122,41 @@ Column {
               anchors.leftMargin: root.panelRoot.space3
               anchors.top: parent.top
               anchors.topMargin: root.panelRoot.space2
-              text: "POSITION"
+              text: "CONTENT SIZE"
             }
-            PositionSelector {
-              anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+            Caption {
               anchors.right: parent.right
               anchors.rightMargin: root.panelRoot.space3
-              anchors.verticalCenter: parent.verticalCenter
-              height: Style.spacing.controlHeight
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: root.selectedContentSize + " px"
+            }
+            Ui.PanelSlider {
+              width: parent.width - root.panelRoot.space3 * 2
+              height: implicitHeight
+              anchors.centerIn: parent
+              bar: root.panelRoot.bar
+              minimum: root.selectedMinimumContentSize
+              maximum: Math.max(root.selectedMinimumContentSize, root.selectedHeight)
+              integer: true
+              value: root.selectedContentSize
               enabled: root.selectedDisplay !== null
               opacity: enabled ? 1 : root.panelRoot.disabledOpacity
-              value: root.selectedBar.position
-              options: [
-                { value: "top", label: "Top" },
-                { value: "right", label: "Right" },
-                { value: "bottom", label: "Bottom" },
-                { value: "left", label: "Left" }
-              ]
-              onChanged: function(value) {
+              onReleased: function(value) {
                 if (root.service && root.selectedDisplay)
-                  root.service.setMonitorBarPosition(root.selectedDisplay.name, value)
+                  root.service.setMonitorBarContentSize(root.selectedDisplay.name, Math.round(value))
               }
+            }
+            Caption {
+              visible: root.selectedRequestedContentSize > root.selectedHeight
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: root.panelRoot.space1
+              width: parent.width - root.panelRoot.space3 * 2
+              text: "Maximum " + root.selectedHeight + " px — content exceeds bar height."
+              color: Commons.Color.urgent
+              elide: Text.ElideRight
             }
             Ui.PanelSeparator {
               anchors.bottom: parent.bottom

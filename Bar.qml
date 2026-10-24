@@ -78,6 +78,7 @@ Item {
     copy.background = ["solid", "transparent", "blur"].indexOf(entry.background) !== -1
       ? entry.background : (copy.transparent === true ? "transparent" : "solid")
     copy.style = ["default", "pill"].indexOf(entry.style) !== -1 ? entry.style : "default"
+    copy.contentSize = Number(entry.contentSize) > 0 ? Math.round(Number(entry.contentSize)) : 0
     copy.transparent = copy.background === "transparent"
     copy.maximumHeight = Number(stationBarMaximumHeights[screen ? screen.name : ""]) || 0
     return copy

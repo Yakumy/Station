@@ -43,7 +43,7 @@ the plugin and it is ready.
 | **Synchronized workspaces** | Switch every active display together with the familiar `SUPER + 1…0` workflow. |
 | **Spatial window movement** | Move naturally within a display, across neighboring displays, and across station edges. |
 | **Safe display control** | Arrange, rotate, mirror, disable, scale, and select exact modes with guarded previews and automatic rollback. |
-| **Per-monitor bars** | Set presence, edge, width, height, background, and Omarchy-default or Pill style independently per display. |
+| **Per-monitor bars** | Set presence, edge, width, height, content size, background, and Omarchy-default or Pill style independently per display. |
 | **Multi-monitor wallpaper** | Use one image everywhere, choose one per monitor, or frame a single image across the complete layout. |
 | **Hot-plug recovery** | Preserve station identity while docks and displays appear, disappear, or change roles. |
 | **Native Omarchy design** | Uses the installed shell components, theme colors, typography, spacing, and live theme updates. |

@@ -22,16 +22,16 @@ test('2.2 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 7);
+  assert.equal(Store.CONFIG_VERSION, 8);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
-    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill' },
-    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000, background: 'bad', style: 'unknown' },
+    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill', contentSize: 18.4 },
+    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000, background: 'bad', style: 'unknown', contentSize: 5000 },
     broken: 'bad',
   }}).bars, {
-    'DP-1': { enabled: false, position: 'right', width: 55, height: 120, background: 'blur', style: 'pill' },
-    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000, background: 'solid', style: 'default' },
-    broken: { enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default' },
+    'DP-1': { enabled: false, position: 'right', width: 55, height: 120, background: 'blur', style: 'pill', contentSize: 18 },
+    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000, background: 'solid', style: 'default', contentSize: 1000 },
+    broken: { enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default', contentSize: 0 },
   });
 });
 
@@ -107,7 +107,7 @@ test('an active full bar defers its shell.json mirror while the panel is open', 
   assert.equal(setPosition('DP-1', 'right'), 'ok');
   assert.equal(context.config.bars['DP-1'].position, 'right');
   assert.deepEqual(pending, [[
-    'DP-1', { enabled: true, position: 'right', width: 100, height: 0, background: 'solid', style: 'default' },
+    'DP-1', { enabled: true, position: 'right', width: 100, height: 0, background: 'solid', style: 'default', contentSize: 0 },
   ]]);
 });
 
@@ -207,10 +207,11 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(panel, /\["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"\]/);
   assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Station\.BarLayout/);
-  assert.match(tab, /component PositionSelector: Ui\.BorderSurface/);
-  assert.match(tab, /text: "POSITION"/);
-  assert.match(tab, /value: "top", label: "Top"[\s\S]*?value: "right", label: "Right"[\s\S]*?value: "bottom", label: "Bottom"[\s\S]*?value: "left", label: "Left"/);
-  assert.match(tab, /anchors\.verticalCenter: parent\.verticalCenter[\s\S]*?height: Style\.spacing\.controlHeight/);
+  assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);
+  assert.match(tab, /text: "CONTENT SIZE"/);
+  assert.match(tab, /minimum: root\.selectedMinimumContentSize[\s\S]*?maximum: Math\.max\(root\.selectedMinimumContentSize, root\.selectedHeight\)/);
+  assert.match(tab, /setMonitorBarContentSize\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.match(tab, /"Maximum " \+ root\.selectedHeight \+ " px — content exceeds bar height\."/);
   assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 5);
   assert.match(tab, /text: "WIDTH"/);
   assert.match(tab, /minimum: 1[\s\S]*?maximum: 100/);
@@ -269,6 +270,10 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /pillOuterMargin \+ pillPadding : Style\.space\(8\)/);
   assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);
   assert.match(monitorBar, /parent\.height - height - barContent\.edgeMargin/);
+  assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
+  assert.match(monitorBar, /Math\.ceil\(baseContentWidth \* root\.contentScale\)/);
+  assert.match(monitorBar, /Math\.ceil\(baseContentHeight \* root\.contentScale\)/);
+  assert.equal((monitorBar.match(/scale: root\.contentScale/g) || []).length, 3);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 
@@ -297,7 +302,7 @@ test('bar width persists the request while runtime measurements provide a safe m
   assert.equal(setWidth('DP-1', 48), 'ok');
   assert.equal(context.config.bars['DP-1'].width, 48);
   assert.deepEqual(pending, [
-    'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid', style: 'default' },
+    'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid', style: 'default', contentSize: 0 },
   ]);
   assert.equal(context.rememberedTab, 1);
   assert.ok(context.panelTransferUntil > Date.now());
@@ -327,7 +332,7 @@ test('bar height is per monitor and capped at ten percent of the shorter native 
   assert.equal(setHeight('DP-1', 120), 'ok');
   assert.equal(context.config.bars['DP-1'].height, 120);
   assert.deepEqual(pending, [
-    'DP-1', { enabled: true, position: 'top', width: 100, height: 120, background: 'solid', style: 'default' },
+    'DP-1', { enabled: true, position: 'top', width: 100, height: 120, background: 'solid', style: 'default', contentSize: 0 },
   ]);
   assert.equal(setHeight('DP-1', 121), 'invalid');
 });
@@ -357,7 +362,7 @@ test('bar background persists per monitor and synchronizes compositor blur', () 
   assert.equal(context.config.bars['DP-1'].background, 'blur');
   assert.equal(blurSyncs, 1);
   assert.deepEqual(pending, ['DP-1', {
-    enabled: true, position: 'top', width: 100, height: 0, background: 'blur', style: 'default',
+    enabled: true, position: 'top', width: 100, height: 0, background: 'blur', style: 'default', contentSize: 0,
   }]);
   assert.equal(setBackground('DP-1', 'glass'), 'invalid');
 });
@@ -384,9 +389,43 @@ test('bar style persists per monitor and defers the active host mirror', () => {
   assert.equal(setStyle('DP-1', 'pill'), 'ok');
   assert.equal(context.config.bars['DP-1'].style, 'pill');
   assert.deepEqual(pending, ['DP-1', {
-    enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'pill',
+    enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'pill', contentSize: 0,
   }]);
   assert.equal(setStyle('DP-1', 'floating'), 'invalid');
+});
+
+test('bar content size starts at the Omarchy body size and cannot exceed bar height', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200 }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 40, background: 'solid',
+      style: 'default', contentSize: 0,
+    } } },
+    Style: { font: { body: 12 }, bar: { sizeHorizontal: 26, sizeVertical: 26 } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  context.monitorBarRenderedHeight = qmlFunction(service, 'monitorBarRenderedHeight', context);
+  const setContentSize = qmlFunction(service, 'setMonitorBarContentSize', context);
+
+  assert.equal(context.monitorBarRenderedHeight('DP-1'), 40);
+  assert.equal(setContentSize('DP-1', 24), 'ok');
+  assert.equal(context.config.bars['DP-1'].contentSize, 24);
+  assert.deepEqual(pending, ['DP-1', {
+    enabled: true, position: 'top', width: 100, height: 40, background: 'solid',
+    style: 'default', contentSize: 24,
+  }]);
+  assert.equal(setContentSize('DP-1', 11), 'invalid');
+  assert.equal(setContentSize('DP-1', 41), 'invalid');
 });
 
 test('bar blur leases and restores the prior global compositor setting', () => {

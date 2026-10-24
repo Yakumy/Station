@@ -248,11 +248,13 @@ Item {
     var background = row && ["solid", "transparent", "blur"].indexOf(row.background) !== -1
       ? row.background : "solid"
     var style = row && ["default", "pill"].indexOf(row.style) !== -1 ? row.style : "default"
+    var contentSize = row && isFinite(Number(row.contentSize))
+      ? Math.max(0, Math.min(1000, Math.round(Number(row.contentSize)))) : 0
     return row && typeof row === "object"
       ? { enabled: row.enabled !== false,
           position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
-          width: width, height: height, background: background, style: style }
-      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid", style: "default" }
+          width: width, height: height, background: background, style: style, contentSize: contentSize }
+      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid", style: "default", contentSize: 0 }
   }
 
   function monitorBarMaximumHeight(name) {
@@ -260,6 +262,14 @@ Item {
     if (!display) return 1
     var shorterSide = Math.min(Number(display.width) || 0, Number(display.height) || 0)
     return Math.max(1, Math.floor(shorterSide * 0.1))
+  }
+
+  function monitorBarRenderedHeight(name) {
+    var bar = monitorBar(name)
+    var minimum = bar.position === "left" || bar.position === "right"
+      ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+    var maximum = Math.max(minimum, monitorBarMaximumHeight(name))
+    return Math.max(minimum, Math.min(maximum, bar.height > 0 ? bar.height : minimum))
   }
 
   function monitorBarMinimum(name) {
@@ -319,7 +329,7 @@ Item {
         var next = changes[name]
         scoped.bar.monitors[name] = {
           enabled: next.enabled, position: next.position, width: next.width, height: next.height,
-          background: next.background, style: next.style
+          background: next.background, style: next.style, contentSize: next.contentSize
         }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
@@ -342,7 +352,7 @@ Item {
     var pending = Object.assign({}, pendingMonitorBars)
     pending[name] = {
       enabled: next.enabled, position: next.position, width: next.width, height: next.height,
-      background: next.background, style: next.style
+      background: next.background, style: next.style, contentSize: next.contentSize
     }
     pendingMonitorBars = pending
   }
@@ -482,6 +492,30 @@ Item {
     if (["default", "pill"].indexOf(style) === -1) return "invalid"
     var next = monitorBar(name)
     next.style = style
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarContentSize(name, contentSize) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(contentSize)
+    var minimum = Math.max(1, Math.ceil(Style.font.body))
+    if (!isFinite(number) || number < minimum || number > monitorBarRenderedHeight(name)) return "invalid"
+    var next = monitorBar(name)
+    next.contentSize = Math.round(number)
     if (panelWanted) {
       rememberedTab = 1
       panelTransferUntil = Date.now() + 3000
@@ -2027,6 +2061,7 @@ Item {
       setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
       setMonitorBarBackground: function(name, background) { return root.setMonitorBarBackground(name, background) },
       setMonitorBarStyle: function(name, style) { return root.setMonitorBarStyle(name, style) },
+      setMonitorBarContentSize: function(name, contentSize) { return root.setMonitorBarContentSize(name, contentSize) },
       reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
       monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },

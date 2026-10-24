@@ -42,9 +42,9 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
-      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur", style: "pill"}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid", style: "default"}
-      return {enabled: false, position: "right", width: 100, height: 0, background: "transparent", style: "default"}
+      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur", style: "pill", contentSize: 18}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid", style: "default", contentSize: 0}
+      return {enabled: false, position: "right", width: 100, height: 0, background: "transparent", style: "default", contentSize: 0}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
     function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 120 : 108 }
@@ -54,6 +54,7 @@ ShellRoot {
     function setMonitorBarHeight() { return "ok" }
     function setMonitorBarBackground() { return "ok" }
     function setMonitorBarStyle() { return "ok" }
+    function setMonitorBarContentSize() { return "ok" }
   }
   Item {
     id: panel

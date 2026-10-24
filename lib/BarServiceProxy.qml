@@ -52,12 +52,13 @@ QtObject {
   function setMonitorBarHeight(name, height) { return call("setMonitorBarHeight", [name, height]) }
   function setMonitorBarBackground(name, background) { return call("setMonitorBarBackground", [name, background]) }
   function setMonitorBarStyle(name, style) { return call("setMonitorBarStyle", [name, style]) }
+  function setMonitorBarContentSize(name, contentSize) { return call("setMonitorBarContentSize", [name, contentSize]) }
   function reportMonitorBarMinimum(name, value) { return call("reportMonitorBarMinimum", [name, value]) }
   function monitorBar(name) {
     var revision = snapshot
     var value = call("monitorBar", [name])
     return value && typeof value === "object" ? value
-      : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default" })
+      : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
   }
   function monitorBarMaximumHeight(name) {
     var revision = snapshot

@@ -28,7 +28,7 @@ detached copy of the shared layout with that connector's saved position,
 width, thickness, background mode, and surface style.
 The wrapper coordinates popouts across those isolated copies so opening a
 panel on one output closes the panel already open on another.
-Presence, position, width, height, background, and style live in both Station's
+Presence, position, width, height, content size, background, and style live in both Station's
 validated `config.bars` preferences and the shell bar's `monitors` map. While
 the panel is open, the full bar reads
 the detached `config.bars` snapshot through the top-level bridge and treats it
@@ -48,6 +48,10 @@ Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
 the bar's parallel monitor edges. The panel's cross-axis stabilization permits
 the half-gap visual extension when validating the remapped bar window; the
 exclusive-zone size exposed to popup placement remains unchanged.
+Content size is stored per monitor as a font-pixel baseline. `MonitorBar`
+scales each module subtree around its center, enlarges only the along-bar slot
+used by the overlap calculation, and clips the cross axis to the configured bar
+height. A zero stored value follows Omarchy's live `Style.font.body` default.
 Blur is compositor-owned. The service keeps a persisted lease of the prior
 global Hyprland blur state, enables one named layer rule for the shared
 `omarchy-bar` namespace, temporarily uses size 8 with three passes, and
