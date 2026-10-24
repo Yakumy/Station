@@ -90,6 +90,10 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 
 `Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `PLATFORM-FINDINGS.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
 
+Bar thickness is the exception that starts from the dedicated Omarchy tokens
+`Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
+Height control may increase it, but never lowers it below the active token.
+
 Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. One shared vertical rhythm between the Displays sidebar, Keybindings rows and Settings rows, so switching tabs doesn't change the page's density.
 
 ## 7. Component inventory

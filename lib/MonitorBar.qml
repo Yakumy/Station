@@ -74,6 +74,8 @@ Item {
   property int barConfigSerial: 0
   property string position: "top"
   property int requestedWidthPercent: 100
+  property int requestedHeight: 0
+  property int requestedMaximumHeight: 0
   property real measuredMinimumLength: 1
   // Resolves through fontconfig at paint time (Style.font.family defaults
   // to "monospace"), so changing the system font (via `omarchy-font-set`)
@@ -641,7 +643,13 @@ Item {
   }
 
   readonly property bool vertical: position === "left" || position === "right"
-  readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property int defaultBarSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property int maximumBarSize: Math.max(defaultBarSize, requestedMaximumHeight > 0
+    ? requestedMaximumHeight : Math.floor(Math.min(
+      targetScreen ? Number(targetScreen.width) : 1,
+      targetScreen ? Number(targetScreen.height) : 1) * 0.1))
+  readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
+    requestedHeight > 0 ? requestedHeight : defaultBarSize))
   readonly property real screenLength: targetScreen
     ? Number(vertical ? targetScreen.height : targetScreen.width) : 1
   readonly property int minimumWidthPercent: Math.max(1, Math.min(100,
@@ -695,6 +703,11 @@ Item {
     var width = Number(config.widthPercent)
     requestedWidthPercent = isFinite(width)
       ? Math.max(1, Math.min(100, Math.round(width))) : 100
+    var height = Number(config.height)
+    requestedHeight = isFinite(height) && height > 0 ? Math.round(height) : 0
+    var maximumHeight = Number(config.maximumHeight)
+    requestedMaximumHeight = isFinite(maximumHeight) && maximumHeight > 0
+      ? Math.round(maximumHeight) : 0
     setRequestedTransparency(config.transparent === true)
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -1185,6 +1198,7 @@ Item {
 
   onRequestedTransparentChanged: scheduleTransparentForegroundRefresh()
   onPositionChanged: scheduleTransparentForegroundRefresh()
+  onBarSizeChanged: scheduleTransparentForegroundRefresh()
   onThemeForegroundChanged: scheduleTransparentForegroundRefresh()
   onThemeContrastForegroundChanged: scheduleTransparentForegroundRefresh()
 

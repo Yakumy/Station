@@ -63,10 +63,14 @@ Ui.BorderSurface {
       readonly property bool outputEnabled: canvas.service
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       readonly property var barSetting: canvas.service
-        ? canvas.service.monitorBar(modelData.name) : ({ enabled: true, position: "top", width: 100 })
+        ? canvas.service.monitorBar(modelData.name) : ({ enabled: true, position: "top", width: 100, height: 0 })
       readonly property int minimumBarWidth: canvas.service
         ? canvas.service.monitorBarMinimum(modelData.name) : 1
       readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100
+      readonly property int defaultBarHeight: barSetting.position === "left" || barSetting.position === "right"
+        ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+      readonly property real effectiveBarHeight: Math.max(defaultBarHeight,
+        Number(barSetting.height) > 0 ? Number(barSetting.height) : defaultBarHeight)
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
@@ -89,11 +93,11 @@ Ui.BorderSurface {
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
           || monitorCard.barSetting.position === "right"
-        width: side ? Math.max(2, Style.space(3))
+        width: side ? Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
           : Math.max(1, (parent.width - canvas.monitorGap * 2) * monitorCard.effectiveBarWidth)
         height: side
           ? Math.max(1, (parent.height - canvas.monitorGap * 2) * monitorCard.effectiveBarWidth)
-          : Math.max(2, Style.space(3))
+          : Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
         x: monitorCard.barSetting.position === "left" ? canvas.monitorGap
           : monitorCard.barSetting.position === "right" ? parent.width - width - canvas.monitorGap
           : (parent.width - width) / 2

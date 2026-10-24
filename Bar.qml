@@ -25,13 +25,15 @@ Item {
   // making the host reload shell.json. The service mirrors the choice there
   // after the panel closes.
   property var stationBars: ({})
+  property var stationBarMaximumHeights: ({})
   property string stationBarsKey: ""
 
   readonly property string focusedScreenName: Hyprland.focusedMonitor
     ? String(Hyprland.focusedMonitor.name || "") : ""
   readonly property string position: validPosition(monitorEntry(focusedScreenName).position || defaultPosition())
   readonly property bool vertical: position === "left" || position === "right"
-  readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property int barSize: preferredInstance()
+    ? preferredInstance().barSize : (vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   readonly property string fontFamily: Style.font.family
   readonly property bool barHidden: instances.length ? instances[0].barHidden === true : false
 
@@ -72,6 +74,8 @@ Item {
     var entry = monitorEntry(screen ? screen.name : "")
     copy.position = validPosition(entry.position || copy.position)
     copy.widthPercent = Number(entry.width) > 0 ? Number(entry.width) : 100
+    copy.height = Number(entry.height) > 0 ? Number(entry.height) : 0
+    copy.maximumHeight = Number(stationBarMaximumHeights[screen ? screen.name : ""]) || 0
     return copy
   }
 
@@ -87,10 +91,18 @@ Item {
     var snapshot = api && typeof api.snapshot === "function" ? api.snapshot() : null
     var bars = snapshot && snapshot.config && snapshot.config.bars
     if (!bars || typeof bars !== "object") bars = ({})
-    var key = JSON.stringify(bars)
+    var maximumHeights = ({})
+    var displays = snapshot && Array.isArray(snapshot.displayDraft) ? snapshot.displayDraft : []
+    for (var i = 0; i < displays.length; i++) {
+      var display = displays[i]
+      maximumHeights[String(display.name || "")] = Math.max(1,
+        Math.floor(Math.min(Number(display.width) || 0, Number(display.height) || 0) * 0.1))
+    }
+    var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights })
     if (key === stationBarsKey) return
     stationBarsKey = key
-    stationBars = JSON.parse(key)
+    stationBars = JSON.parse(JSON.stringify(bars))
+    stationBarMaximumHeights = JSON.parse(JSON.stringify(maximumHeights))
   }
 
   Timer {

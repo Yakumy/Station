@@ -42,14 +42,16 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
-      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100}
-      return {enabled: false, position: "right", width: 100}
+      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0}
+      return {enabled: false, position: "right", width: 100, height: 0}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
+    function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 120 : 108 }
     function setMonitorBarEnabled() { return "ok" }
     function setMonitorBarPosition() { return "ok" }
     function setMonitorBarWidth() { return "ok" }
+    function setMonitorBarHeight() { return "ok" }
   }
   Item {
     id: panel

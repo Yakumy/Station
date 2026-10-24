@@ -10,9 +10,16 @@ Column {
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
-    ? service.monitorBar(selectedDisplay.name) : ({ enabled: true, position: "top", width: 100 })
+    ? service.monitorBar(selectedDisplay.name) : ({ enabled: true, position: "top", width: 100, height: 0 })
   readonly property int selectedMinimumWidth: selectedDisplay && service
     ? service.monitorBarMinimum(selectedDisplay.name) : 1
+  readonly property int selectedMinimumHeight: selectedBar.position === "left" || selectedBar.position === "right"
+    ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property int selectedMaximumHeight: selectedDisplay && service
+    ? Math.max(selectedMinimumHeight, service.monitorBarMaximumHeight(selectedDisplay.name))
+    : selectedMinimumHeight
+  readonly property int selectedHeight: Math.max(selectedMinimumHeight, Math.min(selectedMaximumHeight,
+    Number(selectedBar.height) > 0 ? Number(selectedBar.height) : selectedMinimumHeight))
   readonly property real pad: panelRoot.regionPadH
   spacing: 0
 
@@ -233,8 +240,49 @@ Column {
             }
           }
 
+          Item {
+            id: heightRow
+            width: parent.width
+            height: controlFrame.height / 5
+            Caption {
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: "HEIGHT"
+            }
+            Caption {
+              anchors.right: parent.right
+              anchors.rightMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: root.selectedHeight + " px"
+            }
+            Ui.PanelSlider {
+              width: parent.width - root.panelRoot.space3 * 2
+              height: implicitHeight
+              anchors.centerIn: parent
+              bar: root.panelRoot.bar
+              minimum: root.selectedMinimumHeight
+              maximum: root.selectedMaximumHeight
+              integer: true
+              value: root.selectedHeight
+              enabled: root.selectedDisplay !== null
+              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              onReleased: function(value) {
+                if (root.service && root.selectedDisplay)
+                  root.service.setMonitorBarHeight(root.selectedDisplay.name, Math.round(value))
+              }
+            }
+            Ui.PanelSeparator {
+              anchors.bottom: parent.bottom
+              width: parent.width
+              foreground: Commons.Color.popups.text
+            }
+          }
+
           Repeater {
-            model: 3
+            model: 2
             delegate: Item {
               required property int index
               width: controlFrame.width

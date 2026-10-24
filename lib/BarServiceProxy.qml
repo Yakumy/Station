@@ -49,11 +49,17 @@ QtObject {
   function setMonitorBarEnabled(name, enabled) { return call("setMonitorBarEnabled", [name, enabled]) }
   function setMonitorBarPosition(name, position) { return call("setMonitorBarPosition", [name, position]) }
   function setMonitorBarWidth(name, width) { return call("setMonitorBarWidth", [name, width]) }
+  function setMonitorBarHeight(name, height) { return call("setMonitorBarHeight", [name, height]) }
   function reportMonitorBarMinimum(name, value) { return call("reportMonitorBarMinimum", [name, value]) }
   function monitorBar(name) {
     var revision = snapshot
     var value = call("monitorBar", [name])
-    return value && typeof value === "object" ? value : ({ enabled: true, position: "top", width: 100 })
+    return value && typeof value === "object" ? value : ({ enabled: true, position: "top", width: 100, height: 0 })
+  }
+  function monitorBarMaximumHeight(name) {
+    var revision = snapshot
+    var value = call("monitorBarMaximumHeight", [name])
+    return value === undefined ? 1 : Number(value)
   }
   function monitorBarMinimum(name) {
     var revision = snapshot

@@ -242,11 +242,20 @@ Item {
     var row = config.bars && config.bars[name]
     var width = row && isFinite(Number(row.width))
       ? Math.max(1, Math.min(100, Math.round(Number(row.width)))) : 100
+    var height = row && isFinite(Number(row.height))
+      ? Math.max(0, Math.min(1000, Math.round(Number(row.height)))) : 0
     return row && typeof row === "object"
       ? { enabled: row.enabled !== false,
           position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
-          width: width }
-      : { enabled: true, position: fallback, width: 100 }
+          width: width, height: height }
+      : { enabled: true, position: fallback, width: 100, height: 0 }
+  }
+
+  function monitorBarMaximumHeight(name) {
+    var display = displayDraft.find(function(item) { return item.name === name })
+    if (!display) return 1
+    var shorterSide = Math.min(Number(display.width) || 0, Number(display.height) || 0)
+    return Math.max(1, Math.floor(shorterSide * 0.1))
   }
 
   function monitorBarMinimum(name) {
@@ -304,7 +313,9 @@ Item {
       if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
       Object.keys(changes || {}).forEach(function(name) {
         var next = changes[name]
-        scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position, width: next.width }
+        scoped.bar.monitors[name] = {
+          enabled: next.enabled, position: next.position, width: next.width, height: next.height
+        }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
         ;["left", "center", "right"].forEach(function(section) {
@@ -324,7 +335,9 @@ Item {
 
   function deferMonitorBarPublish(name, next) {
     var pending = Object.assign({}, pendingMonitorBars)
-    pending[name] = { enabled: next.enabled, position: next.position, width: next.width }
+    pending[name] = {
+      enabled: next.enabled, position: next.position, width: next.width, height: next.height
+    }
     pendingMonitorBars = pending
   }
 
@@ -394,6 +407,29 @@ Item {
     if (!isFinite(number) || number < 1 || number > 100) return "invalid"
     var next = monitorBar(name)
     next.width = Math.round(number)
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarHeight(name, height) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(height)
+    if (!isFinite(number) || number < 1 || number > monitorBarMaximumHeight(name)) return "invalid"
+    var next = monitorBar(name)
+    next.height = Math.round(number)
     if (panelWanted) {
       rememberedTab = 1
       panelTransferUntil = Date.now() + 3000
@@ -1865,8 +1901,10 @@ Item {
       setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
       setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
       setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
+      setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
       reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
+      monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },
       monitorBarMinimum: function(name) { return root.monitorBarMinimum(name) },
       applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
       swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },

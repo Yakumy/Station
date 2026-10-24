@@ -22,16 +22,16 @@ test('2.2 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 4);
+  assert.equal(Store.CONFIG_VERSION, 5);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
-    'DP-1': { enabled: false, position: 'right', width: 54.6 },
-    'DP-2': { enabled: true, position: 'diagonal', width: 1000 },
+    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4 },
+    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000 },
     broken: 'bad',
   }}).bars, {
-    'DP-1': { enabled: false, position: 'right', width: 55 },
-    'DP-2': { enabled: true, position: 'top', width: 100 },
-    broken: { enabled: true, position: 'top', width: 100 },
+    'DP-1': { enabled: false, position: 'right', width: 55, height: 120 },
+    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000 },
+    broken: { enabled: true, position: 'top', width: 100, height: 0 },
   });
 });
 
@@ -105,7 +105,7 @@ test('an active full bar defers its shell.json mirror while the panel is open', 
 
   assert.equal(setPosition('DP-1', 'right'), 'ok');
   assert.equal(context.config.bars['DP-1'].position, 'right');
-  assert.deepEqual(pending, [['DP-1', { enabled: true, position: 'right', width: 100 }]]);
+  assert.deepEqual(pending, [['DP-1', { enabled: true, position: 'right', width: 100, height: 0 }]]);
 });
 
 test('closing the panel flushes all deferred monitor rows in one host write', () => {
@@ -208,11 +208,14 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(tab, /text: "POSITION"/);
   assert.match(tab, /value: "top", label: "Top"[\s\S]*?value: "right", label: "Right"[\s\S]*?value: "bottom", label: "Bottom"[\s\S]*?value: "left", label: "Left"/);
   assert.match(tab, /anchors\.verticalCenter: parent\.verticalCenter[\s\S]*?height: Style\.spacing\.controlHeight/);
-  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 3);
+  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 4);
   assert.match(tab, /text: "WIDTH"/);
   assert.match(tab, /minimum: 1[\s\S]*?maximum: 100/);
   assert.match(tab, /setMonitorBarWidth\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
   assert.match(tab, /"Minimum " \+ root\.selectedMinimumWidth \+ "% — bar items overlap\."/);
+  assert.match(tab, /text: "HEIGHT"/);
+  assert.match(tab, /minimum: root\.selectedMinimumHeight[\s\S]*?maximum: root\.selectedMaximumHeight/);
+  assert.match(tab, /setMonitorBarHeight\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
   assert.match(layout, /selectedDisplayName/);
   assert.match(layout, /displaySelected\(monitorCard\.modelData\.name\)/);
   assert.match(layout, /Color\.menu\.selectedBackground/);
@@ -230,6 +233,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(preview, /position === "left" \? canvas\.monitorGap/);
   assert.match(preview, /parent\.height - height - canvas\.monitorGap/);
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
+  assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
   assert.match(panel, /sessionTabRestored/);
   assert.doesNotMatch(layout, /setDisplayPosition|previewLayout|drag/i);
@@ -264,9 +268,34 @@ test('bar width persists the request while runtime measurements provide a safe m
   assert.equal(context.monitorBarMinimum('DP-1'), 63);
   assert.equal(setWidth('DP-1', 48), 'ok');
   assert.equal(context.config.bars['DP-1'].width, 48);
-  assert.deepEqual(pending, ['DP-1', { enabled: true, position: 'top', width: 48 }]);
+  assert.deepEqual(pending, ['DP-1', { enabled: true, position: 'top', width: 48, height: 0 }]);
   assert.equal(context.rememberedTab, 1);
   assert.ok(context.panelTransferUntil > Date.now());
   assert.equal(setWidth('DP-1', 0), 'invalid');
   assert.equal(reportMinimum('../bad', 50), 'invalid');
+});
+
+test('bar height is per monitor and capped at ten percent of the shorter native side', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200, scale: 1.25 }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100, height: 0 } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  const setHeight = qmlFunction(service, 'setMonitorBarHeight', context);
+
+  assert.equal(context.monitorBarMaximumHeight('DP-1'), 120);
+  assert.equal(setHeight('DP-1', 120), 'ok');
+  assert.equal(context.config.bars['DP-1'].height, 120);
+  assert.deepEqual(pending, ['DP-1', { enabled: true, position: 'top', width: 100, height: 120 }]);
+  assert.equal(setHeight('DP-1', 121), 'invalid');
 });

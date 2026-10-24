@@ -24,10 +24,11 @@ shares the themed SVG mark between the bar and panel header.
 
 Station 2.2 also declares a full-bar entry. `Bar.qml` creates one
 `MonitorBar.qml` instance per connected Quickshell screen and passes each a
-detached copy of the shared layout with that connector's saved position.
+detached copy of the shared layout with that connector's saved position,
+width, and thickness.
 The wrapper coordinates popouts across those isolated copies so opening a
 panel on one output closes the panel already open on another.
-Presence and position live in both Station's validated `config.bars` preferences
+Presence, position, width, and height live in both Station's validated `config.bars` preferences
 and the shell bar's `monitors` map. While the panel is open, the full bar reads
 the detached `config.bars` snapshot through the top-level bridge and treats it
 as the live authority; the service defers the redundant shell map write until

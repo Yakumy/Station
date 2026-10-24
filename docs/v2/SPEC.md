@@ -427,8 +427,15 @@ Bar tab:
   and right widget regions and reports the first non-overlapping percentage.
   Requests below it remain visible in the slider, but the rendered surface is
   clamped to the measured minimum and the row reports `Minimum N% — bar items
-  overlap.` The remaining rows are reserved for the other bar appearance
-  controls.
+  overlap.` **Height** starts at Omarchy's current theme-driven bar thickness
+  and can grow to 10% of the monitor mode's shorter native dimension (the
+  shorter side remains the reference after rotation, so 1920×1200 caps at
+  120 px). It is saved per monitor, applies immediately, and the layout preview
+  reflects the chosen thickness. The cap is defined at default display and
+  text scale; later scale or text-size changes may increase its apparent size.
+  They may also raise the live minimum, in which case a saved lower value is
+  clamped rather than overriding Omarchy's readable default. The remaining
+  rows are reserved for the other bar appearance controls.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives
