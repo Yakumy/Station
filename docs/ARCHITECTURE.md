@@ -49,9 +49,12 @@ the bar's parallel monitor edges. The panel's cross-axis stabilization permits
 the half-gap visual extension when validating the remapped bar window; the
 exclusive-zone size exposed to popup placement remains unchanged.
 Content size is stored per monitor as a font-pixel baseline. `MonitorBar`
-scales each module subtree around its center, enlarges only the along-bar slot
+propagates the selected ratio into module font and icon primitives so Qt
+renders them at their final resolution, and enlarges only the along-bar slot
 used by the overlap calculation, and clips the cross axis to the configured bar
-height. A zero stored value follows Omarchy's live `Style.font.body` default.
+height. Composite widgets whose geometry comes from non-Item helpers may expose
+`nativeContentSized` and consume the bar's effective size directly. A zero
+stored value follows Omarchy's live `Style.font.body` default.
 Blur is compositor-owned. The service keeps a persisted lease of the prior
 global Hyprland blur state, enables one named layer rule for the shared
 `omarchy-bar` namespace, temporarily uses size 8 with three passes, and

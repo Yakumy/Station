@@ -9,9 +9,12 @@ Grid {
   property int stationNumber: 1
   property bool opened: false
   property alias anchorItem: logoButton
+  readonly property bool nativeContentSized: true
   signal pressed()
 
   readonly property bool vertical: bar ? bar.vertical : false
+  readonly property real contentFontSize: bar && "effectiveContentSize" in bar
+    ? bar.effectiveContentSize : Style.font.body
   readonly property real controlMargin: Style.spaceReal(7.5)
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   // Match the menu's painted height, rather than its font's em square.
@@ -25,7 +28,7 @@ Grid {
   FontMetrics {
     id: menuMetrics
     font.family: "omarchy"
-    font.pixelSize: Style.font.body
+    font.pixelSize: root.contentFontSize
   }
 
   TextMetrics {
@@ -74,7 +77,7 @@ Grid {
     labelVisible: false
     hasVisualContent: true
     horizontalMargin: 7.5
-    fontSize: Style.font.body
+    fontSize: root.contentFontSize
     fixedWidth: root.vertical ? barSize : indicatorInk.width + root.inkGap
     onPressed: root.pressed()
 

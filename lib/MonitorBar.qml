@@ -1983,6 +1983,11 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
+    property var nativeSizeBaselines: new Map()
+    property var nativeContentRoot: null
+    property real baselineContentWidth: 0
+    property real baselineContentHeight: 0
+    readonly property real requestedNativeScale: root.contentScale
     readonly property real baseContentWidth: activeItem && activeItem.visible
       ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
     readonly property real baseContentHeight: activeItem && activeItem.visible
@@ -1998,9 +2003,11 @@ Item {
       return Math.max(Style.space(10), Math.round((root.vertical ? slot.height : slot.width) * 0.55))
     }
     implicitWidth: activeItem && activeItem.visible
-      ? (root.vertical ? root.barSize : Math.ceil(baseContentWidth * root.contentScale)) : 0
+      ? (root.vertical ? root.barSize : Math.ceil(Math.max(baseContentWidth,
+          baselineContentWidth * requestedNativeScale))) : 0
     implicitHeight: activeItem && activeItem.visible
-      ? (root.vertical ? Math.ceil(baseContentHeight * root.contentScale) : root.barSize) : 0
+      ? (root.vertical ? Math.ceil(Math.max(baseContentHeight,
+          baselineContentHeight * requestedNativeScale)) : root.barSize) : 0
     width: implicitWidth
     height: implicitHeight
     clip: true
@@ -2032,11 +2039,11 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
-      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
+        slot.scheduleNativeContentSize()
       }
     }
 
@@ -2047,11 +2054,11 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
-      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
+        slot.scheduleNativeContentSize()
       }
     }
 
@@ -2062,12 +2069,21 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
-      scale: root.contentScale
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
+        slot.scheduleNativeContentSize()
       }
+    }
+
+    // Scaling a complete Loader subtree turns native-rendered glyphs and SVG
+    // masks into a low-resolution texture. Resize the primitives themselves
+    // instead, so Qt rasterizes text and icons at their final pixel size.
+    Timer {
+      id: nativeSizeTimer
+      interval: 0
+      onTriggered: slot.applyNativeContentSize()
     }
 
     Rectangle {
@@ -2196,8 +2212,76 @@ Item {
       }
     }
 
-    onActiveItemChanged: Qt.callLater(injectProps)
+    onActiveItemChanged: {
+      Qt.callLater(injectProps)
+      scheduleNativeContentSize()
+    }
     onModuleSettingsChanged: injectProps()
+    onRequestedNativeScaleChanged: scheduleNativeContentSize()
+
+    function walkNativeContent(item, inheritedFontOwner, visitor) {
+      if (!item || (item !== activeItem && "visible" in item && item.visible === false)) return
+      // A widget may implement the bar's effective size itself when some of
+      // its visual geometry is derived from non-Item helpers such as
+      // FontMetrics. Do not apply the generic ratio a second time.
+      if ("nativeContentSized" in item && item.nativeContentSized === true) return
+      var ownsFontSize = !inheritedFontOwner && "fontSize" in item
+        && isFinite(Number(item.fontSize)) && Number(item.fontSize) > 0
+      visitor(item, inheritedFontOwner, ownsFontSize)
+      var kids = "children" in item && item.children ? item.children : []
+      for (var i = 0; i < kids.length; i++)
+        walkNativeContent(kids[i], inheritedFontOwner || ownsFontSize, visitor)
+    }
+
+    function captureNativeSizeBaselines(target) {
+      walkNativeContent(target, false, function(item, inheritedFontOwner, ownsFontSize) {
+        if (nativeSizeBaselines.has(item)) return
+        var baseline = ({})
+        if (ownsFontSize) baseline.fontSize = Number(item.fontSize)
+        if (!inheritedFontOwner && !ownsFontSize && "font" in item && item.font
+            && isFinite(Number(item.font.pixelSize)) && Number(item.font.pixelSize) > 0)
+          baseline.fontPixelSize = Number(item.font.pixelSize)
+        ;["iconSize", "opticalSize", "slotSize"].forEach(function(name) {
+          if (name in item && isFinite(Number(item[name])) && Number(item[name]) > 0)
+            baseline[name] = Number(item[name])
+        })
+        nativeSizeBaselines.set(item, baseline)
+      })
+    }
+
+    function applyNativeContentSize() {
+      var target = activeItem
+      if (!target) return
+      if (nativeContentRoot !== target) {
+        nativeContentRoot = target
+        nativeSizeBaselines = new Map()
+        baselineContentWidth = Math.max(0, Number(target.implicitWidth) || 0)
+        baselineContentHeight = Math.max(0, Number(target.implicitHeight) || 0)
+      }
+      if (baselineContentWidth <= 0)
+        baselineContentWidth = Math.max(0, Number(target.implicitWidth) || 0)
+      if (baselineContentHeight <= 0)
+        baselineContentHeight = Math.max(0, Number(target.implicitHeight) || 0)
+
+      captureNativeSizeBaselines(target)
+      var factor = requestedNativeScale
+      walkNativeContent(target, false, function(item) {
+        var baseline = nativeSizeBaselines.get(item)
+        if (!baseline) return
+        if (baseline.fontSize !== undefined)
+          item.fontSize = Math.max(1, Math.round(baseline.fontSize * factor))
+        if (baseline.fontPixelSize !== undefined)
+          item.font.pixelSize = Math.max(1, Math.round(baseline.fontPixelSize * factor))
+        ;["iconSize", "opticalSize", "slotSize"].forEach(function(name) {
+          if (baseline[name] !== undefined)
+            item[name] = Math.max(1, baseline[name] * factor)
+        })
+      })
+    }
+
+    function scheduleNativeContentSize() {
+      nativeSizeTimer.restart()
+    }
 
     function injectProps() {
       var target = activeItem

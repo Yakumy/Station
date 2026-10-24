@@ -271,9 +271,12 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);
   assert.match(monitorBar, /parent\.height - height - barContent\.edgeMargin/);
   assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
-  assert.match(monitorBar, /Math\.ceil\(baseContentWidth \* root\.contentScale\)/);
-  assert.match(monitorBar, /Math\.ceil\(baseContentHeight \* root\.contentScale\)/);
-  assert.equal((monitorBar.match(/scale: root\.contentScale/g) || []).length, 3);
+  assert.match(monitorBar, /function applyNativeContentSize\(\)/);
+  assert.match(monitorBar, /item\.fontSize = Math\.max\(1, Math\.round\(baseline\.fontSize \* factor\)\)/);
+  assert.match(monitorBar, /item\.font\.pixelSize = Math\.max\(1, Math\.round\(baseline\.fontPixelSize \* factor\)\)/);
+  assert.doesNotMatch(monitorBar, /scale: root\.contentScale/);
+  assert.match(monitorBar, /"nativeContentSized" in item && item\.nativeContentSized === true/);
+  assert.match(read('lib/StationBar.qml'), /font\.pixelSize: root\.contentFontSize/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 

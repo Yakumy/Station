@@ -422,7 +422,8 @@ Bar tab:
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: `Selected: <connector>` followed by five equal control rows. The first,
   **Content size**, is an integer slider from Omarchy's current `Style.font.body`
-  size through the selected bar height. It scales each module's painted subtree
+  size through the selected bar height. It natively rerenders each module's text
+  and icon primitives at the requested size (never scaling a rasterized subtree)
   around its center, expands its along-bar layout footprint so neighbors never
   overlap, and clips its cross-axis footprint to the bar. A saved request above
   a subsequently reduced bar height is clamped at runtime and reports
