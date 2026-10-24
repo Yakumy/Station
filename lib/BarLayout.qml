@@ -14,7 +14,7 @@ Ui.BorderSurface {
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property real monitorGap: Style.spacing.sm
-  readonly property real barEdgeGap: Style.spacing.xl
+  readonly property real barEdgeGap: Style.spacing.sm
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
@@ -71,8 +71,13 @@ Ui.BorderSurface {
       readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100
       readonly property int defaultBarHeight: barSetting.position === "left" || barSetting.position === "right"
         ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+      readonly property real maximumBarHeight: Math.max(defaultBarHeight,
+        canvas.service ? canvas.service.monitorBarMaximumHeight(modelData.name)
+          : Math.floor(Math.min(Number(modelData.width), Number(modelData.height)) * 0.05))
       readonly property real effectiveBarHeight: Math.max(defaultBarHeight,
-        Number(barSetting.height) > 0 ? Number(barSetting.height) : defaultBarHeight)
+        Math.min(maximumBarHeight, Number(barSetting.height) > 0 ? Number(barSetting.height) : defaultBarHeight))
+      readonly property real nameInset: canvas.barEdgeGap
+        + Math.max(2, maximumBarHeight * canvas.zoom) + Style.spacing.sm
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
@@ -96,8 +101,7 @@ Ui.BorderSurface {
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
           || monitorCard.barSetting.position === "right"
-        readonly property real topInset: Math.max(canvas.barEdgeGap,
-          monitorName.y + monitorName.implicitHeight + canvas.barEdgeGap)
+        readonly property real topInset: canvas.barEdgeGap
         readonly property real bottomInset: canvas.barEdgeGap
         width: side ? Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
           : Math.max(1, (parent.width - canvas.barEdgeGap * 2) * monitorCard.effectiveBarWidth)
@@ -138,15 +142,16 @@ Ui.BorderSurface {
       Text {
         id: monitorName
         objectName: "monitorName-" + monitorCard.modelData.name
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.margins: canvas.panelRoot.space2
+        x: monitorCard.nameInset
+        y: Math.max(monitorCard.nameInset, parent.height * 0.36 - height / 2)
         text: monitorCard.modelData.name
         color: canvas.panelRoot.textDim
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
-        width: parent.width - canvas.panelRoot.space4
+        horizontalAlignment: Text.AlignHCenter
+        width: Math.max(0, parent.width - monitorCard.nameInset * 2)
+        visible: width > 0 && y + height <= parent.height - monitorCard.nameInset
       }
 
       Repeater {

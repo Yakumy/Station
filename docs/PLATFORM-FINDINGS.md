@@ -632,5 +632,75 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   `Style.spacing.sm` on both cross-axis edges and checks the fully revealed
   left, centered, and right regions along the bar. Model tests cover both
   limiting axes and tray reveal extents. The offscreen layout harness covers
-  all four preview sides and verifies that `Style.spacing.xl` plus the connector
-  label reserve keeps the preview away from every card edge and monitor name.
+  all four preview sides. The follow-up below revises the label placement and
+  repairs the runtime publication of the maximum.
+
+- [LIVE][SRC] The installed shell logged `ReferenceError: barContent is not
+  defined` at MonitorBar's root maximum binding: the id belongs to the nested
+  BarPanel component. The content limit now publishes to a root measurement
+  property on completion and change, matching the minimum-length path.
+  The runtime Qt harness exercises that component boundary and verifies that
+  content zoom follows requests and changing limits.
+- [SRC][QTTEST] Preview edge gaps return to `Style.spacing.sm`. Names move
+  toward the card center and reserve the maximum preview thickness plus a
+  theme gap on every side. The layout test uses an oversized saved height to
+  verify clamping and label separation on all four sides.
+
+### Enlarged image layers (2026-10-25)
+
+- [SRC] StationMark's tint source and Omarchy Tray's symbolic image sources
+  use `layer.enabled`; the tray drawer also layers its Row/Column. Increasing
+  image `sourceSize` alone leaves these intermediate textures at baseline size.
+  MonitorBar now scales existing layer textures too, including the output pixel
+  ratio, while leaving Loader layers disabled and preserving scalable text.
+- [QTTEST] `check-bar-rendering.py` checks nested/default/explicit layer sizes,
+  geometry updates, repeated zoom and restoration. `check-bar-icons.py` uses
+  Wayland/GPU rendering of the real logo SVG through MultiEffect and a nested
+  group layer at 3x. Compared with a directly sized reference, the corrected
+  render has less than one quarter of the original summed red-channel pixel
+  error. The capture visibly resolves the logo edges. This does not establish
+  the quality of every application's supplied tray bitmap.
+
+### Station logo follow-up (2026-10-25)
+
+- [LIVE] The user still observed a soft Station bar logo after the intermediate
+  layer fix. The previous GPU fixture recreated the image/effect structure; it
+  did not instantiate StationMark and was insufficient evidence for that logo.
+- [SRC] StationMark now renders its SVG paths with Shape.CurveRenderer and
+  direct theme tint, eliminating its image/effect rasterization path. Tray
+  image and group-layer handling remains in place. StationBar positions the
+  mark from the actual centered Text baseline used by WidgetButton rather
+  than reconstructing it from rounded FontMetrics height.
+- [QTTEST] The GPU check now instantiates the production StationMark at 3x
+  and compares it with a directly sized production mark. The captured edges
+  are sharp. The layout harness passes 216 combinations covering three font
+  sizes, three bar heights, three zooms, four edges and S1/S10. These checks
+  do not substitute for the user's final desktop confirmation.
+
+### Confirmed logo correction and global bar controls (2026-10-25)
+
+- [LIVE] The user confirmed the vector Station logo is now sharp and aligned.
+  The problem was rasterization of the image/tint path before content zoom;
+  enlarging decoded images and intermediate textures did not reliably fix the
+  production logo. Rendering the original paths directly with CurveRenderer
+  removes that raster boundary. A centered Text reference also removes the
+  vertical discrepancy from reconstructing WidgetButton's baseline with
+  rounded FontMetrics values.
+- [SRC] Omarchy's Bar → Position menu runs `omarchy bar position`, which
+  writes global `bar.position`. Stock bar dragging writes the same setting.
+  Station's per-monitor overrides previously masked global changes; its drag
+  adaptation wrote only shell.json monitor rows while config.bars remained the
+  authority. The service now observes global edge changes and updates every
+  saved/connected monitor, preserving presence and appearance. Drag completion
+  calls the allowlisted global action. Station's card arrows remain per-monitor.
+- [QTTEST] Production-function tests cover four global edges, saved/disconnected
+  entries, appearance preservation, initial attachment without override loss,
+  pending publication during an open panel, and drag-to-service dispatch.
+
+- [LIVE] Stock `omarchy bar position right|bottom|left|top` updated both saved
+  monitor edges in the installed service. Each command was allowed to finish
+  its asynchronous shell/config writes before the next command; issuing the
+  next command immediately after observing config.json can race the previous
+  shell.json mirror write. Original bar settings were backed up and restored,
+  followed by shell restart/ping. Physical pointer dragging remains a manual
+  check; the automated drag test verifies the completion-to-service path.

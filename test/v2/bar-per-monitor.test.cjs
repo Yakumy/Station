@@ -248,7 +248,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(preview, /parent\.height - topInset - bottomInset/);
   assert.match(preview, /position === "left" \? canvas\.barEdgeGap/);
   assert.match(preview, /parent\.height - height - bottomInset/);
-  assert.match(preview, /monitorName\.y \+ monitorName\.implicitHeight \+ canvas\.barEdgeGap/);
+  assert.match(layout, /maximumBarHeight \* canvas\.zoom/);
+  assert.match(layout, /horizontalAlignment: Text\.AlignHCenter/);
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
@@ -287,7 +288,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /onBaseContentWidthChanged: scheduleContentImageZoom\(\)/);
   assert.match(monitorBar, /property real effectiveContentSize: root\.effectiveContentSize/);
   assert.doesNotMatch(monitorBar, /applyNativeContentSize|nativeSizeBaselines|baseline\.fontSize|item\.font\.pixelSize = customized/);
-  assert.match(monitorBar, /maximumContentSize: barContent\.maximumContentSize/);
+  assert.match(monitorBar, /maximumContentSize: measuredMaximumContentSize/);
+  assert.match(monitorBar, /onMaximumContentSizeChanged: root\.measuredMaximumContentSize = maximumContentSize/);
   assert.match(host, /reportMonitorBarMaximumContent/);
   assert.match(service, /monitorBarMaximumContents: monitorBarMaximumContents/);
   assert.match(service, /reportMonitorBarMaximumContent: function/);
@@ -512,4 +514,66 @@ test('bar blur leases and restores the prior global compositor setting', () => {
   assert.equal(context.persisted.barBlurLease, null);
   assert.match(scripts.at(-1), /set_enabled\(false\).*enabled = false, passes = 1/);
   assert.equal(saves, 2);
+});
+
+
+test('Omarchy global moves update every saved and connected bar without losing appearance', () => {
+  let writes = 0;
+  const host = { bar: { id: 'yakumy.station', position: 'top', monitors: {} } };
+  const context = {
+    configLoaded: true, globalBarPosition: 'top', lastGlobalBarPosition: '',
+    config: { bars: { 'DP-1': { position: 'left', width: 65, height: 42, style: 'pill', contentSize: 24 },
+      'DP-3': { position: 'right', enabled: false } } },
+    displayDraft: [{ name: 'DP-1' }, { name: 'DP-2' }],
+    pendingMonitorBars: {}, panelWanted: true, panelTransferUntil: 0,
+    validConnector: name => /^DP-[123]$/.test(name),
+    activeStationBar: () => true,
+    saveConfig() { writes++; },
+    shell: { barConfig: host.bar, mutateShellConfig(fn) { fn(host); return true; } },
+  };
+  for (const name of ['monitorBar', 'deferMonitorBarPublish', 'publishMonitorBars',
+    'flushPendingMonitorBars', 'setGlobalBarPosition', 'syncGlobalBarPosition'])
+    context[name] = qmlFunction(service, name, context);
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'left', 'startup preserves overrides');
+  assert.equal(writes, 0);
+  for (const position of ['bottom', 'left', 'right', 'top']) {
+    context.globalBarPosition = position;
+    context.syncGlobalBarPosition();
+    for (const name of ['DP-1', 'DP-2', 'DP-3']) {
+      assert.equal(context.config.bars[name].position, position);
+      assert.equal(context.pendingMonitorBars[name].position, position);
+    }
+    assert.equal(host.bar.position, position);
+  }
+  assert.equal(context.config.bars['DP-1'].width, 65);
+  assert.equal(context.config.bars['DP-1'].style, 'pill');
+  assert.equal(context.config.bars['DP-1'].contentSize, 24);
+  assert.equal(context.config.bars['DP-3'].enabled, false);
+  assert.equal(context.setGlobalBarPosition('diagonal'), 'invalid');
+  assert.equal(writes, 4);
+  context.config.bars['DP-1'].position = 'left';
+  assert.equal(context.setGlobalBarPosition('top'), 'ok', 'drag can reapply the global edge');
+  context.panelWanted = false;
+  context.flushPendingMonitorBars();
+  assert.equal(host.bar.monitors['DP-1'].position, 'top');
+  assert.equal(Object.keys(context.pendingMonitorBars).length, 0);
+});
+
+test('bar drag completion reaches the service-owned global position action', () => {
+  const monitor = read('lib/MonitorBar.qml');
+  const calls = [];
+  const api = { call(name, args) { calls.push([name, [...args]]); return 'ok'; } };
+  const request = qmlFunction(read('Bar.qml'), 'requestGlobalPosition', { BarBridge: { current: () => api } });
+  const context = {
+    barMoveCandidate: 'right', barMoveActive: true, position: 'top',
+    clearBarMove() { this.barMoveActive = false; },
+    normalizePosition: value => value,
+    positionRequested: request,
+  };
+  context.clearBarMove = () => { context.barMoveActive = false; };
+  context.setBarPosition = qmlFunction(monitor, 'setBarPosition', context);
+  qmlFunction(monitor, 'finishBarMove', context)();
+  assert.deepEqual(calls, [['setGlobalBarPosition', ['right']]]);
+  assert.match(read('Bar.qml'), /onPositionRequested: function\(position\) \{ root.requestGlobalPosition\(position\)/);
 });

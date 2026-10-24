@@ -47,7 +47,8 @@ ShellRoot {
       return {enabled: false, position: "right", width: 100, height: 0, background: "transparent", style: "default", contentSize: 0}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
-    function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 120 : 108 }
+    function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 60 : 54 }
+    function monitorBarMaximumContent(name) { return 24 }
     function setMonitorBarEnabled() { return "ok" }
     function setMonitorBarPosition() { return "ok" }
     function setMonitorBarWidth() { return "ok" }

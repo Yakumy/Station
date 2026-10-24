@@ -256,7 +256,7 @@ Item {
       ]
       var positions = ["top", "right", "bottom", "left"]
       for (var position of positions) {
-        service.bars = {"eDP-1": {enabled:true, position:position, width:100, height:40, background:"solid", style:"default", contentSize:12}}
+        service.bars = {"eDP-1": {enabled:true, position:position, width:100, height:1000, background:"solid", style:"default", contentSize:12}}
         service.displayDraft = service.displayDraft.slice()
         wait(10)
         var target = barCard("eDP-1")
@@ -265,7 +265,10 @@ Item {
         verify(preview !== null && name !== null)
         verify(preview.x >= barLayout.barEdgeGap - 0.01)
         verify(preview.x + preview.width <= target.width - barLayout.barEdgeGap + 0.01)
-        verify(preview.y >= name.y + name.height + barLayout.barEdgeGap - 0.01)
+        verify(preview.y >= barLayout.barEdgeGap - 0.01)
+        verify(preview.x + preview.width <= name.x || name.x + name.width <= preview.x
+          || preview.y + preview.height <= name.y || name.y + name.height <= preview.y,
+          "The centered monitor name must clear the bar on every side")
         verify(preview.y + preview.height <= target.height - barLayout.barEdgeGap + 0.01)
       }
     }

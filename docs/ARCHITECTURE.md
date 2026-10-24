@@ -56,6 +56,13 @@ to Qt's scalable distance-field rendering while zoomed, restoring their original
 render type at default size. Enlarging an offscreen layer does not re-rasterize
 native glyph caches, so the loaders render directly without that extra layer.
 The bar also multiplies each loaded image's `sourceSize` by the same ratio.
+Existing tray effect-source and tray-group layers receive matching physical-pixel
+texture sizes, bound to their geometry and output pixel ratio; otherwise those
+intermediate textures downsample the decoded images before enlargement. Their
+original texture sizes are restored at default content size. StationMark uses
+Qt Quick curve-rendered vector paths from the supplied SVG geometry, with the
+foreground tint applied directly. Its bar placement follows a centered Text
+reference matching the Omarchy menu button, including its actual baseline.
 The along-bar slot grows by that ratio so module gaps keep their proportions.
 The live maximum preserves `Style.spacing.sm` on both cross-axis edges and
 checks the scaled left, centered, and right extents against the monitor length.

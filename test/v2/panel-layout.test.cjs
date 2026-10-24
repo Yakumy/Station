@@ -95,9 +95,9 @@ test('bar logo shares the Omarchy menu foreground and size token', () => {
   assert.match(markComponent, /assets\/station-main-logo-mask\.svg/);
   assert.match(bar, /tint:\s*logoButton\.foreground/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
-  // Keep the supplied green master for public artwork, but use its white
-  // geometry twin at runtime. MultiEffect preserves source luminance, so only
-  // the white mask can reproduce WidgetButton.foreground exactly.
+  // The runtime vector keeps the artwork geometry and uses the theme tint directly.
+  assert.match(markComponent, /Shape.CurveRenderer/);
+  assert.doesNotMatch(markComponent, /MultiEffect|layer.enabled/);
   assert.match(master, /#A6B465/);
   assert.match(mark, /stroke="white"/);
   assert.match(mark, /stroke-width="35"/);

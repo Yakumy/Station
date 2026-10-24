@@ -49,7 +49,8 @@ Item {
     id: bar
     property string position: "top"
     readonly property bool vertical: position === "left" || position === "right"
-    readonly property int barSize: Style.space(26)
+    property int extraHeight: 0
+    readonly property int barSize: Style.space(26) + extraHeight
     property string fontFamily: "monospace"
     property color barForeground: "white"
     property color urgent: "red"
@@ -82,14 +83,19 @@ Item {
       var rows = []
       for (var size of [10, 12, 18])
         for (var position of ["top", "bottom", "left", "right"])
+          for (var extraHeight of [0, 1, 20])
+          for (var zoom of [1, 1.75, 2.5])
           for (var station of [1, 10])
-            rows.push({tag: size + "-" + position + "-S" + station,
-              size: size, position: position, station: station})
+            rows.push({tag: size + "-" + position + "-S" + station + "-height" + extraHeight + "-zoom" + zoom,
+              size: size, position: position, station: station, extraHeight: extraHeight, zoom: zoom})
       return rows
     }
     function test_layout(data) {
       Style.font = {family: "monospace", body: data.size}
       bar.position = data.position
+      bar.extraHeight = data.extraHeight
+      menu.scale = data.zoom
+      controls.scale = data.zoom
       controls.stationNumber = data.station
       wait(30)
       var logo = controls.anchorItem
@@ -129,6 +135,7 @@ Item {
         verify(Math.abs(firstGap - secondGap) <= 0.5, "painted gaps must match: " + firstGap + " / " + secondGap + "; menu=" + menu.width + "; slot=" + controls.menuSlotWidth)
         var menuTop = menuLabel.y + menuLabel.baselineOffset + controls.menuInk.y
         compare(mark.y, menuTop)
+        compare(mark.y * data.zoom, menuTop * data.zoom)
         compare(mark.height, controls.menuInk.height)
       }
       metrics.destroy()

@@ -567,21 +567,10 @@ Item {
     setBarPosition(edge)
   }
 
+  signal positionRequested(string position)
+
   function setBarPosition(value) {
-    var next = normalizePosition(value)
-    if (root.shell && typeof root.shell.mutateShellConfig === "function") {
-      root.shell.mutateShellConfig(function(config) {
-        if (!Util.isPlainObject(config.bar)) config.bar = {}
-        if (!Util.isPlainObject(config.bar.monitors)) config.bar.monitors = {}
-        var current = Util.isPlainObject(config.bar.monitors[root.targetScreenName])
-          ? config.bar.monitors[root.targetScreenName] : {}
-        current.position = next
-        current.enabled = current.enabled !== false
-        config.bar.monitors[root.targetScreenName] = current
-      })
-    } else {
-      root.position = next
-    }
+    positionRequested(normalizePosition(value))
   }
 
   function captureBarDragGhost(slot) {
@@ -670,7 +659,8 @@ Item {
   readonly property int panelThickness: barSize + edgeCenterOffset
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
   readonly property int contentInset: Math.ceil(Style.spacing.sm)
-  readonly property int maximumContentSize: barContent.maximumContentSize
+  property int measuredMaximumContentSize: defaultContentSize
+  readonly property int maximumContentSize: measuredMaximumContentSize
   readonly property int effectiveContentSize: Math.max(defaultContentSize,
     Math.min(maximumContentSize, requestedContentSize > 0 ? requestedContentSize : defaultContentSize))
   readonly property real contentScale: effectiveContentSize / defaultContentSize
@@ -1474,7 +1464,11 @@ Item {
           centerPadding, rightPadding)
       }
       onMinimumLengthChanged: root.measuredMinimumLength = minimumLength
-      Component.onCompleted: root.measuredMinimumLength = minimumLength
+      onMaximumContentSizeChanged: root.measuredMaximumContentSize = maximumContentSize
+      Component.onCompleted: {
+        root.measuredMinimumLength = minimumLength
+        root.measuredMaximumContentSize = maximumContentSize
+      }
 
       Rectangle {
         anchors.fill: parent
@@ -2038,6 +2032,7 @@ Item {
     readonly property bool panelOpen: root.activePopout === slot.activeItem
     property var imageSourceBaselines: new Map()
     property var textRenderBaselines: new Map()
+    property var layerTextureBaselines: new Map()
     property var imageContentRoot: null
     readonly property bool widgetSizedContent: activeItem
       && "nativeContentSized" in activeItem && activeItem.nativeContentSized === true
@@ -2316,6 +2311,7 @@ Item {
         imageContentRoot = target
         imageSourceBaselines = new Map()
         textRenderBaselines = new Map()
+        layerTextureBaselines = new Map()
       }
       var zoom = Math.max(1, contentZoom)
       if (zoom <= 1) {
@@ -2329,12 +2325,33 @@ Item {
           if (baseline.height > 0) item.sourceSize.height = baseline.height
         })
         imageSourceBaselines = new Map()
+        layerTextureBaselines.forEach(function(size, item) {
+          if (item) item.layer.textureSize = size
+        })
+        layerTextureBaselines = new Map()
         return
       }
       walkContentImages(target, function(item) {
         if (item instanceof Text && item.renderType === Text.NativeRendering) {
           if (!textRenderBaselines.has(item)) textRenderBaselines.set(item, item.renderType)
           item.renderType = Text.QtRendering
+        }
+        // Images used by MultiEffect and the tray's layered Row/Column must
+        // also render at the enlarged resolution. A larger image decode alone
+        // is downsampled again by a default-sized intermediate layer.
+        if (item.layer && item.layer.enabled && !layerTextureBaselines.has(item)) {
+          var originalSize = Qt.size(item.layer.textureSize.width, item.layer.textureSize.height)
+          layerTextureBaselines.set(item, originalSize)
+          item.layer.textureSize = Qt.binding(function() {
+            var dpr = item.Screen.devicePixelRatio
+            var rect = item.layer.sourceRect
+            var width = originalSize.width > 0 ? originalSize.width
+              : (rect.width > 0 ? rect.width : item.width) * dpr
+            var height = originalSize.height > 0 ? originalSize.height
+              : (rect.height > 0 ? rect.height : item.height) * dpr
+            return Qt.size(Math.max(1, Math.ceil(width * slot.contentZoom)),
+                           Math.max(1, Math.ceil(height * slot.contentZoom)))
+          })
         }
         if (!("source" in item) || !("sourceSize" in item)) return
         var baseline = imageSourceBaselines.get(item)

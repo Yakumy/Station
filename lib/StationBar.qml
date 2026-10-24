@@ -45,12 +45,22 @@ Grid {
     fixedHeight: root.vertical ? menuMetrics.height + scaledVerticalPadding * 2 : barSize
     onPressed: root.pressed()
 
+    // Use the same centered Text line box as Omarchy's WidgetButton, including
+    // Qt's baseline and anchor rounding. FontMetrics.height can differ from it.
+    Text {
+      id: menuReference
+      anchors.centerIn: parent
+      visible: false
+      text: "\ue900"
+      font: menuMetrics.font
+    }
+
     Station.StationMark {
       width: root.logoSize
       height: root.logoSize
       x: (parent.width - width) / 2
       // WidgetButton centers the font line box. Match the ink inside it.
-      y: Math.round((parent.height - menuMetrics.height) / 2) + menuMetrics.ascent + root.menuInk.y
+      y: menuReference.y + menuReference.baselineOffset + root.menuInk.y
       tint: logoButton.foreground
     }
 
@@ -99,7 +109,7 @@ Grid {
       x: root.vertical ? (parent.width - stationButton.indicatorInk.width) / 2 - stationButton.indicatorInk.x
         : root.controlMargin - stationButton.indicatorInk.x
       y: root.vertical ? (parent.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
-        : Math.round((parent.height - menuMetrics.height) / 2) + menuMetrics.ascent + root.menuInk.y
+        : menuReference.y + menuReference.baselineOffset + root.menuInk.y
           + (root.menuInk.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
     }
   }

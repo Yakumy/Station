@@ -20,6 +20,13 @@ Item {
 
   property var shell: null
   onShellChanged: Qt.callLater(reconcileActiveBarLayout)
+  // Observe Omarchy's global edge independently of our per-monitor overrides.
+  property string lastGlobalBarPosition: ""
+  readonly property string globalBarPosition: {
+    var value = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig).position : ""
+    return ["top", "bottom", "left", "right"].indexOf(value) !== -1 ? value : ""
+  }
+  onGlobalBarPositionChanged: Qt.callLater(syncGlobalBarPosition)
   property var manifest: null
   property var barBridge: null
   readonly property string pluginDir: manifest && typeof manifest.__sourceDir === "string"
@@ -386,6 +393,45 @@ Item {
     if (!publishMonitorBars(pending)) return false
     pendingMonitorBars = ({})
     return true
+  }
+
+  function syncGlobalBarPosition() {
+    var next = globalBarPosition
+    if (!next) return
+    var previous = lastGlobalBarPosition
+    lastGlobalBarPosition = next
+    // Initial attachment must preserve independently saved monitor positions.
+    if (!previous || previous === next || !configLoaded || !activeStationBar()) return
+    setGlobalBarPosition(next)
+  }
+
+  function setGlobalBarPosition(position) {
+    if (["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
+    if (!configLoaded || !activeStationBar()) return "unavailable"
+    lastGlobalBarPosition = position
+    var names = Object.keys(config.bars || {})
+    displayDraft.forEach(function(display) {
+      if (names.indexOf(display.name) === -1) names.push(display.name)
+    })
+    var bars = Object.assign({}, config.bars || {})
+    names.forEach(function(name) {
+      if (!validConnector(name)) return
+      var next = monitorBar(name)
+      next.position = position
+      bars[name] = next
+      // Replace any older deferred position so closing a panel cannot undo it.
+      deferMonitorBarPublish(name, next)
+    })
+    config = Object.assign({}, config, { bars: bars })
+    saveConfig()
+    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+    shell.mutateShellConfig(function(scoped) {
+      if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
+      scoped.bar.position = position
+    })
+    flushPendingMonitorBars()
+    return "ok"
   }
 
   function setMonitorBarPosition(name, position) {
@@ -2079,6 +2125,7 @@ Item {
       setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
       setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
+      setGlobalBarPosition: function(position) { return root.setGlobalBarPosition(position) },
       setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
       setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
       setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
@@ -2409,6 +2456,8 @@ Item {
     function approveBinding(value: string): string { return root.approveBinding(value) }
     function status(): string { return JSON.stringify({ state: root.state, generation: root.gen,
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
+      globalBarPosition: root.globalBarPosition, lastGlobalBarPosition: root.lastGlobalBarPosition,
+      bars: root.config.bars,
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
       migrationPhase: root.migrationPhase, layoutError: root.layoutError,
       lastWindowAction: root.lastWindowAction,

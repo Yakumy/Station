@@ -415,8 +415,9 @@ Bar tab:
   by Station remain visible and dimmed; physically disconnected displays are
   absent. Every monitor card shows a compact bar preview, four side arrows, and
   a central on/off switch. The preview reflects the selected width, uses
-  `Style.spacing.xl` at monitor edges, and reserves the connector label above
-  every side preview. It disappears while that bar is off; no side arrow
+  `Style.spacing.sm` at monitor edges, and places the connector label toward
+  the card center, inset beyond the maximum preview thickness on every side.
+  It disappears while that bar is off; no side arrow
   remains accented while it is off. Side choices and presence apply
   immediately.
 - At least one enabled output must retain a bar. A disabled output may keep a
@@ -448,7 +449,10 @@ Bar tab:
   Requests below it remain visible in the slider, but the rendered surface is
   clamped to the measured minimum and the row reports `Minimum N% — bar items
   overlap.` Position remains directly editable through the four arrows on each
-  monitor card. **Background** is
+  monitor card. Omarchy's global Bar → Position menu and bar drag gesture move
+  all bars together; they update saved monitor edges without changing presence
+  or appearance. Initial shell attachment preserves per-monitor overrides.
+  **Background** is
   a full-width themed dropdown ordered Solid color, Transparent, Blur. Solid
   is the default. Transparent retains Omarchy's wallpaper-aware foreground and
   can also be toggled by double-clicking empty bar space. Blur uses the same
@@ -481,9 +485,9 @@ Bar tab:
   Cross-axis panel moves accept the additional `Style.gapsOut` visual-layer
   thickness before switching the open panel to the new edge, so the panel
   never combines a stale edge with the remapped bar-window geometry.
-- Bar-tab previews use a larger named edge inset than the gap between monitor
-  cards. The top inset also reserves the connector label, so no preview bar on
-  any side can cross the monitor name.
+- Bar-tab previews retain a compact equal inset on every side. Monitor names
+  are centered horizontally above the toggle, with a clearance based on the
+  maximum allowed bar thickness; saved heights are clamped to that maximum.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives
