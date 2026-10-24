@@ -44,6 +44,10 @@ visual/input layer inward by `Style.gapsOut` and keeps the exclusion zone at the
 configured thickness. Omarchy defines that token as half Hyprland's outer
 window gap, which centers module icons in the complete monitor-edge-to-window
 strip without moving tiled windows. Solid default bars retain stock geometry.
+Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
+the bar's parallel monitor edges. The panel's cross-axis stabilization permits
+the half-gap visual extension when validating the remapped bar window; the
+exclusive-zone size exposed to popup placement remains unchanged.
 Blur is compositor-owned. The service keeps a persisted lease of the prior
 global Hyprland blur state, enables one named layer rule for the shared
 `omarchy-bar` namespace, temporarily uses size 8 with three passes, and

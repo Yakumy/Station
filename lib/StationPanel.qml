@@ -610,7 +610,7 @@ Ui.Panel {
       var window = panel.anchorWindow
       return PanelPosition.stableBarPosition(root.stablePanelBarPosition,
         desiredPosition, window ? window.width : 0, window ? window.height : 0,
-        source ? source.barSize : 0)
+        source ? source.barSize + Style.gapsOut : 0)
     }
     readonly property real barSize: PanelPosition.verticalBarPosition(position)
       ? Style.bar.sizeVertical : Style.bar.sizeHorizontal

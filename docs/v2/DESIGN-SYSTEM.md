@@ -138,6 +138,9 @@ edge-aligned surface. Pill style and Blur/Transparent backgrounds use
 thickness as their layer-shell exclusion zone. `Style.gapsOut` is half the
 compositor's outer window gap, so this centers bar content in the full strip
 between the monitor edge and tiled windows on every bar side.
+The leading and trailing Pill islands use the full outer window gap
+(`Style.gapsOut * 2`) from the monitor sides parallel to the bar, keeping their
+outer edges aligned with tiled windows.
 
 ## 8. Do-not list
 

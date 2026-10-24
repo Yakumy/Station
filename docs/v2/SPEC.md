@@ -460,6 +460,11 @@ Bar tab:
   zone. Since that token is half Hyprland's outer window gap, the module
   centerline sits exactly halfway between the monitor edge and the nearest
   tiled-window edge on Top, Right, Bottom, and Left bars.
+- Pill end islands also retain one full compositor outer gap from the two
+  monitor edges parallel to the bar, matching the outer edge of tiled windows.
+  Cross-axis panel moves accept the additional `Style.gapsOut` visual-layer
+  thickness before switching the open panel to the new edge, so the panel
+  never combines a stale edge with the remapped bar-window geometry.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives

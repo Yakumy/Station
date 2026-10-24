@@ -1431,10 +1431,12 @@ Item {
       y: root.vertical
         ? Math.round((parent.height - height) / 2)
         : (root.position === "top" ? root.edgeCenterOffset : 0)
-      readonly property real edgeMargin: Style.space(8)
       readonly property real regionGap: Style.spacing.sm
       readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0
       readonly property real pillInset: Style.space(2)
+      readonly property real pillOuterMargin: root.barStyle === "pill" ? Style.gapsOut * 2 : 0
+      readonly property real edgeMargin: root.barStyle === "pill"
+        ? pillOuterMargin + pillPadding : Style.space(8)
       readonly property real leadingLength: (root.vertical ? leftModules.height : leftModules.width)
         + (root.barStyle === "pill" && leftModules.visibleLength > 0 ? pillPadding * 2 : 0)
       readonly property real trailingLength: (root.vertical ? rightModules.height : rightModules.width)
@@ -1497,15 +1499,15 @@ Item {
 
       LeftModules {
         id: leftModules
-        x: root.vertical ? (parent.width - width) / 2 : Style.space(8)
-        y: root.vertical ? Style.space(8) : (parent.height - height) / 2
+        x: root.vertical ? (parent.width - width) / 2 : barContent.edgeMargin
+        y: root.vertical ? barContent.edgeMargin : (parent.height - height) / 2
       }
 
       RightModules {
         id: rightModules
         x: root.vertical ? (parent.width - width) / 2
-          : parent.width - width - Style.space(8)
-        y: root.vertical ? parent.height - height - Style.space(8)
+          : parent.width - width - barContent.edgeMargin
+        y: root.vertical ? parent.height - height - barContent.edgeMargin
           : (parent.height - height) / 2
       }
 

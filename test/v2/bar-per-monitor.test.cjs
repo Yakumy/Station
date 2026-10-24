@@ -265,6 +265,10 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /exclusiveZone: root\.barSize/);
   assert.match(monitorBar, /root\.position === "left" \? root\.edgeCenterOffset : 0/);
   assert.match(monitorBar, /root\.position === "top" \? root\.edgeCenterOffset : 0/);
+  assert.match(monitorBar, /pillOuterMargin: root\.barStyle === "pill" \? Style\.gapsOut \* 2 : 0/);
+  assert.match(monitorBar, /pillOuterMargin \+ pillPadding : Style\.space\(8\)/);
+  assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);
+  assert.match(monitorBar, /parent\.height - height - barContent\.edgeMargin/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 

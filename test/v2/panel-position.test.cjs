@@ -62,6 +62,11 @@ test('a cross-axis edge waits for matching thin bar-window geometry', () => {
   assert.equal(Position.stableBarPosition('left', 'right', 0, 0), 'right');
   assert.equal(Position.stableBarPosition('top', 'bottom', 0, 0), 'bottom');
   assert.equal(Position.stableBarPosition('left', 'top', 0, 0), 'left');
+  assert.equal(Position.stableBarPosition('top', 'left', 31, 1080, 31), 'left',
+    'the completed vertical geometry accepts a Style.gapsOut visual extension');
+  assert.equal(Position.stableBarPosition('top', 'left', 1920, 31, 31), 'top',
+    'the prior horizontal geometry remains rejected during the remap');
+  assert.match(panel, /source \? source\.barSize \+ Style\.gapsOut : 0/);
 });
 
 test('Settings and the live panel bind to the persisted position', () => {
