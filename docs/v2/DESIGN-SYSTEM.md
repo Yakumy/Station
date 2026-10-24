@@ -132,6 +132,13 @@ monitor card by half of `Style.spacing.sm`, producing a compact named gap
 between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
 Span keeps exact edge-to-edge cards because its image crop is continuous.
 
+**Floating bar edge geometry:** Omarchy-default Solid bars retain the stock
+edge-aligned surface. Pill style and Blur/Transparent backgrounds use
+`Style.gapsOut` as an inward visual offset while preserving the configured bar
+thickness as their layer-shell exclusion zone. `Style.gapsOut` is half the
+compositor's outer window gap, so this centers bar content in the full strip
+between the monitor edge and tiled windows on every bar side.
+
 ## 8. Do-not list
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.

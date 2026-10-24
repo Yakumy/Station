@@ -39,6 +39,11 @@ hide the last bar on an enabled output.
 The default style paints one continuous surface. Pill style paints independently
 rounded left, center, and right islands while reusing the selected Background
 mode; its padding is included in each live bar's non-overlap measurement.
+For Pill, Blur, and Transparent presentations, `MonitorBar` expands only its
+visual/input layer inward by `Style.gapsOut` and keeps the exclusion zone at the
+configured thickness. Omarchy defines that token as half Hyprland's outer
+window gap, which centers module icons in the complete monitor-edge-to-window
+strip without moving tiled windows. Solid default bars retain stock geometry.
 Blur is compositor-owned. The service keeps a persisted lease of the prior
 global Hyprland blur state, enables one named layer rule for the shared
 `omarchy-bar` namespace, temporarily uses size 8 with three passes, and

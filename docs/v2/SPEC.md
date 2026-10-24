@@ -454,6 +454,12 @@ Bar tab:
   saved value even though the host dropdown imperatively assigns its own value
   during selection; changing monitors or reopening the panel must never show a
   mode last chosen for another connector.
+- Solid Omarchy-default bars retain the stock edge geometry. Pill style and
+  Blur/Transparent backgrounds extend their clear layer surface inward by
+  `Style.gapsOut` while retaining the configured bar thickness as the exclusive
+  zone. Since that token is half Hyprland's outer window gap, the module
+  centerline sits exactly halfway between the monitor edge and the nearest
+  tiled-window edge on Top, Right, Bottom, and Left bars.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives

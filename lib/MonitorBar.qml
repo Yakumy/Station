@@ -655,6 +655,13 @@ Item {
       targetScreen ? Number(targetScreen.height) : 1) * 0.1))
   readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
+  readonly property bool insetPresentation: barStyle === "pill" || backgroundMode !== "solid"
+  // Hyprland leaves its full outer gap between the layer-shell exclusion edge
+  // and tiled windows. Style.gapsOut is half that gap, so extending the visual
+  // surface inward by this amount places the module centerline exactly halfway
+  // between the physical monitor edge and the nearest window edge.
+  readonly property int edgeCenterOffset: insetPresentation ? Style.gapsOut : 0
+  readonly property int panelThickness: barSize + edgeCenterOffset
   readonly property real screenLength: targetScreen
     ? Number(vertical ? targetScreen.height : targetScreen.width) : 1
   readonly property int minimumWidthPercent: Math.max(1, Math.min(100,
@@ -1372,7 +1379,9 @@ Item {
     // textures — which measures ~150ms against ~20ms to tear down. Parking
     // keeps the surface alive, so showing is only a margin change.
     visible: !remapGuard.remapping
-    exclusionMode: root.barHidden ? ExclusionMode.Ignore : ExclusionMode.Auto
+    exclusionMode: root.barHidden ? ExclusionMode.Ignore
+      : root.insetPresentation ? ExclusionMode.Normal : ExclusionMode.Auto
+    exclusiveZone: root.barSize
 
     ScreenMoveRemap {
       id: remapGuard
@@ -1380,10 +1389,10 @@ Item {
     }
 
     margins {
-      top: root.barHidden && root.position === "top" ? -root.barSize : 0
-      bottom: root.barHidden && root.position === "bottom" ? -root.barSize : 0
-      left: root.barHidden && root.position === "left" ? -root.barSize : 0
-      right: root.barHidden && root.position === "right" ? -root.barSize : 0
+      top: root.barHidden && root.position === "top" ? -root.panelThickness : 0
+      bottom: root.barHidden && root.position === "bottom" ? -root.panelThickness : 0
+      left: root.barHidden && root.position === "left" ? -root.panelThickness : 0
+      right: root.barHidden && root.position === "right" ? -root.panelThickness : 0
     }
 
     anchors {
@@ -1393,8 +1402,8 @@ Item {
       right: root.position === "right" || !root.vertical
     }
 
-    implicitWidth: root.vertical ? root.barSize : 0
-    implicitHeight: root.vertical ? 0 : root.barSize
+    implicitWidth: root.vertical ? root.panelThickness : 0
+    implicitHeight: root.vertical ? 0 : root.panelThickness
     color: "transparent"
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
@@ -1414,10 +1423,14 @@ Item {
     // survives the flip and re-anchors with it.
     Item {
       id: barContent
-      width: root.vertical ? parent.width : root.effectiveBarLength
-      height: root.vertical ? root.effectiveBarLength : parent.height
-      x: root.vertical ? 0 : Math.round((parent.width - width) / 2)
-      y: root.vertical ? Math.round((parent.height - height) / 2) : 0
+      width: root.vertical ? root.barSize : root.effectiveBarLength
+      height: root.vertical ? root.effectiveBarLength : root.barSize
+      x: root.vertical
+        ? (root.position === "left" ? root.edgeCenterOffset : 0)
+        : Math.round((parent.width - width) / 2)
+      y: root.vertical
+        ? Math.round((parent.height - height) / 2)
+        : (root.position === "top" ? root.edgeCenterOffset : 0)
       readonly property real edgeMargin: Style.space(8)
       readonly property real regionGap: Style.spacing.sm
       readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0

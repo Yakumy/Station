@@ -258,6 +258,13 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /backgroundMode === "blur" \? Util\.alpha\(Commons\.Color\.bar\.background, 0\.01\)/);
   assert.match(monitorBar, /barStyle === "pill"/);
   assert.match(monitorBar, /radius: Math\.min\(width, height\) \/ 2/);
+  assert.match(monitorBar, /insetPresentation: barStyle === "pill" \|\| backgroundMode !== "solid"/);
+  assert.match(monitorBar, /edgeCenterOffset: insetPresentation \? Style\.gapsOut : 0/);
+  assert.match(monitorBar, /panelThickness: barSize \+ edgeCenterOffset/);
+  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore[\s\S]*?root\.insetPresentation \? ExclusionMode\.Normal : ExclusionMode\.Auto/);
+  assert.match(monitorBar, /exclusiveZone: root\.barSize/);
+  assert.match(monitorBar, /root\.position === "left" \? root\.edgeCenterOffset : 0/);
+  assert.match(monitorBar, /root\.position === "top" \? root\.edgeCenterOffset : 0/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 
