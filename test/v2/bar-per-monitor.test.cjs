@@ -273,6 +273,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
   assert.match(monitorBar, /contentZoom: widgetSizedContent \? 1 : root\.contentScale/);
   assert.equal((monitorBar.match(/scale: slot\.contentZoom/g) || []).length, 3);
+  assert.equal((monitorBar.match(/layer\.enabled: slot\.contentZoom > 1/g) || []).length, 3);
+  assert.equal((monitorBar.match(/layer\.textureSize: Qt\.size\(/g) || []).length, 3);
   assert.match(monitorBar, /transformOrigin: Item\.Center/);
   assert.match(monitorBar, /baseContentWidth \* contentZoom/);
   assert.match(monitorBar, /baseContentHeight \* contentZoom/);
@@ -283,6 +285,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.doesNotMatch(monitorBar, /applyNativeContentSize|nativeSizeBaselines|baseline\.fontSize|item\.font\.pixelSize = customized/);
   assert.match(monitorBar, /"nativeContentSized" in activeItem && activeItem\.nativeContentSized === true/);
   assert.match(read('lib/StationBar.qml'), /font\.pixelSize: root\.contentFontSize/);
+  assert.match(read('lib/StationPanel.qml'), /readonly property bool nativeContentSized: true/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 

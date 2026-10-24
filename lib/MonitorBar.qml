@@ -2044,6 +2044,10 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
+      layer.enabled: slot.contentZoom > 1
+      layer.smooth: true
+      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
+        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2061,6 +2065,10 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
+      layer.enabled: slot.contentZoom > 1
+      layer.smooth: true
+      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
+        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2078,6 +2086,10 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
+      layer.enabled: slot.contentZoom > 1
+      layer.smooth: true
+      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
+        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2087,10 +2099,11 @@ Item {
     }
 
     // The zoom transform keeps every proportion — glyphs, padding, and the
-    // gaps between them — the way Omarchy's global text size does, and Qt
-    // re-rasterizes text at the scaled size. Image textures still decode at
-    // their logical size, so the walk below multiplies each sourceSize by the
-    // same ratio and raster icons decode at final physical pixels.
+    // gaps between them — the way Omarchy's global text size does. A plain
+    // transform only stretches the rasterized subtree, so each loader renders
+    // into a texture sized to the final device pixels and Qt re-rasterizes
+    // text there. Image textures still decode at their logical size, so the
+    // walk below multiplies each sourceSize by the same ratio.
     Timer {
       id: contentImageTimer
       interval: 0
