@@ -173,7 +173,10 @@ bug, then reconcile the affected documents in the same change.
   than copying uncommitted files into the installed checkout. For an ordinary
   committed descendant, run
   `omarchy plugin update yakumy.station --yes`, then verify both revisions and
-  statuses again.
+  statuses again. After **every** installed-plugin update, run
+  `omarchy restart shell` once and verify `omarchy-shell shell ping`; do not
+  rely on plugin file watches, a successful updater message, or matching file
+  hashes as proof that the running shell loaded the new code.
 - Never amend merely to make installation convenient. If the user explicitly
   requests both an amend and an installed update, the installed checkout's old
   commit will normally diverge and the stock updater will refuse it. Verify
@@ -183,8 +186,7 @@ bug, then reconcile the affected documents in the same change.
   `dev` branch to the exact fetched source commit. Never discard unknown edits,
   delete/reclone the checkout, or use a broad destructive command as a shortcut.
 - A plugin rescan or file watch may leave an old Quickshell component cached.
-  If the UI still shows old text/geometry, compare installed files to source,
-  inspect the running shell's start time, then run `omarchy restart shell`
-  once and verify `omarchy-shell shell ping`. Do not mistake an enabled
-  `listPlugins` entry for proof that the running panel uses new code;
-  `active: false` was observed even for enabled plugins.
+  If the UI still shows old text/geometry after the mandatory restart, compare
+  installed files to source and inspect the running shell's start time. Do not
+  mistake an enabled `listPlugins` entry for proof that the running panel uses
+  new code; `active: false` was observed even for enabled plugins.
