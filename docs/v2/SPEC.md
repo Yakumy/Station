@@ -422,11 +422,13 @@ Bar tab:
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: `Selected: <connector>` followed by five equal control rows. The first,
   **Content size**, is an integer slider from Omarchy's current `Style.font.body`
-  size through the selected bar height. Above the default it natively rerenders
-  every module's text and icon primitives at the same absolute requested size
-  (never scaling a rasterized subtree)
-  around its center, expands its along-bar layout footprint so neighbors never
-  overlap, and clips its cross-axis footprint to the bar. A saved request above
+  size through the selected bar height. Above the default it zooms every
+  module's default-size subtree uniformly by the requested-to-default ratio —
+  the same proportions as Omarchy's global text size, scoped to this bar. Text
+  re-rasterizes at the final size and loaded images decode at the matched
+  physical resolution; the along-bar layout footprint grows by the ratio so
+  proportional gaps are preserved and neighbors never overlap, and the
+  cross-axis footprint stays clipped to the bar. A saved request above
   a subsequently reduced bar height is clamped at runtime and reports
   `Maximum N px — content exceeds bar height.` Position remains directly
   editable through the four arrows on each monitor card. **Width** requests

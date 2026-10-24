@@ -1988,11 +1988,11 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
-    property var nativeSizeBaselines: new Map()
-    property var nativeContentRoot: null
-    property real baselineContentWidth: 0
-    property real baselineContentHeight: 0
-    readonly property real requestedNativeScale: root.contentScale
+    property var imageSourceBaselines: new Map()
+    property var imageContentRoot: null
+    readonly property bool widgetSizedContent: activeItem
+      && "nativeContentSized" in activeItem && activeItem.nativeContentSized === true
+    readonly property real contentZoom: widgetSizedContent ? 1 : root.contentScale
     readonly property real baseContentWidth: activeItem && activeItem.visible
       ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
     readonly property real baseContentHeight: activeItem && activeItem.visible
@@ -2008,11 +2008,9 @@ Item {
       return Math.max(Style.space(10), Math.round((root.vertical ? slot.height : slot.width) * 0.55))
     }
     implicitWidth: activeItem && activeItem.visible
-      ? (root.vertical ? root.barSize : Math.ceil(Math.max(baseContentWidth,
-          baselineContentWidth * requestedNativeScale))) : 0
+      ? (root.vertical ? root.barSize : Math.ceil(baseContentWidth * contentZoom)) : 0
     implicitHeight: activeItem && activeItem.visible
-      ? (root.vertical ? Math.ceil(Math.max(baseContentHeight,
-          baselineContentHeight * requestedNativeScale)) : root.barSize) : 0
+      ? (root.vertical ? Math.ceil(baseContentHeight * contentZoom) : root.barSize) : 0
     width: implicitWidth
     height: implicitHeight
     clip: true
@@ -2044,11 +2042,13 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
+      scale: slot.contentZoom
+      transformOrigin: Item.Center
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
-        slot.scheduleNativeContentSize()
+        slot.scheduleContentImageZoom()
       }
     }
 
@@ -2059,11 +2059,13 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
+      scale: slot.contentZoom
+      transformOrigin: Item.Center
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
-        slot.scheduleNativeContentSize()
+        slot.scheduleContentImageZoom()
       }
     }
 
@@ -2074,21 +2076,25 @@ Item {
       anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
+      scale: slot.contentZoom
+      transformOrigin: Item.Center
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
         Qt.callLater(slot.injectProps)
-        slot.scheduleNativeContentSize()
+        slot.scheduleContentImageZoom()
       }
     }
 
-    // Scaling a complete Loader subtree turns native-rendered glyphs and SVG
-    // masks into a low-resolution texture. Resize the primitives themselves
-    // instead, so Qt rasterizes text and icons at their final pixel size.
+    // The zoom transform keeps every proportion — glyphs, padding, and the
+    // gaps between them — the way Omarchy's global text size does, and Qt
+    // re-rasterizes text at the scaled size. Image textures still decode at
+    // their logical size, so the walk below multiplies each sourceSize by the
+    // same ratio and raster icons decode at final physical pixels.
     Timer {
-      id: nativeSizeTimer
+      id: contentImageTimer
       interval: 0
-      onTriggered: slot.applyNativeContentSize()
+      onTriggered: slot.applyContentImageZoom()
     }
 
     Rectangle {
@@ -2219,80 +2225,57 @@ Item {
 
     onActiveItemChanged: {
       Qt.callLater(injectProps)
-      scheduleNativeContentSize()
+      scheduleContentImageZoom()
     }
     onModuleSettingsChanged: injectProps()
-    onRequestedNativeScaleChanged: scheduleNativeContentSize()
-    // Nested Loaders and Repeaters (notably the indicator block) can populate
-    // after the outer widget's onLoaded signal. Their arrival changes the
-    // widget's implicit extent, which gives us a deterministic rescan hook.
-    onBaseContentWidthChanged: scheduleNativeContentSize()
-    onBaseContentHeightChanged: scheduleNativeContentSize()
+    onContentZoomChanged: scheduleContentImageZoom()
+    // Nested Loaders and Repeaters (notably the indicator block and the tray)
+    // can populate after the outer widget's onLoaded signal. Their arrival
+    // changes the widget's implicit extent, which gives us a deterministic
+    // rescan hook for images created later.
+    onBaseContentWidthChanged: scheduleContentImageZoom()
+    onBaseContentHeightChanged: scheduleContentImageZoom()
 
-    function walkNativeContent(item, inheritedFontOwner, visitor) {
-      if (!item || (item !== activeItem && "visible" in item && item.visible === false)) return
-      // A widget may implement the bar's effective size itself when some of
-      // its visual geometry is derived from non-Item helpers such as
-      // FontMetrics. Do not apply the generic ratio a second time.
-      if ("nativeContentSized" in item && item.nativeContentSized === true) return
-      var ownsFontSize = !inheritedFontOwner && "fontSize" in item
-        && isFinite(Number(item.fontSize)) && Number(item.fontSize) > 0
-      visitor(item, inheritedFontOwner, ownsFontSize)
+    function walkContentImages(item, visitor) {
+      if (!item) return
+      visitor(item)
       var kids = "children" in item && item.children ? item.children : []
-      for (var i = 0; i < kids.length; i++)
-        walkNativeContent(kids[i], inheritedFontOwner || ownsFontSize, visitor)
+      for (var i = 0; i < kids.length; i++) walkContentImages(kids[i], visitor)
     }
 
-    function captureNativeSizeBaselines(target) {
-      walkNativeContent(target, false, function(item, inheritedFontOwner, ownsFontSize) {
-        if (nativeSizeBaselines.has(item)) return
-        var baseline = ({})
-        if (ownsFontSize) baseline.fontSize = Number(item.fontSize)
-        if (!inheritedFontOwner && !ownsFontSize && "font" in item && item.font
-            && isFinite(Number(item.font.pixelSize)) && Number(item.font.pixelSize) > 0)
-          baseline.fontPixelSize = Number(item.font.pixelSize)
-        ;["iconSize", "opticalSize"].forEach(function(name) {
-          if (name in item && isFinite(Number(item[name])) && Number(item[name]) > 0)
-            baseline[name] = Number(item[name])
-        })
-        nativeSizeBaselines.set(item, baseline)
-      })
-    }
-
-    function applyNativeContentSize() {
+    function applyContentImageZoom() {
       var target = activeItem
       if (!target) return
-      if (nativeContentRoot !== target) {
-        nativeContentRoot = target
-        nativeSizeBaselines = new Map()
-        baselineContentWidth = Math.max(0, Number(target.implicitWidth) || 0)
-        baselineContentHeight = Math.max(0, Number(target.implicitHeight) || 0)
+      if (imageContentRoot !== target) {
+        imageContentRoot = target
+        imageSourceBaselines = new Map()
       }
-      if (baselineContentWidth <= 0)
-        baselineContentWidth = Math.max(0, Number(target.implicitWidth) || 0)
-      if (baselineContentHeight <= 0)
-        baselineContentHeight = Math.max(0, Number(target.implicitHeight) || 0)
-
-      captureNativeSizeBaselines(target)
-      var customized = root.requestedContentSize > 0
-        && root.effectiveContentSize > root.defaultContentSize
-      var targetSize = root.effectiveContentSize
-      walkNativeContent(target, false, function(item) {
-        var baseline = nativeSizeBaselines.get(item)
-        if (!baseline) return
-        if (baseline.fontSize !== undefined)
-          item.fontSize = customized ? targetSize : baseline.fontSize
-        if (baseline.fontPixelSize !== undefined)
-          item.font.pixelSize = customized ? targetSize : baseline.fontPixelSize
-        ;["iconSize", "opticalSize"].forEach(function(name) {
-          if (baseline[name] !== undefined)
-            item[name] = customized ? targetSize : baseline[name]
+      var zoom = Math.max(1, contentZoom)
+      if (zoom <= 1) {
+        imageSourceBaselines.forEach(function(baseline, item) {
+          if (!item) return
+          if (baseline.width > 0) item.sourceSize.width = baseline.width
+          if (baseline.height > 0) item.sourceSize.height = baseline.height
         })
+        imageSourceBaselines = new Map()
+        return
+      }
+      walkContentImages(target, function(item) {
+        if (!("source" in item) || !("sourceSize" in item)) return
+        var baseline = imageSourceBaselines.get(item)
+        if (!baseline) {
+          baseline = { width: Number(item.sourceSize.width), height: Number(item.sourceSize.height) }
+          imageSourceBaselines.set(item, baseline)
+        }
+        if (baseline.width > 0)
+          item.sourceSize.width = Math.max(1, Math.round(baseline.width * zoom))
+        if (baseline.height > 0)
+          item.sourceSize.height = Math.max(1, Math.round(baseline.height * zoom))
       })
     }
 
-    function scheduleNativeContentSize() {
-      nativeSizeTimer.restart()
+    function scheduleContentImageZoom() {
+      contentImageTimer.restart()
     }
 
     function injectProps() {
