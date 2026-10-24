@@ -884,12 +884,13 @@ Item {
     return "ok"
   }
 
-  function setDisplayTransform(name, value) {
-    if (!draftEditable || !Number.isInteger(value) || value < 0 || value > 7) return "invalid"
+  function setResizedDisplayValue(name, key, value) {
+    if (!draftEditable || ["mode", "scale", "transform"].indexOf(key) === -1) return "invalid"
     try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
     var before = displayDraft.find(function(display) { return display.name === name })
     if (!before) return "invalid"
-    var changed = Object.assign({}, before, { transform: value })
+    var changed = Object.assign({}, before)
+    changed[key] = value
     var peers = draftMode === "extend" && before.enabled
       ? displayDraft.filter(function(display) { return display.enabled }) : [before]
     var position = Model.resizedPosition(before, changed, peers)
@@ -899,6 +900,11 @@ Item {
       return display.name === name ? changed : display
     })
     return "ok"
+  }
+
+  function setDisplayTransform(name, value) {
+    if (!Number.isInteger(value) || value < 0 || value > 7) return "invalid"
+    return setResizedDisplayValue(name, "transform", value)
   }
 
   function applyDisplaySetting(name, key, value) {
@@ -912,7 +918,7 @@ Item {
     var display = displayDraft.find(function(item) { return item.name === name })
     if (display && display[key] === value) return "ok"
     var before = displayDraft
-    if (setDisplayValue(name, key, value) !== "ok") return "invalid"
+    if (setResizedDisplayValue(name, key, value) !== "ok") return "invalid"
     try {
       var options = { mode: draftMode, singleTarget: draftSingleTarget,
         enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }

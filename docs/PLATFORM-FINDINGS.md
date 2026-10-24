@@ -524,6 +524,19 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   geometry and pointer verification; physical compositor acceptance remains a
   user check.
 
+### 14.6 Scale changes disconnected attached outputs (2026-10-24)
+
+- **[SRC]** The direct Scale control changed only `scale`. Increasing scale
+  shrinks the output's logical rectangle; when the edited output was left of or
+  above a neighbor, its far edge moved inward while its top-left coordinate
+  stayed fixed, leaving a logical gap that the pointer could not cross.
+- **[SRC][QTTEST]** Direct scale and resolution transactions now run the same
+  bounded resize placement used by rotation before generating the saved monitor
+  block. The new value and corrected integer position publish together. Tests
+  cover either member of a horizontal pair, assert edge contact and no overlap,
+  and still verify one watched apply without a preview or forced reload. Physical
+  compositor acceptance remains a user check.
+
 ## 15. Where evidence lives
 
 | Source | Content |

@@ -14,7 +14,7 @@ service = (repo / 'Service.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
-for name in ('setDisplayValue', 'setDisplayTransform', 'setDisplayEnabled', 'displayEnabled'):
+for name in ('setDisplayValue', 'setResizedDisplayValue', 'setDisplayTransform', 'setDisplayEnabled', 'displayEnabled'):
     start = service.index('  function ' + name + '(')
     end = service.index('\n  function ', start + 1)
     setter += service[start:end]

@@ -66,6 +66,9 @@ test('resizing preserves a shared edge and moves the changed display out of its 
   const right = { name: 'B', x: 1920, y: 0, width: 1920, height: 1080, scale: 1, transform: 0 };
   const left = { name: 'A', x: 0, y: 0, width: 1920, height: 1200, scale: 1, transform: 0 };
   assert.deepEqual(M.resizedPosition(left, { ...left, transform: 1 }, [left, right]), { x: 720, y: 0 });
+  assert.deepEqual(M.resizedPosition(left, { ...left, scale: 2 }, [left, right]), { x: 960, y: 0 });
+  assert.deepEqual(M.resizedPosition(left, { ...left, mode: '960x1200@60.00Hz' }, [left, right]),
+    { x: 960, y: 0 });
 
   const middle = { name: 'M', x: 100, y: 0, width: 100, height: 200, scale: 1, transform: 0 };
   const neighbors = [

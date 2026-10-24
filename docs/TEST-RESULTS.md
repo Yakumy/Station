@@ -1,5 +1,20 @@
 # Station v2 test results
 
+## Scale adjacency repair — 2026-10-24
+
+- Direct Scale and Resolution changes now preserve the strongest shared edge
+  before saving, publishing the new logical size and corrected position
+  together. Scaling either side of an attached pair remains non-overlapping and
+  pointer-connected without adding a Keep/Revert preview.
+- Transaction coverage verifies both left and right display scaling, one watched
+  apply, no forced reload, exact edge contact, and no overlap. Pure geometry
+  coverage also exercises the shared resize rule used by rotation. Physical
+  compositor and pointer acceptance remain a user check after installation.
+- All 172 Node/M0 tests pass. Displays/Bar passes 21/21 offscreen cases,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
 ## Rotation adjacency repair — 2026-10-24
 
 - Rotation preserves the strongest shared monitor edge and atomically publishes

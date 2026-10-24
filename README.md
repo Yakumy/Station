@@ -87,7 +87,9 @@ preventing it from overlapping its neighbor.
 Scale, resolution, and refresh changes use the same checked file transaction
 without an unnecessary preview. Station writes only its marked block at the end
 of `~/.config/hypr/monitors.lua`, validates the result through Hyprland, and
-restores the backup on failure.
+restores the backup on failure. Scale and resolution changes preserve an
+attached edge and reposition the resized logical rectangle automatically, so
+neighboring displays do not become disconnected or overlap.
 
 ## Wallpaper, built for real monitor layouts
 
