@@ -14,8 +14,6 @@ Ui.Panel {
   moduleName: "yakumy.station"
   manageIpc: false
 
-  readonly property bool nativeContentSized: true
-
   readonly property var directService: bar && bar.shell
     && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor("yakumy.station") : null

@@ -9,18 +9,14 @@ Grid {
   property int stationNumber: 1
   property bool opened: false
   property alias anchorItem: logoButton
-  readonly property bool nativeContentSized: true
   signal pressed()
 
   readonly property bool vertical: bar ? bar.vertical : false
-  readonly property real contentFontSize: bar && "effectiveContentSize" in bar
-    ? bar.effectiveContentSize : Style.font.body
+  readonly property real contentFontSize: Style.font.body
   readonly property real controlMargin: Style.spaceReal(7.5)
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   // Match the menu's painted height, rather than its font's em square.
   readonly property real logoSize: menuInk.height
-  readonly property real menuSlotWidth: menuTextMetrics.advanceWidth + controlMargin * 2
-  readonly property real inkGap: menuSlotWidth - Math.round(controlMargin) - menuInk.x - menuInk.width + controlMargin
 
   columns: vertical ? 1 : 2
   spacing: 0
@@ -78,7 +74,7 @@ Grid {
     hasVisualContent: true
     horizontalMargin: 7.5
     fontSize: root.contentFontSize
-    fixedWidth: root.vertical ? barSize : indicatorInk.width + root.inkGap
+    fixedWidth: root.vertical ? barSize : indicatorInk.width + root.controlMargin * 2
     onPressed: root.pressed()
 
     FontMetrics {
@@ -101,7 +97,7 @@ Grid {
       renderType: Text.NativeRendering
       // Align painted bounds, including S10, without translating the hit area.
       x: root.vertical ? (parent.width - stationButton.indicatorInk.width) / 2 - stationButton.indicatorInk.x
-        : root.inkGap - root.controlMargin - stationButton.indicatorInk.x
+        : root.controlMargin - stationButton.indicatorInk.x
       y: root.vertical ? (parent.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
         : Math.round((parent.height - menuMetrics.height) / 2) + menuMetrics.ascent + root.menuInk.y
           + (root.menuInk.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y

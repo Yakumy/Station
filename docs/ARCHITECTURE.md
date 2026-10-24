@@ -56,12 +56,13 @@ to Qt's scalable distance-field rendering while zoomed, restoring their original
 render type at default size. Enlarging an offscreen layer does not re-rasterize
 native glyph caches, so the loaders render directly without that extra layer.
 The bar also multiplies each loaded image's `sourceSize` by the same ratio.
-The along-bar slot grows by that ratio so module gaps
-keep their proportions and neighbors never overlap, and the cross axis stays
-clipped to the configured bar height. Widgets whose geometry is derived from
-non-Item helpers may expose `nativeContentSized` on the registry-loaded widget
-root and consume the bar's effective size directly; the bar checks that root
-only, so a wrapper entry point must carry the flag. A zero stored value
+The along-bar slot grows by that ratio so module gaps keep their proportions.
+The live maximum preserves `Style.spacing.sm` on both cross-axis edges and
+checks the scaled left, centered, and right extents against the monitor length.
+Each bar reports that maximum through the detached bridge together with its
+minimum width. The tray slot removes Omarchy's unpainted collapsed drawer
+reserve from its flow extent and adds it back as the reveal animation advances,
+so the Pill island follows the visible tray. A zero stored value
 follows Omarchy's live `Style.font.body` default.
 Blur is compositor-owned. The service keeps a persisted lease of the prior
 global Hyprland blur state, enables one named layer rule for the shared

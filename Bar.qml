@@ -91,6 +91,13 @@ Item {
       api.call("reportMonitorBarMinimum", [instance.targetScreenName, instance.minimumWidthPercent])
   }
 
+  function reportMaximumContent(instance) {
+    if (!instance || !instance.targetScreenName) return
+    var api = BarBridge.current()
+    if (api && typeof api.call === "function")
+      api.call("reportMonitorBarMaximumContent", [instance.targetScreenName, instance.maximumContentSize])
+  }
+
   function refreshStationBars() {
     var api = BarBridge.current()
     var snapshot = api && typeof api.snapshot === "function" ? api.snapshot() : null
@@ -101,7 +108,7 @@ Item {
     for (var i = 0; i < displays.length; i++) {
       var display = displays[i]
       maximumHeights[String(display.name || "")] = Math.max(1,
-        Math.floor(Math.min(Number(display.width) || 0, Number(display.height) || 0) * 0.1))
+        Math.floor(Math.min(Number(display.width) || 0, Number(display.height) || 0) * 0.05))
     }
     var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights })
     if (key === stationBarsKey) return
@@ -202,9 +209,11 @@ Item {
         onPopoutRequested: root.closePeerPopouts(monitorBar)
         onBackgroundModeRequested: function(mode) { root.requestMonitorBackground(monitorBar, mode) }
         onMinimumWidthPercentChanged: root.reportMinimumWidth(monitorBar)
+        onMaximumContentSizeChanged: root.reportMaximumContent(monitorBar)
         Component.onCompleted: {
           root.registerInstance(monitorBar)
           Qt.callLater(function() { root.reportMinimumWidth(monitorBar) })
+          Qt.callLater(function() { root.reportMaximumContent(monitorBar) })
         }
         Component.onDestruction: root.unregisterInstance(monitorBar)
       }

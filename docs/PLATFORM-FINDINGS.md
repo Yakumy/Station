@@ -616,3 +616,21 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   nested glyphs, repeated scans, newly added/destroyed text, and restoration.
   Passed on Qt 6.12.0. This verifies rendering policy, not final desktop pixels;
   installed-bar visual acceptance remains pending.
+
+## Bar geometry follow-up (2026-10-25)
+
+- [LIVE][SRC] After the scalable-rendering repair, the user confirmed enlarged
+  glyphs were sharp. Their screenshots also showed that Station's logo-to-label
+  gap grew less than neighboring widget gaps and that the right Pill island
+  included the tray's invisible collapsed drawer reserve.
+- [SRC] Station now uses the host button margin on both sides of both internal
+  controls and enters the same uniform subtree zoom path as other widgets. The
+  tray slot subtracts `drawerExtent - revealExtent` from its flow footprint, so
+  the Pill follows the chevron while collapsed and grows as icons reveal.
+- [SRC][QTTEST] Bar height is capped at 5% of the monitor mode's shorter native
+  side. Each live bar reports a content-size maximum that preserves
+  `Style.spacing.sm` on both cross-axis edges and checks the fully revealed
+  left, centered, and right regions along the bar. Model tests cover both
+  limiting axes and tray reveal extents. The offscreen layout harness covers
+  all four preview sides and verifies that `Style.spacing.xl` plus the connector
+  label reserve keeps the preview away from every card edge and monitor name.

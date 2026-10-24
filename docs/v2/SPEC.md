@@ -414,10 +414,11 @@ Bar tab:
   Displays. Displays disabled
   by Station remain visible and dimmed; physically disconnected displays are
   absent. Every monitor card shows a compact bar preview, four side arrows, and
-  a central on/off switch. The preview reflects the selected width, is inset
-  from every monitor edge by `Style.spacing.sm`, and disappears while that bar
-  is off; no side arrow remains accented while it is off. Side choices and
-  presence apply immediately.
+  a central on/off switch. The preview reflects the selected width, uses
+  `Style.spacing.xl` at monitor edges, and reserves the connector label above
+  every side preview. It disappears while that bar is off; no side arrow
+  remains accented while it is off. Side choices and presence apply
+  immediately.
 - At least one enabled output must retain a bar. A disabled output may keep a
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: `Selected: <connector>` followed by five equal control rows. The first,
@@ -428,23 +429,26 @@ Bar tab:
   re-rasterizes at the final size and loaded images decode at the matched
   physical resolution; the along-bar layout footprint grows by the ratio so
   proportional gaps are preserved and neighbors never overlap, and the
-  cross-axis footprint stays clipped to the bar. A saved request above
-  a subsequently reduced bar height is clamped at runtime and reports
-  `Maximum N px — content exceeds bar height.` Position remains directly
-  editable through the four arrows on each monitor card. **Width** requests
+  cross-axis footprint stays clipped to the bar. The maximum leaves
+  `Style.spacing.sm` clear on both cross-axis edges and also stops before the
+  scaled left, centered, and right regions overlap along the bar. A saved
+  request above a subsequently reduced limit is clamped at runtime and reports
+  `Maximum N px — content needs more bar space.` The second row, **Height**,
+  starts at Omarchy's current theme-driven bar thickness and can grow to 5% of
+  the monitor mode's shorter native dimension (the shorter side remains the
+  reference after rotation, so 1920×1200 caps at 60 px). It is saved per
+  monitor, applies immediately, and the layout preview reflects the chosen
+  thickness. The cap is defined at default display and text scale; later scale
+  or text-size changes may increase its apparent size. They may also raise the
+  live minimum, in which case a saved lower value is clamped rather than
+  overriding Omarchy's readable default. The third row, **Width**, requests
   1–100% of that monitor edge,
   with 100% as the default. Each live bar measures its actual left, centered,
   and right widget regions and reports the first non-overlapping percentage.
   Requests below it remain visible in the slider, but the rendered surface is
   clamped to the measured minimum and the row reports `Minimum N% — bar items
-  overlap.` **Height** starts at Omarchy's current theme-driven bar thickness
-  and can grow to 10% of the monitor mode's shorter native dimension (the
-  shorter side remains the reference after rotation, so 1920×1200 caps at
-  120 px). It is saved per monitor, applies immediately, and the layout preview
-  reflects the chosen thickness. The cap is defined at default display and
-  text scale; later scale or text-size changes may increase its apparent size.
-  They may also raise the live minimum, in which case a saved lower value is
-  clamped rather than overriding Omarchy's readable default. **Background** is
+  overlap.` Position remains directly editable through the four arrows on each
+  monitor card. **Background** is
   a full-width themed dropdown ordered Solid color, Transparent, Blur. Solid
   is the default. Transparent retains Omarchy's wallpaper-aware foreground and
   can also be toggled by double-clicking empty bar space. Blur uses the same
@@ -460,6 +464,8 @@ Bar tab:
   and right islands with token-scaled inner padding; Background still owns
   their fill, so Solid, Transparent, and Blur behave identically in either
   style. Island padding participates in the measured non-overlap minimum. The
+  stock tray's collapsed drawer reserve is excluded from its island and layout
+  footprint; the island grows with the tray as hidden icons reveal. The
   Background and Style dropdowns remain bound to the selected connector's
   saved value even though the host dropdown imperatively assigns its own value
   during selection; changing monitors or reopening the panel must never show a
@@ -475,6 +481,9 @@ Bar tab:
   Cross-axis panel moves accept the additional `Style.gapsOut` visual-layer
   thickness before switching the open panel to the new edge, so the panel
   never combines a stale edge with the remapped bar-window geometry.
+- Bar-tab previews use a larger named edge inset than the gap between monitor
+  cards. The top inset also reserves the connector label, so no preview bar on
+  any side can cross the monitor name.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives

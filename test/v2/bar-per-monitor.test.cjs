@@ -203,15 +203,16 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const wallpaperLayout = read('lib/WallpaperLayout.qml');
   const host = read('Bar.qml');
   const monitorBar = read('lib/MonitorBar.qml');
+  const proxy = read('lib/BarServiceProxy.qml');
 
   assert.match(panel, /\["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"\]/);
   assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Station\.BarLayout/);
   assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);
   assert.match(tab, /text: "CONTENT SIZE"/);
-  assert.match(tab, /minimum: root\.selectedMinimumContentSize[\s\S]*?maximum: Math\.max\(root\.selectedMinimumContentSize, root\.selectedHeight\)/);
+  assert.match(tab, /minimum: root\.selectedMinimumContentSize[\s\S]*?maximum: root\.selectedMaximumContentSize/);
   assert.match(tab, /setMonitorBarContentSize\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
-  assert.match(tab, /"Maximum " \+ root\.selectedHeight \+ " px — content exceeds bar height\."/);
+  assert.match(tab, /"Maximum " \+ root\.selectedMaximumContentSize \+ " px — content needs more bar space\."/);
   assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 5);
   assert.match(tab, /text: "WIDTH"/);
   assert.match(tab, /minimum: 1[\s\S]*?maximum: 100/);
@@ -220,6 +221,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(tab, /text: "HEIGHT"/);
   assert.match(tab, /minimum: root\.selectedMinimumHeight[\s\S]*?maximum: root\.selectedMaximumHeight/);
   assert.match(tab, /setMonitorBarHeight\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.ok(tab.indexOf('id: contentSizeRow') < tab.indexOf('id: heightRow'));
+  assert.ok(tab.indexOf('id: heightRow') < tab.indexOf('id: widthRow'));
   assert.match(tab, /text: "BACKGROUND"/);
   assert.match(tab, /Ui\.Dropdown[\s\S]*?value: "solid", label: "Solid color"[\s\S]*?value: "transparent", label: "Transparent"[\s\S]*?value: "blur", label: "Blur"/);
   assert.match(tab, /setMonitorBarBackground\(root\.selectedDisplay\.name, value\)/);
@@ -241,10 +244,11 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   }
   const preview = layout.slice(layout.indexOf('id: barPreview'), layout.indexOf('\n      Text {', layout.indexOf('id: barPreview')));
   assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
-  assert.match(preview, /parent\.width - canvas\.monitorGap \* 2/);
-  assert.match(preview, /parent\.height - canvas\.monitorGap \* 2/);
-  assert.match(preview, /position === "left" \? canvas\.monitorGap/);
-  assert.match(preview, /parent\.height - height - canvas\.monitorGap/);
+  assert.match(preview, /parent\.width - canvas\.barEdgeGap \* 2/);
+  assert.match(preview, /parent\.height - topInset - bottomInset/);
+  assert.match(preview, /position === "left" \? canvas\.barEdgeGap/);
+  assert.match(preview, /parent\.height - height - bottomInset/);
+  assert.match(preview, /monitorName\.y \+ monitorName\.implicitHeight \+ canvas\.barEdgeGap/);
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
@@ -275,17 +279,25 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.equal((monitorBar.match(/scale: slot\.contentZoom/g) || []).length, 3);
   assert.doesNotMatch(monitorBar, /layer\.enabled: slot\.contentZoom/);
   assert.match(monitorBar, /item\.renderType = Text\.QtRendering/);
-  assert.match(monitorBar, /transformOrigin: Item\.Center/);
-  assert.match(monitorBar, /baseContentWidth \* contentZoom/);
-  assert.match(monitorBar, /baseContentHeight \* contentZoom/);
+  assert.match(monitorBar, /transformOrigin: Item\.TopLeft/);
+  assert.match(monitorBar, /visibleBaseContentWidth \* contentZoom/);
+  assert.match(monitorBar, /visibleBaseContentHeight \* contentZoom/);
   assert.match(monitorBar, /function applyContentImageZoom\(\)/);
   assert.match(monitorBar, /item\.sourceSize\.width = Math\.max\(1, Math\.round\(baseline\.width \* zoom\)\)/);
   assert.match(monitorBar, /onBaseContentWidthChanged: scheduleContentImageZoom\(\)/);
   assert.match(monitorBar, /property real effectiveContentSize: root\.effectiveContentSize/);
   assert.doesNotMatch(monitorBar, /applyNativeContentSize|nativeSizeBaselines|baseline\.fontSize|item\.font\.pixelSize = customized/);
-  assert.match(monitorBar, /"nativeContentSized" in activeItem && activeItem\.nativeContentSized === true/);
+  assert.match(monitorBar, /maximumContentSize: barContent\.maximumContentSize/);
+  assert.match(host, /reportMonitorBarMaximumContent/);
+  assert.match(service, /monitorBarMaximumContents: monitorBarMaximumContents/);
+  assert.match(service, /reportMonitorBarMaximumContent: function/);
+  assert.match(service, /monitorBarMaximumContent: function/);
+  assert.match(proxy, /monitorBarMaximumContents/);
+  assert.match(proxy, /function reportMonitorBarMaximumContent/);
+  assert.match(proxy, /function monitorBarMaximumContent/);
+  assert.match(monitorBar, /BarModel\.visibleModuleFlowLength/);
   assert.match(read('lib/StationBar.qml'), /font\.pixelSize: root\.contentFontSize/);
-  assert.match(read('lib/StationPanel.qml'), /readonly property bool nativeContentSized: true/);
+  assert.doesNotMatch(read('lib/StationPanel.qml'), /nativeContentSized/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 
@@ -322,7 +334,35 @@ test('bar width persists the request while runtime measurements provide a safe m
   assert.equal(reportMinimum('../bad', 50), 'invalid');
 });
 
-test('bar height is per monitor and capped at ten percent of the shorter native side', () => {
+test('bar content maximum is reported as runtime geometry and bounded by padded height', () => {
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200 }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100, height: 40 } } },
+    monitorBarMaximumContents: {},
+    shell: null,
+    Style: {
+      font: { body: 12 },
+      bar: { sizeHorizontal: 26, sizeVertical: 26 },
+      spacing: { sm: 4 },
+    },
+    validConnector: value => value === 'DP-1',
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  context.monitorBarRenderedHeight = qmlFunction(service, 'monitorBarRenderedHeight', context);
+  context.monitorBarMaximumContent = qmlFunction(service, 'monitorBarMaximumContent', context);
+  const reportMaximum = qmlFunction(service, 'reportMonitorBarMaximumContent', context);
+
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 32);
+  assert.equal(reportMaximum('DP-1', 27), 'ok');
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 27);
+  assert.equal(reportMaximum('DP-1', 38), 'ok');
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 32,
+    'a report cannot exceed the height after both edge insets');
+  assert.equal(reportMaximum('../bad', 20), 'invalid');
+});
+
+test('bar height is per monitor and capped at five percent of the shorter native side', () => {
   let pending = null;
   const context = {
     displayDraft: [{ name: 'DP-1', width: 1920, height: 1200, scale: 1.25 }],
@@ -340,13 +380,13 @@ test('bar height is per monitor and capped at ten percent of the shorter native 
   context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
   const setHeight = qmlFunction(service, 'setMonitorBarHeight', context);
 
-  assert.equal(context.monitorBarMaximumHeight('DP-1'), 120);
-  assert.equal(setHeight('DP-1', 120), 'ok');
-  assert.equal(context.config.bars['DP-1'].height, 120);
+  assert.equal(context.monitorBarMaximumHeight('DP-1'), 60);
+  assert.equal(setHeight('DP-1', 60), 'ok');
+  assert.equal(context.config.bars['DP-1'].height, 60);
   assert.deepEqual(pending, [
-    'DP-1', { enabled: true, position: 'top', width: 100, height: 120, background: 'solid', style: 'default', contentSize: 0 },
+    'DP-1', { enabled: true, position: 'top', width: 100, height: 60, background: 'solid', style: 'default', contentSize: 0 },
   ]);
-  assert.equal(setHeight('DP-1', 121), 'invalid');
+  assert.equal(setHeight('DP-1', 61), 'invalid');
 });
 
 test('bar background persists per monitor and synchronizes compositor blur', () => {
@@ -406,7 +446,7 @@ test('bar style persists per monitor and defers the active host mirror', () => {
   assert.equal(setStyle('DP-1', 'floating'), 'invalid');
 });
 
-test('bar content size starts at the Omarchy body size and cannot exceed bar height', () => {
+test('bar content size starts at the Omarchy body size and cannot exceed live geometry', () => {
   let pending = null;
   const context = {
     displayDraft: [{ name: 'DP-1', width: 1920, height: 1200 }],
@@ -427,6 +467,7 @@ test('bar content size starts at the Omarchy body size and cannot exceed bar hei
   context.monitorBar = qmlFunction(service, 'monitorBar', context);
   context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
   context.monitorBarRenderedHeight = qmlFunction(service, 'monitorBarRenderedHeight', context);
+  context.monitorBarMaximumContent = () => 32;
   const setContentSize = qmlFunction(service, 'setMonitorBarContentSize', context);
 
   assert.equal(context.monitorBarRenderedHeight('DP-1'), 40);
@@ -437,7 +478,7 @@ test('bar content size starts at the Omarchy body size and cannot exceed bar hei
     style: 'default', contentSize: 24,
   }]);
   assert.equal(setContentSize('DP-1', 11), 'invalid');
-  assert.equal(setContentSize('DP-1', 41), 'invalid');
+  assert.equal(setContentSize('DP-1', 33), 'invalid');
 });
 
 test('bar blur leases and restores the prior global compositor setting', () => {

@@ -658,7 +658,7 @@ Item {
   readonly property int maximumBarSize: Math.max(defaultBarSize, requestedMaximumHeight > 0
     ? requestedMaximumHeight : Math.floor(Math.min(
       targetScreen ? Number(targetScreen.width) : 1,
-      targetScreen ? Number(targetScreen.height) : 1) * 0.1))
+      targetScreen ? Number(targetScreen.height) : 1) * 0.05))
   readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
   readonly property bool insetPresentation: barStyle === "pill" || backgroundMode !== "solid"
@@ -669,8 +669,10 @@ Item {
   readonly property int edgeCenterOffset: insetPresentation ? Style.gapsOut : 0
   readonly property int panelThickness: barSize + edgeCenterOffset
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
+  readonly property int contentInset: Math.ceil(Style.spacing.sm)
+  readonly property int maximumContentSize: barContent.maximumContentSize
   readonly property int effectiveContentSize: Math.max(defaultContentSize,
-    Math.min(barSize, requestedContentSize > 0 ? requestedContentSize : defaultContentSize))
+    Math.min(maximumContentSize, requestedContentSize > 0 ? requestedContentSize : defaultContentSize))
   readonly property real contentScale: effectiveContentSize / defaultContentSize
   readonly property real screenLength: targetScreen
     ? Number(vertical ? targetScreen.height : targetScreen.width) : 1
@@ -1457,6 +1459,20 @@ Item {
         leadingLength, centerModules.leadingExtent + (root.barStyle === "pill" ? pillPadding : 0),
         centerModules.trailingExtent + (root.barStyle === "pill" ? pillPadding : 0),
         trailingLength, edgeMargin, regionGap)
+      readonly property int maximumContentSize: {
+        var leftPadding = root.barStyle === "pill" && leftModules.maximumBaseFlowLength > 0
+          ? pillPadding * 2 : 0
+        var centerPadding = root.barStyle === "pill"
+          && centerModules.maximumBaseLeadingExtent + centerModules.maximumBaseTrailingExtent > 0
+          ? pillPadding : 0
+        var rightPadding = root.barStyle === "pill" && rightModules.maximumBaseFlowLength > 0
+          ? pillPadding * 2 : 0
+        return BarModel.maximumContentSize(root.defaultContentSize, root.barSize,
+          root.contentInset, root.screenLength, leftModules.maximumBaseFlowLength,
+          centerModules.maximumBaseLeadingExtent, centerModules.maximumBaseTrailingExtent,
+          rightModules.maximumBaseFlowLength, edgeMargin, regionGap, leftPadding,
+          centerPadding, rightPadding)
+      }
       onMinimumLengthChanged: root.measuredMinimumLength = minimumLength
       Component.onCompleted: root.measuredMinimumLength = minimumLength
 
@@ -1758,6 +1774,20 @@ Item {
     readonly property real trailingExtent: hasAnchor
       ? afterLength + anchorLength / 2 : centeredLength / 2
     readonly property real visibleLength: leadingExtent + trailingExtent
+    readonly property real baseAnchorLength: centerAnchorModule.baseFlowLength
+    readonly property real baseLeadingExtent: hasAnchor
+      ? beforeCenterModules.baseFlowLength + baseAnchorLength / 2
+      : centeredModules.baseFlowLength / 2
+    readonly property real baseTrailingExtent: hasAnchor
+      ? afterCenterModules.baseFlowLength + baseAnchorLength / 2
+      : centeredModules.baseFlowLength / 2
+    readonly property real maximumBaseAnchorLength: centerAnchorModule.maximumBaseFlowLength
+    readonly property real maximumBaseLeadingExtent: hasAnchor
+      ? beforeCenterModules.maximumBaseFlowLength + maximumBaseAnchorLength / 2
+      : centeredModules.maximumBaseFlowLength / 2
+    readonly property real maximumBaseTrailingExtent: hasAnchor
+      ? afterCenterModules.maximumBaseFlowLength + maximumBaseAnchorLength / 2
+      : centeredModules.maximumBaseFlowLength / 2
 
     // One arrangement for both orientations: the unanchored list centers in
     // the section, the anchor module centers, and the before/after lists sit
@@ -1910,6 +1940,24 @@ Item {
     property string region: ""
     readonly property bool vertical: root.vertical
     readonly property real visibleLength: root.vertical ? height : width
+    readonly property real baseFlowLength: {
+      var total = 0
+      var kids = children
+      for (var i = 0; i < kids.length; i++) {
+        var slot = kids[i]
+        if (slot && slot.visible !== false) total += Number(slot.baseFlowLength) || 0
+      }
+      return total
+    }
+    readonly property real maximumBaseFlowLength: {
+      var total = 0
+      var kids = children
+      for (var i = 0; i < kids.length; i++) {
+        var slot = kids[i]
+        if (slot && slot.visible !== false) total += Number(slot.maximumBaseFlowLength) || 0
+      }
+      return total
+    }
 
     visible: entries.length > 0
     width: implicitWidth
@@ -1998,6 +2046,22 @@ Item {
       ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
     readonly property real baseContentHeight: activeItem && activeItem.visible
       ? Math.max(0, Number(activeItem.implicitHeight) || 0) : 0
+    readonly property real trayFlowInset: moduleName === "omarchy.tray" && activeItem
+      && "drawerExtent" in activeItem && "revealExtent" in activeItem
+      ? Math.max(0, Number(activeItem.drawerExtent) - Number(activeItem.revealExtent)) : 0
+    readonly property real visibleBaseContentWidth: root.vertical ? baseContentWidth
+      : BarModel.visibleModuleFlowLength(moduleName, baseContentWidth,
+        activeItem && "drawerExtent" in activeItem ? activeItem.drawerExtent : 0,
+        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0)
+    readonly property real visibleBaseContentHeight: root.vertical
+      ? BarModel.visibleModuleFlowLength(moduleName, baseContentHeight,
+        activeItem && "drawerExtent" in activeItem ? activeItem.drawerExtent : 0,
+        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0)
+      : baseContentHeight
+    readonly property real baseFlowLength: root.vertical
+      ? visibleBaseContentHeight : visibleBaseContentWidth
+    readonly property real maximumBaseFlowLength: root.vertical
+      ? baseContentHeight : baseContentWidth
     // Modules bigger than the mark they want (a text label in a padded slot,
     // a multi-line stack on a vertical bar) can say how long the open-panel
     // dot should be along the bar, so it tracks what the module paints
@@ -2009,9 +2073,9 @@ Item {
       return Math.max(Style.space(10), Math.round((root.vertical ? slot.height : slot.width) * 0.55))
     }
     implicitWidth: activeItem && activeItem.visible
-      ? (root.vertical ? root.barSize : Math.ceil(baseContentWidth * contentZoom)) : 0
+      ? (root.vertical ? root.barSize : Math.ceil(visibleBaseContentWidth * contentZoom)) : 0
     implicitHeight: activeItem && activeItem.visible
-      ? (root.vertical ? Math.ceil(baseContentHeight * contentZoom) : root.barSize) : 0
+      ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize) : 0
     width: implicitWidth
     height: implicitHeight
     clip: true
@@ -2040,11 +2104,12 @@ Item {
       id: componentLoader
       active: !slot.qmlCustom && !slot.registered
       sourceComponent: slot.commandCustom ? customCommandModuleComponent : emptyModuleComponent
-      anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
-      transformOrigin: Item.Center
+      transformOrigin: Item.TopLeft
+      x: root.vertical ? (parent.width - width * scale) / 2 : -slot.trayFlowInset * scale
+      y: root.vertical ? -slot.trayFlowInset * scale : (parent.height - height * scale) / 2
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2057,11 +2122,12 @@ Item {
       id: registryLoader
       active: slot.registered
       sourceComponent: slot.registered ? slot.registryComponent : null
-      anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
-      transformOrigin: Item.Center
+      transformOrigin: Item.TopLeft
+      x: root.vertical ? (parent.width - width * scale) / 2 : -slot.trayFlowInset * scale
+      y: root.vertical ? -slot.trayFlowInset * scale : (parent.height - height * scale) / 2
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2074,11 +2140,12 @@ Item {
       id: qmlLoader
       active: slot.qmlCustom
       source: slot.qmlCustom ? root.customModuleSource(slot.entry) : ""
-      anchors.centerIn: parent
       width: item ? item.implicitWidth : 0
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
-      transformOrigin: Item.Center
+      transformOrigin: Item.TopLeft
+      x: root.vertical ? (parent.width - width * scale) / 2 : -slot.trayFlowInset * scale
+      y: root.vertical ? -slot.trayFlowInset * scale : (parent.height - height * scale) / 2
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()

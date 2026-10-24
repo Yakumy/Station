@@ -8,6 +8,7 @@ QtObject {
 
   readonly property var config: snapshot ? snapshot.config : ({})
   readonly property var monitorBarMinimums: snapshot ? snapshot.monitorBarMinimums : ({})
+  readonly property var monitorBarMaximumContents: snapshot ? snapshot.monitorBarMaximumContents : ({})
   readonly property var displayDraft: snapshot ? snapshot.displayDraft : []
   readonly property var bindStatuses: snapshot ? snapshot.bindStatuses : []
   readonly property int currentStation: snapshot ? snapshot.currentStation : 1
@@ -54,6 +55,7 @@ QtObject {
   function setMonitorBarStyle(name, style) { return call("setMonitorBarStyle", [name, style]) }
   function setMonitorBarContentSize(name, contentSize) { return call("setMonitorBarContentSize", [name, contentSize]) }
   function reportMonitorBarMinimum(name, value) { return call("reportMonitorBarMinimum", [name, value]) }
+  function reportMonitorBarMaximumContent(name, value) { return call("reportMonitorBarMaximumContent", [name, value]) }
   function monitorBar(name) {
     var revision = snapshot
     var value = call("monitorBar", [name])
@@ -68,6 +70,11 @@ QtObject {
   function monitorBarMinimum(name) {
     var revision = snapshot
     var value = call("monitorBarMinimum", [name])
+    return value === undefined ? 1 : Number(value)
+  }
+  function monitorBarMaximumContent(name) {
+    var revision = snapshot
+    var value = call("monitorBarMaximumContent", [name])
     return value === undefined ? 1 : Number(value)
   }
   function applyDisplaySetting(name, key, value) { return call("applyDisplaySetting", [name, key, value]) }

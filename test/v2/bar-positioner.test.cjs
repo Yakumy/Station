@@ -73,10 +73,29 @@ test('positionModules handles empty and non-array input', () => {
   assert.equal(empty.width, 0);
 });
 
+test('tray flow length excludes the collapsed drawer and grows with reveal', () => {
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 0), 32);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 24), 56);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 64), 96);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.audio', 40, 64, 0), 40);
+});
+
 test('minimumBarLength keeps edge regions clear of an asymmetric centered group', () => {
   assert.equal(BarModel.minimumBarLength(100, 40, 60, 80, 8, 4), 304);
   assert.equal(BarModel.minimumBarLength(100, 0, 0, 80, 8, 4), 200);
   assert.equal(BarModel.minimumBarLength(0, 40, 60, 0, 8, 4), 136);
+});
+
+test('maximum content size respects cross-axis padding and along-axis regions', () => {
+  assert.equal(BarModel.maximumContentSize(12, 60, 4, 1920,
+    100, 40, 60, 80, 8, 4, 0, 0, 0), 52,
+  'cross-axis padding is the limiting dimension');
+  assert.equal(BarModel.maximumContentSize(12, 60, 4, 360,
+    100, 40, 60, 80, 8, 4, 0, 0, 0), 14,
+  'left, centered and right regions limit the along axis');
+  assert.equal(BarModel.maximumContentSize(12, 24, 8, 10,
+    100, 40, 60, 80, 8, 4, 0, 0, 0), 12,
+  'the default remains available when the current geometry is already tight');
 });
 
 test('popoutAnchor aligns panels corner-to-corner with their bar region', () => {

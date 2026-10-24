@@ -24,8 +24,11 @@ Column {
   readonly property int selectedMinimumContentSize: Math.max(1, Math.ceil(Style.font.body))
   readonly property int selectedRequestedContentSize: Number(selectedBar.contentSize) > 0
     ? Number(selectedBar.contentSize) : selectedMinimumContentSize
+  readonly property int selectedMaximumContentSize: selectedDisplay && service
+    ? Math.max(selectedMinimumContentSize, service.monitorBarMaximumContent(selectedDisplay.name))
+    : selectedMinimumContentSize
   readonly property int selectedContentSize: Math.max(selectedMinimumContentSize,
-    Math.min(selectedHeight, selectedRequestedContentSize))
+    Math.min(selectedMaximumContentSize, selectedRequestedContentSize))
   readonly property real pad: panelRoot.regionPadH
   spacing: 0
 
@@ -137,7 +140,7 @@ Column {
               anchors.centerIn: parent
               bar: root.panelRoot.bar
               minimum: root.selectedMinimumContentSize
-              maximum: Math.max(root.selectedMinimumContentSize, root.selectedHeight)
+              maximum: root.selectedMaximumContentSize
               integer: true
               value: root.selectedContentSize
               enabled: root.selectedDisplay !== null
@@ -148,15 +151,56 @@ Column {
               }
             }
             Caption {
-              visible: root.selectedRequestedContentSize > root.selectedHeight
+              visible: root.selectedRequestedContentSize > root.selectedMaximumContentSize
               anchors.left: parent.left
               anchors.leftMargin: root.panelRoot.space3
               anchors.bottom: parent.bottom
               anchors.bottomMargin: root.panelRoot.space1
               width: parent.width - root.panelRoot.space3 * 2
-              text: "Maximum " + root.selectedHeight + " px — content exceeds bar height."
+              text: "Maximum " + root.selectedMaximumContentSize + " px — content needs more bar space."
               color: Commons.Color.urgent
               elide: Text.ElideRight
+            }
+            Ui.PanelSeparator {
+              anchors.bottom: parent.bottom
+              width: parent.width
+              foreground: Commons.Color.popups.text
+            }
+          }
+
+          Item {
+            id: heightRow
+            width: parent.width
+            height: controlFrame.height / 5
+            Caption {
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: "HEIGHT"
+            }
+            Caption {
+              anchors.right: parent.right
+              anchors.rightMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: root.selectedHeight + " px"
+            }
+            Ui.PanelSlider {
+              width: parent.width - root.panelRoot.space3 * 2
+              height: implicitHeight
+              anchors.centerIn: parent
+              bar: root.panelRoot.bar
+              minimum: root.selectedMinimumHeight
+              maximum: root.selectedMaximumHeight
+              integer: true
+              value: root.selectedHeight
+              enabled: root.selectedDisplay !== null
+              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              onReleased: function(value) {
+                if (root.service && root.selectedDisplay)
+                  root.service.setMonitorBarHeight(root.selectedDisplay.name, Math.round(value))
+              }
             }
             Ui.PanelSeparator {
               anchors.bottom: parent.bottom
@@ -209,47 +253,6 @@ Column {
               text: "Minimum " + root.selectedMinimumWidth + "% — bar items overlap."
               color: Commons.Color.urgent
               elide: Text.ElideRight
-            }
-            Ui.PanelSeparator {
-              anchors.bottom: parent.bottom
-              width: parent.width
-              foreground: Commons.Color.popups.text
-            }
-          }
-
-          Item {
-            id: heightRow
-            width: parent.width
-            height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
-              text: "HEIGHT"
-            }
-            Caption {
-              anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
-              text: root.selectedHeight + " px"
-            }
-            Ui.PanelSlider {
-              width: parent.width - root.panelRoot.space3 * 2
-              height: implicitHeight
-              anchors.centerIn: parent
-              bar: root.panelRoot.bar
-              minimum: root.selectedMinimumHeight
-              maximum: root.selectedMaximumHeight
-              integer: true
-              value: root.selectedHeight
-              enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
-              onReleased: function(value) {
-                if (root.service && root.selectedDisplay)
-                  root.service.setMonitorBarHeight(root.selectedDisplay.name, Math.round(value))
-              }
             }
             Ui.PanelSeparator {
               anchors.bottom: parent.bottom

@@ -46,7 +46,8 @@ Item {
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var spacing: ({xs: 3, sm: 4, md: 8, xxs: 2, xxl: 12, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
+  property var spacing: ({xs: 3, sm: 4, md: 8, xl: 10, xxs: 2, xxl: 12, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
+  property var bar: ({sizeHorizontal: 26, sizeVertical: 26})
   property int cornerRadius: 0
   property int normalBorderWidth: 1
   property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
@@ -56,8 +57,8 @@ QtObject {
     (commons / 'Color.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var popups: ({background: "black", border: "white", text: "white"})
-  property var menu: ({background: "black", text: "white", border: "white", selectedBackground: "grey", selectedText: "white"})
+  property QtObject popups: QtObject { property color background: "black"; property color border: "white"; property color text: "white" }
+  property QtObject menu: QtObject { property color background: "black"; property color text: "white"; property color border: "white"; property color selectedBackground: "grey"; property color selectedText: "white" }
   property string accent: "white"
 }
 ''')
@@ -85,6 +86,7 @@ Item {
     property string layoutError: ""
     ''' + editable + '''
     property var displayDraft: []
+    property var bars: ({})
     property int previews: 0
     property int writes: 0
     onDisplayDraftChanged: writes++
@@ -92,7 +94,7 @@ Item {
       for (var i = 0; i < displayDraft.length; i++) if (displayDraft[i].name === name) return i
       return -1
     }
-    function monitorBar(name) { return {enabled: true, position: "top", width: 100, height: 0, background: "solid"} }
+    function monitorBar(name) { return bars[name] || {enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0} }
     function monitorBarMinimum(name) { return 1 }
     function monitorBarMaximumHeight(name) { return 108 }
     function setMonitorBarPosition(name, position) {}
@@ -247,6 +249,25 @@ Item {
       wait(10)
       var first = barCard("eDP-1"), second = barCard("HDMI-A-2")
       fuzzyCompare(second.x - first.x - first.width, barLayout.monitorGap, 0.01)
+    }
+    function test_bar_preview_clears_monitor_name_and_every_card_edge() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1}
+      ]
+      var positions = ["top", "right", "bottom", "left"]
+      for (var position of positions) {
+        service.bars = {"eDP-1": {enabled:true, position:position, width:100, height:40, background:"solid", style:"default", contentSize:12}}
+        service.displayDraft = service.displayDraft.slice()
+        wait(10)
+        var target = barCard("eDP-1")
+        var preview = findChild(target, "barPreview-eDP-1")
+        var name = findChild(target, "monitorName-eDP-1")
+        verify(preview !== null && name !== null)
+        verify(preview.x >= barLayout.barEdgeGap - 0.01)
+        verify(preview.x + preview.width <= target.width - barLayout.barEdgeGap + 0.01)
+        verify(preview.y >= name.y + name.height + barLayout.barEdgeGap - 0.01)
+        verify(preview.y + preview.height <= target.height - barLayout.barEdgeGap + 0.01)
+      }
     }
     function test_rotation_handles_hover_diagonally_outside_all_four_corners() {
       service.displayDraft = [

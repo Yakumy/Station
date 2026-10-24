@@ -14,6 +14,7 @@ Ui.BorderSurface {
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property real monitorGap: Style.spacing.sm
+  readonly property real barEdgeGap: Style.spacing.xl
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
@@ -89,22 +90,26 @@ Ui.BorderSurface {
 
       Rectangle {
         id: barPreview
+        objectName: "barPreview-" + monitorCard.modelData.name
         visible: monitorCard.barSetting.enabled
         color: monitorCard.barSetting.style === "pill" ? "transparent" : Commons.Color.accent
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
           || monitorCard.barSetting.position === "right"
+        readonly property real topInset: Math.max(canvas.barEdgeGap,
+          monitorName.y + monitorName.implicitHeight + canvas.barEdgeGap)
+        readonly property real bottomInset: canvas.barEdgeGap
         width: side ? Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
-          : Math.max(1, (parent.width - canvas.monitorGap * 2) * monitorCard.effectiveBarWidth)
+          : Math.max(1, (parent.width - canvas.barEdgeGap * 2) * monitorCard.effectiveBarWidth)
         height: side
-          ? Math.max(1, (parent.height - canvas.monitorGap * 2) * monitorCard.effectiveBarWidth)
+          ? Math.max(1, (parent.height - topInset - bottomInset) * monitorCard.effectiveBarWidth)
           : Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
-        x: monitorCard.barSetting.position === "left" ? canvas.monitorGap
-          : monitorCard.barSetting.position === "right" ? parent.width - width - canvas.monitorGap
+        x: monitorCard.barSetting.position === "left" ? canvas.barEdgeGap
+          : monitorCard.barSetting.position === "right" ? parent.width - width - canvas.barEdgeGap
           : (parent.width - width) / 2
-        y: monitorCard.barSetting.position === "top" ? canvas.monitorGap
-          : monitorCard.barSetting.position === "bottom" ? parent.height - height - canvas.monitorGap
-          : (parent.height - height) / 2
+        y: monitorCard.barSetting.position === "top" ? topInset
+          : monitorCard.barSetting.position === "bottom" ? parent.height - height - bottomInset
+          : topInset + (parent.height - topInset - bottomInset - height) / 2
 
         Repeater {
           model: monitorCard.barSetting.style === "pill" ? [0, 1, 2] : []
@@ -131,6 +136,8 @@ Ui.BorderSurface {
       }
 
       Text {
+        id: monitorName
+        objectName: "monitorName-" + monitorCard.modelData.name
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.margins: canvas.panelRoot.space2

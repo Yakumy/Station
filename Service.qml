@@ -35,6 +35,7 @@ Item {
   // measured widgets. It is runtime geometry, not a preference, so it stays
   // out of config.json and is merely included in detached panel snapshots.
   property var monitorBarMinimums: ({})
+  property var monitorBarMaximumContents: ({})
   property bool barBlurSyncQueued: false
   Timer {
     id: monitorBarPublishDelay
@@ -168,6 +169,7 @@ Item {
       bindStatuses: bindStatuses,
       config: config,
       monitorBarMinimums: monitorBarMinimums,
+      monitorBarMaximumContents: monitorBarMaximumContents,
       draftMode: draftMode,
       draftSingleTarget: draftSingleTarget,
       draftEditable: draftEditable,
@@ -262,7 +264,7 @@ Item {
     var display = displayDraft.find(function(item) { return item.name === name })
     if (!display) return 1
     var shorterSide = Math.min(Number(display.width) || 0, Number(display.height) || 0)
-    return Math.max(1, Math.floor(shorterSide * 0.1))
+    return Math.max(1, Math.floor(shorterSide * 0.05))
   }
 
   function monitorBarRenderedHeight(name) {
@@ -287,6 +289,26 @@ Item {
     var next = Object.assign({}, monitorBarMinimums)
     next[name] = number
     monitorBarMinimums = next
+    return "ok"
+  }
+
+  function monitorBarMaximumContent(name) {
+    var minimum = Math.max(1, Math.ceil(Style.font.body))
+    var fallback = Math.max(minimum,
+      monitorBarRenderedHeight(name) - Math.ceil(Style.spacing.sm) * 2)
+    var value = Number(monitorBarMaximumContents && monitorBarMaximumContents[name])
+    return isFinite(value) ? Math.max(minimum, Math.min(fallback, Math.round(value))) : fallback
+  }
+
+  function reportMonitorBarMaximumContent(name, value) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(value)
+    if (!isFinite(number) || number < 1 || number > 1000) return "invalid"
+    number = Math.round(number)
+    if (monitorBarMaximumContent(name) === number && monitorBarMaximumContents[name] !== undefined) return "ok"
+    var next = Object.assign({}, monitorBarMaximumContents)
+    next[name] = number
+    monitorBarMaximumContents = next
     return "ok"
   }
 
@@ -514,7 +536,7 @@ Item {
     if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
     var number = Number(contentSize)
     var minimum = Math.max(1, Math.ceil(Style.font.body))
-    if (!isFinite(number) || number < minimum || number > monitorBarRenderedHeight(name)) return "invalid"
+    if (!isFinite(number) || number < minimum || number > monitorBarMaximumContent(name)) return "invalid"
     var next = monitorBar(name)
     next.contentSize = Math.round(number)
     if (panelWanted) {
@@ -2064,9 +2086,11 @@ Item {
       setMonitorBarStyle: function(name, style) { return root.setMonitorBarStyle(name, style) },
       setMonitorBarContentSize: function(name, contentSize) { return root.setMonitorBarContentSize(name, contentSize) },
       reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
+      reportMonitorBarMaximumContent: function(name, value) { return root.reportMonitorBarMaximumContent(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
       monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },
       monitorBarMinimum: function(name) { return root.monitorBarMinimum(name) },
+      monitorBarMaximumContent: function(name) { return root.monitorBarMaximumContent(name) },
       applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
       swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },
       displayEnabled: function(name) { return root.displayEnabled(name) },
