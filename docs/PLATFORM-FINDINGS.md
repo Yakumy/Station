@@ -510,6 +510,20 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   of pinned, unmanaged, named and other special windows. These isolated tests
   do not prove a physical keypress or the installed compositor path.
 
+### 14.5 Rotation changed size without changing position (2026-10-24)
+
+- **[SRC]** A rotation handle changed only `transform`. Since transforms 1/3/5/7
+  swap logical width and height, the resized rectangle kept its old top-left
+  coordinate and could grow into an attached neighbor; shrinking along their
+  shared axis could instead leave a gap.
+- **[SRC][QTTEST]** Rotation now preserves the strongest pre-change shared edge,
+  resolves any remaining collision toward a side that was non-overlapping in
+  the valid old layout, and publishes transform plus corrected position in one
+  service update. Production QML coverage includes both horizontal neighbors
+  and the reported 1920×1200-above-1920×1080 arrangement. This is isolated
+  geometry and pointer verification; physical compositor acceptance remains a
+  user check.
+
 ## 15. Where evidence lives
 
 | Source | Content |

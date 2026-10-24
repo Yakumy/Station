@@ -1,5 +1,20 @@
 # Station v2 test results
 
+## Rotation adjacency repair — 2026-10-24
+
+- Rotation preserves the strongest shared monitor edge and atomically publishes
+  its corrected position with the new transform. A rotated monitor therefore
+  stays attached instead of overlapping or separating from its neighbor.
+- Pure geometry coverage includes horizontal adjacency and the reported
+  1920×1200 monitor above a 1920×1080 monitor. The production offscreen pointer
+  harness exercises the service update through the real rotation controls and
+  checks that both arrangements remain touching and non-overlapping. Physical
+  compositor acceptance remains a user check after installation.
+- All 171 Node/M0 tests pass. The Displays/Bar offscreen harness passes 21/21,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
 ## Monitor-card presentation gaps — 2026-10-24
 
 - Displays and Bar now inset each painted monitor card by half of

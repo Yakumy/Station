@@ -56,6 +56,38 @@ test('layout positions snap to grid and neighbouring edges', () => {
   assert.deepEqual(M.snapPosition(displays[1], 2003, 37, displays), { x: 2000, y: 40 });
 });
 
+test('resizing preserves a shared edge and moves the changed display out of its neighbor', () => {
+  const below = { name: 'eDP-1', x: 0, y: 1200, width: 1920, height: 1080, scale: 1, transform: 0 };
+  const above = { name: 'HDMI-A-2', x: 0, y: 0, width: 1920, height: 1200, scale: 1, transform: 0 };
+  const rotatedAbove = { ...above, transform: 1 };
+  assert.deepEqual(M.resizedPosition(above, rotatedAbove, [above, below]), { x: 0, y: -720 });
+  assert.deepEqual(M.layoutOverlaps([{ ...rotatedAbove, ...M.resizedPosition(above, rotatedAbove, [above, below]) }, below]), []);
+
+  const right = { name: 'B', x: 1920, y: 0, width: 1920, height: 1080, scale: 1, transform: 0 };
+  const left = { name: 'A', x: 0, y: 0, width: 1920, height: 1200, scale: 1, transform: 0 };
+  assert.deepEqual(M.resizedPosition(left, { ...left, transform: 1 }, [left, right]), { x: 720, y: 0 });
+
+  const middle = { name: 'M', x: 100, y: 0, width: 100, height: 200, scale: 1, transform: 0 };
+  const neighbors = [
+    { name: 'L', x: 0, y: 0, width: 100, height: 100, scale: 1, transform: 0 },
+    middle,
+    { name: 'R', x: 200, y: 0, width: 100, height: 100, scale: 1, transform: 0 },
+  ];
+  const rotatedMiddle = { ...middle, transform: 1 };
+  const moved = M.resizedPosition(middle, rotatedMiddle, neighbors);
+  assert.deepEqual(M.layoutOverlaps(neighbors.map(display => display.name === 'M'
+    ? { ...rotatedMiddle, ...moved } : display)), []);
+  assert.equal(moved.y, 0, 'a horizontal row stays horizontal when growth cannot fit between both neighbors');
+
+  const fractionalBelow = { name: 'FB', x: 0, y: 0, width: 1000, height: 1000, scale: 1, transform: 0 };
+  const fractionalAbove = { name: 'FA', x: 0, y: -480, width: 1280, height: 720, scale: 1.5, transform: 0 };
+  const fractionalRotation = { ...fractionalAbove, transform: 1 };
+  const integer = M.resizedPosition(fractionalAbove, fractionalRotation, [fractionalAbove, fractionalBelow]);
+  assert.ok(Number.isInteger(integer.x) && Number.isInteger(integer.y));
+  assert.equal(integer.y, -854, 'integer monitor positions round away from the neighbor');
+  assert.deepEqual(M.layoutOverlaps([{ ...fractionalRotation, ...integer }, fractionalBelow]), []);
+});
+
 test('geometry picks directional neighbours and opposite edges', () => {
   const monitors = [
     { name: 'A', x: 0, y: 0, width: 100, height: 100, scale: 1 },

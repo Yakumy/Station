@@ -884,6 +884,23 @@ Item {
     return "ok"
   }
 
+  function setDisplayTransform(name, value) {
+    if (!draftEditable || !Number.isInteger(value) || value < 0 || value > 7) return "invalid"
+    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
+    var before = displayDraft.find(function(display) { return display.name === name })
+    if (!before) return "invalid"
+    var changed = Object.assign({}, before, { transform: value })
+    var peers = draftMode === "extend" && before.enabled
+      ? displayDraft.filter(function(display) { return display.enabled }) : [before]
+    var position = Model.resizedPosition(before, changed, peers)
+    changed.x = Math.round(position.x)
+    changed.y = Math.round(position.y)
+    displayDraft = displayDraft.map(function(display) {
+      return display.name === name ? changed : display
+    })
+    return "ok"
+  }
+
   function applyDisplaySetting(name, key, value) {
     // Side controls are deliberate, discrete choices and do not need the
     // safety countdown used for topology edits. Persist first and let
@@ -1773,6 +1790,7 @@ Item {
       setBinding: function(id, combo) { return root.setBinding(id, combo) },
       approveBinding: function(combo) { return root.approveBinding(combo) },
       setDisplayValue: function(name, key, value) { return root.setDisplayValue(name, key, value) },
+      setDisplayTransform: function(name, value) { return root.setDisplayTransform(name, value) },
       setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
       setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },

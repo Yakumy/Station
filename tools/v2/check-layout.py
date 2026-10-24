@@ -14,7 +14,7 @@ service = (repo / 'Service.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
-for name in ('setDisplayValue', 'setDisplayEnabled', 'displayEnabled'):
+for name in ('setDisplayValue', 'setDisplayTransform', 'setDisplayEnabled', 'displayEnabled'):
     start = service.index('  function ' + name + '(')
     end = service.index('\n  function ', start + 1)
     setter += service[start:end]
@@ -292,6 +292,10 @@ Item {
       mouseClick(layout, hit.x, hit.y)
       compare(service.previews, 1, "External handle remains clickable")
       compare(service.displayDraft[0].transform, 1)
+      compare(service.displayDraft[0].x, 840,
+        "Rotation keeps the selected monitor attached to its right neighbor")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0,
+        "Rotation must not move the resized monitor inside its neighbor")
       compare(toolbar.selectedCard, card("eDP-1"),
         "Rotation overlay must follow a replaced monitor delegate")
     }
@@ -326,6 +330,20 @@ Item {
       mouseClick(layout, hit.x, hit.y)
       compare(service.displayDraft[1].transform, 3)
       compare(service.previews, 1, "Handle must win the hit test over the neighbor")
+    }
+    function test_rotation_above_neighbor_preserves_the_shared_edge_without_overlap() {
+      service.displayDraft = [
+        {name:"HDMI-A-2", x:0, y:0, width:1920, height:1200, scale:1, transform:0, enabled:true, lane:1},
+        {name:"eDP-1", x:0, y:1200, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      layout.rotateDisplay(service.displayDraft[0], 1)
+      compare(service.displayDraft[0].transform, 1)
+      compare(service.displayDraft[0].y, -720)
+      compare(service.displayDraft[0].y + Model.logicalSize(service.displayDraft[0]).height,
+        service.displayDraft[1].y, "The rotated monitor must stay attached above its neighbor")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0)
+      compare(service.previews, 1)
     }
     function test_zoom_keeps_pointer_position_stable() {
       var target = card("HDMI-A-2")

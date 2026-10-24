@@ -69,7 +69,7 @@ Ui.BorderSurface {
     var transform = Number(display.transform) || 0
     var flipped = transform >= 4 ? 4 : 0
     var next = flipped + ((transform - flipped + delta + 4) % 4)
-    if (service.setDisplayValue(display.name, "transform", next) === "ok") service.previewLayout()
+    if (service.setDisplayTransform(display.name, next) === "ok") service.previewLayout()
   }
 
   Canvas {

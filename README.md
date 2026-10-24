@@ -80,7 +80,9 @@ Topology edits—arrangement, rotation, Extend/Mirror/Single mode, and monitor
 on/off—open a 12-second Keep/Revert preview. A detached 20-second watchdog
 restores the previous layout even if the shell crashes. Station never permits a
 zero-output configuration, and it hands an open panel to a surviving display
-before disabling the display that owns it.
+before disabling the display that owns it. Rotating an attached display keeps
+its shared edge and repositions its resized logical rectangle automatically,
+preventing it from overlapping its neighbor.
 
 Scale, resolution, and refresh changes use the same checked file transaction
 without an unnecessary preview. Station writes only its marked block at the end
