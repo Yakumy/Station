@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import qs.Commons
 import "lib/Model.js" as Model
 import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
