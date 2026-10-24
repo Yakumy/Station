@@ -160,6 +160,20 @@ Item {
     }
     function test_horizontal_right() { move("HDMI-A-2", 1920, 1200) }
     function test_horizontal_left_negative() { move("HDMI-A-2", -1920, 1200) }
+    function test_horizontal_with_unequal_heights_accepts_a_centered_offset() {
+      var target = card("HDMI-A-2"), display = target.modelData
+      mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
+        (1920 - display.x) * layout.zoom, (1140 - display.y) * layout.zoom,
+        Qt.LeftButton, Qt.NoModifier, 5)
+      compare(service.writes, 1)
+      compare(service.previews, 1)
+      var changed = service.displayDraft.filter(function(d) { return d.name === "HDMI-A-2" })[0]
+      compare(changed.x, 1920, "The side edge must remain attached")
+      verify(changed.y > 1080 && changed.y < 1200,
+        "The cross-axis offset must remain between corner alignments")
+      compare(changed.y % 10, 0, "The free cross-axis offset stays on the logical grid")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0)
+    }
     function test_vertical_below() { move("HDMI-A-2", 0, 2280) }
     function test_vertical_drag_is_not_stolen_by_panel_scroll() {
       move("HDMI-A-2", 0, 2280)
@@ -186,7 +200,7 @@ Item {
     function test_edge_snap_in_screen_pixels() { moveNearEdge() }
     function moveNearEdge() {
       var target = card("HDMI-A-2")
-      var dx = 1920 * layout.zoom - 7, dy = 1200 * layout.zoom + 5
+      var dx = 1920 * layout.zoom - 7, dy = 1200 * layout.zoom
       mouseDrag(layout, target.x + target.width/2, target.y + target.height * 0.8,
         dx, dy, Qt.LeftButton, Qt.NoModifier, 5)
       compare(service.displayDraft[1].x, 1920); compare(service.displayDraft[1].y, 1200)

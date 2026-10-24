@@ -1,5 +1,21 @@
 # Station v2 test results
 
+## Unequal-height side placement — 2026-10-24
+
+- Edge attachment and parallel-edge alignment now use distinct snap thresholds.
+  A broad screen-space edge snap keeps monitors connected, while the cross axis
+  stays at any 10-unit grid offset unless it is within 20 logical units of exact
+  top/bottom or left/right alignment.
+- Pure geometry tests cover a 1920×1200 monitor at the centered −60 offset beside
+  a 1920×1080 monitor and retain exact top/bottom alignment. The production
+  pointer harness performs the corresponding attached drag and verifies the
+  saved coordinates and non-overlap. Physical drag acceptance remains a user
+  check after installation.
+- All 172 Node/M0 tests pass. Displays/Bar passes 22/22 offscreen cases,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
 ## Scale adjacency repair — 2026-10-24
 
 - Direct Scale and Resolution changes now preserve the strongest shared edge

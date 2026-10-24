@@ -203,7 +203,7 @@ Apply rules for the compact mapping, then `focus` each active output's workspace
 
 ### 5.9 Layout geometry
 
-Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`, `h = pixelH / scale`, with w/h swapped for transforms 1, 3, 5, 7. A 3840×2160 display at scale 2 occupies 1920×1080. Snap edge-to-edge to neighbours and to a 10-unit grid. When rotation, scale, or resolution changes a logical rectangle, preserve its strongest shared edge and reposition it automatically so it remains attached without overlapping a neighbor. Rectangles must not overlap; overlapping layouts cannot be Kept.
+Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`, `h = pixelH / scale`, with w/h swapped for transforms 1, 3, 5, 7. A 3840×2160 display at scale 2 occupies 1920×1080. Snap edge-to-edge to neighbours and to a 10-unit grid. Edge attachment keeps its theme-scaled screen-distance tolerance, while parallel top/bottom or left/right alignment snaps only within 20 logical units; unequal monitors can therefore remain attached at arbitrary grid offsets instead of being forced to touch at a corner. When rotation, scale, or resolution changes a logical rectangle, preserve its strongest shared edge and reposition it automatically so it remains attached without overlapping a neighbor. Rectangles must not overlap; overlapping layouts cannot be Kept.
 
 ## 6. Runtime behaviour
 

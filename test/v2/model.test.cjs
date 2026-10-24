@@ -54,6 +54,14 @@ test('layout positions snap to grid and neighbouring edges', () => {
   ];
   assert.deepEqual(M.snapPosition(displays[1], 1907, 6, displays), { x: 1920, y: 0 });
   assert.deepEqual(M.snapPosition(displays[1], 2003, 37, displays), { x: 2000, y: 40 });
+
+  const taller = { ...displays[1], height: 1200 };
+  assert.deepEqual(M.snapPosition(taller, 1907, -57, [displays[0], taller], 160),
+    { x: 1920, y: -60 }, 'a generous edge snap must not force the cross-axis offset to a corner');
+  assert.deepEqual(M.snapPosition(taller, 1907, 7, [displays[0], taller], 160),
+    { x: 1920, y: 0 }, 'nearby top alignment still snaps exactly');
+  assert.deepEqual(M.snapPosition(taller, 1907, -113, [displays[0], taller], 160),
+    { x: 1920, y: -120 }, 'nearby bottom alignment still snaps exactly');
 });
 
 test('resizing preserves a shared edge and moves the changed display out of its neighbor', () => {

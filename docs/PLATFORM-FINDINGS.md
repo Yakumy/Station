@@ -537,6 +537,20 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   and still verify one watched apply without a preview or forced reload. Physical
   compositor acceptance remains a user check.
 
+### 14.7 Edge snapping forced unequal monitors to corners (2026-10-24)
+
+- **[SRC]** Drag snapping used the same theme-scaled screen-distance threshold
+  for both edge attachment and parallel-edge alignment. At the default fitted
+  zoom, a desired 60-logical-unit centered offset could lie within that broad
+  threshold of both top and bottom alignment, so the cross axis snapped to a
+  corner even while the intended side edge was correct.
+- **[SRC][QTTEST]** Attachment and alignment candidates are now separate. The
+  attachment axis retains the easy screen-distance snap; the parallel axis
+  aligns only within 20 logical units and otherwise remains on its 10-unit grid
+  position. Pure and production-pointer tests cover a 1920×1200 monitor centered
+  at a 60-unit offset beside a 1920×1080 monitor, plus exact top and bottom
+  alignment. Physical drag acceptance remains a user check.
+
 ## 15. Where evidence lives
 
 | Source | Content |

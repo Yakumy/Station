@@ -74,7 +74,10 @@ No additional dependencies are required beyond the standard Omarchy system.
 
 The Displays tab combines a visual layout editor with per-monitor controls for
 brightness, global text size, scale, resolution, and refresh rate. Exact modes
-come from the selected monitor rather than being interpolated.
+come from the selected monitor rather than being interpolated. Edge snapping
+keeps displays attached without forcing unequal-height neighbors into top- or
+bottom-corner alignment, so they can use any 10-unit offset along the shared
+side.
 
 Topology edits—arrangement, rotation, Extend/Mirror/Single mode, and monitor
 on/off—open a 12-second Keep/Revert preview. A detached 20-second watchdog
