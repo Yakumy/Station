@@ -73,6 +73,8 @@ Item {
   property bool centerHoverRevealSuppressed: false
   property int barConfigSerial: 0
   property string position: "top"
+  property int requestedWidthPercent: 100
+  property real measuredMinimumLength: 1
   // Resolves through fontconfig at paint time (Style.font.family defaults
   // to "monospace"), so changing the system font (via `omarchy-font-set`)
   // updates the bar without a reload.
@@ -127,6 +129,23 @@ Item {
   Component {
     id: pluginBarApiComponent
     PluginBarApi { }
+  }
+
+  Component {
+    id: popoutAnchorComponent
+    Item {
+      required property var slotRef
+      property var panel: null
+      readonly property real axisStart: Math.max(0, (root.screenLength - root.effectiveBarLength) / 2)
+      readonly property real panelLength: panel
+        ? Number(root.vertical ? panel.contentHeight : panel.contentWidth) : 0
+      readonly property real axisPosition: axisStart + BarModel.popoutAnchor(
+        slotRef.region, root.effectiveBarLength, panelLength)
+      x: root.vertical ? 0 : axisPosition
+      y: root.vertical ? axisPosition : 0
+      width: root.vertical ? root.barSize : 0
+      height: root.vertical ? 0 : root.barSize
+    }
   }
 
   function publicLayoutConfig() {
@@ -574,6 +593,7 @@ Item {
   }
 
   function requestPopout(owner) {
+    alignPopout(owner)
     if (activePopout === owner) return
     popoutRequested()
     if (activePopout) {
@@ -587,8 +607,48 @@ Item {
     if (activePopout === owner) activePopout = null
   }
 
+  function popoutPanel(container) {
+    var objects = container && container.data ? container.data : []
+    for (var i = 0; i < objects.length; i++) {
+      var candidate = objects[i]
+      if (candidate && "anchorItem" in candidate && "contentWidth" in candidate
+          && "contentHeight" in candidate && "open" in candidate) return candidate
+    }
+    return null
+  }
+
+  function popoutSlot(owner) {
+    for (var i = 0; i < moduleSlots.length; i++) {
+      var slot = moduleSlots[i]
+      if (slot && slot.activeItem === owner) return slot
+      var objects = slot && slot.activeItem && slot.activeItem.data ? slot.activeItem.data : []
+      for (var j = 0; j < objects.length; j++) if (objects[j] === owner) return slot
+    }
+    return null
+  }
+
+  function alignPopout(owner) {
+    var slot = popoutSlot(owner)
+    var panel = popoutPanel(slot ? slot.activeItem : owner)
+    var window = slotWindow(slot)
+    if (!slot || !panel || !window || !window.contentItem) return false
+    if (!slot.popoutAnchor)
+      slot.popoutAnchor = popoutAnchorComponent.createObject(window.contentItem, { slotRef: slot })
+    if (!slot.popoutAnchor) return false
+    slot.popoutAnchor.panel = panel
+    panel.anchorItem = slot.popoutAnchor
+    return true
+  }
+
   readonly property bool vertical: position === "left" || position === "right"
   readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property real screenLength: targetScreen
+    ? Number(vertical ? targetScreen.height : targetScreen.width) : 1
+  readonly property int minimumWidthPercent: Math.max(1, Math.min(100,
+    Math.ceil(measuredMinimumLength * 100 / Math.max(1, screenLength))))
+  readonly property int effectiveWidthPercent: Math.max(requestedWidthPercent, minimumWidthPercent)
+  readonly property int effectiveBarLength: Math.max(1,
+    Math.round(screenLength * effectiveWidthPercent / 100))
 
   function normalizePosition(value) {
     return BarModel.normalizePosition(value)
@@ -632,6 +692,9 @@ Item {
     var config = Util.isPlainObject(barConfig) ? barConfig : fallbackBarConfig
 
     position = normalizePosition(config.position)
+    var width = Number(config.widthPercent)
+    requestedWidthPercent = isFinite(width)
+      ? Math.max(1, Math.min(100, Math.round(width))) : 100
     setRequestedTransparency(config.transparent === true)
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -1313,10 +1376,17 @@ Item {
 
     implicitWidth: root.vertical ? root.barSize : 0
     implicitHeight: root.vertical ? 0 : root.barSize
-    color: root.transparent ? "transparent" : root.background
+    color: "transparent"
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
+
+    mask: Region {
+      x: barContent.x
+      y: barContent.y
+      width: barContent.width
+      height: barContent.height
+    }
 
     // One always-present arrangement: Left starts at the top of a vertical bar
     // and at the left edge of a horizontal one. Positioning flips with
@@ -1324,16 +1394,37 @@ Item {
     // reflows the bar without tearing down modules — any open plugin panel
     // survives the flip and re-anchors with it.
     Item {
-      anchors.fill: parent
+      id: barContent
+      width: root.vertical ? parent.width : root.effectiveBarLength
+      height: root.vertical ? root.effectiveBarLength : parent.height
+      x: root.vertical ? 0 : Math.round((parent.width - width) / 2)
+      y: root.vertical ? Math.round((parent.height - height) / 2) : 0
+      readonly property real edgeMargin: Style.space(8)
+      readonly property real regionGap: Style.spacing.sm
+      readonly property real leadingLength: root.vertical ? leftModules.height : leftModules.width
+      readonly property real trailingLength: root.vertical ? rightModules.height : rightModules.width
+      readonly property real minimumLength: BarModel.minimumBarLength(
+        leadingLength, centerModules.leadingExtent, centerModules.trailingExtent,
+        trailingLength, edgeMargin, regionGap)
+      onMinimumLengthChanged: root.measuredMinimumLength = minimumLength
+      Component.onCompleted: root.measuredMinimumLength = minimumLength
 
-      CenterModules { anchors.fill: parent }
+      Rectangle {
+        anchors.fill: parent
+        color: root.transparent ? "transparent" : root.background
+        radius: Style.cornerRadius
+      }
+
+      CenterModules { id: centerModules; anchors.fill: parent }
 
       LeftModules {
+        id: leftModules
         x: root.vertical ? (parent.width - width) / 2 : Style.space(8)
         y: root.vertical ? Style.space(8) : (parent.height - height) / 2
       }
 
       RightModules {
+        id: rightModules
         x: root.vertical ? (parent.width - width) / 2
           : parent.width - width - Style.space(8)
         y: root.vertical ? parent.height - height - Style.space(8)
@@ -1562,6 +1653,18 @@ Item {
     property var entries: root.layoutEntries("center")
     readonly property bool hasAnchor: root.entryIndex(entries, root.centerAnchor) !== -1
     readonly property var anchorEntry: root.findCenterAnchorEntry()
+    readonly property real anchorLength: root.vertical
+      ? centerAnchorModule.height : centerAnchorModule.width
+    readonly property real centeredLength: root.vertical
+      ? centeredModules.height : centeredModules.width
+    readonly property real beforeLength: root.vertical
+      ? beforeCenterModules.height : beforeCenterModules.width
+    readonly property real afterLength: root.vertical
+      ? afterCenterModules.height : afterCenterModules.width
+    readonly property real leadingExtent: hasAnchor
+      ? beforeLength + anchorLength / 2 : centeredLength / 2
+    readonly property real trailingExtent: hasAnchor
+      ? afterLength + anchorLength / 2 : centeredLength / 2
 
     // One arrangement for both orientations: the unanchored list centers in
     // the section, the anchor module centers, and the before/after lists sit
@@ -1586,12 +1689,14 @@ Item {
     }
 
     ModuleList {
+      id: centeredModules
       entries: centerRoot.hasAnchor ? [] : centerRoot.entries
       region: "center"
       anchors.centerIn: parent
     }
 
     ModuleList {
+      id: beforeCenterModules
       entries: centerRoot.hasAnchor
         ? root.entriesBefore(centerRoot.entries, root.centerAnchor) : []
       region: "center"
@@ -1604,6 +1709,7 @@ Item {
     }
 
     ModuleList {
+      id: afterCenterModules
       entries: centerRoot.hasAnchor
         ? root.entriesAfter(centerRoot.entries, root.centerAnchor) : []
       region: "center"
@@ -1761,6 +1867,7 @@ Item {
 
     required property var entry
     property string region: ""
+    property var popoutAnchor: null
     readonly property string moduleName: root.entryId(entry)
     readonly property var moduleSettings: root.entrySettings(entry)
     readonly property string customType: root.customModuleType(entry)
@@ -1806,6 +1913,7 @@ Item {
     Component.onCompleted: root.registerModuleSlot(slot)
     Component.onDestruction: {
       if (root.barDragSource === slot) root.clearBarDrag()
+      if (popoutAnchor && typeof popoutAnchor.destroy === "function") popoutAnchor.destroy()
       root.unregisterModuleSlot(slot)
     }
 

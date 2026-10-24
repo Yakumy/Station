@@ -30,6 +30,10 @@ Item {
   // closed: changing that host config can rebuild the complete third-party bar
   // and every widget even when its logical layout is unchanged.
   property var pendingMonitorBars: ({})
+  // Live full-bar instances report the first percentage that fits their
+  // measured widgets. It is runtime geometry, not a preference, so it stays
+  // out of config.json and is merely included in detached panel snapshots.
+  property var monitorBarMinimums: ({})
   Timer {
     id: monitorBarPublishDelay
     interval: 250
@@ -69,7 +73,9 @@ Item {
   property int stockDisableAttempts: 0
   property int displayDisableAttempts: 0
   property var displayWidgetEnabled: null
+  property var workspaceWidgetEnabled: null
   property bool displayShowPending: false
+  property bool workspaceShowPending: false
   // The bar rebuilds our widget when its layout entries change (a plugin
   // enable/disable, a widget move) and whenever an output reconfigures, and
   // the panel window dies with the widget. The widget writes its open state
@@ -159,6 +165,7 @@ Item {
       displayDraft: displayDraft,
       bindStatuses: bindStatuses,
       config: config,
+      monitorBarMinimums: monitorBarMinimums,
       draftMode: draftMode,
       draftSingleTarget: draftSingleTarget,
       draftEditable: draftEditable,
@@ -175,6 +182,7 @@ Item {
       rememberedTab: rememberedTab,
       rememberedDisplayName: rememberedDisplayName,
       displayWidgetEnabled: displayWidgetEnabled,
+      workspaceWidgetEnabled: workspaceWidgetEnabled,
       pluginVersion: manifest && manifest.version ? String(manifest.version) : "",
       wallpaper: {
         draft: wallpaper.draft,
@@ -232,10 +240,30 @@ Item {
     var fallback = shellBar ? String(shellBar.position || "top") : "top"
     if (["top", "bottom", "left", "right"].indexOf(fallback) === -1) fallback = "top"
     var row = config.bars && config.bars[name]
+    var width = row && isFinite(Number(row.width))
+      ? Math.max(1, Math.min(100, Math.round(Number(row.width)))) : 100
     return row && typeof row === "object"
       ? { enabled: row.enabled !== false,
-          position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback }
-      : { enabled: true, position: fallback }
+          position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
+          width: width }
+      : { enabled: true, position: fallback, width: 100 }
+  }
+
+  function monitorBarMinimum(name) {
+    var value = Number(monitorBarMinimums && monitorBarMinimums[name])
+    return isFinite(value) ? Math.max(1, Math.min(100, Math.round(value))) : 1
+  }
+
+  function reportMonitorBarMinimum(name, value) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(value)
+    if (!isFinite(number) || number < 1 || number > 100) return "invalid"
+    number = Math.round(number)
+    if (monitorBarMinimum(name) === number && monitorBarMinimums[name] !== undefined) return "ok"
+    var next = Object.assign({}, monitorBarMinimums)
+    next[name] = number
+    monitorBarMinimums = next
+    return "ok"
   }
 
   function reconcileActiveBarLayout() {
@@ -276,7 +304,7 @@ Item {
       if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
       Object.keys(changes || {}).forEach(function(name) {
         var next = changes[name]
-        scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position }
+        scoped.bar.monitors[name] = { enabled: next.enabled, position: next.position, width: next.width }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
         ;["left", "center", "right"].forEach(function(section) {
@@ -296,7 +324,7 @@ Item {
 
   function deferMonitorBarPublish(name, next) {
     var pending = Object.assign({}, pendingMonitorBars)
-    pending[name] = { enabled: next.enabled, position: next.position }
+    pending[name] = { enabled: next.enabled, position: next.position, width: next.width }
     pendingMonitorBars = pending
   }
 
@@ -357,6 +385,29 @@ Item {
     config.bars = bars
     config = Object.assign({}, config)
     saveConfig()
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarWidth(name, width) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(width)
+    if (!isFinite(number) || number < 1 || number > 100) return "invalid"
+    var next = monitorBar(name)
+    next.width = Math.round(number)
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
   }
 
@@ -1548,12 +1599,20 @@ Item {
     pluginList.running = true
   }
 
-  function restoreStockLease() {
+  function restoreStockLease(forceShow) {
+    if (forceShow) workspaceShowPending = true
+    if (stockDisable.running) return
     var lease = persisted.stockLease
-    if (!lease) return
-    if (lease.disabledByStation && lease.wasEnabled) {
+    if (!lease && !forceShow) return
+    if (forceShow || (lease && lease.disabledByStation && lease.wasEnabled)) {
+      var place = lease || { section: "left", index: 1 }
       enqueue(["omarchy", "plugin", "enable", "omarchy.workspaces"], function(code) {
-        if (code !== 0) return
+        if (code !== 0) { root.workspaceShowPending = false; leaseVerify.restart(); return }
+        if (root.config.hideNative) {
+          root.workspaceShowPending = false
+          root.acquireStockLeases()
+          return
+        }
         // Re-enabling alone drops it in the centre, and the recorded spot is
         // where it sat before Station leased it: between the Omarchy menu mark
         // and our own widget. Park it behind Station instead so the row reads
@@ -1563,12 +1622,14 @@ Item {
           "yakumy.station"], function(afterCode) {
           if (afterCode === 0) {
             root.persisted.stockLease = null
+            root.workspaceShowPending = false
             root.saveState()
             return
           }
-          root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", lease.section,
-            "--index", String(lease.index)], function() {
+          root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", place.section,
+            "--index", String(place.index)], function() {
             root.persisted.stockLease = null
+            root.workspaceShowPending = false
             root.saveState()
           })
         })
@@ -1616,10 +1677,11 @@ Item {
       config = Object.assign({}, config)
       saveConfig()
       if (config.hideNative) {
+        workspaceShowPending = false
         stockDisableAttempts = 0
         acquireStockLeases()
       } else {
-        restoreStockLease()
+        restoreStockLease(true)
       }
       return "ok"
     }
@@ -1672,9 +1734,10 @@ Item {
     var list = parseJson(raw, [])
     var changed = false
     var displayEntry = list.find(function(item) { return item.id === "omarchy.monitor" })
+    var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
     if (displayEntry) displayWidgetEnabled = !!displayEntry.enabled
+    if (workspaceEntry) workspaceWidgetEnabled = !!workspaceEntry.enabled
     if (config.hideNative) {
-      var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
       var workspaceEnabled = !!(workspaceEntry && workspaceEntry.enabled)
       if (persisted.stockLease) {
         if (persisted.stockLease.disabledByStation && workspaceEnabled
@@ -1801,7 +1864,10 @@ Item {
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
       setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
       setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
+      setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
+      reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
+      monitorBarMinimum: function(name) { return root.monitorBarMinimum(name) },
       applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
       swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },
       displayEnabled: function(name) { return root.displayEnabled(name) },
@@ -2031,7 +2097,10 @@ Item {
     id: stockDisable
     command: ["omarchy", "plugin", "disable", "omarchy.workspaces"]
     stdout: StdioCollector { waitForEnd: true }
-    onExited: leaseVerify.restart()
+    onExited: {
+      if (root.workspaceShowPending && !root.config.hideNative) root.restoreStockLease(true)
+      leaseVerify.restart()
+    }
   }
 
   Process {

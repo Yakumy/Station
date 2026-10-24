@@ -71,7 +71,15 @@ Item {
     var copy = JSON.parse(JSON.stringify(barConfig || {}))
     var entry = monitorEntry(screen ? screen.name : "")
     copy.position = validPosition(entry.position || copy.position)
+    copy.widthPercent = Number(entry.width) > 0 ? Number(entry.width) : 100
     return copy
+  }
+
+  function reportMinimumWidth(instance) {
+    if (!instance || !instance.targetScreenName) return
+    var api = BarBridge.current()
+    if (api && typeof api.call === "function")
+      api.call("reportMonitorBarMinimum", [instance.targetScreenName, instance.minimumWidthPercent])
   }
 
   function refreshStationBars() {
@@ -157,7 +165,11 @@ Item {
         manifest: root.manifest
         barConfig: root.configFor(modelData)
         onPopoutRequested: root.closePeerPopouts(monitorBar)
-        Component.onCompleted: root.registerInstance(monitorBar)
+        onMinimumWidthPercentChanged: root.reportMinimumWidth(monitorBar)
+        Component.onCompleted: {
+          root.registerInstance(monitorBar)
+          Qt.callLater(function() { root.reportMinimumWidth(monitorBar) })
+        }
         Component.onDestruction: root.unregisterInstance(monitorBar)
       }
     }

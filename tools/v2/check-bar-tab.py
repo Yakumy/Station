@@ -42,22 +42,32 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
-      if (name === "eDP-1") return {enabled: true, position: "bottom"}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left"}
-      return {enabled: false, position: "right"}
+      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100}
+      return {enabled: false, position: "right", width: 100}
     }
+    function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
     function setMonitorBarEnabled() { return "ok" }
     function setMonitorBarPosition() { return "ok" }
+    function setMonitorBarWidth() { return "ok" }
   }
   Item {
     id: panel
     property var service: fakeService
+    property var selectedDisplay: fakeService.displayDraft[0]
+    property var bar: null
     property real regionPadH: Style.space(24)
+    property real space1: Style.space(4)
     property real space2: Style.space(8)
+    property real space3: Style.space(12)
     property real space4: Style.space(16)
     property real disabledOpacity: 0.6
     property color textPrimary: Commons.Color.popups.text
     property color textDim: Qt.darker(Commons.Color.popups.text, 1.4)
+    function selectDisplay(name) {
+      for (var i = 0; i < fakeService.displayDraft.length; i++)
+        if (fakeService.displayDraft[i].name === name) selectedDisplay = fakeService.displayDraft[i]
+    }
   }
   FloatingWindow {
     implicitWidth: Style.space(996)

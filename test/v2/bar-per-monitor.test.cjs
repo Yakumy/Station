@@ -22,16 +22,16 @@ test('2.2 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 3);
+  assert.equal(Store.CONFIG_VERSION, 4);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
-    'DP-1': { enabled: false, position: 'right' },
-    'DP-2': { enabled: true, position: 'diagonal' },
+    'DP-1': { enabled: false, position: 'right', width: 54.6 },
+    'DP-2': { enabled: true, position: 'diagonal', width: 1000 },
     broken: 'bad',
   }}).bars, {
-    'DP-1': { enabled: false, position: 'right' },
-    'DP-2': { enabled: true, position: 'top' },
-    broken: { enabled: true, position: 'top' },
+    'DP-1': { enabled: false, position: 'right', width: 55 },
+    'DP-2': { enabled: true, position: 'top', width: 100 },
+    broken: { enabled: true, position: 'top', width: 100 },
   });
 });
 
@@ -105,7 +105,7 @@ test('an active full bar defers its shell.json mirror while the panel is open', 
 
   assert.equal(setPosition('DP-1', 'right'), 'ok');
   assert.equal(context.config.bars['DP-1'].position, 'right');
-  assert.deepEqual(pending, [['DP-1', { enabled: true, position: 'right' }]]);
+  assert.deepEqual(pending, [['DP-1', { enabled: true, position: 'right', width: 100 }]]);
 });
 
 test('closing the panel flushes all deferred monitor rows in one host write', () => {
@@ -116,8 +116,8 @@ test('closing the panel flushes all deferred monitor rows in one host write', ()
   const context = {
     panelWanted: false,
     pendingMonitorBars: {
-      'DP-1': { enabled: true, position: 'right' },
-      'DP-2': { enabled: false, position: 'bottom' },
+      'DP-1': { enabled: true, position: 'right', width: 72 },
+      'DP-2': { enabled: false, position: 'bottom', width: 100 },
     },
     shell: {
       mutateShellConfig(mutator) { writes++; mutator(shellConfig); return true; },
@@ -129,8 +129,8 @@ test('closing the panel flushes all deferred monitor rows in one host write', ()
   assert.equal(flush(), true);
   assert.equal(writes, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.monitors)), {
-    'DP-1': { enabled: true, position: 'right' },
-    'DP-2': { enabled: false, position: 'bottom' },
+    'DP-1': { enabled: true, position: 'right', width: 72 },
+    'DP-2': { enabled: false, position: 'bottom', width: 100 },
   });
   assert.deepEqual(JSON.parse(JSON.stringify(context.pendingMonitorBars)), {});
 });
@@ -159,10 +159,10 @@ test('first bar edit activates Station and retires its persisted widget atomical
   };
   context.publishMonitorBars = qmlFunction(service, 'publishMonitorBars', context);
   const publish = qmlFunction(service, 'publishMonitorBar', context);
-  assert.equal(publish('DP-1', { enabled: true, position: 'right' }), true);
+  assert.equal(publish('DP-1', { enabled: true, position: 'right', width: 100 }), true);
   assert.equal(shellConfig.bar.id, 'yakumy.station');
   assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.monitors['DP-1'])),
-    { enabled: true, position: 'right' });
+    { enabled: true, position: 'right', width: 100 });
   assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.layout)), {
     left: [{ id: 'omarchy.menu' }],
     center: [{ id: 'omarchy.clock' }],
@@ -208,7 +208,11 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(tab, /text: "POSITION"/);
   assert.match(tab, /value: "top", label: "Top"[\s\S]*?value: "right", label: "Right"[\s\S]*?value: "bottom", label: "Bottom"[\s\S]*?value: "left", label: "Left"/);
   assert.match(tab, /anchors\.verticalCenter: parent\.verticalCenter[\s\S]*?height: Style\.spacing\.controlHeight/);
-  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 2);
+  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 3);
+  assert.match(tab, /text: "WIDTH"/);
+  assert.match(tab, /minimum: 1[\s\S]*?maximum: 100/);
+  assert.match(tab, /setMonitorBarWidth\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.match(tab, /"Minimum " \+ root\.selectedMinimumWidth \+ "% — bar items overlap\."/);
   assert.match(layout, /selectedDisplayName/);
   assert.match(layout, /displaySelected\(monitorCard\.modelData\.name\)/);
   assert.match(layout, /Color\.menu\.selectedBackground/);
@@ -221,8 +225,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   }
   const preview = layout.slice(layout.indexOf('id: barPreview'), layout.indexOf('\n      Text {', layout.indexOf('id: barPreview')));
   assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
-  assert.match(preview, /parent\.width \* 0\.58/);
-  assert.match(preview, /parent\.height \* 0\.58/);
+  assert.match(preview, /parent\.width - canvas\.monitorGap \* 2/);
+  assert.match(preview, /parent\.height - canvas\.monitorGap \* 2/);
   assert.match(preview, /position === "left" \? canvas\.monitorGap/);
   assert.match(preview, /parent\.height - height - canvas\.monitorGap/);
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
@@ -234,4 +238,35 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(host, /onPopoutRequested: root\.closePeerPopouts\(monitorBar\)/);
   assert.match(monitorBar, /function closeActivePopout\(\)/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
+});
+
+test('bar width persists the request while runtime measurements provide a safe minimum', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100 } } },
+    monitorBarMinimums: {},
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMinimum = qmlFunction(service, 'monitorBarMinimum', context);
+  const reportMinimum = qmlFunction(service, 'reportMonitorBarMinimum', context);
+  const setWidth = qmlFunction(service, 'setMonitorBarWidth', context);
+
+  assert.equal(reportMinimum('DP-1', 63), 'ok');
+  assert.equal(context.monitorBarMinimum('DP-1'), 63);
+  assert.equal(setWidth('DP-1', 48), 'ok');
+  assert.equal(context.config.bars['DP-1'].width, 48);
+  assert.deepEqual(pending, ['DP-1', { enabled: true, position: 'top', width: 48 }]);
+  assert.equal(context.rememberedTab, 1);
+  assert.ok(context.panelTransferUntil > Date.now());
+  assert.equal(setWidth('DP-1', 0), 'invalid');
+  assert.equal(reportMinimum('../bad', 50), 'invalid');
 });

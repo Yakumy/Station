@@ -414,16 +414,21 @@ Bar tab:
   Displays. Displays disabled
   by Station remain visible and dimmed; physically disconnected displays are
   absent. Every monitor card shows a compact bar preview, four side arrows, and
-  a central on/off switch. The preview occupies a fixed 58% of its selected
-  side, is inset from that side by `Style.spacing.sm`, never fills the monitor,
-  and disappears while that bar is off; no side arrow remains accented while it
-  is off. Side choices and presence apply immediately.
+  a central on/off switch. The preview reflects the selected width, is inset
+  from every monitor edge by `Style.spacing.sm`, and disappears while that bar
+  is off; no side arrow remains accented while it is off. Side choices and
+  presence apply immediately.
 - At least one enabled output must retain a bar. A disabled output may keep a
   remembered bar choice for its next enable, but it cannot satisfy this guard.
 - Right: `Selected: <connector>` followed by five equal control rows. The first,
   **Position**, is a centered segmented selector ordered Top, Right, Bottom,
-  Left and applies immediately. The remaining rows are reserved for the other
-  bar appearance controls.
+  Left and applies immediately. **Width** requests 1–100% of that monitor edge,
+  with 100% as the default. Each live bar measures its actual left, centered,
+  and right widget regions and reports the first non-overlapping percentage.
+  Requests below it remain visible in the slider, but the rendered surface is
+  clamped to the measured minimum and the row reports `Minimum N% — bar items
+  overlap.` The remaining rows are reserved for the other bar appearance
+  controls.
 - A side change reflows the bar in place instead of rebuilding it: each bar
   region runs through one orientation-agnostic positioner that keeps the same
   module instances across top/bottom/left/right, so an open panel survives
@@ -440,6 +445,13 @@ Bar tab:
   fallback for a coincident structural rebuild (a plugin enable/disable or a
   widget drag), restoring directly to Bar instead of allowing the new widget's
   default Displays tab to overwrite the remembered selection.
+  A partial-width horizontal bar is centered inside a full-width, input-masked
+  layer surface; a partial-height vertical bar is centered inside the matching
+  full-height surface. Keeping the surface's coordinate space equal to the
+  screen is required by Omarchy's keyboard panels. Popouts use section anchors:
+  the panel and bar corners align for Left and Right modules, while Center
+  modules open centered. The edge axis remains anchored and keeps its normal
+  exclusion zone; transparent space outside the visible bar is click-through.
 - The first per-monitor edit selects Station's full-bar entry. It preserves the
   configured widget layout and hosts one Omarchy-derived bar instance per
   connected output, allowing independent positions without editing packaged
@@ -447,7 +459,7 @@ Bar tab:
 
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 
-Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Grace delay, Minimum stations, installed version with a GitHub link. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
+Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Grace delay, Minimum stations, installed version with a GitHub link. The two Hide switches reflect both Station's preference and the live plugin-enabled state; deliberately switching either one off enables its widget even when no Station lease exists. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
 
 **Theme tokens** (`import qs.Commons`, `import qs.Ui`):
 

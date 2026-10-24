@@ -10,7 +10,9 @@ Column {
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
-    ? service.monitorBar(selectedDisplay.name) : ({ enabled: true, position: "top" })
+    ? service.monitorBar(selectedDisplay.name) : ({ enabled: true, position: "top", width: 100 })
+  readonly property int selectedMinimumWidth: selectedDisplay && service
+    ? service.monitorBarMinimum(selectedDisplay.name) : 1
   readonly property real pad: panelRoot.regionPadH
   spacing: 0
 
@@ -179,8 +181,60 @@ Column {
             }
           }
 
+          Item {
+            id: widthRow
+            width: parent.width
+            height: controlFrame.height / 5
+            Caption {
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: "WIDTH"
+            }
+            Caption {
+              anchors.right: parent.right
+              anchors.rightMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: root.selectedBar.width + "%"
+            }
+            Ui.PanelSlider {
+              width: parent.width - root.panelRoot.space3 * 2
+              height: implicitHeight
+              anchors.centerIn: parent
+              bar: root.panelRoot.bar
+              minimum: 1
+              maximum: 100
+              integer: true
+              value: root.selectedBar.width
+              enabled: root.selectedDisplay !== null
+              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              onReleased: function(value) {
+                if (root.service && root.selectedDisplay)
+                  root.service.setMonitorBarWidth(root.selectedDisplay.name, Math.round(value))
+              }
+            }
+            Caption {
+              visible: Number(root.selectedBar.width) < root.selectedMinimumWidth
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: root.panelRoot.space1
+              width: parent.width - root.panelRoot.space3 * 2
+              text: "Minimum " + root.selectedMinimumWidth + "% — bar items overlap."
+              color: Commons.Color.urgent
+              elide: Text.ElideRight
+            }
+            Ui.PanelSeparator {
+              anchors.bottom: parent.bottom
+              width: parent.width
+              foreground: Commons.Color.popups.text
+            }
+          }
+
           Repeater {
-            model: 4
+            model: 3
             delegate: Item {
               required property int index
               width: controlFrame.width

@@ -73,6 +73,18 @@ test('positionModules handles empty and non-array input', () => {
   assert.equal(empty.width, 0);
 });
 
+test('minimumBarLength keeps edge regions clear of an asymmetric centered group', () => {
+  assert.equal(BarModel.minimumBarLength(100, 40, 60, 80, 8, 4), 304);
+  assert.equal(BarModel.minimumBarLength(100, 0, 0, 80, 8, 4), 200);
+  assert.equal(BarModel.minimumBarLength(0, 40, 60, 0, 8, 4), 136);
+});
+
+test('popoutAnchor aligns panels corner-to-corner with their bar region', () => {
+  assert.equal(BarModel.popoutAnchor('left', 600, 240), 120);
+  assert.equal(BarModel.popoutAnchor('center', 600, 240), 300);
+  assert.equal(BarModel.popoutAnchor('right', 600, 240), 480);
+});
+
 test('MonitorBar hosts module sections without vertical/horizontal Loader swaps', () => {
   const { readFileSync } = require('node:fs');
   const { join } = require('node:path');
@@ -85,4 +97,10 @@ test('MonitorBar hosts module sections without vertical/horizontal Loader swaps'
   assert.doesNotMatch(source, /sourceComponent:\s*root\.vertical\s*\?\s*verticalModuleList\s*:\s*horizontalModuleList/);
   // The positioner keeps one module list for both orientations.
   assert.match(source, /BarModel\.positionModules/);
+  assert.match(source, /function alignPopout\(owner\)/);
+  assert.match(source, /slot\.activeItem\.data[\s\S]*?objects\[j\] === owner/,
+    'Station uses a dedicated popout owner nested inside its slot root');
+  assert.match(source, /panel\.anchorItem = slot\.popoutAnchor/);
+  assert.match(source, /mask: Region \{[\s\S]*?x: barContent\.x[\s\S]*?width: barContent\.width/);
+  assert.match(source, /color: "transparent"[\s\S]*?id: barContent/);
 });

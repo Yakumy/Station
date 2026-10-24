@@ -8,7 +8,7 @@ const R = require('../../lib/Recovery.js');
 const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
 
 function restoreBody() {
-  const match = service.match(/function restoreStockLease\(\) \{([\s\S]*?)\n {2}\}/);
+  const match = service.match(/function restoreStockLease\(forceShow\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(match, 'restoreStockLease is defined');
   return match[1];
 }
@@ -35,11 +35,35 @@ test('workspace indicator comes back after the Station widget, not before it', (
   assert.match(body, /"--after",\s*"yakumy\.station"/);
   // The captured section/index stays as the fallback for a bar that has
   // since dropped the Station widget, and it only runs if --after failed.
-  assert.match(body, /"--section", lease\.section/);
-  assert.match(body, /"--index", String\(lease\.index\)/);
+  assert.match(body, /"--section", place\.section/);
+  assert.match(body, /"--index", String\(place\.index\)/);
   const after = body.indexOf('"--after"');
   const fallback = body.indexOf('"--section"');
   assert.ok(after !== -1 && after < fallback, '--after is tried first');
+});
+
+test('explicit Show enables a previously hidden workspace indicator without a lease', () => {
+  const commands = [];
+  const context = {
+    config: { hideNative: false },
+    persisted: { stockLease: null },
+    stockDisable: { running: false },
+    workspaceShowPending: false,
+    leaseVerify: { restart() {} },
+    enqueue(command, done) { commands.push(command); done(0); },
+    acquireStockLeases() {},
+    saveState() {},
+  };
+  context.root = context;
+  const restore = serviceFunction('restoreStockLease', context);
+  restore();
+  assert.equal(commands.length, 0, 'startup does not enable an unleased widget');
+  restore(true);
+  assert.deepEqual(JSON.parse(JSON.stringify(commands)), [
+    ['omarchy', 'plugin', 'enable', 'omarchy.workspaces'],
+    ['omarchy', 'bar', 'move', 'omarchy.workspaces', '--after', 'yakumy.station'],
+  ]);
+  assert.equal(context.workspaceShowPending, false);
 });
 
 test('unload cleanup returns the indicator to its recorded spot', () => {
@@ -141,6 +165,7 @@ test('workspace and Display leases preserve ownership and serialize bar rebuilds
     stockDisableAttempts: 0,
     displayDisableAttempts: 0,
     displayWidgetEnabled: null,
+    workspaceWidgetEnabled: null,
     saveState() { saves++; },
   };
   const handle = serviceFunction('handleStockPlugins', context);
@@ -154,6 +179,7 @@ test('workspace and Display leases preserve ownership and serialize bar rebuilds
     { wasEnabled: true, section: 'right', index: 5, disabledByStation: true });
   assert.equal(context.stockDisable.running, true);
   assert.equal(context.displayDisable.running, false, 'bar config writes are serialized');
+  assert.equal(context.workspaceWidgetEnabled, true);
   assert.equal(saves, 1);
 
   context.stockDisable.running = false;
@@ -178,6 +204,21 @@ test('Display presence is observed even when Station is not hiding it', () => {
   ]));
   assert.equal(context.displayWidgetEnabled, false);
   assert.equal(context.persisted.displayLease, null);
+});
+
+test('workspace presence is observed even when Station is not hiding it', () => {
+  const context = {
+    config: { hideNative: false, hideDisplay: false },
+    persisted: { stockLease: null, displayLease: null },
+    parseJson: JSON.parse,
+    workspaceWidgetEnabled: null,
+    saveState() { throw new Error('no lease should be saved'); },
+  };
+  serviceFunction('handleStockPlugins', context)(JSON.stringify([
+    { id: 'omarchy.workspaces', enabled: false },
+  ]));
+  assert.equal(context.workspaceWidgetEnabled, false);
+  assert.equal(context.persisted.stockLease, null);
 });
 
 test('Settings can refresh Display presence only after Station starts', () => {

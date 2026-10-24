@@ -92,7 +92,8 @@ Item {
       for (var i = 0; i < displayDraft.length; i++) if (displayDraft[i].name === name) return i
       return -1
     }
-    function monitorBar(name) { return {enabled: true, position: "top"} }
+    function monitorBar(name) { return {enabled: true, position: "top", width: 100} }
+    function monitorBarMinimum(name) { return 1 }
     function setMonitorBarPosition(name, position) {}
     function setMonitorBarEnabled(name, enabled) {}
 ''' + setter + '''
