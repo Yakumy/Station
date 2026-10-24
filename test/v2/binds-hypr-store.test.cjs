@@ -59,9 +59,18 @@ test('hypr generators validate every external value', () => {
   const rules = H.compactRules(['A', 'C']);
   assert.equal(rules.length, 20);
   assert.match(rules[3], /workspace = "4", monitor = "C"/);
+  const blur = H.barBlur(true, { enabled: true, size: 8, passes: 3 });
+  assert.match(blur, /name = "station-bar-blur"/);
+  assert.match(blur, /namespace = "omarchy-bar"/);
+  assert.match(blur, /ignore_alpha = 0/);
+  assert.match(blur, /set_enabled\(true\)/);
+  assert.match(blur, /blur = \{ enabled = true, size = 8, passes = 3 \}/);
+  assert.match(H.barBlur(false), /set_enabled\(false\)/);
+  assert.doesNotMatch(H.barBlur(false), /hl\.config/);
 });
 
 test('store defaults and migrations constrain public values', () => {
+  assert.equal(S.STATE_VERSION, 4);
   const config = S.loadConfig({ mode: 'bad', direction: 'bad', graceMs: 999999, minStations: 0, lanes: [] });
   assert.equal(config.mode, 'extend');
   assert.equal(config.direction, 'ltr');
@@ -75,6 +84,9 @@ test('store defaults and migrations constrain public values', () => {
   const state = S.loadState({ lastStation: 99 });
   assert.equal(state.lastStation, 10);
   assert.equal(state.displayLease, null);
+  assert.equal(state.barBlurLease, null);
+  assert.deepEqual(S.loadState({ barBlurLease: { originalEnabled: false, changed: true } }).barBlurLease,
+    { originalEnabled: false, changed: true, originalSize: null, originalPasses: null });
 });
 
 

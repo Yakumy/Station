@@ -42,9 +42,9 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
-      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0}
-      return {enabled: false, position: "right", width: 100, height: 0}
+      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur"}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid"}
+      return {enabled: false, position: "right", width: 100, height: 0, background: "transparent"}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
     function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 120 : 108 }
@@ -52,6 +52,7 @@ ShellRoot {
     function setMonitorBarPosition() { return "ok" }
     function setMonitorBarWidth() { return "ok" }
     function setMonitorBarHeight() { return "ok" }
+    function setMonitorBarBackground() { return "ok" }
   }
   Item {
     id: panel
@@ -83,6 +84,31 @@ ShellRoot {
       Station.BarTab { id: tab; width: parent.width; panelRoot: panel }
     }
   }
+  function findObject(node, name) {
+    if (!node) return null
+    if (node.objectName === name) return node
+    var children = node.children || []
+    for (var i = 0; i < children.length; i++) {
+      var found = findObject(children[i], name)
+      if (found) return found
+    }
+    return null
+  }
+  Timer {
+    interval: 300; running: true
+    onTriggered: {
+      var dropdown = findObject(tab, "barBackgroundDropdown")
+      if (!dropdown) { console.log("BAR_BACKGROUND_BINDING_MISSING"); return }
+      // Ui.Dropdown imperatively assigns value when selected. Simulate that,
+      // then switch monitors and require the external Binding to win again.
+      dropdown.value = "transparent"
+      panel.selectDisplay("HDMI-A-2")
+      Qt.callLater(function() {
+        if (dropdown.value === "solid") console.log("BAR_BACKGROUND_BINDING_OK")
+        else console.log("BAR_BACKGROUND_BINDING_BAD:" + dropdown.value)
+      })
+    }
+  }
   Timer {
     interval: 700; running: true
     onTriggered: capture.grabToImage(function(result) {
@@ -99,6 +125,6 @@ ShellRoot {
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
     print(result.stdout)
     print(output)
-    if "BAR_TAB_RENDER_OK" not in result.stdout or any(token in result.stdout for token in
+    if "BAR_TAB_RENDER_OK" not in result.stdout or "BAR_BACKGROUND_BINDING_OK" not in result.stdout or any(token in result.stdout for token in
             ("ERROR", "ReferenceError", "TypeError", "Binding loop", "Unable to assign", "grabToImage:")):
         raise SystemExit(1)

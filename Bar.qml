@@ -75,6 +75,9 @@ Item {
     copy.position = validPosition(entry.position || copy.position)
     copy.widthPercent = Number(entry.width) > 0 ? Number(entry.width) : 100
     copy.height = Number(entry.height) > 0 ? Number(entry.height) : 0
+    copy.background = ["solid", "transparent", "blur"].indexOf(entry.background) !== -1
+      ? entry.background : (copy.transparent === true ? "transparent" : "solid")
+    copy.transparent = copy.background === "transparent"
     copy.maximumHeight = Number(stationBarMaximumHeights[screen ? screen.name : ""]) || 0
     return copy
   }
@@ -128,6 +131,24 @@ Item {
       if (instances[i] && instances[i] !== source) instances[i].closeActivePopout()
   }
 
+  function requestMonitorBackground(instance, background) {
+    if (!instance || !instance.targetScreenName) return
+    var api = BarBridge.current()
+    var result = api && typeof api.call === "function"
+      ? api.call("setMonitorBarBackground", [instance.targetScreenName, background]) : undefined
+    if (result !== undefined) return
+    if (root.shell && typeof root.shell.mutateShellConfig === "function") {
+      root.shell.mutateShellConfig(function(config) {
+        if (!config.bar || typeof config.bar !== "object") config.bar = {}
+        if (!config.bar.monitors || typeof config.bar.monitors !== "object") config.bar.monitors = {}
+        var current = config.bar.monitors[instance.targetScreenName]
+        if (!current || typeof current !== "object") current = {}
+        current.background = background
+        config.bar.monitors[instance.targetScreenName] = current
+      })
+    }
+  }
+
   function moduleWidgets(pluginId) {
     var result = []
     for (var i = 0; i < instances.length; i++)
@@ -177,6 +198,7 @@ Item {
         manifest: root.manifest
         barConfig: root.configFor(modelData)
         onPopoutRequested: root.closePeerPopouts(monitorBar)
+        onBackgroundModeRequested: function(mode) { root.requestMonitorBackground(monitorBar, mode) }
         onMinimumWidthPercentChanged: root.reportMinimumWidth(monitorBar)
         Component.onCompleted: {
           root.registerInstance(monitorBar)

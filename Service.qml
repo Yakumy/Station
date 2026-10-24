@@ -34,6 +34,7 @@ Item {
   // measured widgets. It is runtime geometry, not a preference, so it stays
   // out of config.json and is merely included in detached panel snapshots.
   property var monitorBarMinimums: ({})
+  property bool barBlurSyncQueued: false
   Timer {
     id: monitorBarPublishDelay
     interval: 250
@@ -244,11 +245,13 @@ Item {
       ? Math.max(1, Math.min(100, Math.round(Number(row.width)))) : 100
     var height = row && isFinite(Number(row.height))
       ? Math.max(0, Math.min(1000, Math.round(Number(row.height)))) : 0
+    var background = row && ["solid", "transparent", "blur"].indexOf(row.background) !== -1
+      ? row.background : "solid"
     return row && typeof row === "object"
       ? { enabled: row.enabled !== false,
           position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
-          width: width, height: height }
-      : { enabled: true, position: fallback, width: 100, height: 0 }
+          width: width, height: height, background: background }
+      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid" }
   }
 
   function monitorBarMaximumHeight(name) {
@@ -314,7 +317,8 @@ Item {
       Object.keys(changes || {}).forEach(function(name) {
         var next = changes[name]
         scoped.bar.monitors[name] = {
-          enabled: next.enabled, position: next.position, width: next.width, height: next.height
+          enabled: next.enabled, position: next.position, width: next.width, height: next.height,
+          background: next.background
         }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
@@ -336,7 +340,8 @@ Item {
   function deferMonitorBarPublish(name, next) {
     var pending = Object.assign({}, pendingMonitorBars)
     pending[name] = {
-      enabled: next.enabled, position: next.position, width: next.width, height: next.height
+      enabled: next.enabled, position: next.position, width: next.width, height: next.height,
+      background: next.background
     }
     pendingMonitorBars = pending
   }
@@ -398,6 +403,7 @@ Item {
     config.bars = bars
     config = Object.assign({}, config)
     saveConfig()
+    syncBarBlur()
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
   }
 
@@ -445,6 +451,99 @@ Item {
       return "ok"
     }
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarBackground(name, background) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    if (["solid", "transparent", "blur"].indexOf(background) === -1) return "invalid"
+    var next = monitorBar(name)
+    next.background = background
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    syncBarBlur()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function barBlurWanted() {
+    return displayDraft.some(function(display) {
+      var bar = monitorBar(display.name)
+      return bar.enabled && bar.background === "blur"
+    })
+  }
+
+  function syncBarBlur() {
+    if (!started || !configLoaded) return
+    if (barBlurProbe.running) { barBlurSyncQueued = true; return }
+    barBlurProbe.running = true
+  }
+
+  function finishBarBlurProbe(code, raw) {
+    if (code !== 0) {
+      if (barBlurSyncQueued) {
+        barBlurSyncQueued = false
+        Qt.callLater(syncBarBlur)
+      }
+      return
+    }
+    var lines = String(raw || "").trim().split("\n")
+    var enabledOption = parseJson(lines[0], {})
+    var sizeOption = parseJson(lines[1], {})
+    var passesOption = parseJson(lines[2], {})
+    if (typeof enabledOption.bool !== "boolean" || !Number.isInteger(sizeOption.int)
+        || !Number.isInteger(passesOption.int)) {
+      if (barBlurSyncQueued) {
+        barBlurSyncQueued = false
+        Qt.callLater(syncBarBlur)
+      }
+      return
+    }
+    var globalEnabled = enabledOption.bool === true
+    var currentSize = sizeOption.int
+    var currentPasses = passesOption.int
+    var wanted = barBlurWanted()
+    var lease = persisted.barBlurLease
+    var options = ({})
+    if (wanted) {
+      if (!lease) {
+        lease = { originalEnabled: globalEnabled, changed: !globalEnabled,
+          originalSize: currentSize, originalPasses: currentPasses }
+        persisted.barBlurLease = lease
+        saveState()
+      } else if (!Number.isInteger(lease.originalSize) || !Number.isInteger(lease.originalPasses)) {
+        lease.originalSize = currentSize
+        lease.originalPasses = currentPasses
+        persisted.barBlurLease = lease
+        saveState()
+      }
+      if (!globalEnabled) options.enabled = true
+      if (currentSize !== 8) options.size = 8
+      if (currentPasses !== 3) options.passes = 3
+    } else if (lease) {
+      if (globalEnabled !== lease.originalEnabled) options.enabled = lease.originalEnabled
+      if (Number.isInteger(lease.originalSize) && currentSize !== lease.originalSize)
+        options.size = lease.originalSize
+      if (Number.isInteger(lease.originalPasses) && currentPasses !== lease.originalPasses)
+        options.passes = lease.originalPasses
+      persisted.barBlurLease = null
+      saveState()
+    }
+    evalLua(Hypr.barBlur(wanted, options))
+    if (barBlurSyncQueued) {
+      barBlurSyncQueued = false
+      Qt.callLater(syncBarBlur)
+    }
   }
 
   function saveConfig() {
@@ -954,6 +1053,7 @@ Item {
       evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
     } catch (error) { console.warn("Station monitor mode:", error) }
     applyBinds()
+    syncBarBlur()
   }
 
   function setDisplayValue(name, key, value) {
@@ -1902,6 +2002,7 @@ Item {
       setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
       setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
       setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
+      setMonitorBarBackground: function(name, background) { return root.setMonitorBarBackground(name, background) },
       reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
       monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },
@@ -2120,6 +2221,15 @@ Item {
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: hyprBindSnapshot.captured = text }
     onRunningChanged: if (running) captured = ""
     onExited: { root.hyprBindingsText = captured; root.finishBindCheck() }
+  }
+
+  Process {
+    id: barBlurProbe
+    command: ["bash", "-lc", "hyprctl getoption decoration:blur:enabled -j; hyprctl getoption decoration:blur:size -j; hyprctl getoption decoration:blur:passes -j"]
+    property string captured: ""
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: barBlurProbe.captured = text }
+    onRunningChanged: if (running) captured = ""
+    onExited: function(code) { root.finishBarBlurProbe(code, captured) }
   }
 
   Process {

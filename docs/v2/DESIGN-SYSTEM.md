@@ -93,6 +93,11 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 Bar thickness is the exception that starts from the dedicated Omarchy tokens
 `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
 Height control may increase it, but never lowers it below the active token.
+Blurred bars use a nearly clear 1% mask derived from `Color.bar.background`
+through `Util.alpha`; it activates compositor blur without adding a visible
+dark glass tint or a separate palette. Bar appearance
+choices use the host `Ui.Dropdown` at full row width and
+`Style.spacing.controlHeight`.
 
 Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. One shared vertical rhythm between the Displays sidebar, Keybindings rows and Settings rows, so switching tabs doesn't change the page's density.
 
@@ -134,7 +139,7 @@ Span keeps exact edge-to-edge cards because its image crop is continuous.
 - No pill/`radius-full` shapes.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
-- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; any derived-colour helper other than the approved `Qt.darker(<token>, 1.4)` dim idiom (so `Util.alpha(`, `Qt.tint(` and any other `Qt.darker(` arity fail); any gradient property; any `DropShadow`/`Glow`/`Blur`-family identifier; any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
+- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
 
 ## 10. Functional bugs found during audit (fix with priority — not cosmetic)
 

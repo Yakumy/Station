@@ -10,10 +10,11 @@ const repositoryRuntimeFiles = new Set(['Panel.qml', 'Service.qml', 'manifest.js
 const textExtensions = new Set(['.qml', '.js', '.mjs', '.json', '.svg', '.css', '.html', '.lua']);
 
 const HEX = /#(?:[\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})(?![\da-f])/i;
-const ELEVATION = /\b\w*(?:dropshadow|blur|glow)\w*\b/i;
+const ELEVATION = /\b(?:DropShadow|FastBlur|GaussianBlur|MaskedBlur|RecursiveBlur|DirectionalBlur|RadialBlur|ZoomBlur|Glow)\s*\{/;
 const SHADOW = /\b\w*shadow\w*\b/i;
 const GRADIENT = /(?:^|[^\w])gradient\s*:|\bGradient\s*\{|(?:^|[^\w])stops\s*:/;
 const APPROVED_DIM = /Qt\.darker\([^,()]+,\s*1\.4\s*\)/;
+const APPROVED_ALPHA = /Util\.alpha\(Commons\.Color\.bar\.background,\s*0\.01\s*\)/;
 const MULTI_EFFECT_KEY = /^(?:id|source|width|height|x|y|visible|enabled|opacity|anchors(?:\.\w+)?)$/;
 const COLORISATION_KEY = /^colorization(?:Enabled|Color)?$/;
 
@@ -34,7 +35,8 @@ function checkLine(path, line, code) {
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');
   if (code.includes('Qt.lighter(')) report(path, line, 'Qt.lighter() derives a Station-owned colour');
-  if (/Util\.alpha\(|Qt\.tint\(/.test(code)) report(path, line, 'derived-colour helper; only Qt.darker(token, 1.4) is approved');
+  if ((code.includes('Util.alpha(') && !APPROVED_ALPHA.test(code)) || code.includes('Qt.tint('))
+    report(path, line, 'derived-colour helper outside the approved bar-blur fill or dim idiom');
   if (code.includes('Qt.darker(') && !APPROVED_DIM.test(code)) {
     report(path, line, 'Qt.darker must be the approved dim idiom Qt.darker(<token>, 1.4)');
   }

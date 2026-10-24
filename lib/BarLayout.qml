@@ -63,7 +63,8 @@ Ui.BorderSurface {
       readonly property bool outputEnabled: canvas.service
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       readonly property var barSetting: canvas.service
-        ? canvas.service.monitorBar(modelData.name) : ({ enabled: true, position: "top", width: 100, height: 0 })
+        ? canvas.service.monitorBar(modelData.name)
+        : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid" })
       readonly property int minimumBarWidth: canvas.service
         ? canvas.service.monitorBarMinimum(modelData.name) : 1
       readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100

@@ -25,16 +25,24 @@ shares the themed SVG mark between the bar and panel header.
 Station 2.2 also declares a full-bar entry. `Bar.qml` creates one
 `MonitorBar.qml` instance per connected Quickshell screen and passes each a
 detached copy of the shared layout with that connector's saved position,
-width, and thickness.
+width, thickness, and background mode.
 The wrapper coordinates popouts across those isolated copies so opening a
 panel on one output closes the panel already open on another.
-Presence, position, width, and height live in both Station's validated `config.bars` preferences
-and the shell bar's `monitors` map. While the panel is open, the full bar reads
+Presence, position, width, height, and background live in both Station's
+validated `config.bars` preferences and the shell bar's `monitors` map. While
+the panel is open, the full bar reads
 the detached `config.bars` snapshot through the top-level bridge and treats it
 as the live authority; the service defers the redundant shell map write until
 the panel closes. This prevents an otherwise harmless host config reload from
 recreating the third-party bar and its panel mid-click. The service refuses to
 hide the last bar on an enabled output.
+Blur is compositor-owned. The service keeps a persisted lease of the prior
+global Hyprland blur state, enables one named layer rule for the shared
+`omarchy-bar` namespace, temporarily uses size 8 with three passes, and
+restores the prior global enabled/size/pass values after the final connected
+Blur bar changes mode. Fully transparent surface regions are
+excluded, which matters because partial bars retain a full-screen coordinate
+surface for correct popup anchoring.
 When Station becomes the active full bar, the service atomically removes its
 persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
 The service also reconciles that row on activation, covering upgrades where

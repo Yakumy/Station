@@ -10,7 +10,8 @@ Column {
   readonly property var service: panelRoot.service
   readonly property var selectedDisplay: panelRoot.selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
-    ? service.monitorBar(selectedDisplay.name) : ({ enabled: true, position: "top", width: 100, height: 0 })
+    ? service.monitorBar(selectedDisplay.name)
+    : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid" })
   readonly property int selectedMinimumWidth: selectedDisplay && service
     ? service.monitorBarMinimum(selectedDisplay.name) : 1
   readonly property int selectedMinimumHeight: selectedBar.position === "left" || selectedBar.position === "right"
@@ -281,8 +282,53 @@ Column {
             }
           }
 
+          Item {
+            id: backgroundRow
+            width: parent.width
+            height: controlFrame.height / 5
+            Caption {
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: "BACKGROUND"
+            }
+            Ui.Dropdown {
+              id: backgroundDropdown
+              objectName: "barBackgroundDropdown"
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.right: parent.right
+              anchors.rightMargin: root.panelRoot.space3
+              anchors.verticalCenter: parent.verticalCenter
+              height: Style.spacing.controlHeight
+              showLabel: false
+              options: [
+                { value: "solid", label: "Solid color" },
+                { value: "transparent", label: "Transparent" },
+                { value: "blur", label: "Blur" }
+              ]
+              enabled: root.selectedDisplay !== null
+              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              onChanged: function(value) {
+                if (root.service && root.selectedDisplay)
+                  root.service.setMonitorBarBackground(root.selectedDisplay.name, value)
+              }
+            }
+            Binding {
+              target: backgroundDropdown
+              property: "value"
+              value: root.selectedBar.background
+            }
+            Ui.PanelSeparator {
+              anchors.bottom: parent.bottom
+              width: parent.width
+              foreground: Commons.Color.popups.text
+            }
+          }
+
           Repeater {
-            model: 2
+            model: 1
             delegate: Item {
               required property int index
               width: controlFrame.width

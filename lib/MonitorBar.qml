@@ -18,6 +18,7 @@ Item {
   property var targetScreen: null
   property string targetScreenName: targetScreen ? String(targetScreen.name || "") : ""
   signal popoutRequested()
+  signal backgroundModeRequested(string mode)
 
   // The omarchy-shell host injects omarchyPath from OMARCHY_PATH.
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
@@ -59,6 +60,7 @@ Item {
   property var layoutConfig: fallbackBarConfig.layout
   property string centerAnchor: ""
   property bool requestedTransparent: false
+  property string backgroundMode: "solid"
   property bool useTransparentForeground: false
   property bool transparent: false
   property bool centerSectionHovered: false
@@ -90,6 +92,8 @@ Item {
   property color barForeground: useTransparentForeground ? transparentForeground : themeForeground
   property bool foregroundAnimationEnabled: true
   property color background: Commons.Color.bar.background
+  readonly property color barSurfaceColor: backgroundMode === "transparent" ? "transparent"
+    : backgroundMode === "blur" ? Util.alpha(Commons.Color.bar.background, 0.01) : background
   property color urgent: Commons.Color.bar.active
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
@@ -708,7 +712,9 @@ Item {
     var maximumHeight = Number(config.maximumHeight)
     requestedMaximumHeight = isFinite(maximumHeight) && maximumHeight > 0
       ? Math.round(maximumHeight) : 0
-    setRequestedTransparency(config.transparent === true)
+    backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
+      ? config.background : (config.transparent === true ? "transparent" : "solid")
+    setRequestedTransparency(backgroundMode !== "solid")
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
     // layoutEntries feeds plain JS arrays to the module Repeaters, and QML
@@ -971,15 +977,7 @@ Item {
   }
 
   function toggleTransparency() {
-    var nextTransparent = !(root.requestedTransparent === true)
-    if (root.shell && typeof root.shell.mutateShellConfig === "function") {
-      root.shell.mutateShellConfig(function(config) {
-        if (!Util.isPlainObject(config.bar)) config.bar = {}
-        config.bar.transparent = nextTransparent
-      })
-    } else {
-      root.setRequestedTransparency(nextTransparent)
-    }
+    root.backgroundModeRequested(root.backgroundMode === "transparent" ? "solid" : "transparent")
   }
 
   function rawLayoutSection(config, region) {
@@ -1158,6 +1156,7 @@ Item {
   function setRequestedTransparency(value) {
     var nextTransparent = value === true
     requestedTransparent = nextTransparent
+    transparent = nextTransparent && backgroundMode === "transparent"
     if (!nextTransparent) {
       foregroundAnimationEnabled = false
       useTransparentForeground = false
@@ -1197,6 +1196,10 @@ Item {
   }
 
   onRequestedTransparentChanged: scheduleTransparentForegroundRefresh()
+  onBackgroundModeChanged: {
+    transparent = requestedTransparent && backgroundMode === "transparent"
+    scheduleTransparentForegroundRefresh()
+  }
   onPositionChanged: scheduleTransparentForegroundRefresh()
   onBarSizeChanged: scheduleTransparentForegroundRefresh()
   onThemeForegroundChanged: scheduleTransparentForegroundRefresh()
@@ -1220,7 +1223,7 @@ Item {
         root.transparentForeground = value
         if (root.requestedTransparent) {
           root.useTransparentForeground = true
-          root.transparent = true
+          root.transparent = root.backgroundMode === "transparent"
         }
         root.restoreForegroundAnimation()
       }
@@ -1425,7 +1428,7 @@ Item {
 
       Rectangle {
         anchors.fill: parent
-        color: root.transparent ? "transparent" : root.background
+        color: root.barSurfaceColor
         radius: Style.cornerRadius
       }
 
@@ -1563,7 +1566,7 @@ Item {
 
       BorderSurface {
         anchors.fill: parent
-        color: root.transparent ? "transparent" : root.background
+        color: root.barSurfaceColor
         borderSpec: Border.flat(root.barForeground, 1)
         radius: Style.cornerRadius
         opacity: root.transparent ? 0.45 : 0.94
@@ -1633,7 +1636,7 @@ Item {
         y: modelData === "bottom" ? parent.height - edgeSize : 0
         width: edgeVertical ? edgeSize : parent.width
         height: edgeVertical ? parent.height : edgeSize
-        color: root.transparent ? "transparent" : root.background
+        color: root.barSurfaceColor
         borderSpec: Border.flat(root.barForeground, 1)
         visible: opacity > 0
         opacity: root.barMoveCandidate === modelData ? (root.transparent ? 0.45 : 0.7) : 0
@@ -1937,7 +1940,7 @@ Item {
       visible: slot.dragSource
       anchors.fill: parent
       anchors.margins: Style.space(1)
-      color: root.transparent ? "transparent" : root.background
+      color: root.barSurfaceColor
       borderSpec: Border.flat(root.barForeground, 1)
       radius: Style.cornerRadius
       opacity: root.transparent ? 0.22 : 0.32
