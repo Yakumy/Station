@@ -599,3 +599,20 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   The helper detects formats by magic bytes, caps total input/chunks/raster, and
   writes only bounded rendering chunks for PNG. QML receives only the private
   prepared path. Old unmarked pinned images are gated and restaged before use.
+
+## Bar content zoom rendering repair (2026-10-25)
+
+- [SRC][DOC] Installed `Ui.WidgetButton` and `Ui.OpticalGlyph` use
+  `Text.NativeRendering`. Qt documents pixelated results when transforming that
+  renderer: https://doc.qt.io/qt-6/qml-qtquick-text.html#renderType-prop.
+  The previous larger-loader-texture fix left that renderer unchanged; the user
+  reported that the enlarged clock and indicator glyphs were still blurry.
+- [SRC] Zoomed module subtrees now switch native text (including icon fonts) to
+  `Text.QtRendering` and omit the loader layer. Image source-size enlargement
+  remains in place. Default-size modules restore their original rendering mode;
+  Station's directly sized widget remains exempt from subtree zoom.
+- [QTTEST] `python3 tools/v2/check-bar-rendering.py` exercises the production
+  traversal with real Qt Text/Image objects: fractional and integer zoom,
+  nested glyphs, repeated scans, newly added/destroyed text, and restoration.
+  Passed on Qt 6.12.0. This verifies rendering policy, not final desktop pixels;
+  installed-bar visual acceptance remains pending.

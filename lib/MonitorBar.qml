@@ -1989,6 +1989,7 @@ Item {
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
     property var imageSourceBaselines: new Map()
+    property var textRenderBaselines: new Map()
     property var imageContentRoot: null
     readonly property bool widgetSizedContent: activeItem
       && "nativeContentSized" in activeItem && activeItem.nativeContentSized === true
@@ -2044,10 +2045,6 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
-      layer.enabled: slot.contentZoom > 1
-      layer.smooth: true
-      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
-        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2065,10 +2062,6 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
-      layer.enabled: slot.contentZoom > 1
-      layer.smooth: true
-      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
-        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2086,10 +2079,6 @@ Item {
       height: item ? item.implicitHeight : 0
       scale: slot.contentZoom
       transformOrigin: Item.Center
-      layer.enabled: slot.contentZoom > 1
-      layer.smooth: true
-      layer.textureSize: Qt.size(Math.max(1, Math.round(width * slot.contentZoom)),
-        Math.max(1, Math.round(height * slot.contentZoom)))
       opacity: slot.dragSource ? 0.22 : 1.0
       onLoaded: {
         slot.injectProps()
@@ -2098,12 +2087,9 @@ Item {
       }
     }
 
-    // The zoom transform keeps every proportion — glyphs, padding, and the
-    // gaps between them — the way Omarchy's global text size does. A plain
-    // transform only stretches the rasterized subtree, so each loader renders
-    // into a texture sized to the final device pixels and Qt re-rasterizes
-    // text there. Image textures still decode at their logical size, so the
-    // walk below multiplies each sourceSize by the same ratio.
+    // NativeRendering caches glyphs at the unscaled font size. A larger
+    // layer texture cannot recover their detail. Use scalable glyph rendering
+    // for zoomed text (including icon fonts), and decode images at zoomed size.
     Timer {
       id: contentImageTimer
       interval: 0
@@ -2262,9 +2248,14 @@ Item {
       if (imageContentRoot !== target) {
         imageContentRoot = target
         imageSourceBaselines = new Map()
+        textRenderBaselines = new Map()
       }
       var zoom = Math.max(1, contentZoom)
       if (zoom <= 1) {
+        textRenderBaselines.forEach(function(renderType, item) {
+          if (item) item.renderType = renderType
+        })
+        textRenderBaselines = new Map()
         imageSourceBaselines.forEach(function(baseline, item) {
           if (!item) return
           if (baseline.width > 0) item.sourceSize.width = baseline.width
@@ -2274,6 +2265,10 @@ Item {
         return
       }
       walkContentImages(target, function(item) {
+        if (item instanceof Text && item.renderType === Text.NativeRendering) {
+          if (!textRenderBaselines.has(item)) textRenderBaselines.set(item, item.renderType)
+          item.renderType = Text.QtRendering
+        }
         if (!("source" in item) || !("sourceSize" in item)) return
         var baseline = imageSourceBaselines.get(item)
         if (!baseline) {

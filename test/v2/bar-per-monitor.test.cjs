@@ -273,8 +273,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
   assert.match(monitorBar, /contentZoom: widgetSizedContent \? 1 : root\.contentScale/);
   assert.equal((monitorBar.match(/scale: slot\.contentZoom/g) || []).length, 3);
-  assert.equal((monitorBar.match(/layer\.enabled: slot\.contentZoom > 1/g) || []).length, 3);
-  assert.equal((monitorBar.match(/layer\.textureSize: Qt\.size\(/g) || []).length, 3);
+  assert.doesNotMatch(monitorBar, /layer\.enabled: slot\.contentZoom/);
+  assert.match(monitorBar, /item\.renderType = Text\.QtRendering/);
   assert.match(monitorBar, /transformOrigin: Item\.Center/);
   assert.match(monitorBar, /baseContentWidth \* contentZoom/);
   assert.match(monitorBar, /baseContentHeight \* contentZoom/);

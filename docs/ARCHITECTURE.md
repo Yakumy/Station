@@ -51,12 +51,12 @@ exclusive-zone size exposed to popup placement remains unchanged.
 Content size is stored per monitor as a font-pixel target. Above the default,
 `MonitorBar` renders each module as a uniform zoom of its default-size subtree
 at the requested-to-default ratio — the same proportions as Omarchy's global
-text size, scoped to that one bar. A plain scale transform only stretches the
-rasterized subtree, so each module renders into a texture sized to its final
-device pixels and Qt re-rasterizes text there; the bar also multiplies each
-loaded image's `sourceSize` by the same ratio so raster icons decode at
-physical pixels rather than upscaling a low-resolution texture. The along-bar
-slot grows by that ratio so module gaps
+text size, scoped to that one bar. Native-rendered text and font icons switch
+to Qt's scalable distance-field rendering while zoomed, restoring their original
+render type at default size. Enlarging an offscreen layer does not re-rasterize
+native glyph caches, so the loaders render directly without that extra layer.
+The bar also multiplies each loaded image's `sourceSize` by the same ratio.
+The along-bar slot grows by that ratio so module gaps
 keep their proportions and neighbors never overlap, and the cross axis stays
 clipped to the configured bar height. Widgets whose geometry is derived from
 non-Item helpers may expose `nativeContentSized` on the registry-loaded widget
