@@ -23,7 +23,7 @@ import QtQuick
 QtObject {
   property int cornerRadius: 0
   property int normalBorderWidth: 1
-  property var spacing: ({xxs: 2})
+  property var spacing: ({sm: 4})
   property var font: ({family: "monospace", caption: 12, body: 14})
   function space(n) { return n }
 }
@@ -94,7 +94,7 @@ Item {
       verify(first.y + first.height <= canvas.height - canvas.verticalInset + 0.01)
       fuzzyCompare(second.x - first.x - first.width, 0, 0.01)
     }
-    function test_non_span_modes_use_the_smallest_monitor_gap() {
+    function test_non_span_modes_use_the_compact_monitor_gap() {
       controller.draft = Object.assign({}, controller.draft, {mode: "individual"})
       var first = findChild(canvas, "wallpaperMonitor-A")
       var second = findChild(canvas, "wallpaperMonitor-B")

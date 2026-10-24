@@ -19,7 +19,7 @@ Ui.BorderSurface {
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
-  readonly property real monitorGap: Style.spacing.xxs
+  readonly property real monitorGap: Style.spacing.sm
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property color cardBackground: Color.popups.background

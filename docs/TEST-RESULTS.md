@@ -3,7 +3,8 @@
 ## Monitor-card presentation gaps — 2026-10-24
 
 - Displays and Bar now inset each painted monitor card by half of
-  `Style.spacing.xxs`, so logically touching outputs retain the smallest named
+  `Style.spacing.sm` (doubled from the initial `xxs` after visual review), so
+  logically touching outputs retain a compact named
   theme-space gap without changing their saved geometry. Same and Per monitor
   Wallpaper previews use the same gap; Span remains exactly edge-to-edge so its
   continuous image crop is unchanged.

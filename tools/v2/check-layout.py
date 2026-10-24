@@ -214,7 +214,7 @@ Item {
         verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
       }
     }
-    function test_adjacent_displays_have_the_smallest_visual_gap() {
+    function test_adjacent_displays_have_the_compact_visual_gap() {
       service.displayDraft = [
         {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
         {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
@@ -223,7 +223,7 @@ Item {
       var first = card("eDP-1"), second = card("HDMI-A-2")
       fuzzyCompare(second.x - first.x - first.width, layout.monitorGap, 0.01)
     }
-    function test_adjacent_bar_cards_have_the_smallest_visual_gap() {
+    function test_adjacent_bar_cards_have_the_compact_visual_gap() {
       service.displayDraft = [
         {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
         {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}

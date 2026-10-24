@@ -399,9 +399,9 @@ Displays tab:
 - Left: **Layout** canvas (logical coordinates, §5.9; drag and snap; wheel/button zoom and background pan; selected outlined; borderless rotation controls diagonally outside all four corners of the selected monitor, revealed by broad square hover targets straddling those corners and kept above neighboring cards; role-number menu inside each enabled monitor; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2). A red layout error appears below the canvas.
 - By default, the actual monitor union is fitted inside the central 80% of the
   canvas, leaving about 10% whitespace on each constraining edge. Bar and
-  Wallpaper use the same framing rule. Displays and Bar paint the smallest
+  Wallpaper use the same framing rule. Displays and Bar paint a compact
   named theme-space gap between touching monitor cards. Wallpaper uses that
-  gap in Same and Per monitor modes, but Span remains edge-to-edge so one image
+  named theme-space gap in Same and Per monitor modes, but Span remains edge-to-edge so one image
   stays visually continuous across the monitor group.
 - Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders and save immediately through the direct §9.3 transaction; they never open the Keep/Revert footer. Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.

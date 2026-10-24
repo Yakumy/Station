@@ -15,7 +15,7 @@ Ui.BorderSurface {
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
   readonly property real gridStep: Style.space(16)
-  readonly property real monitorGap: spanning ? 0 : Style.spacing.xxs
+  readonly property real monitorGap: spanning ? 0 : Style.spacing.sm
   property size readySourceSize: Qt.size(1, 1)
   readonly property real layoutFit: Math.min(
     (width - horizontalInset * 2) / Math.max(1, layout.width),

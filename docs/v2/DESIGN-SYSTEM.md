@@ -119,7 +119,7 @@ union proportionally inside the central 80% of the canvas, giving a default 10%
 inset on the constraining width or height. Center the other dimension, whose
 whitespace may therefore be larger. Do not reserve hypothetical disconnected
 arrangements or cap the fit below the available canvas. Inset each painted
-monitor card by half of `Style.spacing.xxs`, producing the smallest named gap
+monitor card by half of `Style.spacing.sm`, producing a compact named gap
 between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
 Span keeps exact edge-to-edge cards because its image crop is continuous.
 

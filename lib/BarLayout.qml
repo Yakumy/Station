@@ -11,7 +11,7 @@ Ui.BorderSurface {
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
-  readonly property real monitorGap: Style.spacing.xxs
+  readonly property real monitorGap: Style.spacing.sm
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
