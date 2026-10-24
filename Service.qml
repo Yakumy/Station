@@ -247,11 +247,12 @@ Item {
       ? Math.max(0, Math.min(1000, Math.round(Number(row.height)))) : 0
     var background = row && ["solid", "transparent", "blur"].indexOf(row.background) !== -1
       ? row.background : "solid"
+    var style = row && ["default", "pill"].indexOf(row.style) !== -1 ? row.style : "default"
     return row && typeof row === "object"
       ? { enabled: row.enabled !== false,
           position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
-          width: width, height: height, background: background }
-      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid" }
+          width: width, height: height, background: background, style: style }
+      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid", style: "default" }
   }
 
   function monitorBarMaximumHeight(name) {
@@ -318,7 +319,7 @@ Item {
         var next = changes[name]
         scoped.bar.monitors[name] = {
           enabled: next.enabled, position: next.position, width: next.width, height: next.height,
-          background: next.background
+          background: next.background, style: next.style
         }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
@@ -341,7 +342,7 @@ Item {
     var pending = Object.assign({}, pendingMonitorBars)
     pending[name] = {
       enabled: next.enabled, position: next.position, width: next.width, height: next.height,
-      background: next.background
+      background: next.background, style: next.style
     }
     pendingMonitorBars = pending
   }
@@ -468,6 +469,28 @@ Item {
     config = Object.assign({}, config)
     saveConfig()
     syncBarBlur()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarStyle(name, style) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    if (["default", "pill"].indexOf(style) === -1) return "invalid"
+    var next = monitorBar(name)
+    next.style = style
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
     if (activeStationBar() && panelWanted) {
       if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
       deferMonitorBarPublish(name, next)
@@ -2003,6 +2026,7 @@ Item {
       setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
       setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
       setMonitorBarBackground: function(name, background) { return root.setMonitorBarBackground(name, background) },
+      setMonitorBarStyle: function(name, style) { return root.setMonitorBarStyle(name, style) },
       reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
       monitorBar: function(name) { return root.monitorBar(name) },
       monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },

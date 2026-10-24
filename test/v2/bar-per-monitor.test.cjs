@@ -22,16 +22,16 @@ test('2.2 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 6);
+  assert.equal(Store.CONFIG_VERSION, 7);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
-    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur' },
-    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000, background: 'bad' },
+    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill' },
+    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000, background: 'bad', style: 'unknown' },
     broken: 'bad',
   }}).bars, {
-    'DP-1': { enabled: false, position: 'right', width: 55, height: 120, background: 'blur' },
-    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000, background: 'solid' },
-    broken: { enabled: true, position: 'top', width: 100, height: 0, background: 'solid' },
+    'DP-1': { enabled: false, position: 'right', width: 55, height: 120, background: 'blur', style: 'pill' },
+    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000, background: 'solid', style: 'default' },
+    broken: { enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default' },
   });
 });
 
@@ -107,7 +107,7 @@ test('an active full bar defers its shell.json mirror while the panel is open', 
   assert.equal(setPosition('DP-1', 'right'), 'ok');
   assert.equal(context.config.bars['DP-1'].position, 'right');
   assert.deepEqual(pending, [[
-    'DP-1', { enabled: true, position: 'right', width: 100, height: 0, background: 'solid' },
+    'DP-1', { enabled: true, position: 'right', width: 100, height: 0, background: 'solid', style: 'default' },
   ]]);
 });
 
@@ -224,6 +224,10 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(tab, /setMonitorBarBackground\(root\.selectedDisplay\.name, value\)/);
   assert.match(tab, /Binding \{[\s\S]*?target: backgroundDropdown[\s\S]*?property: "value"[\s\S]*?value: root\.selectedBar\.background/,
     'the host dropdown writes its own value, so an external Binding must keep it monitor-specific');
+  assert.match(tab, /text: "STYLE"/);
+  assert.match(tab, /value: "default", label: "Omarchy default"[\s\S]*?value: "pill", label: "Pill"/);
+  assert.match(tab, /setMonitorBarStyle\(root\.selectedDisplay\.name, value\)/);
+  assert.match(tab, /Binding \{[\s\S]*?target: styleDropdown[\s\S]*?property: "value"[\s\S]*?value: root\.selectedBar\.style/);
   assert.match(layout, /selectedDisplayName/);
   assert.match(layout, /displaySelected\(monitorCard\.modelData\.name\)/);
   assert.match(layout, /Color\.menu\.selectedBackground/);
@@ -252,6 +256,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /function closeActivePopout\(\)/);
   assert.match(monitorBar, /onDoubleClicked:[\s\S]*?root\.toggleTransparency\(\)/);
   assert.match(monitorBar, /backgroundMode === "blur" \? Util\.alpha\(Commons\.Color\.bar\.background, 0\.01\)/);
+  assert.match(monitorBar, /barStyle === "pill"/);
+  assert.match(monitorBar, /radius: Math\.min\(width, height\) \/ 2/);
   assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
 });
 
@@ -280,7 +286,7 @@ test('bar width persists the request while runtime measurements provide a safe m
   assert.equal(setWidth('DP-1', 48), 'ok');
   assert.equal(context.config.bars['DP-1'].width, 48);
   assert.deepEqual(pending, [
-    'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid' },
+    'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid', style: 'default' },
   ]);
   assert.equal(context.rememberedTab, 1);
   assert.ok(context.panelTransferUntil > Date.now());
@@ -310,7 +316,7 @@ test('bar height is per monitor and capped at ten percent of the shorter native 
   assert.equal(setHeight('DP-1', 120), 'ok');
   assert.equal(context.config.bars['DP-1'].height, 120);
   assert.deepEqual(pending, [
-    'DP-1', { enabled: true, position: 'top', width: 100, height: 120, background: 'solid' },
+    'DP-1', { enabled: true, position: 'top', width: 100, height: 120, background: 'solid', style: 'default' },
   ]);
   assert.equal(setHeight('DP-1', 121), 'invalid');
 });
@@ -340,9 +346,36 @@ test('bar background persists per monitor and synchronizes compositor blur', () 
   assert.equal(context.config.bars['DP-1'].background, 'blur');
   assert.equal(blurSyncs, 1);
   assert.deepEqual(pending, ['DP-1', {
-    enabled: true, position: 'top', width: 100, height: 0, background: 'blur',
+    enabled: true, position: 'top', width: 100, height: 0, background: 'blur', style: 'default',
   }]);
   assert.equal(setBackground('DP-1', 'glass'), 'invalid');
+});
+
+test('bar style persists per monitor and defers the active host mirror', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default',
+    } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setStyle = qmlFunction(service, 'setMonitorBarStyle', context);
+
+  assert.equal(setStyle('DP-1', 'pill'), 'ok');
+  assert.equal(context.config.bars['DP-1'].style, 'pill');
+  assert.deepEqual(pending, ['DP-1', {
+    enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'pill',
+  }]);
+  assert.equal(setStyle('DP-1', 'floating'), 'invalid');
 });
 
 test('bar blur leases and restores the prior global compositor setting', () => {

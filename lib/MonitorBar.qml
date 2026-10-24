@@ -61,6 +61,7 @@ Item {
   property string centerAnchor: ""
   property bool requestedTransparent: false
   property string backgroundMode: "solid"
+  property string barStyle: "default"
   property bool useTransparentForeground: false
   property bool transparent: false
   property bool centerSectionHovered: false
@@ -714,6 +715,7 @@ Item {
       ? Math.round(maximumHeight) : 0
     backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
       ? config.background : (config.transparent === true ? "transparent" : "solid")
+    barStyle = ["default", "pill"].indexOf(config.style) !== -1 ? config.style : "default"
     setRequestedTransparency(backgroundMode !== "solid")
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -1418,18 +1420,64 @@ Item {
       y: root.vertical ? Math.round((parent.height - height) / 2) : 0
       readonly property real edgeMargin: Style.space(8)
       readonly property real regionGap: Style.spacing.sm
-      readonly property real leadingLength: root.vertical ? leftModules.height : leftModules.width
-      readonly property real trailingLength: root.vertical ? rightModules.height : rightModules.width
+      readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0
+      readonly property real pillInset: Style.space(2)
+      readonly property real leadingLength: (root.vertical ? leftModules.height : leftModules.width)
+        + (root.barStyle === "pill" && leftModules.visibleLength > 0 ? pillPadding * 2 : 0)
+      readonly property real trailingLength: (root.vertical ? rightModules.height : rightModules.width)
+        + (root.barStyle === "pill" && rightModules.visibleLength > 0 ? pillPadding * 2 : 0)
       readonly property real minimumLength: BarModel.minimumBarLength(
-        leadingLength, centerModules.leadingExtent, centerModules.trailingExtent,
+        leadingLength, centerModules.leadingExtent + (root.barStyle === "pill" ? pillPadding : 0),
+        centerModules.trailingExtent + (root.barStyle === "pill" ? pillPadding : 0),
         trailingLength, edgeMargin, regionGap)
       onMinimumLengthChanged: root.measuredMinimumLength = minimumLength
       Component.onCompleted: root.measuredMinimumLength = minimumLength
 
       Rectangle {
         anchors.fill: parent
+        visible: root.barStyle === "default"
         color: root.barSurfaceColor
         radius: Style.cornerRadius
+      }
+
+      Rectangle {
+        visible: root.barStyle === "pill" && leftModules.visibleLength > 0
+        x: root.vertical ? barContent.pillInset : leftModules.x - barContent.pillPadding
+        y: root.vertical ? leftModules.y - barContent.pillPadding : barContent.pillInset
+        width: root.vertical ? parent.width - barContent.pillInset * 2
+          : leftModules.width + barContent.pillPadding * 2
+        height: root.vertical ? leftModules.height + barContent.pillPadding * 2
+          : parent.height - barContent.pillInset * 2
+        color: root.barSurfaceColor
+        radius: Math.min(width, height) / 2
+      }
+
+      Rectangle {
+        visible: root.barStyle === "pill" && centerModules.visibleLength > 0
+        x: root.vertical ? barContent.pillInset
+          : parent.width / 2 - centerModules.leadingExtent - barContent.pillPadding
+        y: root.vertical
+          ? parent.height / 2 - centerModules.leadingExtent - barContent.pillPadding
+          : barContent.pillInset
+        width: root.vertical ? parent.width - barContent.pillInset * 2
+          : centerModules.leadingExtent + centerModules.trailingExtent + barContent.pillPadding * 2
+        height: root.vertical
+          ? centerModules.leadingExtent + centerModules.trailingExtent + barContent.pillPadding * 2
+          : parent.height - barContent.pillInset * 2
+        color: root.barSurfaceColor
+        radius: Math.min(width, height) / 2
+      }
+
+      Rectangle {
+        visible: root.barStyle === "pill" && rightModules.visibleLength > 0
+        x: root.vertical ? barContent.pillInset : rightModules.x - barContent.pillPadding
+        y: root.vertical ? rightModules.y - barContent.pillPadding : barContent.pillInset
+        width: root.vertical ? parent.width - barContent.pillInset * 2
+          : rightModules.width + barContent.pillPadding * 2
+        height: root.vertical ? rightModules.height + barContent.pillPadding * 2
+          : parent.height - barContent.pillInset * 2
+        color: root.barSurfaceColor
+        radius: Math.min(width, height) / 2
       }
 
       CenterModules { id: centerModules; anchors.fill: parent }
@@ -1682,6 +1730,7 @@ Item {
       ? beforeLength + anchorLength / 2 : centeredLength / 2
     readonly property real trailingExtent: hasAnchor
       ? afterLength + anchorLength / 2 : centeredLength / 2
+    readonly property real visibleLength: leadingExtent + trailingExtent
 
     // One arrangement for both orientations: the unanchored list centers in
     // the section, the anchor module centers, and the before/after lists sit
@@ -1833,6 +1882,7 @@ Item {
     property var entries: []
     property string region: ""
     readonly property bool vertical: root.vertical
+    readonly property real visibleLength: root.vertical ? height : width
 
     visible: entries.length > 0
     width: implicitWidth

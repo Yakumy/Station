@@ -64,7 +64,7 @@ Ui.BorderSurface {
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
       readonly property var barSetting: canvas.service
         ? canvas.service.monitorBar(modelData.name)
-        : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid" })
+        : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default" })
       readonly property int minimumBarWidth: canvas.service
         ? canvas.service.monitorBarMinimum(modelData.name) : 1
       readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100
@@ -90,7 +90,7 @@ Ui.BorderSurface {
       Rectangle {
         id: barPreview
         visible: monitorCard.barSetting.enabled
-        color: Commons.Color.accent
+        color: monitorCard.barSetting.style === "pill" ? "transparent" : Commons.Color.accent
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
           || monitorCard.barSetting.position === "right"
@@ -105,6 +105,23 @@ Ui.BorderSurface {
         y: monitorCard.barSetting.position === "top" ? canvas.monitorGap
           : monitorCard.barSetting.position === "bottom" ? parent.height - height - canvas.monitorGap
           : (parent.height - height) / 2
+
+        Repeater {
+          model: monitorCard.barSetting.style === "pill" ? [0, 1, 2] : []
+          delegate: Rectangle {
+            required property int modelData
+            readonly property real segmentLength: barPreview.side ? barPreview.height : barPreview.width
+            readonly property real segmentStart: modelData === 0 ? 0
+              : modelData === 1 ? segmentLength * 0.41 : segmentLength * 0.74
+            readonly property real segmentShare: modelData === 1 ? 0.18 : 0.26
+            x: barPreview.side ? 0 : segmentStart
+            y: barPreview.side ? segmentStart : 0
+            width: barPreview.side ? barPreview.width : segmentLength * segmentShare
+            height: barPreview.side ? segmentLength * segmentShare : barPreview.height
+            color: Commons.Color.accent
+            radius: Math.min(width, height) / 2
+          }
+        }
       }
 
       MouseArea {

@@ -444,8 +444,13 @@ Bar tab:
   leases Hyprland's global blur setting only while a connected enabled bar
   requests Blur, applies a named `omarchy-bar` layer rule with transparent
   pixels excluded, and restores the prior global enabled, size, and passes
-  settings when the last Blur request is removed. The final row is reserved
-  for Style. The Background dropdown remains bound to the selected connector's
+  settings when the last Blur request is removed. **Style** is a full-width
+  themed dropdown ordered Omarchy default, Pill. Omarchy default keeps the
+  continuous bar surface. Pill uses three independently rounded left, center,
+  and right islands with token-scaled inner padding; Background still owns
+  their fill, so Solid, Transparent, and Blur behave identically in either
+  style. Island padding participates in the measured non-overlap minimum. The
+  Background and Style dropdowns remain bound to the selected connector's
   saved value even though the host dropdown imperatively assigns its own value
   during selection; changing monitors or reopening the panel must never show a
   mode last chosen for another connector.

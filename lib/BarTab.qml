@@ -11,7 +11,7 @@ Column {
   readonly property var selectedDisplay: panelRoot.selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
     ? service.monitorBar(selectedDisplay.name)
-    : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid" })
+    : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default" })
   readonly property int selectedMinimumWidth: selectedDisplay && service
     ? service.monitorBarMinimum(selectedDisplay.name) : 1
   readonly property int selectedMinimumHeight: selectedBar.position === "left" || selectedBar.position === "right"
@@ -327,18 +327,42 @@ Column {
             }
           }
 
-          Repeater {
-            model: 1
-            delegate: Item {
-              required property int index
-              width: controlFrame.width
-              height: controlFrame.height / 5
-              Ui.PanelSeparator {
-                visible: index < 3
-                anchors.bottom: parent.bottom
-                width: parent.width
-                foreground: Commons.Color.popups.text
+          Item {
+            id: styleRow
+            width: parent.width
+            height: controlFrame.height / 5
+            Caption {
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.top: parent.top
+              anchors.topMargin: root.panelRoot.space2
+              text: "STYLE"
+            }
+            Ui.Dropdown {
+              id: styleDropdown
+              objectName: "barStyleDropdown"
+              anchors.left: parent.left
+              anchors.leftMargin: root.panelRoot.space3
+              anchors.right: parent.right
+              anchors.rightMargin: root.panelRoot.space3
+              anchors.verticalCenter: parent.verticalCenter
+              height: Style.spacing.controlHeight
+              showLabel: false
+              options: [
+                { value: "default", label: "Omarchy default" },
+                { value: "pill", label: "Pill" }
+              ]
+              enabled: root.selectedDisplay !== null
+              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              onChanged: function(value) {
+                if (root.service && root.selectedDisplay)
+                  root.service.setMonitorBarStyle(root.selectedDisplay.name, value)
               }
+            }
+            Binding {
+              target: styleDropdown
+              property: "value"
+              value: root.selectedBar.style
             }
           }
         }

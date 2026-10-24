@@ -15,6 +15,7 @@ const SHADOW = /\b\w*shadow\w*\b/i;
 const GRADIENT = /(?:^|[^\w])gradient\s*:|\bGradient\s*\{|(?:^|[^\w])stops\s*:/;
 const APPROVED_DIM = /Qt\.darker\([^,()]+,\s*1\.4\s*\)/;
 const APPROVED_ALPHA = /Util\.alpha\(Commons\.Color\.bar\.background,\s*0\.01\s*\)/;
+const APPROVED_PILL_RADIUS = /Math\.min\(width,\s*height\)\s*\/\s*2/;
 const MULTI_EFFECT_KEY = /^(?:id|source|width|height|x|y|visible|enabled|opacity|anchors(?:\.\w+)?)$/;
 const COLORISATION_KEY = /^colorization(?:Enabled|Color)?$/;
 
@@ -30,7 +31,8 @@ function report(path, line, message) {
 function checkLine(path, line, code) {
   if (HEX.test(code)) report(path, line, 'hex colour literal');
   const radius = code.match(/\bradius\s*:/);
-  if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')) {
+  if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')
+      && !APPROVED_PILL_RADIUS.test(code)) {
     report(path, line, 'radius not bound to Style.cornerRadius');
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');

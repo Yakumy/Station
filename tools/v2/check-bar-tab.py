@@ -42,9 +42,9 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
-      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur"}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid"}
-      return {enabled: false, position: "right", width: 100, height: 0, background: "transparent"}
+      if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur", style: "pill"}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid", style: "default"}
+      return {enabled: false, position: "right", width: 100, height: 0, background: "transparent", style: "default"}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
     function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 120 : 108 }
@@ -53,6 +53,7 @@ ShellRoot {
     function setMonitorBarWidth() { return "ok" }
     function setMonitorBarHeight() { return "ok" }
     function setMonitorBarBackground() { return "ok" }
+    function setMonitorBarStyle() { return "ok" }
   }
   Item {
     id: panel
@@ -98,14 +99,16 @@ ShellRoot {
     interval: 300; running: true
     onTriggered: {
       var dropdown = findObject(tab, "barBackgroundDropdown")
-      if (!dropdown) { console.log("BAR_BACKGROUND_BINDING_MISSING"); return }
+      var styleDropdown = findObject(tab, "barStyleDropdown")
+      if (!dropdown || !styleDropdown) { console.log("BAR_DROPDOWN_BINDING_MISSING"); return }
       // Ui.Dropdown imperatively assigns value when selected. Simulate that,
       // then switch monitors and require the external Binding to win again.
       dropdown.value = "transparent"
+      styleDropdown.value = "pill"
       panel.selectDisplay("HDMI-A-2")
       Qt.callLater(function() {
-        if (dropdown.value === "solid") console.log("BAR_BACKGROUND_BINDING_OK")
-        else console.log("BAR_BACKGROUND_BINDING_BAD:" + dropdown.value)
+        if (dropdown.value === "solid" && styleDropdown.value === "default") console.log("BAR_DROPDOWN_BINDING_OK")
+        else console.log("BAR_DROPDOWN_BINDING_BAD:" + dropdown.value + ":" + styleDropdown.value)
       })
     }
   }
@@ -125,6 +128,6 @@ ShellRoot {
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
     print(result.stdout)
     print(output)
-    if "BAR_TAB_RENDER_OK" not in result.stdout or "BAR_BACKGROUND_BINDING_OK" not in result.stdout or any(token in result.stdout for token in
+    if "BAR_TAB_RENDER_OK" not in result.stdout or "BAR_DROPDOWN_BINDING_OK" not in result.stdout or any(token in result.stdout for token in
             ("ERROR", "ReferenceError", "TypeError", "Binding loop", "Unable to assign", "grabToImage:")):
         raise SystemExit(1)
