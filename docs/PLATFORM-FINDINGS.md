@@ -704,3 +704,25 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   shell.json mirror write. Original bar settings were backed up and restored,
   followed by shell restart/ping. Physical pointer dragging remains a manual
   check; the automated drag test verifies the completion-to-service path.
+
+### Monitor-scoped menu and drag positioning (2026-10-25 revision)
+
+- The user clarified that bar movement must be independent on each monitor.
+  This supersedes the all-bars-together behavior described above.
+- [SRC] A drag now sends the originating bar's connector through the existing
+  `setMonitorBarPosition` bridge action. It never uses whichever display happens
+  to have keyboard focus when the gesture ends. The Omarchy menu's global edge
+  change is translated into an edit of Hyprland's focused monitor only.
+  Previously the global action loop assigned that edge to every saved monitor;
+  that was the cause of the second monitor moving too.
+- [SRC] Unconfigured peers are pinned to their previously inherited edge before
+  the new global fallback can move them. Pending shell.json mirrors preserve
+  those independent positions when an open panel closes.
+- [QTTEST] Tests cover each menu edge, switching the target monitor, inherited
+  peer positions, disabled saved outputs, appearance preservation, and drag
+  origin routing for HDMI-A-1 and eDP-1.
+
+- [SRC] The stock menu's current position is mirrored from the focused bar
+  when focus changes, without moving a bar. This also makes choosing the same
+  menu edge on two different monitors observable. Mirrors are deferred while
+  Station's panel is open and never override a pending external menu request.

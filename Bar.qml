@@ -140,10 +140,11 @@ Item {
       if (instances[i] && instances[i] !== source) instances[i].closeActivePopout()
   }
 
-  function requestGlobalPosition(position) {
+  function requestMonitorPosition(instance, position) {
+    if (!instance || !instance.targetScreenName) return "invalid"
     var api = BarBridge.current()
     if (api && typeof api.call === "function")
-      return api.call("setGlobalBarPosition", [position])
+      return api.call("setMonitorBarPosition", [String(instance.targetScreenName), position])
     return "unavailable"
   }
 
@@ -213,7 +214,7 @@ Item {
         shell: root.shell
         manifest: root.manifest
         barConfig: root.configFor(modelData)
-        onPositionRequested: function(position) { root.requestGlobalPosition(position) }
+        onPositionRequested: function(position) { root.requestMonitorPosition(monitorBar, position) }
         onPopoutRequested: root.closePeerPopouts(monitorBar)
         onBackgroundModeRequested: function(mode) { root.requestMonitorBackground(monitorBar, mode) }
         onMinimumWidthPercentChanged: root.reportMinimumWidth(monitorBar)

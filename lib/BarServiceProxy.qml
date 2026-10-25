@@ -48,7 +48,6 @@ QtObject {
   function setDisplayPosition(name, x, y) { return call("setDisplayPosition", [name, x, y]) }
   function setDisplayEnabled(name, enabled) { return call("setDisplayEnabled", [name, enabled]) }
   function setMonitorBarEnabled(name, enabled) { return call("setMonitorBarEnabled", [name, enabled]) }
-  function setGlobalBarPosition(position) { return call("setGlobalBarPosition", [position]) }
   function setMonitorBarPosition(name, position) { return call("setMonitorBarPosition", [name, position]) }
   function setMonitorBarWidth(name, width) { return call("setMonitorBarWidth", [name, width]) }
   function setMonitorBarHeight(name, height) { return call("setMonitorBarHeight", [name, height]) }

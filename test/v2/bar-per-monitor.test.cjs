@@ -517,63 +517,72 @@ test('bar blur leases and restores the prior global compositor setting', () => {
 });
 
 
-test('Omarchy global moves update every saved and connected bar without losing appearance', () => {
-  let writes = 0;
+test('Omarchy position menu only moves the focused monitor and pins inherited peer edges', () => {
   const host = { bar: { id: 'yakumy.station', position: 'top', monitors: {} } };
   const context = {
-    configLoaded: true, globalBarPosition: 'top', lastGlobalBarPosition: '',
+    configLoaded: true, globalBarPosition: 'top', lastGlobalBarPosition: '', focusedBarScreenName: 'DP-1',
     config: { bars: { 'DP-1': { position: 'left', width: 65, height: 42, style: 'pill', contentSize: 24 },
       'DP-3': { position: 'right', enabled: false } } },
     displayDraft: [{ name: 'DP-1' }, { name: 'DP-2' }],
     pendingMonitorBars: {}, panelWanted: true, panelTransferUntil: 0,
     validConnector: name => /^DP-[123]$/.test(name),
-    activeStationBar: () => true,
-    saveConfig() { writes++; },
+    activeStationBar: () => true, saveConfig() {},
     shell: { barConfig: host.bar, mutateShellConfig(fn) { fn(host); return true; } },
   };
   for (const name of ['monitorBar', 'deferMonitorBarPublish', 'publishMonitorBars',
-    'flushPendingMonitorBars', 'setGlobalBarPosition', 'syncGlobalBarPosition'])
+    'flushPendingMonitorBars', 'applyBarMenuPosition', 'syncGlobalBarPosition', 'syncFocusedBarMenu'])
     context[name] = qmlFunction(service, name, context);
   context.syncGlobalBarPosition();
-  assert.equal(context.config.bars['DP-1'].position, 'left', 'startup preserves overrides');
-  assert.equal(writes, 0);
+  assert.equal(context.config.bars['DP-1'].position, 'left');
   for (const position of ['bottom', 'left', 'right', 'top']) {
+    host.bar.position = position;
     context.globalBarPosition = position;
     context.syncGlobalBarPosition();
-    for (const name of ['DP-1', 'DP-2', 'DP-3']) {
-      assert.equal(context.config.bars[name].position, position);
-      assert.equal(context.pendingMonitorBars[name].position, position);
-    }
-    assert.equal(host.bar.position, position);
+    assert.equal(context.config.bars['DP-1'].position, position);
+    assert.equal(context.config.bars['DP-2'].position, 'top', 'inherited peer keeps its original edge');
+    assert.equal(context.config.bars['DP-3'].position, 'right');
   }
+  context.focusedBarScreenName = 'DP-2';
+  host.bar.position = context.globalBarPosition = 'bottom';
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'top');
+  assert.equal(context.config.bars['DP-2'].position, 'bottom');
   assert.equal(context.config.bars['DP-1'].width, 65);
-  assert.equal(context.config.bars['DP-1'].style, 'pill');
   assert.equal(context.config.bars['DP-1'].contentSize, 24);
   assert.equal(context.config.bars['DP-3'].enabled, false);
-  assert.equal(context.setGlobalBarPosition('diagonal'), 'invalid');
-  assert.equal(writes, 4);
-  context.config.bars['DP-1'].position = 'left';
-  assert.equal(context.setGlobalBarPosition('top'), 'ok', 'drag can reapply the global edge');
+  assert.equal(context.applyBarMenuPosition('DP-4', 'left', 'top'), 'invalid');
+  assert.equal(context.applyBarMenuPosition('DP-1', 'diagonal', 'top'), 'invalid');
   context.panelWanted = false;
   context.flushPendingMonitorBars();
   assert.equal(host.bar.monitors['DP-1'].position, 'top');
-  assert.equal(Object.keys(context.pendingMonitorBars).length, 0);
+  assert.equal(host.bar.monitors['DP-2'].position, 'bottom');
+  context.focusedBarScreenName = 'DP-1';
+  context.syncFocusedBarMenu();
+  assert.equal(host.bar.position, 'top', 'stock menu follows the newly focused bar');
+  context.globalBarPosition = host.bar.position;
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-2'].position, 'bottom', 'focus mirror does not move peers');
+  host.bar.position = context.globalBarPosition = 'bottom';
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'bottom', 'same menu choice on a second monitor still applies');
 });
 
-test('bar drag completion reaches the service-owned global position action', () => {
+test('drag completion targets its source monitor even when focus is elsewhere', () => {
   const monitor = read('lib/MonitorBar.qml');
   const calls = [];
   const api = { call(name, args) { calls.push([name, [...args]]); return 'ok'; } };
-  const request = qmlFunction(read('Bar.qml'), 'requestGlobalPosition', { BarBridge: { current: () => api } });
-  const context = {
-    barMoveCandidate: 'right', barMoveActive: true, position: 'top',
-    clearBarMove() { this.barMoveActive = false; },
-    normalizePosition: value => value,
-    positionRequested: request,
-  };
-  context.clearBarMove = () => { context.barMoveActive = false; };
-  context.setBarPosition = qmlFunction(monitor, 'setBarPosition', context);
-  qmlFunction(monitor, 'finishBarMove', context)();
-  assert.deepEqual(calls, [['setGlobalBarPosition', ['right']]]);
-  assert.match(read('Bar.qml'), /onPositionRequested: function\(position\) \{ root.requestGlobalPosition\(position\)/);
+  const request = qmlFunction(read('Bar.qml'), 'requestMonitorPosition', { BarBridge: { current: () => api } });
+  for (const connector of ['HDMI-A-1', 'eDP-1']) {
+    const context = {
+      barMoveCandidate: 'right', barMoveActive: true, position: 'top',
+      normalizePosition: value => value,
+      positionRequested: position => request({ targetScreenName: connector }, position),
+    };
+    context.clearBarMove = () => { context.barMoveActive = false; };
+    context.setBarPosition = qmlFunction(monitor, 'setBarPosition', context);
+    qmlFunction(monitor, 'finishBarMove', context)();
+  }
+  assert.deepEqual(calls, [['setMonitorBarPosition', ['HDMI-A-1', 'right']],
+    ['setMonitorBarPosition', ['eDP-1', 'right']]]);
+  assert.match(read('Bar.qml'), /root.requestMonitorPosition\(monitorBar, position\)/);
 });

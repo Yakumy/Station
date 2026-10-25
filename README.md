@@ -37,7 +37,7 @@ Station manages that numbering for you, including when a display disconnects.
 | **Change your setup** | A visual display editor with snapping, rotation, Extend/Mirror/Single modes, and guarded previews. |
 | **Make room on every screen** | Independent bar placement, visibility, size, background, and Pill style. |
 | **Frame your desktop** | The same wallpaper everywhere, one image per monitor, or a single image spanning the layout. |
-| **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, global bar-position controls, and drag-to-position. |
+| **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, monitor-aware bar-position controls, and drag-to-position. |
 
 ## Install
 
@@ -112,9 +112,10 @@ Select a monitor in the **Bar** tab and adjust:
 | **Background** | Choose Solid color, Transparent, or Blur. |
 | **Style** | Keep Omarchy’s default bar or use separate Pill groups. The tray pill expands as its drawer opens. |
 
-To move **all bars together**, use Omarchy’s **Bar → Position** menu from
-`SUPER + Space`, or drag the bar’s free area toward a screen edge. To position
-just one monitor’s bar, use Station’s monitor-card arrows.
+Drag a bar’s free area toward a screen edge to move **only that monitor’s bar**.
+Omarchy’s **Bar → Position** menu from `SUPER + Space` changes the bar on the
+**focused monitor**. Station’s monitor-card arrows also control one monitor at
+a time; the other displays keep their positions.
 
 The bar keeps Omarchy’s widgets, shared widget layout, and theme colors.
 Station’s logo renders as a vector so it stays sharp as content size changes.

@@ -449,9 +449,11 @@ Bar tab:
   Requests below it remain visible in the slider, but the rendered surface is
   clamped to the measured minimum and the row reports `Minimum N% — bar items
   overlap.` Position remains directly editable through the four arrows on each
-  monitor card. Omarchy's global Bar → Position menu and bar drag gesture move
-  all bars together; they update saved monitor edges without changing presence
-  or appearance. Initial shell attachment preserves per-monitor overrides.
+  monitor card. Omarchy's Bar → Position menu changes only the focused monitor.
+  Dragging changes only the bar's originating monitor, regardless of focus.
+  Other monitors retain their positions, including inherited default edges;
+  presence and appearance are preserved. Initial shell attachment preserves
+  per-monitor overrides.
   **Background** is
   a full-width themed dropdown ordered Solid color, Transparent, Blur. Solid
   is the default. Transparent retains Omarchy's wallpaper-aware foreground and

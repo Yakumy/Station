@@ -21,6 +21,9 @@ Item {
   property var shell: null
   onShellChanged: Qt.callLater(reconcileActiveBarLayout)
   // Observe Omarchy's global edge independently of our per-monitor overrides.
+  readonly property string focusedBarScreenName: Hyprland.focusedMonitor
+    ? String(Hyprland.focusedMonitor.name || "") : ""
+  onFocusedBarScreenNameChanged: Qt.callLater(syncFocusedBarMenu)
   property string lastGlobalBarPosition: ""
   readonly property string globalBarPosition: {
     var value = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig).position : ""
@@ -33,6 +36,7 @@ Item {
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
+  onConfigChanged: Qt.callLater(syncFocusedBarMenu)
   // While a panel is open, config.bars is the live authority consumed through
   // BarBridge. Delay the redundant shell.json mirror write until the panel is
   // closed: changing that host config can rebuild the complete third-party bar
@@ -47,7 +51,7 @@ Item {
   Timer {
     id: monitorBarPublishDelay
     interval: 250
-    onTriggered: root.flushPendingMonitorBars()
+    onTriggered: { root.flushPendingMonitorBars(); root.syncFocusedBarMenu() }
   }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
@@ -68,6 +72,7 @@ Item {
   property int currentStation: persisted.lastStation || 1
   property int gen: 0
   property bool configLoaded: false
+  onConfigLoadedChanged: Qt.callLater(syncFocusedBarMenu)
   property bool stateLoaded: false
   property bool dirsReady: false
   property bool previewLoaded: false
@@ -212,8 +217,7 @@ Item {
   function setPanelWanted(value) {
     if (typeof value !== "boolean") return
     panelWanted = value
-    if (!value && Object.keys(pendingMonitorBars).length)
-      monitorBarPublishDelay.restart()
+    if (!value) monitorBarPublishDelay.restart()
   }
   function setPanelScreenName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) panelScreenName = value
@@ -349,11 +353,13 @@ Item {
     return publishMonitorBars(changes)
   }
 
-  function publishMonitorBars(changes) {
+  function publishMonitorBars(changes, menuPosition) {
     if (!shell || typeof shell.mutateShellConfig !== "function") return false
     return shell.mutateShellConfig(function(scoped) {
       if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
       scoped.bar.id = "yakumy.station"
+      if (["top", "bottom", "left", "right"].indexOf(menuPosition) !== -1)
+        scoped.bar.position = menuPosition
       if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
       Object.keys(changes || {}).forEach(function(name) {
         var next = changes[name]
@@ -395,17 +401,44 @@ Item {
     return true
   }
 
+  function syncFocusedBarMenu() {
+    if (!configLoaded || panelWanted || !activeStationBar()) return
+    // Do not overwrite an external menu request awaiting its deferred handler.
+    if (!lastGlobalBarPosition || globalBarPosition !== lastGlobalBarPosition) return
+    var name = focusedBarScreenName
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return
+    var position = monitorBar(name).position
+    if (position === globalBarPosition) return
+    var bars = Object.assign({}, config.bars || {})
+    var changed = false
+    displayDraft.forEach(function(display) {
+      if (!validConnector(display.name) || bars[display.name]) return
+      bars[display.name] = monitorBar(display.name)
+      changed = true
+    })
+    if (changed) {
+      config = Object.assign({}, config, { bars: bars })
+      saveConfig()
+    }
+    // Keep the stock menu's current edge aligned with focus, without treating
+    // our own mirror as a request to move another monitor.
+    lastGlobalBarPosition = position
+    if (!publishMonitorBars(bars, position)) lastGlobalBarPosition = globalBarPosition
+  }
+
   function syncGlobalBarPosition() {
     var next = globalBarPosition
     if (!next) return
     var previous = lastGlobalBarPosition
     lastGlobalBarPosition = next
     // Initial attachment must preserve independently saved monitor positions.
-    if (!previous || previous === next || !configLoaded || !activeStationBar()) return
-    setGlobalBarPosition(next)
+    if (!previous) { syncFocusedBarMenu(); return }
+    if (previous === next || !configLoaded || !activeStationBar()) return
+    applyBarMenuPosition(focusedBarScreenName, next, previous)
   }
 
-  function setGlobalBarPosition(position) {
+  function applyBarMenuPosition(name, position, previous) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
     if (["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
     if (!configLoaded || !activeStationBar()) return "unavailable"
     lastGlobalBarPosition = position
@@ -414,22 +447,21 @@ Item {
       if (names.indexOf(display.name) === -1) names.push(display.name)
     })
     var bars = Object.assign({}, config.bars || {})
-    names.forEach(function(name) {
-      if (!validConnector(name)) return
-      var next = monitorBar(name)
-      next.position = position
-      bars[name] = next
+    names.forEach(function(connector) {
+      if (!validConnector(connector)) return
+      var next = monitorBar(connector)
+      // Omarchy has already changed the fallback. Materialize inherited edges
+      // from the previous value so an unconfigured peer does not move with it.
+      if (!bars[connector]) next.position = previous
+      if (connector === name) next.position = position
+      bars[connector] = next
       // Replace any older deferred position so closing a panel cannot undo it.
-      deferMonitorBarPublish(name, next)
+      deferMonitorBarPublish(connector, next)
     })
     config = Object.assign({}, config, { bars: bars })
     saveConfig()
     if (panelWanted) panelTransferUntil = Date.now() + 3000
     if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
-    shell.mutateShellConfig(function(scoped) {
-      if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
-      scoped.bar.position = position
-    })
     flushPendingMonitorBars()
     return "ok"
   }
@@ -2125,7 +2157,6 @@ Item {
       setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
       setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
-      setGlobalBarPosition: function(position) { return root.setGlobalBarPosition(position) },
       setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
       setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
       setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
