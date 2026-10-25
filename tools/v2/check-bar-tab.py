@@ -124,12 +124,41 @@ ShellRoot {
   }
 }
 '''.replace("OUTPUT", str(output))
+    # Optional documentation capture: animate isolated preview data only.
+    # The production BarTab and host theme/components are still used.
+    tour = os.environ.get("STATION_README_TOUR") == "1"
+    if tour:
+        qml = qml.replace('      anchors.fill: parent', '      width: Style.space(996); height: tab.implicitHeight')
+        qml = qml.replace('id: fakeService', 'id: fakeService; property int step: 0')
+        begin = qml.index('    function monitorBar(name) {')
+        end = qml.index('    function monitorBarMinimum', begin)
+        qml = qml[:begin] + '''    function monitorBar(name) {
+      var phase = step % 4
+      return {enabled: name !== "DP-3", position: name === "HDMI-A-2" ? "top" : ["top", "right", "bottom", "left"][phase],
+        width: [100, 100, 72, 100][phase], height: [30, 42, 48, 36][phase],
+        contentSize: [14, 18, 24, 18][phase], background: ["solid", "blur", "transparent", "solid"][phase],
+        style: phase === 0 ? "default" : "pill"}
+    }
+''' + qml[end:]
+        begin = qml.index('  Timer {\n    interval: 300')
+        qml = qml[:begin] + '''  Timer {
+    property int frame: 0
+    interval: 200; running: true; repeat: true
+    onTriggered: capture.grabToImage(function(result) {
+      result.saveToFile("OUTPUT/frame-" + String(frame).padStart(3, "0") + ".png")
+      frame++
+      if (frame >= 40) { console.log("BAR_TAB_RENDER_OK"); Qt.quit(); return }
+      fakeService.step = Math.floor(frame / 10)
+    })
+  }
+}
+'''.replace("OUTPUT", str(output))
     (root / "shell.qml").write_text(qml)
     result = subprocess.run(["quickshell", "--no-color", "-p", str(root)],
                             env=dict(os.environ, QT_QPA_PLATFORM="wayland"), text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
     print(result.stdout)
     print(output)
-    if "BAR_TAB_RENDER_OK" not in result.stdout or "BAR_DROPDOWN_BINDING_OK" not in result.stdout or any(token in result.stdout for token in
+    if "BAR_TAB_RENDER_OK" not in result.stdout or (not tour and "BAR_DROPDOWN_BINDING_OK" not in result.stdout) or any(token in result.stdout for token in
             ("ERROR", "ReferenceError", "TypeError", "Binding loop", "Unable to assign", "grabToImage:")):
         raise SystemExit(1)

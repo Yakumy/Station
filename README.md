@@ -1,199 +1,220 @@
 <div align="center">
-  <img src="assets/station-main-logo.svg" alt="Station logo" width="144">
-  <h1>Station</h1>
-  <p><strong>One workspace system for every monitor.</strong></p>
+  <img src="assets/station-main-logo.svg" alt="Station" width="112">
+  <h1>Every display. One flow.</h1>
+  <p><strong>Synchronized workspaces, display layouts, per-monitor bars, and wallpapers for Omarchy.</strong></p>
+  <p>Keep your work together. Make each screen your own.</p>
   <p>
-    Station synchronizes Hyprland workspaces, safely manages display layouts,<br>
-    and gives Omarchy a proper multi-monitor wallpaper workflow.
+    <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=flat-square" alt="Omarchy 4 Quattro"></a>
+    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-2.2-A6B465?style=flat-square" alt="Station 2.2"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
   </p>
   <p>
-    <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=for-the-badge&amp;logo=github&amp;label=Stars&amp;color=A6B465" alt="GitHub stars"></a>
-    <a href="https://github.com/Yakumy/Station/commits/main"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FYakumy%2FStation%2Fmain%2Fmanifest.json&amp;query=%24.version&amp;style=for-the-badge&amp;label=Version&amp;color=A6B465" alt="Version"></a>
-    <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=for-the-badge" alt="Omarchy 4"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/Yakumy/Station?style=for-the-badge&amp;color=A6B465" alt="Apache 2.0"></a>
+    <a href="#install">Install</a> ·
+    <a href="#stations">Stations</a> ·
+    <a href="#displays">Displays</a> ·
+    <a href="#bars">Bars</a> ·
+    <a href="#wallpapers">Wallpapers</a> ·
+    <a href="#keybindings">Keybindings</a>
   </p>
 </div>
 
-![Station display panel](docs/assets/station-display.png)
+![Animated illustration of switching all displays between stations](docs/assets/tours/stations.gif)
 
-## Why Station?
+*One shortcut switches the whole setup. Illustrated feature tour; see the current panel previews below.*
 
-Multiple monitors should feel like one desktop, not several unrelated piles of
-workspaces. Station groups one workspace from each active display into a
-**station** and switches the whole group together.
+## Meet Station
 
-![Station bar indicator](docs/assets/station-bar.png)
+A **station** is one workspace on each active display. Switch stations and every
+screen follows. Send a window to another station and it stays on the same
+physical monitor.
 
-The compact bar indicator shows the active station at a glance and follows the
-current Omarchy theme without competing with the rest of the bar.
+With two displays, S1 contains workspaces 1 and 2; S2 contains 3 and 4.
+Station manages that numbering for you, including when a display disconnects.
 
-With two displays, station 1 contains workspaces 1 and 2, station 2 contains 3
-and 4, and so on. Moving a window to another station keeps it on the same
-physical display. Disconnect a monitor and the grid compacts without losing the
-station each window belongs to; reconnect it and Station expands the grid again.
-
-Station is a native Omarchy 4 plugin. There is no installer script, compiled
-binary, background daemon, network service, or initialization command. Enable
-the plugin and it is ready.
-
-## Highlights
-
-| | |
+| Your workflow | What Station adds |
 | --- | --- |
-| **Synchronized workspaces** | Switch every active display together with the familiar `SUPER + 1…0` workflow. |
-| **Spatial window movement** | Move naturally within a display, across neighboring displays, and across station edges. |
-| **Safe display control** | Arrange, rotate, mirror, disable, scale, and select exact modes with guarded previews and automatic rollback. |
-| **Per-monitor bars** | Set presence, edge, width, height, content size, background, and Omarchy-default or Pill style independently per display. |
-| **Multi-monitor wallpaper** | Use one image everywhere, choose one per monitor, or frame a single image across the complete layout. |
-| **Hot-plug recovery** | Preserve station identity while docks and displays appear, disappear, or change roles. |
-| **Native Omarchy design** | Uses the installed shell components, theme colors, typography, spacing, and live theme updates. |
+| **Move between projects** | Synchronized stations, directional navigation, and window moves with or without following. |
+| **Change your setup** | A visual display editor with snapping, rotation, Extend/Mirror/Single modes, and guarded previews. |
+| **Make room on every screen** | Independent bar placement, visibility, size, background, and Pill style. |
+| **Frame your desktop** | The same wallpaper everywhere, one image per monitor, or a single image spanning the layout. |
+| **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, global bar-position controls, and drag-to-position. |
 
 ## Install
 
-Requirements:
-
-- Omarchy 4 (Quattro)
-- Hyprland 0.56 or newer with Lua configuration
-- One to three managed independent displays
-
-Install and enable Station with one command:
+Requires **Omarchy 4 (Quattro)** and **Hyprland 0.56+ with Lua configuration**.
+Station manages up to three independent displays.
 
 ```bash
 omarchy plugin add https://github.com/Yakumy/Station.git --enable
 ```
 
-Open Station from its bar icon. The panel starts in Extend mode, discovers the
-current display arrangement, and activates the synchronized station bindings.
-No additional dependencies are required beyond the standard Omarchy system.
+Click the Station logo in the bar to open the panel. Station discovers your
+displays and enables its workspace shortcuts automatically. No initialization
+command or additional dependencies are needed on a standard Omarchy install.
+
+> [!TIP]
+> Start with **Displays** to arrange your screens, then visit **Bar** and
+> **Wallpaper** to customize the setup. **Keybindings** and **Settings** let you
+> adjust how Station fits your workflow.
+
+## Stations
+
+**Keep a whole project one shortcut away.** Use `SUPER + 1…0` to switch every
+active display together. The bar’s S1, S2, … indicator shows where you are.
+
+- Move a window to another station and follow it, or send it silently while you keep working.
+- Move directionally within a screen, across neighboring displays, and into the next station at the outer edge.
+- Choose a station direction that matches your physical layout.
+- Disconnect a display without losing each window’s station identity. Station compacts the workspace mapping and expands it when displays return.
+
+The first display retains its role independently of the order in which outputs
+are discovered. Station keeps physical identity, display roles, and workspace
+numbers separate so changing a layout does not change what a station means.
+
+## Displays
+
+![Station Displays tab with a visual monitor arrangement and display controls](docs/assets/station-display.png)
+
+**Arrange your screens where they actually sit.** Drag monitor cards, snap
+shared edges, rotate a screen, and choose **Extend**, **Mirror**, or **Single**.
+Unequal-height screens can slide along their shared edge instead of being forced
+into corner alignment.
+
+Select a monitor to control brightness, scale, resolution, and refresh rate.
+Available modes come from that monitor. The text-size control changes text
+across Omarchy; display scale changes the apparent size on the selected screen.
+
+Topology edits offer a **12-second Keep/Revert preview**, backed by an independent
+20-second recovery watchdog. Station keeps at least one real output enabled and
+moves its open panel to a surviving screen when needed. Scale, resolution, and
+refresh changes save directly through the checked configuration transaction.
 
 > [!NOTE]
-> Station manages at most three independent displays. A fourth display remains
-> untouched and is reported as unmanaged until you mirror or disable one.
+> Station manages at most three independent outputs; additional outputs are
+> reported as unmanaged. Three- and four-monitor hardware transitions remain
+> unverified on the current two-monitor test setup.
 
-## Displays that fail safely
+## Bars
 
-The Displays tab combines a visual layout editor with per-monitor controls for
-brightness, global text size, scale, resolution, and refresh rate. Exact modes
-come from the selected monitor rather than being interpolated. Edge snapping
-keeps displays attached without forcing unequal-height neighbors into top- or
-bottom-corner alignment, so they can use any 10-unit offset along the shared
-side.
+![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)
 
-Topology edits—arrangement, rotation, Extend/Mirror/Single mode, and monitor
-on/off—open a 12-second Keep/Revert preview. A detached 20-second watchdog
-restores the previous layout even if the shell crashes. Station never permits a
-zero-output configuration, and it hands an open panel to a surviving display
-before disabling the display that owns it. Rotating an attached display keeps
-its shared edge and repositions its resized logical rectangle automatically,
-preventing it from overlapping its neighbor.
+*Rendered from the current Bar tab with isolated preview data; no desktop settings were changed for this animation.*
 
-Scale, resolution, and refresh changes use the same checked file transaction
-without an unnecessary preview. Station writes only its marked block at the end
-of `~/.config/hypr/monitors.lua`, validates the result through Hyprland, and
-restores the backup on failure. Scale and resolution changes preserve an
-attached edge and reposition the resized logical rectangle automatically, so
-neighboring displays do not become disconnected or overlap.
+**A different bar for each display, with Omarchy’s controls still available.**
+Select a monitor in the **Bar** tab and adjust:
 
-## Wallpaper, built for real monitor layouts
+| Control | What it does |
+| --- | --- |
+| **Presence and position** | Show or hide the bar on a display; choose top, bottom, left, or right with the monitor-card arrows. At least one active display keeps a bar. |
+| **Content size** | Enlarge icons and labels together. The live limit reserves padding and prevents the widget groups from overlapping. |
+| **Height** | Change bar thickness, up to 5% of the monitor mode’s shorter dimension, subject to Omarchy’s readable minimum. |
+| **Width** | Choose how much of the edge the bar occupies. Station keeps enough room for the widgets. |
+| **Background** | Choose Solid color, Transparent, or Blur. |
+| **Style** | Keep Omarchy’s default bar or use separate Pill groups. The tray pill expands as its drawer opens. |
 
-![Station span wallpaper mode](docs/assets/station-wallpaper-real-layout.png)
+To move **all bars together**, use Omarchy’s **Bar → Position** menu from
+`SUPER + Space`, or drag the bar’s free area toward a screen edge. To position
+just one monitor’s bar, use Station’s monitor-card arrows.
 
-Station supports three wallpaper modes:
+The bar keeps Omarchy’s widgets, shared widget layout, and theme colors.
+Station’s logo renders as a vector so it stays sharp as content size changes.
 
-- **Same on all** — Omarchy's wallpaper or one local image on every display.
-- **Per monitor** — choose a different local image for each active display.
-- **Span** — position the complete fixed monitor group over one large image;
-  drag to frame it and use the mouse wheel to zoom the crop.
+## Wallpapers
 
-Span respects monitor positions, gaps, rotation, logical size, and scale. The
-panel calculates a recommended source resolution for the current layout, while
-still allowing smaller images.
+![Animated illustration of wallpaper modes and framing one image across several monitors](docs/assets/tours/wallpaper.gif)
 
-**Follow Omarchy wallpaper** is enabled by default. Theme and background changes
-then update Station automatically. Turn it off to pin your own images across
-theme changes. Station remembers wallpaper choices and Span framing per Omarchy
-theme/background pair, so returning to a previous theme restores the view you
-used with it.
+*Illustrated wallpaper tour. The screenshot below shows the real layout editor.*
 
-Chosen files are streamed through a bounded format check before any preview.
-PNG text, profile, EXIF, and other non-rendering ancillary chunks are removed,
-then only the private Station copy is shown or saved. Older saved choices are
-prepared through the same boundary before they can render. Station never
-rewrites Omarchy's background link, theme files, or wallpaper history.
+![Station wallpaper editor framing an image across the physical monitor layout](docs/assets/station-wallpaper-real-layout.png)
+
+**One image across your whole setup—or a different view on every screen.**
+
+| Mode | Use it for |
+| --- | --- |
+| **Same on all** | Omarchy’s wallpaper or one local image on every display. |
+| **Per monitor** | A different local image for each active display. |
+| **Span** | One large image across the complete monitor layout. Drag the fixed monitor group to frame it and scroll to zoom. |
+
+Span respects monitor positions, gaps, rotation, logical sizes, and scale. A
+recommended source resolution helps you choose an image; smaller images are
+still allowed.
+
+**Follow Omarchy wallpaper** is on by default, so theme and background changes
+flow through automatically. Turn it off to keep your own images. Station
+remembers image choices and Span framing per Omarchy theme/background pair.
+
+Chosen images are prepared as private Station copies. Your originals and
+Omarchy’s wallpaper links, theme files, and background history stay intact.
 
 ## Keybindings
 
-| Action | Default |
+| Action | Default shortcut |
 | --- | --- |
 | Switch station | `SUPER + 1…0` |
 | Move window to station and follow | `SUPER + SHIFT + 1…0` |
-| Move window to station without following | `SUPER + SHIFT + ALT + 1…0` |
-| Previous/next existing station | `CTRL + SUPER + Left/Right` |
+| Send window without following | `SUPER + SHIFT + ALT + 1…0` |
+| Previous / next existing station | `CTRL + SUPER + Left / Right` |
 | Move across displays and station edges | `SHIFT + CTRL + SUPER + arrows` |
 
-Directional movement tries normal Hyprland movement first, then a neighboring
-display, then an adjacent station at the outer edge. The Keybindings tab shows
-personal conflicts before applying them. A conflicting binding remains inactive
+The **Keybindings** tab checks personal conflicts before applying a change.
+Choose modifiers, capture the key, then Apply. Conflicting bindings stay inactive
 until you choose another combination or explicitly approve replacement.
-Choose modifiers with the chips, then click the key button and press the key
-alone. The Special key menu includes Escape and Tab; Escape cancels capture.
-Apply saves the combination, while Cancel discards the edit. The picker does
-not read the clipboard.
 
-Station intentionally replaces Omarchy's numbered workspace bindings and the
-rarely used grouped-window focus bindings on `CTRL + SUPER + Left/Right`. It
-records the stock workspace widget before hiding it and restores the widget and
-default bindings when Station is disabled or removed.
+Station replaces Omarchy’s numbered workspace shortcuts and the grouped-window
+focus shortcuts on `CTRL + SUPER + Left/Right`. Disabling or removing Station
+restores the defaults and the stock widgets it temporarily hid.
 
-## Settings and state
+## Make it yours
 
-Settings include follow-focus behavior, the station grace delay, minimum station
-count, whether to show Omarchy's Workspace and Display widgets, and whether the
-panel opens beside the bar icon or centered on the current monitor.
+The **Settings** tab controls follow-focus behavior, station grace delay, minimum
+station count, visibility of Omarchy’s Workspace and Display widgets, and whether
+the panel opens beside its bar icon or centered on the current monitor.
 
-| Data | Location |
-| --- | --- |
-| Preferences | `~/.config/omarchy/station/config.json` |
-| Runtime state and recovery | `~/.local/state/omarchy/station/` |
-| Saved wallpaper copies | `~/.local/state/omarchy/station/wallpapers/` |
-| Managed display block | `~/.config/hypr/monitors.lua` |
-
-Station journals workspace migrations before moving windows and resumes an
-interrupted migration by saved window identity and station. Disabling or removing
-the plugin restores only the stock widgets Station leased, removes runtime
-bindings and workspace rules, and neutralizes saved Single/Mirror rules.
+Colors, typography, spacing, and controls follow the active Omarchy theme.
 
 ## Update or remove
 
 ```bash
 omarchy plugin update yakumy.station
-```
-
-If an updated panel is still cached, refresh the shell once:
-
-```bash
 omarchy restart shell
 ```
 
-Remove Station through Omarchy:
+To remove Station:
 
 ```bash
 omarchy plugin remove yakumy.station
 ```
 
-Saved preferences and wallpaper copies are retained so a later reinstall can
-recover them. If the shell was unavailable for the entire removal cleanup window,
-run `hyprctl reload` once it returns.
+Preferences and wallpaper copies are retained for a later reinstall. Removal
+cleans up Station’s runtime bindings and workspace rules, restores the stock
+widgets it leased, and neutralizes its saved Single/Mirror rules. If the shell
+was unavailable throughout removal, run `hyprctl reload` once it returns.
+
+<details>
+<summary><strong>Where Station keeps its data</strong></summary>
+
+| Data | Location |
+| --- | --- |
+| Preferences | `~/.config/omarchy/station/config.json` |
+| Runtime state and recovery | `~/.local/state/omarchy/station/` |
+| Prepared wallpaper copies | `~/.local/state/omarchy/station/wallpapers/` |
+| Managed display block | `~/.config/hypr/monitors.lua` |
+
+Station changes only its marked display block, with backup and validation.
+Workspace migrations are journaled before moving windows and can resume after
+an interruption. It does not edit Omarchy’s packaged files.
+
+</details>
 
 ## Development
 
-Station's behavior, transaction guarantees, and verified platform findings are
-documented in [the v2 specification](docs/v2/SPEC.md),
-[architecture guide](docs/ARCHITECTURE.md), and
-[platform findings](docs/PLATFORM-FINDINGS.md). UI work follows the
-[Station design system](docs/v2/DESIGN-SYSTEM.md).
+Read the [specification](docs/v2/SPEC.md), [architecture](docs/ARCHITECTURE.md),
+[design system](docs/v2/DESIGN-SYSTEM.md), and
+[platform findings](docs/PLATFORM-FINDINGS.md) before changing behavior.
+The findings distinguish hardware observations from isolated tests.
 
-Run the standard checks from the repository root:
+<details>
+<summary><strong>Verification commands</strong></summary>
 
 ```bash
 node --test test/m0/*.test.mjs test/v2/*.test.cjs
@@ -204,10 +225,16 @@ omarchy plugin validate .
 python3 tools/v2/check-qml.py .
 ```
 
-`check-qml.py` needs access to the live Wayland session but does not instantiate
-Station or change the desktop configuration. Hardware topology changes remain
-manual release checks; the offscreen tests do not pretend to prove real hardware.
+The QML check needs Wayland access but does not instantiate Station or change
+the desktop configuration. Live topology checks are separate release work.
+See [media notes](docs/assets/tours/README.md) for GIF provenance and rendering.
 
-## License
+</details>
 
-Station is available under the [Apache License 2.0](LICENSE).
+---
+
+<div align="center">
+  <strong>Station is free and open source.</strong><br>
+  <a href="LICENSE">Apache License 2.0</a> ·
+  <a href="https://github.com/Yakumy/Station/issues">Report an issue</a>
+</div>
