@@ -7,6 +7,8 @@ preserve work already in progress.
 
 ## Where to look
 
+- [Branding palette](docs/BRANDING.md): approved Station colors and media rules.
+  Read before creating videos, banners, previews, screenshots, GIFs, or themes.
 - [v2 build spec](docs/v2/SPEC.md): product behavior, invariants, security,
   transaction and removal contracts. Start with §§1–3, then the section for
   the feature being changed.
