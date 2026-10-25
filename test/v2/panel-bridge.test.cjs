@@ -112,7 +112,7 @@ test('new intent setters reject malformed values at the service boundary', () =>
     ['setPanelWanted', 'panelWanted', true, [1, 'true', null]],
     ['setPanelScreenName', 'panelScreenName', 'DP-1', [{}, '../bad', 4]],
     ['setPanelTransferUntil', 'panelTransferUntil', 1234, [NaN, Infinity, -1, '1234']],
-    ['setRememberedTab', 'rememberedTab', 3, [-1, 4, 1.5, '2']],
+    ['setRememberedTab', 'rememberedTab', 4, [-1, 5, 1.5, '2']],
     ['setRememberedDisplayName', 'rememberedDisplayName', 'HDMI-A-1', [{}, 'x;bad', null]],
   ]) {
     const fn = qmlFunction(service, method, context);
@@ -139,7 +139,7 @@ test('deferred popout settlement works after the proxy has been destroyed', () =
 
 // Catch newly added UI members that would otherwise work only under the stock bar.
 test('the proxies cover every service and wallpaper member consumed by the panel', () => {
-  const consumers = ['StationPanel', 'DisplaysTab', 'DisplayLayout', 'SettingsTab',
+  const consumers = ['StationPanel', 'DisplaysTab', 'DisplayLayout', 'BarTab', 'SettingsTab',
     'KeybindingsTab', 'WallpaperTab'].map(name => read('lib/' + name + '.qml')).join('\n');
   const members = new Set([...consumers.matchAll(/\bservice\.(\w+)/g)].map(m => m[1]));
   const declared = new Set([...proxy.matchAll(/(?:property \w+|function) (\w+)/g)].map(m => m[1]));

@@ -7,6 +7,8 @@ QtObject {
   property var api: null
 
   readonly property var config: snapshot ? snapshot.config : ({})
+  readonly property var monitorBarMinimums: snapshot ? snapshot.monitorBarMinimums : ({})
+  readonly property var monitorBarMaximumContents: snapshot ? snapshot.monitorBarMaximumContents : ({})
   readonly property var displayDraft: snapshot ? snapshot.displayDraft : []
   readonly property var bindStatuses: snapshot ? snapshot.bindStatuses : []
   readonly property int currentStation: snapshot ? snapshot.currentStation : 1
@@ -26,6 +28,7 @@ QtObject {
   readonly property int rememberedTab: snapshot ? snapshot.rememberedTab : 0
   readonly property string rememberedDisplayName: snapshot ? snapshot.rememberedDisplayName : ""
   readonly property var displayWidgetEnabled: snapshot ? snapshot.displayWidgetEnabled : null
+  readonly property var workspaceWidgetEnabled: snapshot ? snapshot.workspaceWidgetEnabled : null
   readonly property var manifest: ({ version: snapshot ? snapshot.pluginVersion : "" })
 
   readonly property var wallpaper: Station.WallpaperProxy {
@@ -41,8 +44,39 @@ QtObject {
   function setBinding(id, combo) { return call("setBinding", [id, combo]) }
   function approveBinding(combo) { return call("approveBinding", [combo]) }
   function setDisplayValue(name, key, value) { return call("setDisplayValue", [name, key, value]) }
+  function setDisplayTransform(name, value) { return call("setDisplayTransform", [name, value]) }
   function setDisplayPosition(name, x, y) { return call("setDisplayPosition", [name, x, y]) }
   function setDisplayEnabled(name, enabled) { return call("setDisplayEnabled", [name, enabled]) }
+  function setMonitorBarEnabled(name, enabled) { return call("setMonitorBarEnabled", [name, enabled]) }
+  function setMonitorBarPosition(name, position) { return call("setMonitorBarPosition", [name, position]) }
+  function setMonitorBarWidth(name, width) { return call("setMonitorBarWidth", [name, width]) }
+  function setMonitorBarHeight(name, height) { return call("setMonitorBarHeight", [name, height]) }
+  function setMonitorBarBackground(name, background) { return call("setMonitorBarBackground", [name, background]) }
+  function setMonitorBarStyle(name, style) { return call("setMonitorBarStyle", [name, style]) }
+  function setMonitorBarContentSize(name, contentSize) { return call("setMonitorBarContentSize", [name, contentSize]) }
+  function reportMonitorBarMinimum(name, value) { return call("reportMonitorBarMinimum", [name, value]) }
+  function reportMonitorBarMaximumContent(name, value) { return call("reportMonitorBarMaximumContent", [name, value]) }
+  function monitorBar(name) {
+    var revision = snapshot
+    var value = call("monitorBar", [name])
+    return value && typeof value === "object" ? value
+      : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
+  }
+  function monitorBarMaximumHeight(name) {
+    var revision = snapshot
+    var value = call("monitorBarMaximumHeight", [name])
+    return value === undefined ? 1 : Number(value)
+  }
+  function monitorBarMinimum(name) {
+    var revision = snapshot
+    var value = call("monitorBarMinimum", [name])
+    return value === undefined ? 1 : Number(value)
+  }
+  function monitorBarMaximumContent(name) {
+    var revision = snapshot
+    var value = call("monitorBarMaximumContent", [name])
+    return value === undefined ? 1 : Number(value)
+  }
   function applyDisplaySetting(name, key, value) { return call("applyDisplaySetting", [name, key, value]) }
   function swapRole(name, roleIndex) { return call("swapRole", [name, roleIndex]) }
   function previewLayout() { return call("previewLayout", []) }

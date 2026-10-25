@@ -2,12 +2,13 @@
   "schemaVersion": 1,
   "id": "yakumy.station",
   "name": "Station",
-  "version": "2.1.9",
+  "version": "2.2.0",
   "author": "Yakumy",
   "license": "Apache-2.0",
   "description": "Synchronized workspaces, displays, and wallpapers for Omarchy",
-  "kinds": ["bar-widget", "service"],
+  "kinds": ["bar", "bar-widget", "service"],
   "entryPoints": {
+    "bar": "Bar.qml",
     "barWidget": "Panel.qml",
     "service": "Service.qml"
   },

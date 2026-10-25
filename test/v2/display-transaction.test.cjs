@@ -209,10 +209,24 @@ test('scale side control saves directly with one watched apply and no preview co
   assert.equal(c.state, 'idle');
   assert.equal(c.displayDraft.find(display => display.name === 'A').scale, 2);
   assert.equal(c.displayDraft.find(display => display.name === 'B').scale, 1);
+  assert.equal(c.displayDraft.find(display => display.name === 'A').x, 960);
+  assert.equal(c.displayDraft.find(display => display.name === 'A').x
+    + c.Model.logicalSize(c.displayDraft.find(display => display.name === 'A')).width,
+    c.displayDraft.find(display => display.name === 'B').x,
+    'scaling the left display keeps its right edge attached to its neighbor');
+  assert.deepEqual(c.Model.layoutOverlaps(c.displayDraft), []);
   assert.equal(h.order.filter(item => item === 'autoreload').length, 1);
   assert.equal(h.order.filter(item => item === 'reload').length, 0,
     'the direct write relies on the watched apply and never forces another reload');
   assert.equal(c.previewSeconds || 0, 0);
+});
+
+test('scaling the right display retains its attached left edge', () => {
+  const h = harness(), c = h.c;
+  assert.equal(c.applyDisplaySetting('B', 'scale', 2), 'started');
+  h.drain();
+  assert.equal(c.displayDraft.find(display => display.name === 'B').x, 1920);
+  assert.deepEqual(c.Model.layoutOverlaps(c.displayDraft), []);
 });
 
 test('an unchanged side control performs no write or compositor apply', () => {

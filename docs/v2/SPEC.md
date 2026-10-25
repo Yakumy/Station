@@ -72,7 +72,8 @@ yakumy.station/
 ├── manifest.json        # id yakumy.station, kinds ["bar-widget","service"]; copy key names from the Display manifest and PluginRegistry.qml; Panel.qml is the widget's popout entry, as in Display
 ├── Service.qml          # root item: IPC methods, state machine, event loop
 ├── lib/StationBar.qml  # logo + S1; row on horizontal bars, stack on vertical bars
-├── Panel.qml            # Display-style popout (qs.Ui Panel/KeyboardPanel): Displays | Wallpaper | Keybindings | Settings
+├── Bar.qml              # full-bar host: one isolated Omarchy bar per connected output
+├── Panel.qml            # Display-style popout: Displays | Bar | Wallpaper | Keybindings | Settings
 ├── lib/
 │   ├── Model.js         # lanes, roles, planners (pure)
 │   ├── Hypr.js          # the only place hyprctl/eval is called; validation; Lua generators
@@ -202,7 +203,7 @@ Apply rules for the compact mapping, then `focus` each active output's workspace
 
 ### 5.9 Layout geometry
 
-Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`, `h = pixelH / scale`, with w/h swapped for transforms 1, 3, 5, 7. A 3840×2160 display at scale 2 occupies 1920×1080. Snap edge-to-edge to neighbours and to a 10-unit grid. Rectangles must not overlap; overlapping layouts cannot be Kept.
+Canvas and validation use Hyprland **logical** coordinates: `w = pixelW / scale`, `h = pixelH / scale`, with w/h swapped for transforms 1, 3, 5, 7. A 3840×2160 display at scale 2 occupies 1920×1080. Snap edge-to-edge to neighbours and to a 10-unit grid. Edge attachment keeps its theme-scaled screen-distance tolerance, while parallel top/bottom or left/right alignment snaps only within 20 logical units; unequal monitors can therefore remain attached at arbitrary grid offsets instead of being forced to touch at a corner. When rotation, scale, or resolution changes a logical rectangle, preserve its strongest shared edge and reposition it automatically so it remains attached without overlapping a neighbor. Rectangles must not overlap; overlapping layouts cannot be Kept.
 
 ## 6. Runtime behaviour
 
@@ -391,18 +392,135 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
+**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Bar | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
 
 Displays tab:
 
 - Left: **Layout** canvas (logical coordinates, §5.9; drag and snap; wheel/button zoom and background pan; selected outlined; borderless rotation controls diagonally outside all four corners of the selected monitor, revealed by broad square hover targets straddling those corners and kept above neighboring cards; role-number menu inside each enabled monitor; overlaps flagged; drag stays live while a preview is pending, so an arrangement can be revised without Keep or Revert first — §9.2). A red layout error appears below the canvas.
+- By default, the actual monitor union is fitted inside the central 80% of the
+  canvas, leaving about 10% whitespace on each constraining edge. Bar and
+  Wallpaper use the same framing rule. Displays and Bar paint a compact
+  named theme-space gap between touching monitor cards. Wallpaper uses that
+  named theme-space gap in Same and Per monitor modes, but Span remains edge-to-edge so one image
+  stays visually continuous across the monitor group.
 - Right: `Selected: <connector>` followed by **Brightness** (read `omarchy-brightness-display --monitor <name>` async, show unavailable state on empty/`unavailable`; write `omarchy brightness display --no-osd --monitor <name> N%`, debounced; skip disabled monitors), global **Text size** (Omarchy's seven stops and CLI), **Scale** (1x, 1.25x, 1.6x, 2x, 3x, 4x), **Resolution** and **Refresh rate**. The last three use discrete index sliders and save immediately through the direct §9.3 transaction; they never open the Keep/Revert footer. Resolution and Refresh index exact supported `availableModes` strings, not interpolated unsupported values. Refresh choices depend on the selected resolution. Their chosen values appear at the right edge of the row header.
 - Footer only while a preview is pending: "Keep these settings? Reverting in N s" with **Revert** and **Keep** (Keep runs the §9.3 transaction). No Identify, no Initialize.
 - Hotplug: summon the panel on Displays when a monitor is added, not when removed. A fourth independent monitor shows the §5.6 explanation.
 
+Bar tab:
+
+- Left: the current connected-monitor arrangement, selectable but read-only for
+  display geometry. The selected card uses the same selected border and fill as
+  Displays. Displays disabled
+  by Station remain visible and dimmed; physically disconnected displays are
+  absent. Every monitor card shows a compact bar preview, four side arrows, and
+  a central on/off switch. The preview reflects the selected width, uses
+  `Style.spacing.sm` at monitor edges, and places the connector label toward
+  the card center, inset beyond the maximum preview thickness on every side.
+  It disappears while that bar is off; no side arrow
+  remains accented while it is off. Side choices and presence apply
+  immediately.
+- At least one enabled output must retain a bar. A disabled output may keep a
+  remembered bar choice for its next enable, but it cannot satisfy this guard.
+- Right: `Selected: <connector>` followed by five equal control rows. The first,
+  **Content size**, is an integer slider from Omarchy's current `Style.font.body`
+  size through the selected bar height. Above the default it zooms every
+  module's default-size subtree uniformly by the requested-to-default ratio —
+  the same proportions as Omarchy's global text size, scoped to this bar. Text
+  re-rasterizes at the final size and loaded images decode at the matched
+  physical resolution; the along-bar layout footprint grows by the ratio so
+  proportional gaps are preserved and neighbors never overlap, and the
+  cross-axis footprint stays clipped to the bar. The maximum leaves
+  `Style.spacing.sm` clear on both cross-axis edges and also stops before the
+  scaled left, centered, and right regions overlap along the bar. A saved
+  request above a subsequently reduced limit is clamped at runtime and reports
+  `Maximum N px — content needs more bar space.` The second row, **Height**,
+  starts at Omarchy's current theme-driven bar thickness and can grow to 5% of
+  the monitor mode's shorter native dimension (the shorter side remains the
+  reference after rotation, so 1920×1200 caps at 60 px). It is saved per
+  monitor, applies immediately, and the layout preview reflects the chosen
+  thickness. The cap is defined at default display and text scale; later scale
+  or text-size changes may increase its apparent size. They may also raise the
+  live minimum, in which case a saved lower value is clamped rather than
+  overriding Omarchy's readable default. The third row, **Width**, requests
+  1–100% of that monitor edge,
+  with 100% as the default. Each live bar measures its actual left, centered,
+  and right widget regions and reports the first non-overlapping percentage.
+  Requests below it remain visible in the slider, but the rendered surface is
+  clamped to the measured minimum and the row reports `Minimum N% — bar items
+  overlap.` Position remains directly editable through the four arrows on each
+  monitor card. Omarchy's Bar → Position menu changes only the focused monitor.
+  Dragging changes only the bar's originating monitor, regardless of focus.
+  Other monitors retain their positions, including inherited default edges;
+  presence and appearance are preserved. Initial shell attachment preserves
+  per-monitor overrides.
+  **Background** is
+  a full-width themed dropdown ordered Solid color, Transparent, Blur. Solid
+  is the default. Transparent retains Omarchy's wallpaper-aware foreground and
+  can also be toggled by double-clicking empty bar space. Blur uses the same
+  foreground selection over a nearly clear activation mask, with no visible
+  dark tint, and raises Hyprland's blur passes to three for a smooth result.
+  Station
+  leases Hyprland's global blur setting only while a connected enabled bar
+  requests Blur, applies a named `omarchy-bar` layer rule with transparent
+  pixels excluded, and restores the prior global enabled, size, and passes
+  settings when the last Blur request is removed. **Style** is a full-width
+  themed dropdown ordered Omarchy default, Pill. Omarchy default keeps the
+  continuous bar surface. Pill uses three independently rounded left, center,
+  and right islands with token-scaled inner padding; Background still owns
+  their fill, so Solid, Transparent, and Blur behave identically in either
+  style. Island padding participates in the measured non-overlap minimum. The
+  stock tray's collapsed drawer reserve is excluded from its island and layout
+  footprint; the island grows with the tray as hidden icons reveal. The
+  Background and Style dropdowns remain bound to the selected connector's
+  saved value even though the host dropdown imperatively assigns its own value
+  during selection; changing monitors or reopening the panel must never show a
+  mode last chosen for another connector.
+- Solid Omarchy-default bars retain the stock edge geometry. Pill style and
+  Blur/Transparent backgrounds extend their clear layer surface inward by
+  `Style.gapsOut` while retaining the configured bar thickness as the exclusive
+  zone. Since that token is half Hyprland's outer window gap, the module
+  centerline sits exactly halfway between the monitor edge and the nearest
+  tiled-window edge on Top, Right, Bottom, and Left bars.
+- Pill end islands also retain one full compositor outer gap from the two
+  monitor edges parallel to the bar, matching the outer edge of tiled windows.
+  Cross-axis panel moves accept the additional `Style.gapsOut` visual-layer
+  thickness before switching the open panel to the new edge, so the panel
+  never combines a stale edge with the remapped bar-window geometry.
+- Bar-tab previews retain a compact equal inset on every side. Monitor names
+  are centered horizontally above the toggle, with a clearance based on the
+  maximum allowed bar thickness; saved heights are clamped to that maximum.
+- A side change reflows the bar in place instead of rebuilding it: each bar
+  region runs through one orientation-agnostic positioner that keeps the same
+  module instances across top/bottom/left/right, so an open panel survives
+  every side choice and re-anchors with the bar. `config.bars` is the live
+  authority during this interaction: the full bar reads its detached service
+  snapshot, while the redundant `shell.json` `bar.monitors` write is deferred
+  until the panel closes. This keeps the host's config reload outside the open
+  panel lifetime. The open KeyboardPanel also retains its selected Quickshell
+  screen through the bar window's horizontal↔vertical layer-shell transition.
+  During that transition, the panel must not combine the new logical edge with
+  the old-axis bar-window dimensions: it retains the last geometrically valid
+  edge until the anchor window reports the requested axis, then moves directly
+  to the new valid geometry. The panel-restoration machinery (§10.3) still arms as a
+  fallback for a coincident structural rebuild (a plugin enable/disable or a
+  widget drag), restoring directly to Bar instead of allowing the new widget's
+  default Displays tab to overwrite the remembered selection.
+  A partial-width horizontal bar is centered inside a full-width, input-masked
+  layer surface; a partial-height vertical bar is centered inside the matching
+  full-height surface. Keeping the surface's coordinate space equal to the
+  screen is required by Omarchy's keyboard panels. Popouts use section anchors:
+  the panel and bar corners align for Left and Right modules, while Center
+  modules open centered. The edge axis remains anchored and keeps its normal
+  exclusion zone; transparent space outside the visible bar is click-through.
+- The first per-monitor edit selects Station's full-bar entry. It preserves the
+  configured widget layout and hosts one Omarchy-derived bar instance per
+  connected output, allowing independent positions without editing packaged
+  Omarchy sources.
+
 Keybindings tab: action, key chips, status (Free / Unverified / Replaces Omarchy default / Conflict); conflict rows expand with owner and actions.
 
-Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Grace delay, Minimum stations, installed version with a GitHub link. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
+Settings tab: Hide Omarchy's workspace indicator, Hide Omarchy's Display icon, Follow focus, Panel opening position (Left at the Station bar icon, or Center on the current monitor; Left by default), Grace delay, Minimum stations, installed version with a GitHub link. The two Hide switches reflect both Station's preference and the live plugin-enabled state; deliberately switching either one off enables its widget even when no Station lease exists. Center uses the selected output's full-screen KeyboardPanel card and keeps the card clear of the bar when the monitor is too small for exact centering.
 
 **Theme tokens** (`import qs.Commons`, `import qs.Ui`):
 

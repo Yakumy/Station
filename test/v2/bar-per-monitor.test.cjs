@@ -1,0 +1,588 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { runInNewContext } = require('node:vm');
+
+const read = name => readFileSync(name, 'utf8');
+const Store = require('../../lib/Store.js');
+const service = read('Service.qml');
+
+function qmlFunction(source, name, context = {}) {
+  const start = source.indexOf('  function ' + name + '(');
+  assert.notEqual(start, -1, name + ' exists');
+  const end = source.indexOf('\n  }', start) + 4;
+  return runInNewContext('(' + source.slice(start, end) + ')', context);
+}
+
+test('2.2 manifest exposes the full bar alongside the widget and service', () => {
+  const manifest = JSON.parse(read('manifest.json'));
+  assert.equal(manifest.version, '2.2.0');
+  assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
+  assert.equal(manifest.entryPoints.bar, 'Bar.qml');
+});
+
+test('bar preferences migrate and reject unknown positions', () => {
+  assert.equal(Store.CONFIG_VERSION, 8);
+  assert.deepEqual(Store.loadConfig({}).bars, {});
+  assert.deepEqual(Store.loadConfig({ bars: {
+    'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill', contentSize: 18.4 },
+    'DP-2': { enabled: true, position: 'diagonal', width: 1000, height: 5000, background: 'bad', style: 'unknown', contentSize: 5000 },
+    broken: 'bad',
+  }}).bars, {
+    'DP-1': { enabled: false, position: 'right', width: 55, height: 120, background: 'blur', style: 'pill', contentSize: 18 },
+    'DP-2': { enabled: true, position: 'top', width: 100, height: 1000, background: 'solid', style: 'default', contentSize: 1000 },
+    broken: { enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default', contentSize: 0 },
+  });
+});
+
+test('service refuses to hide the last bar on an enabled output', () => {
+  const context = {
+    displayDraft: [
+      { name: 'DP-1', enabled: true },
+      { name: 'DP-2', enabled: true },
+      { name: 'DP-3', enabled: false },
+    ],
+    config: { bars: {
+      'DP-1': { enabled: true, position: 'top' },
+      'DP-2': { enabled: false, position: 'left' },
+      'DP-3': { enabled: true, position: 'bottom' },
+    } },
+    validConnector: value => /^DP-[1-3]$/.test(value),
+    shell: null,
+    panelWanted: false,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    syncBarBlur() {},
+    publishMonitorBar() { throw new Error('must not publish rejected change'); },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setEnabled = qmlFunction(service, 'setMonitorBarEnabled', context);
+  assert.equal(setEnabled('DP-1', false), 'last-bar');
+
+  context.config.bars['DP-2'].enabled = true;
+  context.publishMonitorBar = () => true;
+  assert.equal(setEnabled('DP-1', false), 'ok');
+  assert.equal(context.config.bars['DP-1'].enabled, false);
+});
+
+test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {
+  const context = {
+    displayDraft: [{ name: 'DP-1', enabled: true }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top' } } },
+    validConnector: value => value === 'DP-1',
+    shell: null,
+    panelWanted: true,
+    panelTransferUntil: 0,
+    rememberedTab: 0,
+    saveConfig() {},
+    activeStationBar() { return false; },
+    publishMonitorBar() { return true; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setPosition = qmlFunction(service, 'setMonitorBarPosition', context);
+
+  assert.equal(setPosition('DP-1', 'right'), 'ok');
+  assert.equal(context.rememberedTab, 1);
+  assert.ok(context.panelTransferUntil > Date.now());
+});
+
+test('an active full bar defers its shell.json mirror while the panel is open', () => {
+  const pending = [];
+  const context = {
+    displayDraft: [{ name: 'DP-1', enabled: true }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top' } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() { throw new Error('must not write shell.json while open'); } },
+    panelWanted: true,
+    panelTransferUntil: 0,
+    rememberedTab: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, next) { pending.push([name, { ...next }]); },
+    publishMonitorBar() { throw new Error('must defer the host write'); },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setPosition = qmlFunction(service, 'setMonitorBarPosition', context);
+
+  assert.equal(setPosition('DP-1', 'right'), 'ok');
+  assert.equal(context.config.bars['DP-1'].position, 'right');
+  assert.deepEqual(pending, [[
+    'DP-1', { enabled: true, position: 'right', width: 100, height: 0, background: 'solid', style: 'default', contentSize: 0 },
+  ]]);
+});
+
+test('closing the panel flushes all deferred monitor rows in one host write', () => {
+  const shellConfig = { bar: { id: 'yakumy.station', monitors: {}, layout: {
+    left: [], center: [], right: [],
+  } } };
+  let writes = 0;
+  const context = {
+    panelWanted: false,
+    pendingMonitorBars: {
+      'DP-1': { enabled: true, position: 'right', width: 72 },
+      'DP-2': { enabled: false, position: 'bottom', width: 100 },
+    },
+    shell: {
+      mutateShellConfig(mutator) { writes++; mutator(shellConfig); return true; },
+    },
+  };
+  context.publishMonitorBars = qmlFunction(service, 'publishMonitorBars', context);
+  const flush = qmlFunction(service, 'flushPendingMonitorBars', context);
+
+  assert.equal(flush(), true);
+  assert.equal(writes, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.monitors)), {
+    'DP-1': { enabled: true, position: 'right', width: 72 },
+    'DP-2': { enabled: false, position: 'bottom', width: 100 },
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.pendingMonitorBars)), {});
+});
+
+test('full-bar entry reads live service bars before the shell.json mirror', () => {
+  const fullBar = read('Bar.qml');
+  assert.match(fullBar, /import "lib\/BarBridge\.js" as BarBridge/);
+  assert.match(fullBar, /var live = stationBars/);
+  assert.match(fullBar, /snapshot\.config\.bars/);
+  assert.ok(fullBar.indexOf('var live = stationBars') < fullBar.indexOf('var rows = barConfig'));
+});
+
+test('first bar edit activates Station and retires its persisted widget atomically', () => {
+  const shellConfig = { bar: {
+    id: 'omarchy.bar',
+    layout: {
+      left: [{ id: 'omarchy.menu' }, { id: 'yakumy.station' }],
+      center: [{ id: 'omarchy.clock' }],
+      right: [{ id: 'yakumy.station' }, { id: 'omarchy.tray' }],
+    },
+  } };
+  const context = {
+    shell: {
+      mutateShellConfig(mutator) { mutator(shellConfig); return true; },
+    },
+  };
+  context.publishMonitorBars = qmlFunction(service, 'publishMonitorBars', context);
+  const publish = qmlFunction(service, 'publishMonitorBar', context);
+  assert.equal(publish('DP-1', { enabled: true, position: 'right', width: 100 }), true);
+  assert.equal(shellConfig.bar.id, 'yakumy.station');
+  assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.monitors['DP-1'])),
+    { enabled: true, position: 'right', width: 100 });
+  assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.layout)), {
+    left: [{ id: 'omarchy.menu' }],
+    center: [{ id: 'omarchy.clock' }],
+    right: [{ id: 'omarchy.tray' }],
+  });
+});
+
+test('upgrading an active Station bar retires the legacy widget row on service load', () => {
+  const shellConfig = { bar: {
+    id: 'yakumy.station',
+    layout: {
+      left: [{ id: 'omarchy.menu' }, { id: 'yakumy.station' }],
+      center: [],
+      right: [],
+    },
+  } };
+  const context = {
+    shell: {
+      barConfig: shellConfig.bar,
+      mutateShellConfig(mutator) { mutator(shellConfig); return true; },
+    },
+  };
+  const reconcile = qmlFunction(service, 'reconcileActiveBarLayout', context);
+  assert.equal(reconcile(), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(shellConfig.bar.layout.left)),
+    [{ id: 'omarchy.menu' }]);
+  assert.equal(reconcile(), false, 'reconciliation is idempotent after the legacy row is gone');
+});
+
+test('bar tab is read-only for display geometry and exposes all requested controls', () => {
+  const panel = read('lib/StationPanel.qml');
+  const tab = read('lib/BarTab.qml');
+  const layout = read('lib/BarLayout.qml');
+  const displayLayout = read('lib/DisplayLayout.qml');
+  const wallpaperLayout = read('lib/WallpaperLayout.qml');
+  const host = read('Bar.qml');
+  const monitorBar = read('lib/MonitorBar.qml');
+  const proxy = read('lib/BarServiceProxy.qml');
+
+  assert.match(panel, /\["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"\]/);
+  assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
+  assert.match(tab, /Station\.BarLayout/);
+  assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);
+  assert.match(tab, /text: "CONTENT SIZE"/);
+  assert.match(tab, /minimum: root\.selectedMinimumContentSize[\s\S]*?maximum: root\.selectedMaximumContentSize/);
+  assert.match(tab, /setMonitorBarContentSize\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.match(tab, /"Maximum " \+ root\.selectedMaximumContentSize \+ " px — content needs more bar space\."/);
+  assert.equal((tab.match(/height: controlFrame\.height \/ 5/g) || []).length, 5);
+  assert.match(tab, /text: "WIDTH"/);
+  assert.match(tab, /minimum: 1[\s\S]*?maximum: 100/);
+  assert.match(tab, /setMonitorBarWidth\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.match(tab, /"Minimum " \+ root\.selectedMinimumWidth \+ "% — bar items overlap\."/);
+  assert.match(tab, /text: "HEIGHT"/);
+  assert.match(tab, /minimum: root\.selectedMinimumHeight[\s\S]*?maximum: root\.selectedMaximumHeight/);
+  assert.match(tab, /setMonitorBarHeight\(root\.selectedDisplay\.name, Math\.round\(value\)\)/);
+  assert.ok(tab.indexOf('id: contentSizeRow') < tab.indexOf('id: heightRow'));
+  assert.ok(tab.indexOf('id: heightRow') < tab.indexOf('id: widthRow'));
+  assert.match(tab, /text: "BACKGROUND"/);
+  assert.match(tab, /Ui\.Dropdown[\s\S]*?value: "solid", label: "Solid color"[\s\S]*?value: "transparent", label: "Transparent"[\s\S]*?value: "blur", label: "Blur"/);
+  assert.match(tab, /setMonitorBarBackground\(root\.selectedDisplay\.name, value\)/);
+  assert.match(tab, /Binding \{[\s\S]*?target: backgroundDropdown[\s\S]*?property: "value"[\s\S]*?value: root\.selectedBar\.background/,
+    'the host dropdown writes its own value, so an external Binding must keep it monitor-specific');
+  assert.match(tab, /text: "STYLE"/);
+  assert.match(tab, /value: "default", label: "Omarchy default"[\s\S]*?value: "pill", label: "Pill"/);
+  assert.match(tab, /setMonitorBarStyle\(root\.selectedDisplay\.name, value\)/);
+  assert.match(tab, /Binding \{[\s\S]*?target: styleDropdown[\s\S]*?property: "value"[\s\S]*?value: root\.selectedBar\.style/);
+  assert.match(layout, /selectedDisplayName/);
+  assert.match(layout, /displaySelected\(monitorCard\.modelData\.name\)/);
+  assert.match(layout, /Color\.menu\.selectedBackground/);
+  assert.match(layout, /Ui\.ToggleSwitch/);
+  for (const side of ['top', 'right', 'bottom', 'left'])
+    assert.match(layout, new RegExp('position: "' + side + '"'));
+  for (const canvas of [layout, displayLayout, wallpaperLayout]) {
+    assert.match(canvas, /horizontalInset: width \* 0\.1/);
+    assert.match(canvas, /verticalInset: height \* 0\.1/);
+  }
+  const preview = layout.slice(layout.indexOf('id: barPreview'), layout.indexOf('\n      Text {', layout.indexOf('id: barPreview')));
+  assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
+  assert.match(preview, /parent\.width - canvas\.barEdgeGap \* 2/);
+  assert.match(preview, /parent\.height - topInset - bottomInset/);
+  assert.match(preview, /position === "left" \? canvas\.barEdgeGap/);
+  assert.match(preview, /parent\.height - height - bottomInset/);
+  assert.match(layout, /maximumBarHeight \* canvas\.zoom/);
+  assert.match(layout, /horizontalAlignment: Text\.AlignHCenter/);
+  assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
+  assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
+  assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
+  assert.match(panel, /sessionTabRestored/);
+  assert.doesNotMatch(layout, /setDisplayPosition|previewLayout|drag/i);
+  assert.match(host, /Variants\s*\{[\s\S]*?model: Quickshell\.screens/);
+  assert.match(host, /configuredEnabledCount\(\) > 0/);
+  assert.match(host, /onPopoutRequested: root\.closePeerPopouts\(monitorBar\)/);
+  assert.match(host, /onBackgroundModeRequested: function\(mode\) \{ root\.requestMonitorBackground\(monitorBar, mode\) \}/);
+  assert.match(monitorBar, /function closeActivePopout\(\)/);
+  assert.match(monitorBar, /onDoubleClicked:[\s\S]*?root\.toggleTransparency\(\)/);
+  assert.match(monitorBar, /backgroundMode === "blur" \? Util\.alpha\(Commons\.Color\.bar\.background, 0\.01\)/);
+  assert.match(monitorBar, /barStyle === "pill"/);
+  assert.match(monitorBar, /radius: Math\.min\(width, height\) \/ 2/);
+  assert.match(monitorBar, /insetPresentation: barStyle === "pill" \|\| backgroundMode !== "solid"/);
+  assert.match(monitorBar, /edgeCenterOffset: insetPresentation \? Style\.gapsOut : 0/);
+  assert.match(monitorBar, /panelThickness: barSize \+ edgeCenterOffset/);
+  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore[\s\S]*?root\.insetPresentation \? ExclusionMode\.Normal : ExclusionMode\.Auto/);
+  assert.match(monitorBar, /exclusiveZone: root\.barSize/);
+  assert.match(monitorBar, /root\.position === "left" \? root\.edgeCenterOffset : 0/);
+  assert.match(monitorBar, /root\.position === "top" \? root\.edgeCenterOffset : 0/);
+  assert.match(monitorBar, /pillOuterMargin: root\.barStyle === "pill" \? Style\.gapsOut \* 2 : 0/);
+  assert.match(monitorBar, /pillOuterMargin \+ pillPadding : Style\.space\(8\)/);
+  assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);
+  assert.match(monitorBar, /parent\.height - height - barContent\.edgeMargin/);
+  assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
+  assert.match(monitorBar, /contentZoom: widgetSizedContent \? 1 : root\.contentScale/);
+  assert.equal((monitorBar.match(/scale: slot\.contentZoom/g) || []).length, 3);
+  assert.doesNotMatch(monitorBar, /layer\.enabled: slot\.contentZoom/);
+  assert.match(monitorBar, /item\.renderType = Text\.QtRendering/);
+  assert.match(monitorBar, /transformOrigin: Item\.TopLeft/);
+  assert.match(monitorBar, /visibleBaseContentWidth \* contentZoom/);
+  assert.match(monitorBar, /visibleBaseContentHeight \* contentZoom/);
+  assert.match(monitorBar, /function applyContentImageZoom\(\)/);
+  assert.match(monitorBar, /item\.sourceSize\.width = Math\.max\(1, Math\.round\(baseline\.width \* zoom\)\)/);
+  assert.match(monitorBar, /onBaseContentWidthChanged: scheduleContentImageZoom\(\)/);
+  assert.match(monitorBar, /property real effectiveContentSize: root\.effectiveContentSize/);
+  assert.doesNotMatch(monitorBar, /applyNativeContentSize|nativeSizeBaselines|baseline\.fontSize|item\.font\.pixelSize = customized/);
+  assert.match(monitorBar, /maximumContentSize: measuredMaximumContentSize/);
+  assert.match(monitorBar, /onMaximumContentSizeChanged: root\.measuredMaximumContentSize = maximumContentSize/);
+  assert.match(host, /reportMonitorBarMaximumContent/);
+  assert.match(service, /monitorBarMaximumContents: monitorBarMaximumContents/);
+  assert.match(service, /reportMonitorBarMaximumContent: function/);
+  assert.match(service, /monitorBarMaximumContent: function/);
+  assert.match(proxy, /monitorBarMaximumContents/);
+  assert.match(proxy, /function reportMonitorBarMaximumContent/);
+  assert.match(proxy, /function monitorBarMaximumContent/);
+  assert.match(monitorBar, /BarModel\.visibleModuleFlowLength/);
+  assert.match(read('lib/StationBar.qml'), /font\.pixelSize: root\.contentFontSize/);
+  assert.doesNotMatch(read('lib/StationPanel.qml'), /nativeContentSized/);
+  assert.equal((monitorBar.match(/model: root\.targetScreen \? \[root\.targetScreen\] : \[\]/g) || []).length, 3);
+});
+
+test('bar width persists the request while runtime measurements provide a safe minimum', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100 } } },
+    monitorBarMinimums: {},
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMinimum = qmlFunction(service, 'monitorBarMinimum', context);
+  const reportMinimum = qmlFunction(service, 'reportMonitorBarMinimum', context);
+  const setWidth = qmlFunction(service, 'setMonitorBarWidth', context);
+
+  assert.equal(reportMinimum('DP-1', 63), 'ok');
+  assert.equal(context.monitorBarMinimum('DP-1'), 63);
+  assert.equal(setWidth('DP-1', 48), 'ok');
+  assert.equal(context.config.bars['DP-1'].width, 48);
+  assert.deepEqual(pending, [
+    'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid', style: 'default', contentSize: 0 },
+  ]);
+  assert.equal(context.rememberedTab, 1);
+  assert.ok(context.panelTransferUntil > Date.now());
+  assert.equal(setWidth('DP-1', 0), 'invalid');
+  assert.equal(reportMinimum('../bad', 50), 'invalid');
+});
+
+test('bar content maximum is reported as runtime geometry and bounded by padded height', () => {
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200 }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100, height: 40 } } },
+    monitorBarMaximumContents: {},
+    shell: null,
+    Style: {
+      font: { body: 12 },
+      bar: { sizeHorizontal: 26, sizeVertical: 26 },
+      spacing: { sm: 4 },
+    },
+    validConnector: value => value === 'DP-1',
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  context.monitorBarRenderedHeight = qmlFunction(service, 'monitorBarRenderedHeight', context);
+  context.monitorBarMaximumContent = qmlFunction(service, 'monitorBarMaximumContent', context);
+  const reportMaximum = qmlFunction(service, 'reportMonitorBarMaximumContent', context);
+
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 32);
+  assert.equal(reportMaximum('DP-1', 27), 'ok');
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 27);
+  assert.equal(reportMaximum('DP-1', 38), 'ok');
+  assert.equal(context.monitorBarMaximumContent('DP-1'), 32,
+    'a report cannot exceed the height after both edge insets');
+  assert.equal(reportMaximum('../bad', 20), 'invalid');
+});
+
+test('bar height is per monitor and capped at five percent of the shorter native side', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200, scale: 1.25 }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top', width: 100, height: 0 } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  const setHeight = qmlFunction(service, 'setMonitorBarHeight', context);
+
+  assert.equal(context.monitorBarMaximumHeight('DP-1'), 60);
+  assert.equal(setHeight('DP-1', 60), 'ok');
+  assert.equal(context.config.bars['DP-1'].height, 60);
+  assert.deepEqual(pending, [
+    'DP-1', { enabled: true, position: 'top', width: 100, height: 60, background: 'solid', style: 'default', contentSize: 0 },
+  ]);
+  assert.equal(setHeight('DP-1', 61), 'invalid');
+});
+
+test('bar background persists per monitor and synchronizes compositor blur', () => {
+  let pending = null;
+  let blurSyncs = 0;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 0, background: 'solid',
+    } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    syncBarBlur() { blurSyncs++; },
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setBackground = qmlFunction(service, 'setMonitorBarBackground', context);
+
+  assert.equal(setBackground('DP-1', 'blur'), 'ok');
+  assert.equal(context.config.bars['DP-1'].background, 'blur');
+  assert.equal(blurSyncs, 1);
+  assert.deepEqual(pending, ['DP-1', {
+    enabled: true, position: 'top', width: 100, height: 0, background: 'blur', style: 'default', contentSize: 0,
+  }]);
+  assert.equal(setBackground('DP-1', 'glass'), 'invalid');
+});
+
+test('bar style persists per monitor and defers the active host mirror', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'default',
+    } } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setStyle = qmlFunction(service, 'setMonitorBarStyle', context);
+
+  assert.equal(setStyle('DP-1', 'pill'), 'ok');
+  assert.equal(context.config.bars['DP-1'].style, 'pill');
+  assert.deepEqual(pending, ['DP-1', {
+    enabled: true, position: 'top', width: 100, height: 0, background: 'solid', style: 'pill', contentSize: 0,
+  }]);
+  assert.equal(setStyle('DP-1', 'floating'), 'invalid');
+});
+
+test('bar content size starts at the Omarchy body size and cannot exceed live geometry', () => {
+  let pending = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1', width: 1920, height: 1200 }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 40, background: 'solid',
+      style: 'default', contentSize: 0,
+    } } },
+    Style: { font: { body: 12 }, bar: { sizeHorizontal: 26, sizeVertical: 26 } },
+    validConnector: value => value === 'DP-1',
+    shell: { mutateShellConfig() {} },
+    panelWanted: true,
+    rememberedTab: 0,
+    panelTransferUntil: 0,
+    saveConfig() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, row) { pending = [name, { ...row }]; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.monitorBarMaximumHeight = qmlFunction(service, 'monitorBarMaximumHeight', context);
+  context.monitorBarRenderedHeight = qmlFunction(service, 'monitorBarRenderedHeight', context);
+  context.monitorBarMaximumContent = () => 32;
+  const setContentSize = qmlFunction(service, 'setMonitorBarContentSize', context);
+
+  assert.equal(context.monitorBarRenderedHeight('DP-1'), 40);
+  assert.equal(setContentSize('DP-1', 24), 'ok');
+  assert.equal(context.config.bars['DP-1'].contentSize, 24);
+  assert.deepEqual(pending, ['DP-1', {
+    enabled: true, position: 'top', width: 100, height: 40, background: 'solid',
+    style: 'default', contentSize: 24,
+  }]);
+  assert.equal(setContentSize('DP-1', 11), 'invalid');
+  assert.equal(setContentSize('DP-1', 33), 'invalid');
+});
+
+test('bar blur leases and restores the prior global compositor setting', () => {
+  const scripts = [];
+  let saves = 0;
+  const context = {
+    displayDraft: [{ name: 'DP-1' }],
+    config: { bars: { 'DP-1': {
+      enabled: true, position: 'top', width: 100, height: 0, background: 'blur',
+    } } },
+    persisted: { barBlurLease: null },
+    shell: null,
+    barBlurSyncQueued: false,
+    parseJson(raw, fallback) { try { return JSON.parse(raw); } catch { return fallback; } },
+    saveState() { saves++; },
+    evalLua(script) { scripts.push(script); },
+    Hypr: require('../../lib/Hypr.js'),
+    Qt: { callLater(fn) { fn(); } },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  context.barBlurWanted = qmlFunction(service, 'barBlurWanted', context);
+  const finishProbe = qmlFunction(service, 'finishBarBlurProbe', context);
+
+  finishProbe(0, '{"bool":false}\n{"int":8}\n{"int":1}');
+  assert.deepEqual(JSON.parse(JSON.stringify(context.persisted.barBlurLease)),
+    { originalEnabled: false, changed: true, originalSize: 8, originalPasses: 1 });
+  assert.match(scripts.at(-1), /set_enabled\(true\).*enabled = true, passes = 3/);
+
+  context.config.bars['DP-1'].background = 'solid';
+  finishProbe(0, '{"bool":true}\n{"int":8}\n{"int":3}');
+  assert.equal(context.persisted.barBlurLease, null);
+  assert.match(scripts.at(-1), /set_enabled\(false\).*enabled = false, passes = 1/);
+  assert.equal(saves, 2);
+});
+
+
+test('Omarchy position menu only moves the focused monitor and pins inherited peer edges', () => {
+  const host = { bar: { id: 'yakumy.station', position: 'top', monitors: {} } };
+  const context = {
+    configLoaded: true, globalBarPosition: 'top', lastGlobalBarPosition: '', focusedBarScreenName: 'DP-1',
+    config: { bars: { 'DP-1': { position: 'left', width: 65, height: 42, style: 'pill', contentSize: 24 },
+      'DP-3': { position: 'right', enabled: false } } },
+    displayDraft: [{ name: 'DP-1' }, { name: 'DP-2' }],
+    pendingMonitorBars: {}, panelWanted: true, panelTransferUntil: 0,
+    validConnector: name => /^DP-[123]$/.test(name),
+    activeStationBar: () => true, saveConfig() {},
+    shell: { barConfig: host.bar, mutateShellConfig(fn) { fn(host); return true; } },
+  };
+  for (const name of ['monitorBar', 'deferMonitorBarPublish', 'publishMonitorBars',
+    'flushPendingMonitorBars', 'applyBarMenuPosition', 'syncGlobalBarPosition', 'syncFocusedBarMenu'])
+    context[name] = qmlFunction(service, name, context);
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'left');
+  for (const position of ['bottom', 'left', 'right', 'top']) {
+    host.bar.position = position;
+    context.globalBarPosition = position;
+    context.syncGlobalBarPosition();
+    assert.equal(context.config.bars['DP-1'].position, position);
+    assert.equal(context.config.bars['DP-2'].position, 'top', 'inherited peer keeps its original edge');
+    assert.equal(context.config.bars['DP-3'].position, 'right');
+  }
+  context.focusedBarScreenName = 'DP-2';
+  host.bar.position = context.globalBarPosition = 'bottom';
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'top');
+  assert.equal(context.config.bars['DP-2'].position, 'bottom');
+  assert.equal(context.config.bars['DP-1'].width, 65);
+  assert.equal(context.config.bars['DP-1'].contentSize, 24);
+  assert.equal(context.config.bars['DP-3'].enabled, false);
+  assert.equal(context.applyBarMenuPosition('DP-4', 'left', 'top'), 'invalid');
+  assert.equal(context.applyBarMenuPosition('DP-1', 'diagonal', 'top'), 'invalid');
+  context.panelWanted = false;
+  context.flushPendingMonitorBars();
+  assert.equal(host.bar.monitors['DP-1'].position, 'top');
+  assert.equal(host.bar.monitors['DP-2'].position, 'bottom');
+  context.focusedBarScreenName = 'DP-1';
+  context.syncFocusedBarMenu();
+  assert.equal(host.bar.position, 'top', 'stock menu follows the newly focused bar');
+  context.globalBarPosition = host.bar.position;
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-2'].position, 'bottom', 'focus mirror does not move peers');
+  host.bar.position = context.globalBarPosition = 'bottom';
+  context.syncGlobalBarPosition();
+  assert.equal(context.config.bars['DP-1'].position, 'bottom', 'same menu choice on a second monitor still applies');
+});
+
+test('drag completion targets its source monitor even when focus is elsewhere', () => {
+  const monitor = read('lib/MonitorBar.qml');
+  const calls = [];
+  const api = { call(name, args) { calls.push([name, [...args]]); return 'ok'; } };
+  const request = qmlFunction(read('Bar.qml'), 'requestMonitorPosition', { BarBridge: { current: () => api } });
+  for (const connector of ['HDMI-A-1', 'eDP-1']) {
+    const context = {
+      barMoveCandidate: 'right', barMoveActive: true, position: 'top',
+      normalizePosition: value => value,
+      positionRequested: position => request({ targetScreenName: connector }, position),
+    };
+    context.clearBarMove = () => { context.barMoveActive = false; };
+    context.setBarPosition = qmlFunction(monitor, 'setBarPosition', context);
+    qmlFunction(monitor, 'finishBarMove', context)();
+  }
+  assert.deepEqual(calls, [['setMonitorBarPosition', ['HDMI-A-1', 'right']],
+    ['setMonitorBarPosition', ['eDP-1', 'right']]]);
+  assert.match(read('Bar.qml'), /root.requestMonitorPosition\(monitorBar, position\)/);
+});

@@ -11,6 +11,14 @@ test('CI accepts tokens and rejects hex palettes in future plugin sources', () =
   try {
     writeFileSync(join(directory, 'Panel.qml'), 'Rectangle { color: Color.popups.background; radius: Style.cornerRadius }');
     assert.equal(run().status, 0);
+    writeFileSync(join(directory, 'Panel.qml'), 'Item { property string backgroundMode: "blur" }');
+    assert.equal(run().status, 0, 'semantic compositor blur mode is not a QML elevation effect');
+    writeFileSync(join(directory, 'Panel.qml'), 'GaussianBlur { source: panel }');
+    assert.equal(run().status, 1, 'a real QML blur effect remains forbidden');
+    writeFileSync(join(directory, 'Panel.qml'), 'Rectangle { color: Util.alpha(Commons.Color.bar.background, 0.01) }');
+    assert.equal(run().status, 0, 'the documented bar blur fill is token-derived');
+    writeFileSync(join(directory, 'Panel.qml'), 'Rectangle { color: Util.alpha(Color.accent, 0.5) }');
+    assert.equal(run().status, 1, 'arbitrary alpha-derived palettes remain forbidden');
     for (const colour of ['abcdef', '123', 'abcd', '12345678']) {
       writeFileSync(join(directory, 'Panel.qml'), `Rectangle { color: "${String.fromCharCode(35)}${colour}" }`);
       assert.equal(run().status, 1);

@@ -90,13 +90,22 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 
 `Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `PLATFORM-FINDINGS.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
 
+Bar thickness is the exception that starts from the dedicated Omarchy tokens
+`Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
+Height control may increase it, but never lowers it below the active token.
+Blurred bars use a nearly clear 1% mask derived from `Color.bar.background`
+through `Util.alpha`; it activates compositor blur without adding a visible
+dark glass tint or a separate palette. Bar appearance
+choices use the host `Ui.Dropdown` at full row width and
+`Style.spacing.controlHeight`.
+
 Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. One shared vertical rhythm between the Displays sidebar, Keybindings rows and Settings rows, so switching tabs doesn't change the page's density.
 
 ## 7. Component inventory
 
 Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button` [V, `Panel.qml`]. Keybinding entry uses `BindingKeyPicker` (buttons and key events), never an editable text control: native text inputs can retrieve clipboard payloads even while hidden.
 
-**Tabs** (Displays / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box.
+**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box.
 
 **Choice chip** (the 4 modifier-key toggles): see §1. Displays uses sliders and compact text menus instead.
 
@@ -110,18 +119,38 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Select / dropdown** (Mode, Direction, monitor role): the approved render puts compact borderless triggers in the top tab row and inside the monitor cards. `Station/InlineDropdown.qml` keeps the text and chevron content-sized, uses host menu tokens for the popup, and right-aligns Mode's wider menu so named Single-output choices stay readable within the panel.
 
-**Slider** (Brightness, Text size, Scale, Resolution, Refresh): host-owned `Ui.PanelSlider` paints the track and knob. The last four use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
+**Slider** (Brightness, Text size, Scale, Resolution, Refresh, Bar content size, Bar width): host-owned `Ui.PanelSlider` paints the track and knob. The display controls after Brightness use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Bar content size starts at `Style.font.body`; its maximum preserves `Style.spacing.sm` on both cross-axis edges and prevents overlap among the scaled bar regions along the other axis. It reports when a saved request is clamped after the bar geometry shrinks. Bar width uses integer percentages and reports its measured non-overlap minimum below the track when the request is too small. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
 
-**Display node** (Layout canvas): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
+**Display node** (Displays and Bar layout canvases): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
+
+**Monitor-canvas framing** (Displays / Bar / Wallpaper): fit the actual monitor
+union proportionally inside the central 80% of the canvas, giving a default 10%
+inset on the constraining width or height. Center the other dimension, whose
+whitespace may therefore be larger. Do not reserve hypothetical disconnected
+arrangements or cap the fit below the available canvas. Inset each painted
+monitor card by half of `Style.spacing.sm`, producing a compact named gap
+between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
+Span keeps exact edge-to-edge cards because its image crop is continuous.
+
+**Floating bar edge geometry:** Omarchy-default Solid bars retain the stock
+edge-aligned surface. Pill style and Blur/Transparent backgrounds use
+`Style.gapsOut` as an inward visual offset while preserving the configured bar
+thickness as their layer-shell exclusion zone. `Style.gapsOut` is half the
+compositor's outer window gap, so this centers bar content in the full strip
+between the monitor edge and tiled windows on every bar side.
+The leading and trailing Pill islands use the full outer window gap
+(`Style.gapsOut * 2`) from the monitor sides parallel to the bar, keeping their
+outer edges aligned with tiled windows.
 
 ## 8. Do-not list
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.
-- No hardcoded radius, including `0` — always `Style.cornerRadius`.
-- No pill/`radius-full` shapes.
+- No hardcoded radius, including `0` — use `Style.cornerRadius`, except the
+  explicit Bar-tab Pill style whose island radius is half its shorter side.
+- No pill/`radius-full` shapes outside the explicit per-monitor bar Pill style.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
-- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; any derived-colour helper other than the approved `Qt.darker(<token>, 1.4)` dim idiom (so `Util.alpha(`, `Qt.tint(` and any other `Qt.darker(` arity fail); any gradient property; any `DropShadow`/`Glow`/`Blur`-family identifier; any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
+- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
 
 ## 10. Functional bugs found during audit (fix with priority — not cosmetic)
 

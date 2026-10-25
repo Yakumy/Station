@@ -1,5 +1,141 @@
 # Station v2 test results
 
+## Unequal-height side placement — 2026-10-24
+
+- Edge attachment and parallel-edge alignment now use distinct snap thresholds.
+  A broad screen-space edge snap keeps monitors connected, while the cross axis
+  stays at any 10-unit grid offset unless it is within 20 logical units of exact
+  top/bottom or left/right alignment.
+- Pure geometry tests cover a 1920×1200 monitor at the centered −60 offset beside
+  a 1920×1080 monitor and retain exact top/bottom alignment. The production
+  pointer harness performs the corresponding attached drag and verifies the
+  saved coordinates and non-overlap. Physical drag acceptance remains a user
+  check after installation.
+- All 172 Node/M0 tests pass. Displays/Bar passes 22/22 offscreen cases,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
+## Scale adjacency repair — 2026-10-24
+
+- Direct Scale and Resolution changes now preserve the strongest shared edge
+  before saving, publishing the new logical size and corrected position
+  together. Scaling either side of an attached pair remains non-overlapping and
+  pointer-connected without adding a Keep/Revert preview.
+- Transaction coverage verifies both left and right display scaling, one watched
+  apply, no forced reload, exact edge contact, and no overlap. Pure geometry
+  coverage also exercises the shared resize rule used by rotation. Physical
+  compositor and pointer acceptance remain a user check after installation.
+- All 172 Node/M0 tests pass. Displays/Bar passes 21/21 offscreen cases,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
+## Rotation adjacency repair — 2026-10-24
+
+- Rotation preserves the strongest shared monitor edge and atomically publishes
+  its corrected position with the new transform. A rotated monitor therefore
+  stays attached instead of overlapping or separating from its neighbor.
+- Pure geometry coverage includes horizontal adjacency and the reported
+  1920×1200 monitor above a 1920×1080 monitor. The production offscreen pointer
+  harness exercises the service update through the real rotation controls and
+  checks that both arrangements remain touching and non-overlapping. Physical
+  compositor acceptance remains a user check after installation.
+- All 171 Node/M0 tests pass. The Displays/Bar offscreen harness passes 21/21,
+  Wallpaper passes 10/10, Station bar passes 26/26, and the theme scan reports
+  35 source files with zero violations. Clean-package validation, live-Wayland
+  QML compilation, and whitespace checks pass.
+
+## Monitor-card presentation gaps — 2026-10-24
+
+- Displays and Bar now inset each painted monitor card by half of
+  `Style.spacing.sm` (doubled from the initial `xxs` after visual review), so
+  logically touching outputs retain a compact named
+  theme-space gap without changing their saved geometry. Same and Per monitor
+  Wallpaper previews use the same gap; Span remains exactly edge-to-edge so its
+  continuous image crop is unchanged.
+- All 170 Node/M0 tests pass. The offscreen Displays/Bar geometry harness passes
+  20/20 cases, including exact adjacent-card gap coverage; the Wallpaper harness
+  passes 10/10, including separate contiguous Span and gapped non-Span checks.
+  The Station bar harness passes 26/26.
+- Theme scanning reports 35 source files and zero violations. A clean tracked-file
+  package passes plugin validation, live-Wayland QML component compilation
+  reaches `STATION_COMPONENTS_READY`, and whitespace checks pass. Direct checkout
+  validation still encounters the documented ignored
+  `videos/intro/node_modules` symlink. Final visual acceptance remains a user
+  check after installation; no live monitor topology was changed by these tests.
+
+## Bar side change without a panel reload — 2026-10-23
+
+- Finding: the stock-adapted `MonitorBar` swapped `root.vertical`-keyed Loader
+  components for the section container, the center arrangement, and every module
+  Row/Column. A top→left/bottom→right-style axis flip therefore destroyed every
+  module slot — the Station widget and the open popout with them — and the
+  pre-armed hand-off reopened the panel, which read as a reload. Same-axis flips
+  (top↔bottom, left↔right) kept `vertical` unchanged and rebuilt nothing. The
+  per-monitor asymmetry (reload seen on eDP-1, not on HDMI-A-2) followed from the
+  open panel being hosted on eDP-1: only the edited monitor's bar touched the
+  panel-host copy.
+- Repair: one always-present section arrangement plus one orientation-agnostic
+  synchronous positioner per region now host the same module instances in all
+  four positions; the placement math lives in `lib/BarModel.positionModules`
+  with unit tests, including skips for invisible slots and reflow across flips.
+  A side change reflows those instances in place. Follow-up live testing found
+  a second, intermittent host-level path: some `shell.json` position writes
+  recreated both full-bar surfaces and their widget populations even though
+  the inner layout was stable. The installed log showed changed layer-surface
+  addresses, duplicate IPC registration, and callbacks evaluated against
+  invalid old `MonitorBar` contexts. `Bar.qml` therefore reads the service's
+  detached `config.bars` snapshot as the live authority while the panel is
+  open; the service batches and defers the redundant `shell.json` monitor-map
+  mirror until the panel closes. The §10.3 hand-off remains armed as a fallback
+  for genuinely structural rebuilds.
+  Module positions now come from the positioner on entries/vertical/size
+  changes; module drag-reorder and popout geometry read live slot geometry as
+  before.
+- Checks after the geometry-gating follow-up: 169 Node/M0 tests (including the
+  new positioner, open-panel deferral, one-write flush, bridge-precedence, and
+  retained-screen and geometry-gating coverage), `check-bar-layout.py` 26/26,
+  display pointer harness 18, theme tokens 0 violations, live-Wayland QML
+  compilation, and whitespace checks pass. Live acceptance of flips on both
+  monitors (panel open, no host-surface replacement before close, tab retention,
+  drag reorder, hover, tray drawer, center anchor) remains a user check.
+
+- Follow-up after physical acceptance: same-axis moves remained clean, while
+  horizontal↔vertical moves still produced a shorter panel glitch after the
+  host-write deferral. The panel now retains its Quickshell screen object while
+  open. A second physical check showed that was insufficient: moving the other
+  monitor's bar is clean, while changing the panel-owning bar still glitches.
+  The panel now also withholds the new logical edge until its anchor window has
+  changed to the matching horizontal or vertical geometry, preventing a frame
+  that combines the new edge with the old full-axis dimension. Source coverage
+  verifies the retained-screen and geometry-gating paths; repeated physical
+  cross-axis acceptance remains pending.
+
+## Per-monitor bar control — 2026-10-22 (2.2.0)
+
+- All 157 Node/M0 tests pass, including config migration, full-bar manifest,
+  last-visible-bar protection, read-only monitor geometry, all four positions,
+  panel-tab restoration, and bridge allowlist coverage.
+- The existing bar geometry harness passes all 26 position/font/station cases;
+  the display pointer harness passes all 18 cases with its existing incomplete
+  theme-stub warnings.
+- The production Bar tab renders against the installed Omarchy UI modules with
+  the connected and disabled monitor examples, all four arrows, bar previews,
+  the central switches, and the intentionally empty right panel; no QML layout
+  or binding warnings are emitted. Displays, Bar, and Wallpaper now fit the
+  actual monitor union with a 10% default canvas inset. Bar previews remain at
+  58% of one side, disappear when off, and leave no accented arrow when off.
+- Theme-token scanning, live-Wayland compilation of every QML component,
+  clean-package manifest validation, and whitespace checks pass.
+- The full-bar entry is an MIT-attributed adaptation of Omarchy 4.0.6. Commit
+  `25f0627` was installed and active on the two-monitor system; the user
+  confirmed independent per-monitor position and presence controls work.
+  A live stock-versus-Station comparison measured identical reserved thickness:
+  26 logical pixels horizontally and 28 vertically, with matching icon/menu
+  centering. The UI refinements and Bar-tab restoration remain user acceptance
+  checks; hotplug and disable/remove behavior remain outside this check.
+
 ## Bar alignment and vertical indicator — 2026-10-22 (2.1.9)
 
 - All 150 Node/M0 regression tests pass with normal local process access.

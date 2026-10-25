@@ -46,6 +46,13 @@ bug, then reconcile the affected documents in the same change.
   (its `station` points back to the service), instantiate a second service, or
   capture a widget-owned proxy in deferred hand-off work: capture the bridge API
   and scalar values instead. Use setters for panel writes on both paths.
+- Station 2.2 also declares a full-bar entry for per-monitor presence and
+  position. `Bar.qml` hosts one isolated `lib/MonitorBar.qml` per connected
+  Quickshell screen; the latter is an attributed Omarchy stock-bar adaptation.
+  Keep the shared layout and host capability facade intact. When activating
+  this bar, remove Station's persisted widget row atomically and let the bar
+  inject its virtual Station slot, so plugin disable/remove unloads the service.
+  Never edit `/usr/share/omarchy` to implement per-monitor behavior.
 - `lib/Grid.js` owns compact workspace numbering and migration plans;
   `Model.js` owns display identity, lanes, geometry, and mode choices;
   `Hypr.js`, `Binds.js`, and `MonitorsLua.js` validate and generate runtime
@@ -166,7 +173,10 @@ bug, then reconcile the affected documents in the same change.
   than copying uncommitted files into the installed checkout. For an ordinary
   committed descendant, run
   `omarchy plugin update yakumy.station --yes`, then verify both revisions and
-  statuses again.
+  statuses again. After **every** installed-plugin update, run
+  `omarchy restart shell` once and verify `omarchy-shell shell ping`; do not
+  rely on plugin file watches, a successful updater message, or matching file
+  hashes as proof that the running shell loaded the new code.
 - Never amend merely to make installation convenient. If the user explicitly
   requests both an amend and an installed update, the installed checkout's old
   commit will normally diverge and the stock updater will refuse it. Verify
@@ -176,8 +186,7 @@ bug, then reconcile the affected documents in the same change.
   `dev` branch to the exact fetched source commit. Never discard unknown edits,
   delete/reclone the checkout, or use a broad destructive command as a shortcut.
 - A plugin rescan or file watch may leave an old Quickshell component cached.
-  If the UI still shows old text/geometry, compare installed files to source,
-  inspect the running shell's start time, then run `omarchy restart shell`
-  once and verify `omarchy-shell shell ping`. Do not mistake an enabled
-  `listPlugins` entry for proof that the running panel uses new code;
-  `active: false` was observed even for enabled plugins.
+  If the UI still shows old text/geometry after the mandatory restart, compare
+  installed files to source and inspect the running shell's start time. Do not
+  mistake an enabled `listPlugins` entry for proof that the running panel uses
+  new code; `active: false` was observed even for enabled plugins.

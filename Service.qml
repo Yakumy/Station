@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import qs.Commons
 import "lib/Model.js" as Model
 import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
@@ -18,12 +19,40 @@ Item {
   id: root
 
   property var shell: null
+  onShellChanged: Qt.callLater(reconcileActiveBarLayout)
+  // Observe Omarchy's global edge independently of our per-monitor overrides.
+  readonly property string focusedBarScreenName: Hyprland.focusedMonitor
+    ? String(Hyprland.focusedMonitor.name || "") : ""
+  onFocusedBarScreenNameChanged: Qt.callLater(syncFocusedBarMenu)
+  property string lastGlobalBarPosition: ""
+  readonly property string globalBarPosition: {
+    var value = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig).position : ""
+    return ["top", "bottom", "left", "right"].indexOf(value) !== -1 ? value : ""
+  }
+  onGlobalBarPositionChanged: Qt.callLater(syncGlobalBarPosition)
   property var manifest: null
   property var barBridge: null
   readonly property string pluginDir: manifest && typeof manifest.__sourceDir === "string"
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
+  onConfigChanged: Qt.callLater(syncFocusedBarMenu)
+  // While a panel is open, config.bars is the live authority consumed through
+  // BarBridge. Delay the redundant shell.json mirror write until the panel is
+  // closed: changing that host config can rebuild the complete third-party bar
+  // and every widget even when its logical layout is unchanged.
+  property var pendingMonitorBars: ({})
+  // Live full-bar instances report the first percentage that fits their
+  // measured widgets. It is runtime geometry, not a preference, so it stays
+  // out of config.json and is merely included in detached panel snapshots.
+  property var monitorBarMinimums: ({})
+  property var monitorBarMaximumContents: ({})
+  property bool barBlurSyncQueued: false
+  Timer {
+    id: monitorBarPublishDelay
+    interval: 250
+    onTriggered: { root.flushPendingMonitorBars(); root.syncFocusedBarMenu() }
+  }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
   property var persisted: Store.stateDefaults()
@@ -43,6 +72,7 @@ Item {
   property int currentStation: persisted.lastStation || 1
   property int gen: 0
   property bool configLoaded: false
+  onConfigLoadedChanged: Qt.callLater(syncFocusedBarMenu)
   property bool stateLoaded: false
   property bool dirsReady: false
   property bool previewLoaded: false
@@ -58,7 +88,9 @@ Item {
   property int stockDisableAttempts: 0
   property int displayDisableAttempts: 0
   property var displayWidgetEnabled: null
+  property var workspaceWidgetEnabled: null
   property bool displayShowPending: false
+  property bool workspaceShowPending: false
   // The bar rebuilds our widget when its layout entries change (a plugin
   // enable/disable, a widget move) and whenever an output reconfigures, and
   // the panel window dies with the widget. The widget writes its open state
@@ -148,6 +180,8 @@ Item {
       displayDraft: displayDraft,
       bindStatuses: bindStatuses,
       config: config,
+      monitorBarMinimums: monitorBarMinimums,
+      monitorBarMaximumContents: monitorBarMaximumContents,
       draftMode: draftMode,
       draftSingleTarget: draftSingleTarget,
       draftEditable: draftEditable,
@@ -164,6 +198,7 @@ Item {
       rememberedTab: rememberedTab,
       rememberedDisplayName: rememberedDisplayName,
       displayWidgetEnabled: displayWidgetEnabled,
+      workspaceWidgetEnabled: workspaceWidgetEnabled,
       pluginVersion: manifest && manifest.version ? String(manifest.version) : "",
       wallpaper: {
         draft: wallpaper.draft,
@@ -180,7 +215,9 @@ Item {
   }
 
   function setPanelWanted(value) {
-    if (typeof value === "boolean") panelWanted = value
+    if (typeof value !== "boolean") return
+    panelWanted = value
+    if (!value) monitorBarPublishDelay.restart()
   }
   function setPanelScreenName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) panelScreenName = value
@@ -189,7 +226,7 @@ Item {
     if (typeof value === "number" && isFinite(value) && value >= 0) panelTransferUntil = value
   }
   function setRememberedTab(value) {
-    if (Number.isInteger(value) && value >= 0 && value <= 3) rememberedTab = value
+    if (Number.isInteger(value) && value >= 0 && value <= 4) rememberedTab = value
   }
   function setRememberedDisplayName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) rememberedDisplayName = value
@@ -211,6 +248,460 @@ Item {
 
   function validConnector(value) {
     try { MonitorsLua.connector(value); return true } catch (error) { return false }
+  }
+
+  function monitorBar(name) {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    var fallback = shellBar ? String(shellBar.position || "top") : "top"
+    if (["top", "bottom", "left", "right"].indexOf(fallback) === -1) fallback = "top"
+    var row = config.bars && config.bars[name]
+    var width = row && isFinite(Number(row.width))
+      ? Math.max(1, Math.min(100, Math.round(Number(row.width)))) : 100
+    var height = row && isFinite(Number(row.height))
+      ? Math.max(0, Math.min(1000, Math.round(Number(row.height)))) : 0
+    var background = row && ["solid", "transparent", "blur"].indexOf(row.background) !== -1
+      ? row.background : "solid"
+    var style = row && ["default", "pill"].indexOf(row.style) !== -1 ? row.style : "default"
+    var contentSize = row && isFinite(Number(row.contentSize))
+      ? Math.max(0, Math.min(1000, Math.round(Number(row.contentSize)))) : 0
+    return row && typeof row === "object"
+      ? { enabled: row.enabled !== false,
+          position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
+          width: width, height: height, background: background, style: style, contentSize: contentSize }
+      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid", style: "default", contentSize: 0 }
+  }
+
+  function monitorBarMaximumHeight(name) {
+    var display = displayDraft.find(function(item) { return item.name === name })
+    if (!display) return 1
+    var shorterSide = Math.min(Number(display.width) || 0, Number(display.height) || 0)
+    return Math.max(1, Math.floor(shorterSide * 0.05))
+  }
+
+  function monitorBarRenderedHeight(name) {
+    var bar = monitorBar(name)
+    var minimum = bar.position === "left" || bar.position === "right"
+      ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+    var maximum = Math.max(minimum, monitorBarMaximumHeight(name))
+    return Math.max(minimum, Math.min(maximum, bar.height > 0 ? bar.height : minimum))
+  }
+
+  function monitorBarMinimum(name) {
+    var value = Number(monitorBarMinimums && monitorBarMinimums[name])
+    return isFinite(value) ? Math.max(1, Math.min(100, Math.round(value))) : 1
+  }
+
+  function reportMonitorBarMinimum(name, value) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(value)
+    if (!isFinite(number) || number < 1 || number > 100) return "invalid"
+    number = Math.round(number)
+    if (monitorBarMinimum(name) === number && monitorBarMinimums[name] !== undefined) return "ok"
+    var next = Object.assign({}, monitorBarMinimums)
+    next[name] = number
+    monitorBarMinimums = next
+    return "ok"
+  }
+
+  function monitorBarMaximumContent(name) {
+    var minimum = Math.max(1, Math.ceil(Style.font.body))
+    var fallback = Math.max(minimum,
+      monitorBarRenderedHeight(name) - Math.ceil(Style.spacing.sm) * 2)
+    var value = Number(monitorBarMaximumContents && monitorBarMaximumContents[name])
+    return isFinite(value) ? Math.max(minimum, Math.min(fallback, Math.round(value))) : fallback
+  }
+
+  function reportMonitorBarMaximumContent(name, value) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(value)
+    if (!isFinite(number) || number < 1 || number > 1000) return "invalid"
+    number = Math.round(number)
+    if (monitorBarMaximumContent(name) === number && monitorBarMaximumContents[name] !== undefined) return "ok"
+    var next = Object.assign({}, monitorBarMaximumContents)
+    next[name] = number
+    monitorBarMaximumContents = next
+    return "ok"
+  }
+
+  function reconcileActiveBarLayout() {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    if (!shellBar || String(shellBar.id || "") !== "yakumy.station"
+        || !shellBar.layout || typeof shellBar.layout !== "object"
+        || !shell || typeof shell.mutateShellConfig !== "function") return false
+    var found = ["left", "center", "right"].some(function(section) {
+      return Array.isArray(shellBar.layout[section]) && shellBar.layout[section].some(function(entry) {
+        return entry && String(entry.id || "") === "yakumy.station"
+      })
+    })
+    if (!found) return false
+    shell.mutateShellConfig(function(scoped) {
+      if (!scoped.bar || typeof scoped.bar !== "object"
+          || !scoped.bar.layout || typeof scoped.bar.layout !== "object") return
+      ;["left", "center", "right"].forEach(function(section) {
+        if (!Array.isArray(scoped.bar.layout[section])) return
+        scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
+          return !entry || String(entry.id || "") !== "yakumy.station"
+        })
+      })
+    })
+    return true
+  }
+
+  function publishMonitorBar(name, next) {
+    var changes = ({})
+    changes[name] = next
+    return publishMonitorBars(changes)
+  }
+
+  function publishMonitorBars(changes, menuPosition) {
+    if (!shell || typeof shell.mutateShellConfig !== "function") return false
+    return shell.mutateShellConfig(function(scoped) {
+      if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
+      scoped.bar.id = "yakumy.station"
+      if (["top", "bottom", "left", "right"].indexOf(menuPosition) !== -1)
+        scoped.bar.position = menuPosition
+      if (!scoped.bar.monitors || typeof scoped.bar.monitors !== "object") scoped.bar.monitors = {}
+      Object.keys(changes || {}).forEach(function(name) {
+        var next = changes[name]
+        scoped.bar.monitors[name] = {
+          enabled: next.enabled, position: next.position, width: next.width, height: next.height,
+          background: next.background, style: next.style, contentSize: next.contentSize
+        }
+      })
+      if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
+        ;["left", "center", "right"].forEach(function(section) {
+          if (!Array.isArray(scoped.bar.layout[section])) return
+          scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
+            return !entry || String(entry.id || "") !== "yakumy.station"
+          })
+        })
+      }
+    }) === true
+  }
+
+  function activeStationBar() {
+    var shellBar = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig) : null
+    return !!shellBar && String(shellBar.id || "") === "yakumy.station"
+  }
+
+  function deferMonitorBarPublish(name, next) {
+    var pending = Object.assign({}, pendingMonitorBars)
+    pending[name] = {
+      enabled: next.enabled, position: next.position, width: next.width, height: next.height,
+      background: next.background, style: next.style, contentSize: next.contentSize
+    }
+    pendingMonitorBars = pending
+  }
+
+  function flushPendingMonitorBars() {
+    if (panelWanted || !Object.keys(pendingMonitorBars).length) return false
+    var pending = pendingMonitorBars
+    if (!publishMonitorBars(pending)) return false
+    pendingMonitorBars = ({})
+    return true
+  }
+
+  function syncFocusedBarMenu() {
+    if (!configLoaded || panelWanted || !activeStationBar()) return
+    // Do not overwrite an external menu request awaiting its deferred handler.
+    if (!lastGlobalBarPosition || globalBarPosition !== lastGlobalBarPosition) return
+    var name = focusedBarScreenName
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return
+    var position = monitorBar(name).position
+    if (position === globalBarPosition) return
+    var bars = Object.assign({}, config.bars || {})
+    var changed = false
+    displayDraft.forEach(function(display) {
+      if (!validConnector(display.name) || bars[display.name]) return
+      bars[display.name] = monitorBar(display.name)
+      changed = true
+    })
+    if (changed) {
+      config = Object.assign({}, config, { bars: bars })
+      saveConfig()
+    }
+    // Keep the stock menu's current edge aligned with focus, without treating
+    // our own mirror as a request to move another monitor.
+    lastGlobalBarPosition = position
+    if (!publishMonitorBars(bars, position)) lastGlobalBarPosition = globalBarPosition
+  }
+
+  function syncGlobalBarPosition() {
+    var next = globalBarPosition
+    if (!next) return
+    var previous = lastGlobalBarPosition
+    lastGlobalBarPosition = next
+    // Initial attachment must preserve independently saved monitor positions.
+    if (!previous) { syncFocusedBarMenu(); return }
+    if (previous === next || !configLoaded || !activeStationBar()) return
+    applyBarMenuPosition(focusedBarScreenName, next, previous)
+  }
+
+  function applyBarMenuPosition(name, position, previous) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    if (["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
+    if (!configLoaded || !activeStationBar()) return "unavailable"
+    lastGlobalBarPosition = position
+    var names = Object.keys(config.bars || {})
+    displayDraft.forEach(function(display) {
+      if (names.indexOf(display.name) === -1) names.push(display.name)
+    })
+    var bars = Object.assign({}, config.bars || {})
+    names.forEach(function(connector) {
+      if (!validConnector(connector)) return
+      var next = monitorBar(connector)
+      // Omarchy has already changed the fallback. Materialize inherited edges
+      // from the previous value so an unconfigured peer does not move with it.
+      if (!bars[connector]) next.position = previous
+      if (connector === name) next.position = position
+      bars[connector] = next
+      // Replace any older deferred position so closing a panel cannot undo it.
+      deferMonitorBarPublish(connector, next)
+    })
+    config = Object.assign({}, config, { bars: bars })
+    saveConfig()
+    if (panelWanted) panelTransferUntil = Date.now() + 3000
+    if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+    flushPendingMonitorBars()
+    return "ok"
+  }
+
+  function setMonitorBarPosition(name, position) {
+    if (!validConnector(name) || ["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
+    if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var next = monitorBar(name)
+    next.position = position
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    // Once Station's full bar is active, Bar.qml consumes the detached config
+    // snapshot above. Do not feed the same click through shell.json while the
+    // panel is open: the host can recreate the full bar and the panel with it.
+    // Keep shell.json as a durable mirror, but update it after an ordinary
+    // close. The first edit still publishes immediately because it must select
+    // Station's full-bar entry and retire the old widget row atomically.
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarEnabled(name, enabled) {
+    if (!validConnector(name) || typeof enabled !== "boolean") return "invalid"
+    var display = displayDraft.find(function(item) { return item.name === name })
+    if (!display) return "invalid"
+    if (!enabled && display.enabled) {
+      var survivor = displayDraft.some(function(item) {
+        return item.name !== name && item.enabled && monitorBar(item.name).enabled
+      })
+      if (!survivor) return "last-bar"
+    }
+    var next = monitorBar(name)
+    next.enabled = enabled
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    syncBarBlur()
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarWidth(name, width) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(width)
+    if (!isFinite(number) || number < 1 || number > 100) return "invalid"
+    var next = monitorBar(name)
+    next.width = Math.round(number)
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarHeight(name, height) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(height)
+    if (!isFinite(number) || number < 1 || number > monitorBarMaximumHeight(name)) return "invalid"
+    var next = monitorBar(name)
+    next.height = Math.round(number)
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarBackground(name, background) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    if (["solid", "transparent", "blur"].indexOf(background) === -1) return "invalid"
+    var next = monitorBar(name)
+    next.background = background
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    syncBarBlur()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarStyle(name, style) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    if (["default", "pill"].indexOf(style) === -1) return "invalid"
+    var next = monitorBar(name)
+    next.style = style
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarContentSize(name, contentSize) {
+    if (!validConnector(name) || !displayDraft.some(function(display) { return display.name === name })) return "invalid"
+    var number = Number(contentSize)
+    var minimum = Math.max(1, Math.ceil(Style.font.body))
+    if (!isFinite(number) || number < minimum || number > monitorBarMaximumContent(name)) return "invalid"
+    var next = monitorBar(name)
+    next.contentSize = Math.round(number)
+    if (panelWanted) {
+      rememberedTab = 1
+      panelTransferUntil = Date.now() + 3000
+    }
+    var bars = Object.assign({}, config.bars || {})
+    bars[name] = next
+    config.bars = bars
+    config = Object.assign({}, config)
+    saveConfig()
+    if (activeStationBar() && panelWanted) {
+      if (!shell || typeof shell.mutateShellConfig !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
+    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function barBlurWanted() {
+    return displayDraft.some(function(display) {
+      var bar = monitorBar(display.name)
+      return bar.enabled && bar.background === "blur"
+    })
+  }
+
+  function syncBarBlur() {
+    if (!started || !configLoaded) return
+    if (barBlurProbe.running) { barBlurSyncQueued = true; return }
+    barBlurProbe.running = true
+  }
+
+  function finishBarBlurProbe(code, raw) {
+    if (code !== 0) {
+      if (barBlurSyncQueued) {
+        barBlurSyncQueued = false
+        Qt.callLater(syncBarBlur)
+      }
+      return
+    }
+    var lines = String(raw || "").trim().split("\n")
+    var enabledOption = parseJson(lines[0], {})
+    var sizeOption = parseJson(lines[1], {})
+    var passesOption = parseJson(lines[2], {})
+    if (typeof enabledOption.bool !== "boolean" || !Number.isInteger(sizeOption.int)
+        || !Number.isInteger(passesOption.int)) {
+      if (barBlurSyncQueued) {
+        barBlurSyncQueued = false
+        Qt.callLater(syncBarBlur)
+      }
+      return
+    }
+    var globalEnabled = enabledOption.bool === true
+    var currentSize = sizeOption.int
+    var currentPasses = passesOption.int
+    var wanted = barBlurWanted()
+    var lease = persisted.barBlurLease
+    var options = ({})
+    if (wanted) {
+      if (!lease) {
+        lease = { originalEnabled: globalEnabled, changed: !globalEnabled,
+          originalSize: currentSize, originalPasses: currentPasses }
+        persisted.barBlurLease = lease
+        saveState()
+      } else if (!Number.isInteger(lease.originalSize) || !Number.isInteger(lease.originalPasses)) {
+        lease.originalSize = currentSize
+        lease.originalPasses = currentPasses
+        persisted.barBlurLease = lease
+        saveState()
+      }
+      if (!globalEnabled) options.enabled = true
+      if (currentSize !== 8) options.size = 8
+      if (currentPasses !== 3) options.passes = 3
+    } else if (lease) {
+      if (globalEnabled !== lease.originalEnabled) options.enabled = lease.originalEnabled
+      if (Number.isInteger(lease.originalSize) && currentSize !== lease.originalSize)
+        options.size = lease.originalSize
+      if (Number.isInteger(lease.originalPasses) && currentPasses !== lease.originalPasses)
+        options.passes = lease.originalPasses
+      persisted.barBlurLease = null
+      saveState()
+    }
+    evalLua(Hypr.barBlur(wanted, options))
+    if (barBlurSyncQueued) {
+      barBlurSyncQueued = false
+      Qt.callLater(syncBarBlur)
+    }
   }
 
   function saveConfig() {
@@ -720,6 +1211,7 @@ Item {
       evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
     } catch (error) { console.warn("Station monitor mode:", error) }
     applyBinds()
+    syncBarBlur()
   }
 
   function setDisplayValue(name, key, value) {
@@ -737,6 +1229,29 @@ Item {
     return "ok"
   }
 
+  function setResizedDisplayValue(name, key, value) {
+    if (!draftEditable || ["mode", "scale", "transform"].indexOf(key) === -1) return "invalid"
+    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
+    var before = displayDraft.find(function(display) { return display.name === name })
+    if (!before) return "invalid"
+    var changed = Object.assign({}, before)
+    changed[key] = value
+    var peers = draftMode === "extend" && before.enabled
+      ? displayDraft.filter(function(display) { return display.enabled }) : [before]
+    var position = Model.resizedPosition(before, changed, peers)
+    changed.x = Math.round(position.x)
+    changed.y = Math.round(position.y)
+    displayDraft = displayDraft.map(function(display) {
+      return display.name === name ? changed : display
+    })
+    return "ok"
+  }
+
+  function setDisplayTransform(name, value) {
+    if (!Number.isInteger(value) || value < 0 || value > 7) return "invalid"
+    return setResizedDisplayValue(name, "transform", value)
+  }
+
   function applyDisplaySetting(name, key, value) {
     // Side controls are deliberate, discrete choices and do not need the
     // safety countdown used for topology edits. Persist first and let
@@ -748,7 +1263,7 @@ Item {
     var display = displayDraft.find(function(item) { return item.name === name })
     if (display && display[key] === value) return "ok"
     var before = displayDraft
-    if (setDisplayValue(name, key, value) !== "ok") return "invalid"
+    if (setResizedDisplayValue(name, key, value) !== "ok") return "invalid"
     try {
       var options = { mode: draftMode, singleTarget: draftSingleTarget,
         enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
@@ -1378,12 +1893,20 @@ Item {
     pluginList.running = true
   }
 
-  function restoreStockLease() {
+  function restoreStockLease(forceShow) {
+    if (forceShow) workspaceShowPending = true
+    if (stockDisable.running) return
     var lease = persisted.stockLease
-    if (!lease) return
-    if (lease.disabledByStation && lease.wasEnabled) {
+    if (!lease && !forceShow) return
+    if (forceShow || (lease && lease.disabledByStation && lease.wasEnabled)) {
+      var place = lease || { section: "left", index: 1 }
       enqueue(["omarchy", "plugin", "enable", "omarchy.workspaces"], function(code) {
-        if (code !== 0) return
+        if (code !== 0) { root.workspaceShowPending = false; leaseVerify.restart(); return }
+        if (root.config.hideNative) {
+          root.workspaceShowPending = false
+          root.acquireStockLeases()
+          return
+        }
         // Re-enabling alone drops it in the centre, and the recorded spot is
         // where it sat before Station leased it: between the Omarchy menu mark
         // and our own widget. Park it behind Station instead so the row reads
@@ -1393,12 +1916,14 @@ Item {
           "yakumy.station"], function(afterCode) {
           if (afterCode === 0) {
             root.persisted.stockLease = null
+            root.workspaceShowPending = false
             root.saveState()
             return
           }
-          root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", lease.section,
-            "--index", String(lease.index)], function() {
+          root.enqueue(["omarchy", "bar", "move", "omarchy.workspaces", "--section", place.section,
+            "--index", String(place.index)], function() {
             root.persisted.stockLease = null
+            root.workspaceShowPending = false
             root.saveState()
           })
         })
@@ -1446,10 +1971,11 @@ Item {
       config = Object.assign({}, config)
       saveConfig()
       if (config.hideNative) {
+        workspaceShowPending = false
         stockDisableAttempts = 0
         acquireStockLeases()
       } else {
-        restoreStockLease()
+        restoreStockLease(true)
       }
       return "ok"
     }
@@ -1502,9 +2028,10 @@ Item {
     var list = parseJson(raw, [])
     var changed = false
     var displayEntry = list.find(function(item) { return item.id === "omarchy.monitor" })
+    var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
     if (displayEntry) displayWidgetEnabled = !!displayEntry.enabled
+    if (workspaceEntry) workspaceWidgetEnabled = !!workspaceEntry.enabled
     if (config.hideNative) {
-      var workspaceEntry = list.find(function(item) { return item.id === "omarchy.workspaces" })
       var workspaceEnabled = !!(workspaceEntry && workspaceEntry.enabled)
       if (persisted.stockLease) {
         if (persisted.stockLease.disabledByStation && workspaceEnabled
@@ -1617,6 +2144,7 @@ Item {
   }
 
   Component.onCompleted: {
+    Qt.callLater(reconcileActiveBarLayout)
     ensureDirs.running = true
     barBridge = BarBridge.publish(function() { return root.barSnapshot() }, {
       setSetting: function(name, value) { return root.setSetting(name, value) },
@@ -1625,8 +2153,22 @@ Item {
       setBinding: function(id, combo) { return root.setBinding(id, combo) },
       approveBinding: function(combo) { return root.approveBinding(combo) },
       setDisplayValue: function(name, key, value) { return root.setDisplayValue(name, key, value) },
+      setDisplayTransform: function(name, value) { return root.setDisplayTransform(name, value) },
       setDisplayPosition: function(name, x, y) { return root.setDisplayPosition(name, x, y) },
       setDisplayEnabled: function(name, enabled) { return root.setDisplayEnabled(name, enabled) },
+      setMonitorBarEnabled: function(name, enabled) { return root.setMonitorBarEnabled(name, enabled) },
+      setMonitorBarPosition: function(name, position) { return root.setMonitorBarPosition(name, position) },
+      setMonitorBarWidth: function(name, width) { return root.setMonitorBarWidth(name, width) },
+      setMonitorBarHeight: function(name, height) { return root.setMonitorBarHeight(name, height) },
+      setMonitorBarBackground: function(name, background) { return root.setMonitorBarBackground(name, background) },
+      setMonitorBarStyle: function(name, style) { return root.setMonitorBarStyle(name, style) },
+      setMonitorBarContentSize: function(name, contentSize) { return root.setMonitorBarContentSize(name, contentSize) },
+      reportMonitorBarMinimum: function(name, value) { return root.reportMonitorBarMinimum(name, value) },
+      reportMonitorBarMaximumContent: function(name, value) { return root.reportMonitorBarMaximumContent(name, value) },
+      monitorBar: function(name) { return root.monitorBar(name) },
+      monitorBarMaximumHeight: function(name) { return root.monitorBarMaximumHeight(name) },
+      monitorBarMinimum: function(name) { return root.monitorBarMinimum(name) },
+      monitorBarMaximumContent: function(name) { return root.monitorBarMaximumContent(name) },
       applyDisplaySetting: function(name, key, value) { return root.applyDisplaySetting(name, key, value) },
       swapRole: function(name, roleIndex) { return root.swapRole(name, roleIndex) },
       displayEnabled: function(name) { return root.displayEnabled(name) },
@@ -1844,6 +2386,15 @@ Item {
   }
 
   Process {
+    id: barBlurProbe
+    command: ["bash", "-lc", "hyprctl getoption decoration:blur:enabled -j; hyprctl getoption decoration:blur:size -j; hyprctl getoption decoration:blur:passes -j"]
+    property string captured: ""
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: barBlurProbe.captured = text }
+    onRunningChanged: if (running) captured = ""
+    onExited: function(code) { root.finishBarBlurProbe(code, captured) }
+  }
+
+  Process {
     id: pluginList
     command: ["omarchy-shell", "shell", "listPlugins"]
     property string captured: ""
@@ -1856,7 +2407,10 @@ Item {
     id: stockDisable
     command: ["omarchy", "plugin", "disable", "omarchy.workspaces"]
     stdout: StdioCollector { waitForEnd: true }
-    onExited: leaseVerify.restart()
+    onExited: {
+      if (root.workspaceShowPending && !root.config.hideNative) root.restoreStockLease(true)
+      leaseVerify.restart()
+    }
   }
 
   Process {
@@ -1933,6 +2487,8 @@ Item {
     function approveBinding(value: string): string { return root.approveBinding(value) }
     function status(): string { return JSON.stringify({ state: root.state, generation: root.gen,
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
+      globalBarPosition: root.globalBarPosition, lastGlobalBarPosition: root.lastGlobalBarPosition,
+      bars: root.config.bars,
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
       migrationPhase: root.migrationPhase, layoutError: root.layoutError,
       lastWindowAction: root.lastWindowAction,

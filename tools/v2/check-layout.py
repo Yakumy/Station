@@ -14,7 +14,7 @@ service = (repo / 'Service.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
-for name in ('setDisplayValue', 'setDisplayEnabled', 'displayEnabled'):
+for name in ('setDisplayValue', 'setResizedDisplayValue', 'setDisplayTransform', 'setDisplayEnabled', 'displayEnabled'):
     start = service.index('  function ' + name + '(')
     end = service.index('\n  function ', start + 1)
     setter += service[start:end]
@@ -25,19 +25,29 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     root = Path(directory)
     probe = root / 'Probe'
     probe.mkdir()
-    for name in ('DisplayLayout.qml', 'InlineDropdown.qml', 'Model.js', 'MonitorsLua.js'):
+    for name in ('DisplayLayout.qml', 'BarLayout.qml', 'InlineDropdown.qml', 'Model.js', 'MonitorsLua.js'):
         (probe / name).write_text((repo / 'lib' / name).read_text())
     ui = root / 'qs' / 'Ui'
     commons = root / 'qs' / 'Commons'
     ui.mkdir(parents=True)
     commons.mkdir(parents=True)
-    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\n')
+    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\nToggleSwitch 1.0 ToggleSwitch.qml\n')
     (ui / 'BorderSurface.qml').write_text('import QtQuick\nRectangle { property var borderSpec }\n')
+    (ui / 'ToggleSwitch.qml').write_text('''import QtQuick
+Item {
+  property real trackHeight
+  property bool checked
+  property color foreground
+  property color accent
+  signal toggled()
+}
+''')
     (commons / 'qmldir').write_text('module qs.Commons\nsingleton Style 1.0 Style.qml\nsingleton Color 1.0 Color.qml\nsingleton Border 1.0 Border.qml\n')
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var spacing: ({xs: 3, sm: 4, md: 8, xxs: 2, xxl: 12, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
+  property var spacing: ({xs: 3, sm: 4, md: 8, xl: 10, xxs: 2, xxl: 12, popupRowHeight: 24, hairline: 1, controlPaddingX: 8})
+  property var bar: ({sizeHorizontal: 26, sizeVertical: 26})
   property int cornerRadius: 0
   property int normalBorderWidth: 1
   property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
@@ -47,8 +57,8 @@ QtObject {
     (commons / 'Color.qml').write_text('''pragma Singleton
 import QtQuick
 QtObject {
-  property var popups: ({background: "black", border: "white", text: "white"})
-  property var menu: ({background: "black", text: "white", border: "white", selectedBackground: "grey", selectedText: "white"})
+  property QtObject popups: QtObject { property color background: "black"; property color border: "white"; property color text: "white" }
+  property QtObject menu: QtObject { property color background: "black"; property color text: "white"; property color border: "white"; property color selectedBackground: "grey"; property color selectedText: "white" }
   property string accent: "white"
 }
 ''')
@@ -76,6 +86,7 @@ Item {
     property string layoutError: ""
     ''' + editable + '''
     property var displayDraft: []
+    property var bars: ({})
     property int previews: 0
     property int writes: 0
     onDisplayDraftChanged: writes++
@@ -83,6 +94,11 @@ Item {
       for (var i = 0; i < displayDraft.length; i++) if (displayDraft[i].name === name) return i
       return -1
     }
+    function monitorBar(name) { return bars[name] || {enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0} }
+    function monitorBarMinimum(name) { return 1 }
+    function monitorBarMaximumHeight(name) { return 108 }
+    function setMonitorBarPosition(name, position) {}
+    function setMonitorBarEnabled(name, enabled) {}
 ''' + setter + '''
     function previewLayout() {
       if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")
@@ -96,6 +112,19 @@ Item {
     contentWidth: width; contentHeight: 420
     clip: true
     Station.DisplayLayout { id: layout; width: panelScroll.width; service: service }
+  }
+  QtObject {
+    id: barPanelRoot
+    property var service: service
+    property real disabledOpacity: 0.5
+    property real space2: 2
+    property real space4: 4
+  }
+  Station.BarLayout {
+    id: barLayout
+    width: 567; height: 370
+    panelRoot: barPanelRoot
+    visible: false
   }
   TestCase {
     name: "DisplayLayout"; when: windowShown
@@ -118,6 +147,11 @@ Item {
         if (layout.children[i].modelData && layout.children[i].modelData.name === name) return layout.children[i]
       fail("Missing card " + name)
     }
+    function barCard(name) {
+      for (var i = 0; i < barLayout.children.length; i++)
+        if (barLayout.children[i].modelData && barLayout.children[i].modelData.name === name) return barLayout.children[i]
+      fail("Missing bar card " + name)
+    }
     function move(name, x, y) {
       var target = card(name), display = target.modelData
       mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
@@ -130,6 +164,20 @@ Item {
     }
     function test_horizontal_right() { move("HDMI-A-2", 1920, 1200) }
     function test_horizontal_left_negative() { move("HDMI-A-2", -1920, 1200) }
+    function test_horizontal_with_unequal_heights_accepts_a_centered_offset() {
+      var target = card("HDMI-A-2"), display = target.modelData
+      mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
+        (1920 - display.x) * layout.zoom, (1140 - display.y) * layout.zoom,
+        Qt.LeftButton, Qt.NoModifier, 5)
+      compare(service.writes, 1)
+      compare(service.previews, 1)
+      var changed = service.displayDraft.filter(function(d) { return d.name === "HDMI-A-2" })[0]
+      compare(changed.x, 1920, "The side edge must remain attached")
+      verify(changed.y > 1080 && changed.y < 1200,
+        "The cross-axis offset must remain between corner alignments")
+      compare(changed.y % 10, 0, "The free cross-axis offset stays on the logical grid")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0)
+    }
     function test_vertical_below() { move("HDMI-A-2", 0, 2280) }
     function test_vertical_drag_is_not_stolen_by_panel_scroll() {
       move("HDMI-A-2", 0, 2280)
@@ -156,7 +204,7 @@ Item {
     function test_edge_snap_in_screen_pixels() { moveNearEdge() }
     function moveNearEdge() {
       var target = card("HDMI-A-2")
-      var dx = 1920 * layout.zoom - 7, dy = 1200 * layout.zoom + 5
+      var dx = 1920 * layout.zoom - 7, dy = 1200 * layout.zoom
       mouseDrag(layout, target.x + target.width/2, target.y + target.height * 0.8,
         dx, dy, Qt.LeftButton, Qt.NoModifier, 5)
       compare(service.displayDraft[1].x, 1920); compare(service.displayDraft[1].y, 1200)
@@ -167,8 +215,8 @@ Item {
       displays[1] = Object.assign({}, displays[1], {mode:"2560x1440@60.00Hz", scale:2, transform:1})
       service.displayDraft = displays
       service.writes = 0; wait(10)
-      compare(card("HDMI-A-2").width / layout.zoom, 720)
-      compare(card("HDMI-A-2").height / layout.zoom, 1280)
+      fuzzyCompare((card("HDMI-A-2").width + layout.monitorGap) / layout.zoom, 720, 0.01)
+      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap) / layout.zoom, 1280, 0.01)
       move("HDMI-A-2", 1920, 1200)
     }
     function test_three_large_displays_fit() {
@@ -178,10 +226,50 @@ Item {
       wait(10)
       for (var i=0;i<3;i++) {
         var target=card("DP-"+(i+1))
-        verify(target.x >= layout.inset - 0.01)
-        verify(target.x + target.width <= layout.width - layout.inset + 0.01)
-        verify(target.y >= layout.inset - 0.01)
-        verify(target.y + target.height <= layout.height - layout.inset + 0.01)
+        verify(target.x >= layout.horizontalInset - 0.01)
+        verify(target.x + target.width <= layout.width - layout.horizontalInset + 0.01)
+        verify(target.y >= layout.verticalInset - 0.01)
+        verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
+      }
+    }
+    function test_adjacent_displays_have_the_compact_visual_gap() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      var first = card("eDP-1"), second = card("HDMI-A-2")
+      fuzzyCompare(second.x - first.x - first.width, layout.monitorGap, 0.01)
+    }
+    function test_adjacent_bar_cards_have_the_compact_visual_gap() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"HDMI-A-2", x:1920, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      var first = barCard("eDP-1"), second = barCard("HDMI-A-2")
+      fuzzyCompare(second.x - first.x - first.width, barLayout.monitorGap, 0.01)
+    }
+    function test_bar_preview_clears_monitor_name_and_every_card_edge() {
+      service.displayDraft = [
+        {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1}
+      ]
+      var positions = ["top", "right", "bottom", "left"]
+      for (var position of positions) {
+        service.bars = {"eDP-1": {enabled:true, position:position, width:100, height:1000, background:"solid", style:"default", contentSize:12}}
+        service.displayDraft = service.displayDraft.slice()
+        wait(10)
+        var target = barCard("eDP-1")
+        var preview = findChild(target, "barPreview-eDP-1")
+        var name = findChild(target, "monitorName-eDP-1")
+        verify(preview !== null && name !== null)
+        verify(preview.x >= barLayout.barEdgeGap - 0.01)
+        verify(preview.x + preview.width <= target.width - barLayout.barEdgeGap + 0.01)
+        verify(preview.y >= barLayout.barEdgeGap - 0.01)
+        verify(preview.x + preview.width <= name.x || name.x + name.width <= preview.x
+          || preview.y + preview.height <= name.y || name.y + name.height <= preview.y,
+          "The centered monitor name must clear the bar on every side")
+        verify(preview.y + preview.height <= target.height - barLayout.barEdgeGap + 0.01)
       }
     }
     function test_rotation_handles_hover_diagonally_outside_all_four_corners() {
@@ -244,6 +332,10 @@ Item {
       mouseClick(layout, hit.x, hit.y)
       compare(service.previews, 1, "External handle remains clickable")
       compare(service.displayDraft[0].transform, 1)
+      compare(service.displayDraft[0].x, 840,
+        "Rotation keeps the selected monitor attached to its right neighbor")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0,
+        "Rotation must not move the resized monitor inside its neighbor")
       compare(toolbar.selectedCard, card("eDP-1"),
         "Rotation overlay must follow a replaced monitor delegate")
     }
@@ -279,6 +371,20 @@ Item {
       compare(service.displayDraft[1].transform, 3)
       compare(service.previews, 1, "Handle must win the hit test over the neighbor")
     }
+    function test_rotation_above_neighbor_preserves_the_shared_edge_without_overlap() {
+      service.displayDraft = [
+        {name:"HDMI-A-2", x:0, y:0, width:1920, height:1200, scale:1, transform:0, enabled:true, lane:1},
+        {name:"eDP-1", x:0, y:1200, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:2}
+      ]
+      wait(10)
+      layout.rotateDisplay(service.displayDraft[0], 1)
+      compare(service.displayDraft[0].transform, 1)
+      compare(service.displayDraft[0].y, -720)
+      compare(service.displayDraft[0].y + Model.logicalSize(service.displayDraft[0]).height,
+        service.displayDraft[1].y, "The rotated monitor must stay attached above its neighbor")
+      compare(Model.layoutOverlaps(service.displayDraft).length, 0)
+      compare(service.previews, 1)
+    }
     function test_zoom_keeps_pointer_position_stable() {
       var target = card("HDMI-A-2")
       var oldWidth = target.width
@@ -312,6 +418,12 @@ Item {
       move("HDMI-A-2", 1920, 1200)
       compare(service.state, "previewing")
       var target = card("HDMI-A-2"), display = target.modelData
+      // The 10%-inset default fit makes cards intentionally larger. Scroll
+      // the compact harness viewport so the second drag begins on a visible
+      // point while still exercising the production MouseArea.
+      panelScroll.contentY = Math.max(0,
+        target.y + target.height * 0.8 - panelScroll.height / 2)
+      wait(10)
       mouseDrag(layout, target.x + target.width / 2, target.y + target.height * 0.8,
         (-1920 - display.x) * layout.zoom, (1200 - display.y) * layout.zoom,
         Qt.LeftButton, Qt.NoModifier, 5)

@@ -16,6 +16,22 @@ test('the open intent lives on the service, which outlives the widget', () => {
   assert.match(service, /panelWanted: root\.panelWanted/);
 });
 
+test('the keyboard panel retains its output through a bar-axis remap', () => {
+  const source = readFileSync('lib/StationPanel.qml', 'utf8');
+  assert.match(source, /property var retainedPanelScreen: null/);
+  assert.match(source, /function retainCurrentPanelScreen\(\)/);
+  assert.match(source, /screen: root\.currentPanelScreen\(\)/);
+  assert.ok(source.indexOf('retainCurrentPanelScreen()')
+    < source.indexOf('screen: root.currentPanelScreen()'));
+});
+
+test('the keyboard panel does not consume a new axis with stale bar-window geometry', () => {
+  const source = readFileSync('lib/StationPanel.qml', 'utf8');
+  assert.match(source, /property string stablePanelBarPosition: "top"/);
+  assert.match(source, /PanelPosition\.stableBarPosition\(root\.stablePanelBarPosition,/);
+  assert.match(source, /bar: panelBarFacade/);
+});
+
 test('the selected connector survives a panel rebuild and a temporary draft gap', () => {
   const binding = panel.match(/readonly property string selectedDisplayName: \{([\s\S]*?)\n  \}/);
   assert.ok(binding, 'selected connector is a service-backed binding');

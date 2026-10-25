@@ -1,6 +1,6 @@
 # Wallpaper contract — 2026-10-11
 
-The panel tabs are Displays, Wallpaper, Keybindings, Settings. Wallpaper follows
+The panel tabs are Displays, Bar, Wallpaper, Keybindings, Settings. Wallpaper follows
 the existing two-column composition: layout on the left, controls on the right,
 notice at lower left, Cancel/Apply at lower right. The layout and settings frames
 are the same 370-unit height used by Displays, and the layout reuses its dotted
@@ -31,6 +31,10 @@ choice; a new one falls back to the common image. Mirror sinks inherit the sourc
 image through the compositor. Wallpaper never emits monitor/workspace commands.
 
 Span preserves logical output positions, gaps, rotations and relative dimensions.
+Its monitor cards stay edge-to-edge where the logical outputs touch so the
+continuous crop is not interrupted. Same and Per monitor previews paint the
+compact named theme-space gap between touching monitor cards, matching the
+Displays and Bar canvases.
 The whole image is fitted into the canvas with side space as needed. The group
 is uniformly scaled and translated over that fixed image; it cannot be split,
 rotated or rearranged here. Pan is clamped to keep every crop inside the image.

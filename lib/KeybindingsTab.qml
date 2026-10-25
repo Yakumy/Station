@@ -124,7 +124,7 @@ Column {
               }
               Station.BindingKeyPicker {
                 value: keybindingsTab.panelRoot.editingKey
-                available: keybindingsTab.panelRoot.opened && keybindingsTab.panelRoot.selectedTab === 2
+                available: keybindingsTab.panelRoot.opened && keybindingsTab.panelRoot.selectedTab === 3
                 onPicked: function(key) { keybindingsTab.panelRoot.editingKey = key }
               }
               Ui.Button {

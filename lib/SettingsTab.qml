@@ -55,7 +55,8 @@ Column {
 
   PlainToggleRow {
     label: "Hide Omarchy's workspace indicator"
-    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.hideNative
+    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideNative
+      || settingsTab.panelRoot.service.workspaceWidgetEnabled === false)
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("hideNative", !checked)
   }

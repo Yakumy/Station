@@ -27,6 +27,7 @@ test('panel follows the fixed, non-scrollable reference structure', () => {
   assert.doesNotMatch(displays, /service\.previewLayout\(\)/);
   assert.match(bindings, /bindingGroups/);
   assert.match(settings, /label: "Hide Omarchy's Display icon"/);
+  assert.match(settings, /config\.hideNative[\s\S]*?workspaceWidgetEnabled === false/);
   assert.match(settings, /displayWidgetEnabled === false/);
   assert.match(settings, /setSetting\("hideDisplay", !checked\)/);
   assert.match(settings, /Installed version/);
@@ -59,6 +60,16 @@ test('display notices, labels, zoom buttons and settings switches share the inte
   assert.doesNotMatch(settings, /Ui\.Toggle\s*\{/);
 });
 
+test('monitor canvases use the compact spacing token except for continuous Span crops', () => {
+  const display = read('lib/DisplayLayout.qml');
+  const bar = read('lib/BarLayout.qml');
+  const wallpaper = read('lib/WallpaperLayout.qml');
+
+  assert.match(display, /monitorGap: Style\.spacing\.sm/);
+  assert.match(bar, /monitorGap: Style\.spacing\.sm/);
+  assert.match(wallpaper, /monitorGap: spanning \? 0 : Style\.spacing\.sm/);
+});
+
 test('larger panel reserves the reference canvas and discrete slider stops', () => {
   const panel = read('lib/StationPanel.qml');
   const displays = read('lib/DisplaysTab.qml');
@@ -84,9 +95,9 @@ test('bar logo shares the Omarchy menu foreground and size token', () => {
   assert.match(markComponent, /assets\/station-main-logo-mask\.svg/);
   assert.match(bar, /tint:\s*logoButton\.foreground/);
   assert.doesNotMatch(panel, /readonly property color barFg/);
-  // Keep the supplied green master for public artwork, but use its white
-  // geometry twin at runtime. MultiEffect preserves source luminance, so only
-  // the white mask can reproduce WidgetButton.foreground exactly.
+  // The runtime vector keeps the artwork geometry and uses the theme tint directly.
+  assert.match(markComponent, /Shape.CurveRenderer/);
+  assert.doesNotMatch(markComponent, /MultiEffect|layer.enabled/);
   assert.match(master, /#A6B465/);
   assert.match(mark, /stroke="white"/);
   assert.match(mark, /stroke-width="35"/);

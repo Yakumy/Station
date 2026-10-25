@@ -24,6 +24,19 @@ Ui.Panel {
   property string bridgeSnapshotText: ""
   readonly property var service: directService || (bridgeSnapshot ? bridgeProxy : null)
   property int selectedTab: 0
+  property bool sessionTabRestored: false
+  // A cross-axis bar move reconfigures the bar's layer surface. During that
+  // Wayland transition QsWindow can briefly stop reporting the anchor screen,
+  // which made KeyboardPanel follow the transient null and remap even though
+  // this StationPanel instance survived. Retain the real screen object while
+  // the panel is open; the card geometry can continue following the same live
+  // anchor item without moving the panel surface between outputs.
+  property var retainedPanelScreen: null
+  // KeyboardPanel normally reads bar.position immediately, but a cross-axis
+  // layer-shell change publishes that value before the bar window has swapped
+  // from full-height/thin to full-width/thin (or vice versa). Keep the last
+  // geometrically valid edge until the anchor window reports the new axis.
+  property string stablePanelBarPosition: "top"
   property int stationNumber: service ? service.currentStation : 1
   readonly property string selectedDisplayName: {
     if (!service) return ""
@@ -283,8 +296,30 @@ Ui.Panel {
   property bool intentPending: false
 
   function currentScreenName() {
+    var screen = currentPanelScreen()
+    return screen ? String(screen.name || "") : ""
+  }
+
+  function screenByName(name) {
+    var wanted = String(name || "")
+    if (!wanted) return null
+    for (var i = 0; i < Quickshell.screens.length; i++)
+      if (String(Quickshell.screens[i].name || "") === wanted) return Quickshell.screens[i]
+    return null
+  }
+
+  function currentPanelScreen() {
+    if (retainedPanelScreen) return retainedPanelScreen
     var window = panel.anchorWindow
-    return window && window.screen ? String(window.screen.name || "") : ""
+    if (window && window.screen) return window.screen
+    return service ? screenByName(service.panelScreenName) : null
+  }
+
+  function retainCurrentPanelScreen() {
+    var window = panel.anchorWindow
+    var screen = window && window.screen ? window.screen : null
+    if (!screen && service) screen = screenByName(service.panelScreenName)
+    if (screen) retainedPanelScreen = screen
   }
 
   // An explicit dismissal wins even if a bar rebuild is in progress.
@@ -368,6 +403,7 @@ Ui.Panel {
 
   onOpenedChanged: {
     if (opened) {
+      retainCurrentPanelScreen()
       refreshBrightness()
       intentPending = true
       flushIntent()
@@ -387,14 +423,15 @@ Ui.Panel {
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
-  onSelectedTabChanged: if (service) service.setRememberedTab(selectedTab)
+  onSelectedTabChanged: if (service && sessionTabRestored) service.setRememberedTab(selectedTab)
 
   // The bar rebuilds this widget wholesale, so the tab it was showing has to
   // come back from the service instead of from this instance.
   function restoreSession() {
     if (!service) return
     var remembered = Number(service.rememberedTab)
-    if (remembered >= 0 && remembered <= 3 && selectedTab !== remembered) selectedTab = remembered
+    if (remembered >= 0 && remembered <= 4 && selectedTab !== remembered) selectedTab = remembered
+    sessionTabRestored = true
   }
 
   // Open this output's copy directly: shell.summon routes to the focused
@@ -437,7 +474,10 @@ Ui.Panel {
     })
   }
 
-  onServiceChanged: { flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
+  onServiceChanged: {
+    sessionTabRestored = false
+    flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack()
+  }
   Component.onCompleted: { syncBridge(); flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
 
   // Disabling a different output does not rebuild this surviving widget.
@@ -559,6 +599,38 @@ Ui.Panel {
     function closeForPopoutSwitch() { root.closeForPopoutSwitch() }
   }
 
+  // Delay only KeyboardPanel's view of the bar edge. The real bar and its
+  // modules reflow immediately, while the popout keeps using one internally
+  // consistent position/window-geometry pair throughout the surface remap.
+  QtObject {
+    id: panelBarFacade
+    readonly property var source: root.bar
+    readonly property string desiredPosition: source ? String(source.position || "top") : "top"
+    readonly property string position: {
+      var window = panel.anchorWindow
+      return PanelPosition.stableBarPosition(root.stablePanelBarPosition,
+        desiredPosition, window ? window.width : 0, window ? window.height : 0,
+        source ? source.barSize + Style.gapsOut : 0)
+    }
+    readonly property real barSize: PanelPosition.verticalBarPosition(position)
+      ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+    readonly property var activePopout: source ? source.activePopout : null
+    readonly property var clickTargets: source ? source.clickTargets : []
+
+    onPositionChanged: root.stablePanelBarPosition = position
+
+    function requestPopout(owner) {
+      if (source && typeof source.requestPopout === "function") source.requestPopout(owner)
+    }
+    function releasePopout(owner) {
+      if (source && typeof source.releasePopout === "function") source.releasePopout(owner)
+    }
+    function targetBelongsToWindow(target, window) {
+      return source && typeof source.targetBelongsToWindow === "function"
+        ? source.targetBelongsToWindow(target, window) : false
+    }
+  }
+
   Station.StationBar {
     id: barControls
     bar: root.bar
@@ -571,7 +643,11 @@ Ui.Panel {
     id: panel
     anchorItem: barControls.anchorItem
     owner: popoutOwner
-    bar: root.bar
+    bar: panelBarFacade
+    // Override KeyboardPanel's default `anchorWindow.screen` binding. That
+    // screen is stable for same-axis moves but can be transient during the
+    // layer-shell anchor/size change required by a horizontal↔vertical move.
+    screen: root.currentPanelScreen()
     centerOnBar: root.service && root.service.config.panelPosition === "center"
     gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barW, barH,
       root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
@@ -590,7 +666,7 @@ Ui.Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onTabRequested: function(direction) {
-        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 3)) % 4
+        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 4)) % 5
       }
 
       Column {
@@ -633,12 +709,12 @@ Ui.Panel {
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
-              model: ["Displays", "Wallpaper", "Keybindings", "Settings"]
+              model: ["Displays", "Bar", "Wallpaper", "Keybindings", "Settings"]
               delegate: Item {
                 id: tab
                 required property int index
                 required property string modelData
-                readonly property bool conflicted: index === 2 && root.conflictCount > 0
+                readonly property bool conflicted: index === 3 && root.conflictCount > 0
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
@@ -721,9 +797,10 @@ Ui.Panel {
 
         Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
         Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
-        Station.WallpaperTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
-        Station.KeybindingsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
-        Station.SettingsTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
+        Station.BarTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
+        Station.WallpaperTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
+        Station.KeybindingsTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
+        Station.SettingsTab { visible: root.selectedTab === 4; width: parent.width; panelRoot: root }
       }
     }
   }

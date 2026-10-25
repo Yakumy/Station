@@ -122,7 +122,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | Fact | Tag |
 |---|---|
 | `omarchy plugin add <git-url> [--enable]` clones and validates. No install hooks, no package manager, no privileges. Plugins are added **disabled** unless `--enable`. Updates are `omarchy plugin update <id>` (fast-forward with a diff); removal is `omarchy plugin remove <id> [--yes]`. Plugins are unsandboxed and run inside the shell process. | [SRC] |
-| Station's working manifest: `schemaVersion 1`, `id`, `name`, `version`, `kinds: ["bar-widget","service"]`, `entryPoints: { "barWidget": "Panel.qml", "service": "Service.qml" }`, `barWidget: { displayName, description, category, allowMultiple, defaultSection: "left" }`. | [SRC] |
+| Station 2.2's manifest adds the supported `bar` kind and `Bar.qml` entry beside its existing bar-widget and service. The stock host accepts a third-party full bar but exposes only one global position, so independent output positions require one isolated bar instance per screen. | [SRC] |
 | A plugin with both kinds is loaded twice: the service from `Service.qml`, the bar widget and popout from `Panel.qml`. The popout reads the injected service object. | [LIVE] |
 | `omarchy-shell shell listPlugins` prints a JSON **array**; entries have `id, name, kinds, enabled, active, canDisable, firstParty, clonedFrom`. `active` was `false` for every entry, so use **`enabled`**. | [LIVE] |
 | `omarchy-shell shell ping` succeeds when the shell is up (about 80 ms). | [LIVE] |
@@ -173,7 +173,13 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | A `MouseArea` inside the panel's vertical `ScrollView` loses its pointer grab to the underlying `Flickable` once a drag is recognized. Quickshell then calls `onCanceled`, so the card visually moves and snaps back without the service entering Preview. Set `preventStealing: true` on draggable monitor cards. The regression harness must embed the production layout in a scrolling `Flickable`; testing the component as a bare `Item` misses this behavior. | [QTTEST][LIVE] |
 | Isolated layout tests cover horizontal placement on either side, vertical placement, negative positions, repeat drags after Revert, click without Preview, edge snapping, selected-mode/scale/rotation geometry, and three large displays fitting the canvas. Scaled/rotated and three-display **hardware** behavior remain unverified. | [QTTEST] |
 | A position-only preview used to evaluate the full managed monitor block, including a rule for every unchanged output. That can reconfigure the other monitor as well as the dragged one. The runtime preview now emits a rule only for each output whose position changed when mode, enablement, scale, rotation, and resolution are unchanged. Keep still writes the complete guarded block. Rotation/topology edits still use the guarded preview; Scale/Resolution/Refresh now bypass preview and persist directly. | [SRC] |
-| Omarchy's bar uses one surface per `Quickshell.screens` entry and wraps each bar window in `ScreenMoveRemap`. A position change can therefore remap the moved output's bar and destroy its Station widget and popout. Station cannot keep that same QML window alive from inside the plugin; it records the panel's output and tab on the service, then the replacement widget opens its own anchored copy. | [SRC][INFER] |
+| Omarchy's stock-adapted bar swaps `root.vertical`-keyed `Loader` components for the section container, center arrangement, and every module Row/Column (stock `Bar.qml` 1287/1557/1746). An axis flip therefore destroyed the Station widget and its popout; the visible asymmetry followed from the open panel being hosted on eDP-1. Station replaces those swaps with orientation-agnostic hosting and `lib/BarModel.positionModules`, preserving the module instances through an ordinary flip. | [SRC] |
+| That inner repair was necessary but not sufficient. Live repetitions after `128bee0` found intermittent bursts where a `shell.json` position write caused both `omarchy-bar` surfaces to close and reopen; `hyprctl layers -j` showed new surface addresses, while the Quickshell log created duplicate widget IPC handlers and then evaluated callbacks against invalid `MonitorBar` contexts. Other repetitions were clean, so a simulator or single successful flip does not establish host-window continuity. Station now treats validated `config.bars` as the live authority while its panel is open: top-level `Bar.qml` reads the detached service snapshot and moves locally, and the service writes the redundant `shell.json` `bar.monitors` mirror only after the panel closes. Structural rebuilds and display-origin remaps still use the §10.3 hand-off. | [LIVE][SRC] |
+| After that host-write deferral, same-axis moves were clean and moving the other monitor's bar left the eDP-1 panel stable, but changing the panel-owning eDP-1 bar horizontal↔vertical still produced a shorter glitch. Retaining the panel's Quickshell screen did not remove it. The remaining mismatch is geometry: `bar.position` changes before the owning layer window swaps between full-height/thin and full-width/thin, so `Ui.KeyboardPanel.cardOrigin` briefly evaluates the new edge using old-axis `barW`/`barH` (for example, `top` with the old full-height left-bar `barH`). Station now holds the panel's last geometrically valid edge until the anchor window dimensions match the requested axis. This mechanism is source-derived and awaits the repeated physical flip check. | [LIVE][SRC][INFER] |
+| A live stock-versus-Station screenshot check under the active theme and scale measured the same reserved thickness: 26 logical pixels for top/bottom bars and 28 logical pixels for left/right bars. The menu/icon painted bounds were centered alike. Station should continue using `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; a custom thickness would not repair the reported optical imbalance. | [LIVE] |
+| Hyprland 0.56.2 on this machine reports `decoration:blur:enabled = false`. A reversible live `hyprctl eval` probe successfully created a named `hl.layer_rule` matching `omarchy-bar` with `blur = true` and `ignore_alpha = 0.1`, enabled global blur through `hl.config`, verified the option became true, then disabled the rule and restored the option to false. This supports a leased runtime implementation; it does not justify leaving global blur enabled when no Station bar requests it. | [LIVE][SRC] |
+| First live acceptance of the Background commit found Blur dark and visibly blocky. At that point Hyprland reported size 8 and only 1 pass; the bar also painted a 72%-opaque theme background over the result. The follow-up keeps size 8, leases 3 passes as recommended for smoother Kawase blur, and replaces the visible tint with a 1%-alpha activation mask. The lease now records and restores enabled, size, and passes. | [LIVE][SRC] |
+| `Ui.Dropdown.selectCurrent()` imperatively assigns `root.value` before emitting `changed`. A normal `value: selectedMonitorSetting` declaration therefore loses its binding after the first Background choice, leaving the trigger on the last chosen label across monitor selection and panel reopen. An explicit QML `Binding` object remains authoritative and reasserts the selected monitor's persisted mode whenever either the service snapshot or selection changes. | [LIVE][SRC] |
 | `shell.summon` chooses an already open bar widget first, otherwise the focused output. Restoring a destroyed popup through it can move Station to the primary/focused monitor. A `monitoradded` event handler also called `openPanel()` unconditionally, even when the user had closed the panel. The replacement widget now restores on the saved output, falls back if that output disappeared, and the event handler no longer summons a panel. | [SRC] |
 | Disabling/enabling `omarchy.workspaces` changes the bar layout and recreates Station widgets. During that hand-off a transient close can clear both the reopen intent and remembered tab. Station now keeps the intent for a short transfer interval around the setting change and display preview; an explicit user close clears that interval. Repeated preview drags continue in the same 12-second confirmation session and retain the original Revert baseline. This repair is source- and isolated-test-verified; a physical monitor move under the new code remains to be checked. | [SRC][QTTEST] |
 | Disabling/enabling `omarchy.monitor` likewise rebuilds the bar. The Display-icon setting uses the same panel-transfer interval, but a distinct persisted lease containing the widget's original section/index and whether Station actually disabled it. Cleanup receives both validated leases and restores both only after confirming Station is no longer enabled. | [SRC] |
@@ -507,6 +513,47 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   of pinned, unmanaged, named and other special windows. These isolated tests
   do not prove a physical keypress or the installed compositor path.
 
+### 14.5 Rotation changed size without changing position (2026-10-24)
+
+- **[SRC]** A rotation handle changed only `transform`. Since transforms 1/3/5/7
+  swap logical width and height, the resized rectangle kept its old top-left
+  coordinate and could grow into an attached neighbor; shrinking along their
+  shared axis could instead leave a gap.
+- **[SRC][QTTEST]** Rotation now preserves the strongest pre-change shared edge,
+  resolves any remaining collision toward a side that was non-overlapping in
+  the valid old layout, and publishes transform plus corrected position in one
+  service update. Production QML coverage includes both horizontal neighbors
+  and the reported 1920×1200-above-1920×1080 arrangement. This is isolated
+  geometry and pointer verification; physical compositor acceptance remains a
+  user check.
+
+### 14.6 Scale changes disconnected attached outputs (2026-10-24)
+
+- **[SRC]** The direct Scale control changed only `scale`. Increasing scale
+  shrinks the output's logical rectangle; when the edited output was left of or
+  above a neighbor, its far edge moved inward while its top-left coordinate
+  stayed fixed, leaving a logical gap that the pointer could not cross.
+- **[SRC][QTTEST]** Direct scale and resolution transactions now run the same
+  bounded resize placement used by rotation before generating the saved monitor
+  block. The new value and corrected integer position publish together. Tests
+  cover either member of a horizontal pair, assert edge contact and no overlap,
+  and still verify one watched apply without a preview or forced reload. Physical
+  compositor acceptance remains a user check.
+
+### 14.7 Edge snapping forced unequal monitors to corners (2026-10-24)
+
+- **[SRC]** Drag snapping used the same theme-scaled screen-distance threshold
+  for both edge attachment and parallel-edge alignment. At the default fitted
+  zoom, a desired 60-logical-unit centered offset could lie within that broad
+  threshold of both top and bottom alignment, so the cross axis snapped to a
+  corner even while the intended side edge was correct.
+- **[SRC][QTTEST]** Attachment and alignment candidates are now separate. The
+  attachment axis retains the easy screen-distance snap; the parallel axis
+  aligns only within 20 logical units and otherwise remains on its 10-unit grid
+  position. Pure and production-pointer tests cover a 1920×1200 monitor centered
+  at a 60-unit offset beside a 1920×1080 monitor, plus exact top and bottom
+  alignment. Physical drag acceptance remains a user check.
+
 ## 15. Where evidence lives
 
 | Source | Content |
@@ -552,3 +599,130 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   The helper detects formats by magic bytes, caps total input/chunks/raster, and
   writes only bounded rendering chunks for PNG. QML receives only the private
   prepared path. Old unmarked pinned images are gated and restaged before use.
+
+## Bar content zoom rendering repair (2026-10-25)
+
+- [SRC][DOC] Installed `Ui.WidgetButton` and `Ui.OpticalGlyph` use
+  `Text.NativeRendering`. Qt documents pixelated results when transforming that
+  renderer: https://doc.qt.io/qt-6/qml-qtquick-text.html#renderType-prop.
+  The previous larger-loader-texture fix left that renderer unchanged; the user
+  reported that the enlarged clock and indicator glyphs were still blurry.
+- [SRC] Zoomed module subtrees now switch native text (including icon fonts) to
+  `Text.QtRendering` and omit the loader layer. Image source-size enlargement
+  remains in place. Default-size modules restore their original rendering mode;
+  Station's directly sized widget remains exempt from subtree zoom.
+- [QTTEST] `python3 tools/v2/check-bar-rendering.py` exercises the production
+  traversal with real Qt Text/Image objects: fractional and integer zoom,
+  nested glyphs, repeated scans, newly added/destroyed text, and restoration.
+  Passed on Qt 6.12.0. This verifies rendering policy, not final desktop pixels;
+  installed-bar visual acceptance remains pending.
+
+## Bar geometry follow-up (2026-10-25)
+
+- [LIVE][SRC] After the scalable-rendering repair, the user confirmed enlarged
+  glyphs were sharp. Their screenshots also showed that Station's logo-to-label
+  gap grew less than neighboring widget gaps and that the right Pill island
+  included the tray's invisible collapsed drawer reserve.
+- [SRC] Station now uses the host button margin on both sides of both internal
+  controls and enters the same uniform subtree zoom path as other widgets. The
+  tray slot subtracts `drawerExtent - revealExtent` from its flow footprint, so
+  the Pill follows the chevron while collapsed and grows as icons reveal.
+- [SRC][QTTEST] Bar height is capped at 5% of the monitor mode's shorter native
+  side. Each live bar reports a content-size maximum that preserves
+  `Style.spacing.sm` on both cross-axis edges and checks the fully revealed
+  left, centered, and right regions along the bar. Model tests cover both
+  limiting axes and tray reveal extents. The offscreen layout harness covers
+  all four preview sides. The follow-up below revises the label placement and
+  repairs the runtime publication of the maximum.
+
+- [LIVE][SRC] The installed shell logged `ReferenceError: barContent is not
+  defined` at MonitorBar's root maximum binding: the id belongs to the nested
+  BarPanel component. The content limit now publishes to a root measurement
+  property on completion and change, matching the minimum-length path.
+  The runtime Qt harness exercises that component boundary and verifies that
+  content zoom follows requests and changing limits.
+- [SRC][QTTEST] Preview edge gaps return to `Style.spacing.sm`. Names move
+  toward the card center and reserve the maximum preview thickness plus a
+  theme gap on every side. The layout test uses an oversized saved height to
+  verify clamping and label separation on all four sides.
+
+### Enlarged image layers (2026-10-25)
+
+- [SRC] StationMark's tint source and Omarchy Tray's symbolic image sources
+  use `layer.enabled`; the tray drawer also layers its Row/Column. Increasing
+  image `sourceSize` alone leaves these intermediate textures at baseline size.
+  MonitorBar now scales existing layer textures too, including the output pixel
+  ratio, while leaving Loader layers disabled and preserving scalable text.
+- [QTTEST] `check-bar-rendering.py` checks nested/default/explicit layer sizes,
+  geometry updates, repeated zoom and restoration. `check-bar-icons.py` uses
+  Wayland/GPU rendering of the real logo SVG through MultiEffect and a nested
+  group layer at 3x. Compared with a directly sized reference, the corrected
+  render has less than one quarter of the original summed red-channel pixel
+  error. The capture visibly resolves the logo edges. This does not establish
+  the quality of every application's supplied tray bitmap.
+
+### Station logo follow-up (2026-10-25)
+
+- [LIVE] The user still observed a soft Station bar logo after the intermediate
+  layer fix. The previous GPU fixture recreated the image/effect structure; it
+  did not instantiate StationMark and was insufficient evidence for that logo.
+- [SRC] StationMark now renders its SVG paths with Shape.CurveRenderer and
+  direct theme tint, eliminating its image/effect rasterization path. Tray
+  image and group-layer handling remains in place. StationBar positions the
+  mark from the actual centered Text baseline used by WidgetButton rather
+  than reconstructing it from rounded FontMetrics height.
+- [QTTEST] The GPU check now instantiates the production StationMark at 3x
+  and compares it with a directly sized production mark. The captured edges
+  are sharp. The layout harness passes 216 combinations covering three font
+  sizes, three bar heights, three zooms, four edges and S1/S10. These checks
+  do not substitute for the user's final desktop confirmation.
+
+### Confirmed logo correction and global bar controls (2026-10-25)
+
+- [LIVE] The user confirmed the vector Station logo is now sharp and aligned.
+  The problem was rasterization of the image/tint path before content zoom;
+  enlarging decoded images and intermediate textures did not reliably fix the
+  production logo. Rendering the original paths directly with CurveRenderer
+  removes that raster boundary. A centered Text reference also removes the
+  vertical discrepancy from reconstructing WidgetButton's baseline with
+  rounded FontMetrics values.
+- [SRC] Omarchy's Bar → Position menu runs `omarchy bar position`, which
+  writes global `bar.position`. Stock bar dragging writes the same setting.
+  Station's per-monitor overrides previously masked global changes; its drag
+  adaptation wrote only shell.json monitor rows while config.bars remained the
+  authority. The service now observes global edge changes and updates every
+  saved/connected monitor, preserving presence and appearance. Drag completion
+  calls the allowlisted global action. Station's card arrows remain per-monitor.
+- [QTTEST] Production-function tests cover four global edges, saved/disconnected
+  entries, appearance preservation, initial attachment without override loss,
+  pending publication during an open panel, and drag-to-service dispatch.
+
+- [LIVE] Stock `omarchy bar position right|bottom|left|top` updated both saved
+  monitor edges in the installed service. Each command was allowed to finish
+  its asynchronous shell/config writes before the next command; issuing the
+  next command immediately after observing config.json can race the previous
+  shell.json mirror write. Original bar settings were backed up and restored,
+  followed by shell restart/ping. Physical pointer dragging remains a manual
+  check; the automated drag test verifies the completion-to-service path.
+
+### Monitor-scoped menu and drag positioning (2026-10-25 revision)
+
+- The user clarified that bar movement must be independent on each monitor.
+  This supersedes the all-bars-together behavior described above.
+- [SRC] A drag now sends the originating bar's connector through the existing
+  `setMonitorBarPosition` bridge action. It never uses whichever display happens
+  to have keyboard focus when the gesture ends. The Omarchy menu's global edge
+  change is translated into an edit of Hyprland's focused monitor only.
+  Previously the global action loop assigned that edge to every saved monitor;
+  that was the cause of the second monitor moving too.
+- [SRC] Unconfigured peers are pinned to their previously inherited edge before
+  the new global fallback can move them. Pending shell.json mirrors preserve
+  those independent positions when an open panel closes.
+- [QTTEST] Tests cover each menu edge, switching the target monitor, inherited
+  peer positions, disabled saved outputs, appearance preservation, and drag
+  origin routing for HDMI-A-1 and eDP-1.
+
+- [SRC] The stock menu's current position is mirrored from the focused bar
+  when focus changes, without moving a bar. This also makes choosing the same
+  menu edge on two different monitors observable. Mirrors are deferred while
+  Station's panel is open and never override a pending external menu request.

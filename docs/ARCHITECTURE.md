@@ -22,6 +22,71 @@ buttons, arranged as a row on top/bottom bars and a column on left/right bars.
 Its painted geometry follows the Omarchy menu glyph metrics; `StationMark.qml`
 shares the themed SVG mark between the bar and panel header.
 
+Station 2.2 also declares a full-bar entry. `Bar.qml` creates one
+`MonitorBar.qml` instance per connected Quickshell screen and passes each a
+detached copy of the shared layout with that connector's saved position,
+width, thickness, background mode, and surface style.
+The wrapper coordinates popouts across those isolated copies so opening a
+panel on one output closes the panel already open on another.
+Presence, position, width, height, content size, background, and style live in both Station's
+validated `config.bars` preferences and the shell bar's `monitors` map. While
+the panel is open, the full bar reads
+the detached `config.bars` snapshot through the top-level bridge and treats it
+as the live authority; the service defers the redundant shell map write until
+the panel closes. This prevents an otherwise harmless host config reload from
+recreating the third-party bar and its panel mid-click. The service refuses to
+hide the last bar on an enabled output.
+The default style paints one continuous surface. Pill style paints independently
+rounded left, center, and right islands while reusing the selected Background
+mode; its padding is included in each live bar's non-overlap measurement.
+For Pill, Blur, and Transparent presentations, `MonitorBar` expands only its
+visual/input layer inward by `Style.gapsOut` and keeps the exclusion zone at the
+configured thickness. Omarchy defines that token as half Hyprland's outer
+window gap, which centers module icons in the complete monitor-edge-to-window
+strip without moving tiled windows. Solid default bars retain stock geometry.
+Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
+the bar's parallel monitor edges. The panel's cross-axis stabilization permits
+the half-gap visual extension when validating the remapped bar window; the
+exclusive-zone size exposed to popup placement remains unchanged.
+Content size is stored per monitor as a font-pixel target. Above the default,
+`MonitorBar` renders each module as a uniform zoom of its default-size subtree
+at the requested-to-default ratio — the same proportions as Omarchy's global
+text size, scoped to that one bar. Native-rendered text and font icons switch
+to Qt's scalable distance-field rendering while zoomed, restoring their original
+render type at default size. Enlarging an offscreen layer does not re-rasterize
+native glyph caches, so the loaders render directly without that extra layer.
+The bar also multiplies each loaded image's `sourceSize` by the same ratio.
+Existing tray effect-source and tray-group layers receive matching physical-pixel
+texture sizes, bound to their geometry and output pixel ratio; otherwise those
+intermediate textures downsample the decoded images before enlargement. Their
+original texture sizes are restored at default content size. StationMark uses
+Qt Quick curve-rendered vector paths from the supplied SVG geometry, with the
+foreground tint applied directly. Its bar placement follows a centered Text
+reference matching the Omarchy menu button, including its actual baseline.
+The along-bar slot grows by that ratio so module gaps keep their proportions.
+The live maximum preserves `Style.spacing.sm` on both cross-axis edges and
+checks the scaled left, centered, and right extents against the monitor length.
+Each bar reports that maximum through the detached bridge together with its
+minimum width. The tray slot removes Omarchy's unpainted collapsed drawer
+reserve from its flow extent and adds it back as the reveal animation advances,
+so the Pill island follows the visible tray. A zero stored value
+follows Omarchy's live `Style.font.body` default.
+Blur is compositor-owned. The service keeps a persisted lease of the prior
+global Hyprland blur state, enables one named layer rule for the shared
+`omarchy-bar` namespace, temporarily uses size 8 with three passes, and
+restores the prior global enabled/size/pass values after the final connected
+Blur bar changes mode. Fully transparent surface regions are
+excluded, which matters because partial bars retain a full-screen coordinate
+surface for correct popup anchoring.
+When Station becomes the active full bar, the service atomically removes its
+persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
+The service also reconciles that row on activation, covering upgrades where
+Omarchy selects the new full-bar kind before the user makes a Bar-tab edit.
+This avoids Omarchy's multi-kind disable ambiguity: resetting the full-bar id
+then removes the last enable reference and unloads the service normally.
+The bundled bar is an MIT-licensed adaptation of Omarchy 4.0.6; provenance is
+recorded in `THIRD_PARTY_NOTICES.md`.
+
 `BindingKeyPicker.qml` captures allowlisted key events and offers a static
 special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text

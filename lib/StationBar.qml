@@ -12,12 +12,11 @@ Grid {
   signal pressed()
 
   readonly property bool vertical: bar ? bar.vertical : false
+  readonly property real contentFontSize: Style.font.body
   readonly property real controlMargin: Style.spaceReal(7.5)
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   // Match the menu's painted height, rather than its font's em square.
   readonly property real logoSize: menuInk.height
-  readonly property real menuSlotWidth: menuTextMetrics.advanceWidth + controlMargin * 2
-  readonly property real inkGap: menuSlotWidth - Math.round(controlMargin) - menuInk.x - menuInk.width + controlMargin
 
   columns: vertical ? 1 : 2
   spacing: 0
@@ -25,7 +24,7 @@ Grid {
   FontMetrics {
     id: menuMetrics
     font.family: "omarchy"
-    font.pixelSize: Style.font.body
+    font.pixelSize: root.contentFontSize
   }
 
   TextMetrics {
@@ -46,12 +45,22 @@ Grid {
     fixedHeight: root.vertical ? menuMetrics.height + scaledVerticalPadding * 2 : barSize
     onPressed: root.pressed()
 
+    // Use the same centered Text line box as Omarchy's WidgetButton, including
+    // Qt's baseline and anchor rounding. FontMetrics.height can differ from it.
+    Text {
+      id: menuReference
+      anchors.centerIn: parent
+      visible: false
+      text: "\ue900"
+      font: menuMetrics.font
+    }
+
     Station.StationMark {
       width: root.logoSize
       height: root.logoSize
       x: (parent.width - width) / 2
       // WidgetButton centers the font line box. Match the ink inside it.
-      y: Math.round((parent.height - menuMetrics.height) / 2) + menuMetrics.ascent + root.menuInk.y
+      y: menuReference.y + menuReference.baselineOffset + root.menuInk.y
       tint: logoButton.foreground
     }
 
@@ -74,8 +83,8 @@ Grid {
     labelVisible: false
     hasVisualContent: true
     horizontalMargin: 7.5
-    fontSize: Style.font.body
-    fixedWidth: root.vertical ? barSize : indicatorInk.width + root.inkGap
+    fontSize: root.contentFontSize
+    fixedWidth: root.vertical ? barSize : indicatorInk.width + root.controlMargin * 2
     onPressed: root.pressed()
 
     FontMetrics {
@@ -98,9 +107,9 @@ Grid {
       renderType: Text.NativeRendering
       // Align painted bounds, including S10, without translating the hit area.
       x: root.vertical ? (parent.width - stationButton.indicatorInk.width) / 2 - stationButton.indicatorInk.x
-        : root.inkGap - root.controlMargin - stationButton.indicatorInk.x
+        : root.controlMargin - stationButton.indicatorInk.x
       y: root.vertical ? (parent.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
-        : Math.round((parent.height - menuMetrics.height) / 2) + menuMetrics.ascent + root.menuInk.y
+        : menuReference.y + menuReference.baselineOffset + root.menuInk.y
           + (root.menuInk.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
     }
   }
