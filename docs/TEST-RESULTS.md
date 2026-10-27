@@ -1,5 +1,13 @@
 # Station v2 test results
 
+## Mirror editor geometry — 2026-10-27
+
+- Live Mirror state reported eDP-1 and HDMI-A-2 at the same `0x300` runtime
+  coordinates while Station's managed block still retained eDP-1 at `1920x0`.
+- Strict managed-block parsing now restores the independent saved geometry to the
+  editor and rejects malformed or conflicting duplicates. A service-level test
+  covers the collapsed runtime snapshot without changing Mirror compositor state.
+
 ## Post-topology shell screen recovery — 2026-10-27
 
 - Live diagnosis found both outputs enabled in Hyprland, but no background or bar
@@ -11,7 +19,7 @@
   and mirrored outputs. They also refuse recovery without a healthy survivor. A
   source-contract test keeps the single output cycle after settled Keep or Revert
   and out of the active preview interval.
-- All 195 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+- All 198 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
   scanning reports 36 source files with zero violations, and live-Wayland QML
   compilation passes.
 

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
+const MonitorsLua = require('../../lib/MonitorsLua.js');
 const source = readFileSync('Service.qml', 'utf8');
 
 for (const reason of ['', 'Preview timed out.']) {
@@ -10,7 +11,7 @@ for (const reason of ['', 'Preview timed out.']) {
     const commands = [];
     let snapshot, runtimeCalls = 0;
     const c = {
-      Model, state: 'previewing', gen: 5, appliedGeneration: 5,
+      Model, MonitorsLua, state: 'previewing', gen: 5, appliedGeneration: 5,
       panelWanted: false, panelScreenName: '', panelTransferUntil: 0, previewApplied: {},
       panelEvacuationWaiting: 0, panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
       previewApplyLua: '', previewApplyStaged: false, previewApplyExpectedOutputs: [],
@@ -21,7 +22,7 @@ for (const reason of ['', 'Preview timed out.']) {
       pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
       previewBusy: false, previewBaseline: null, previewAbortReason: '', keepOptions: null,
       screenHealthChecks: 0,
-      stateDir: '/tmp/station-test', pendingDisplayConfig: {}, layoutError: '',
+      stateDir: '/tmp/station-test', monitorsSource: '', pendingDisplayConfig: {}, layoutError: '',
       config: { mode: 'extend', singleTarget: '', enabled: ['eDP-1', 'HDMI-A-2'] },
       lanes: { 'eDP-1': 1, 'HDMI-A-2': 2 },
       monitors: [], displayDraft: [{ name: 'eDP-1', x: 900, y: 500, scale: 2 }],

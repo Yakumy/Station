@@ -180,6 +180,32 @@ test('managed block is unique, replaced at EOF, and malformed markers fail close
   assert.throws(() => L.replaceManagedBlock(`${L.START}\nbroken\n`, generated.block), /invalid Station markers/);
 });
 
+test('managed geometry retains the independent layout while Mirror runtime overlaps outputs', () => {
+  const saved = displays();
+  saved[0].x = 1920;
+  saved[0].y = -60;
+  saved[1].x = 0;
+  saved[1].y = 0;
+  const block = L.generate(saved.map((display, index) => ({ ...display, lane: 2 - index })),
+    { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] }).block;
+  const geometry = L.managedGeometry(block);
+  assert.deepEqual(geometry['eDP-1'], {
+    name: 'eDP-1', mode: '1920x1200@59.88Hz', x: 1920, y: -60, scale: 1, transform: 0,
+  });
+  assert.deepEqual(geometry['HDMI-A-2'], {
+    name: 'HDMI-A-2', mode: '1920x1080@60.00Hz', x: 0, y: 0, scale: 1.25, transform: 0,
+  });
+});
+
+test('managed geometry ignores malformed blocks and conflicting duplicate rules', () => {
+  assert.deepEqual(L.managedGeometry('hl.monitor({ output = "eDP-1" })'), {});
+  const conflict = `${L.START}\n`
+    + 'hl.monitor({ output = "eDP-1", mode = "1920x1200@59.88Hz", position = "0x0", scale = 1, transform = 0, disabled = false, mirror = "" })\n'
+    + 'hl.monitor({ output = "eDP-1", mode = "1920x1200@59.88Hz", position = "1920x0", scale = 1, transform = 0, disabled = false, mirror = "" })\n'
+    + `${L.END}\n`;
+  assert.deepEqual(L.managedGeometry(conflict), {});
+});
+
 test('rules for managed outputs outside the block are reported', () => {
   const source = 'hl.monitor({ output = "eDP-1", scale = 2 })\n';
   assert.deepEqual(L.externalRuleConflicts(source, ['eDP-1', 'HDMI-A-2']), ['eDP-1']);

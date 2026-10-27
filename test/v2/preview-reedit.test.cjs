@@ -29,6 +29,30 @@ test('a re-edit joins the running session instead of restarting its baseline', (
   assert.match(body[1], /previewArm\.running = true/);
 });
 
+test('Mirror runtime coordinates do not collapse the saved editable layout', () => {
+  const saved = [
+    { name: 'eDP-1', mode: '1920x1080@60.00Hz', availableModes: ['1920x1080@60.00Hz'],
+      x: 1920, y: 0, scale: 1, transform: 3, lane: 2 },
+    { name: 'HDMI-A-2', mode: '1920x1200@59.88Hz', availableModes: ['1920x1200@59.88Hz'],
+      x: 0, y: 300, scale: 1, transform: 0, lane: 1 },
+  ];
+  const context = {
+    Model, MonitorsLua,
+    monitorsSource: MonitorsLua.generate(saved, { mode: 'mirror', enabled: saved.map(d => d.name) }).block,
+    monitors: saved.map(display => ({ ...display, x: 0, y: 300, mirrorOf: display.name === 'eDP-1' ? '1' : 'none',
+      width: Number(display.mode.split('x')[0]), height: Number(display.mode.split('x')[1].split('@')[0]), refreshRate: 60 })),
+    config: { mode: 'mirror', enabled: saved.map(d => d.name), singleTarget: '' },
+    lanes: { 'eDP-1': 2, 'HDMI-A-2': 1 }, displayDraft: [], draftMode: '', draftSingleTarget: '',
+    root: { validConnector: () => true },
+  };
+  const start = service.indexOf('  function syncDisplayDraft() {');
+  const end = service.indexOf('\n  function ', start + 1);
+  const sync = runInNewContext('(' + service.slice(start, end).trim() + ')', context);
+  sync();
+  assert.deepEqual(context.displayDraft.map(display => [display.name, display.x, display.y]),
+    [['eDP-1', 1920, 0], ['HDMI-A-2', 0, 300]]);
+});
+
 test('successive position previews reconfigure only the output being moved', () => {
   const before = [
     { name: 'eDP-1', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 0, y: 0, scale: 1, transform: 0 },

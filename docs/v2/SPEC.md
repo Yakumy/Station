@@ -234,6 +234,9 @@ Load config/state → recovery check (§9 stale preview token → rollback) → 
 
 - **Extend:** enabled displays form one desktop; checkmarks enable/disable individual displays.
 - **Mirror:** all enabled mirror the primary (lowest present lane).
+- Mirror sinks report the source output's runtime coordinates. The layout editor
+  retains each output's independent geometry from Station's marked managed block;
+  Mirror must not overwrite or visually collapse the saved Extend arrangement.
 - **Single on k:** others disabled; journaled migration merges each station onto k and compacts IDs to 1–10. Back to Extend expands IDs and retains windows on k.
 - Mode is global (Mode dropdown beside Direction). Mode and enabled set are config preferences, re-applied at start and after reload, and written into the guarded block (§9).
 - Never leave zero enabled monitors: if the saved enabled set has none connected, enable all connected.

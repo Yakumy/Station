@@ -119,7 +119,9 @@ Pure modules under `lib/` isolate policy from QML:
   geometry-only cleanup copy. If cold discovery is empty or the saved survivor
   is absent, an exclusive fallback applies saved geometry with outputs enabled
   and unmirrored. Warm reload executes only the combined final-state rules, so
-  a disabled output is not briefly re-enabled by a geometry prepass.
+  a disabled output is not briefly re-enabled by a geometry prepass. Its strict
+  managed-block geometry reader also keeps the editor's independent positions
+  when Hyprland reports a Mirror sink at the source output's runtime coordinates.
 - `Store.js` owns versioned defaults and bounded migrations.
 - `Wallpaper.js` validates wallpaper preferences and owns logical crop geometry,
   native-resolution recommendations, and theme/background profile resolution.

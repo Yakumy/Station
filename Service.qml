@@ -849,11 +849,16 @@ Item {
 
   function syncDisplayDraft() {
     var enabled = Model.enabledNames(monitors, config.enabled)
+    var saved = MonitorsLua.managedGeometry(monitorsSource)
     displayDraft = monitors.filter(function(m) { return root.validConnector(m.name) && lanes[m.name] }).map(function(m) {
+      var geometry = saved[m.name]
+      if (!geometry || (m.availableModes || []).indexOf(geometry.mode) < 0) geometry = null
       return { name: m.name, description: m.description || m.model || "", width: Number(m.width),
         height: Number(m.height), refreshRate: Number(m.refreshRate), availableModes: m.availableModes || [],
-        mode: Model.currentMode(m), x: Number(m.x) || 0, y: Number(m.y) || 0,
-        scale: Number(m.scale) || 1, transform: Number(m.transform) || 0,
+        mode: geometry ? geometry.mode : Model.currentMode(m),
+        x: geometry ? geometry.x : Number(m.x) || 0, y: geometry ? geometry.y : Number(m.y) || 0,
+        scale: geometry ? geometry.scale : Number(m.scale) || 1,
+        transform: geometry ? geometry.transform : Number(m.transform) || 0,
         enabled: enabled.indexOf(m.name) !== -1, lane: lanes[m.name] }
     })
     draftMode = config.mode
@@ -2305,7 +2310,10 @@ Item {
     path: root.monitorsPath
     watchChanges: true
     printErrors: false
-    onLoaded: root.monitorsSource = text()
+    onLoaded: {
+      root.monitorsSource = text()
+      if (root.started && root.state === "idle") root.syncDisplayDraft()
+    }
     onLoadFailed: root.monitorsSource = ""
     onFileChanged: reload()
   }
