@@ -138,8 +138,11 @@ and returns to workspace 3 after collapse.
 
 Persist a journal containing old/new maps and each window's address, PID,
 initial class, station, and destination. Wait for write acknowledgment, apply
-rules and address-based moves, place existing destination workspaces, verify,
-and commit the new mapping. Failed or interrupted operations retain the journal.
+workspace rules first, then address-based moves and placement of existing
+destination workspaces. A move batch's aggregate dispatch result is not proof
+of failure because an earlier move may already have applied; always snapshot
+and verify every recorded live window destination before committing or retrying.
+Failed or interrupted operations retain the journal.
 Resume by window identity and recorded station, never by decoding partially
 migrated IDs. If topology changes again, retarget the saved logical destinations.
 Window commands are suspended until the mapping commit completes.

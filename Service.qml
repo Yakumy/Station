@@ -1176,7 +1176,8 @@ Item {
 
   function executeMigration() {
     var plan = workspaceData.pending
-    var statements = Hypr.compactRules(plan.to.outputs)
+    var rules = Hypr.compactRules(plan.to.outputs)
+    var statements = []
     var destinations = {}
     var affected = {}
     plan.windows.forEach(function(row) {
@@ -1195,24 +1196,39 @@ Item {
       statements.push(Hypr.moveWorkspace(Number(id), destinations[id]))
     })
     expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(affected), until: Date.now() + 2000 }
-    evalLua(Hypr.batch(statements), function(code, output) {
-      if (code !== 0 || (output && output.trim() !== "ok")) { migrationFailed("compositor rejected the move batch"); return }
-      refresh(true, function() {
-        if (topologyDirty || !Grid.equal(plan.to, targetMapping())) {
-          migrationPhase = ""
-          if (state !== "previewing") state = "idle"
-          reconcile(); return
-        }
-        var failed = plan.windows.some(function(row) {
-          var client = clients.find(function(c) { return Grid.sameClient(row, c) })
-          return client && !client.pinned && (Number(client.workspace.id) !== row.to || client.monitor !== row.output)
+    // Install the rules separately so a false result from a later idempotent
+    // move cannot hide whether future workspaces have the correct owner.
+    evalLua(Hypr.batch(rules), function(ruleCode, ruleOutput) {
+      if (ruleCode !== 0 || (ruleOutput && ruleOutput.trim() !== "ok")) {
+        migrationFailed("compositor rejected the workspace rules")
+        return
+      }
+      evalLua(Hypr.batch(statements), function(moveCode, moveOutput) {
+        // Hyprland can apply an earlier dispatch in a Lua batch and still
+        // return false for a later no-op. The durable journal and a fresh
+        // compositor snapshot, not that aggregate return value, determine
+        // whether the migration completed.
+        refresh(true, function() {
+          if (topologyDirty || !Grid.equal(plan.to, targetMapping())) {
+            migrationPhase = ""
+            if (state !== "previewing") state = "idle"
+            reconcile(); return
+          }
+          var failed = plan.windows.some(function(row) {
+            var client = clients.find(function(c) { return Grid.sameClient(row, c) })
+            return client && !client.pinned && (Number(client.workspace.id) !== row.to || client.monitor !== row.output)
+          })
+          if (failed) {
+            var rejected = moveCode !== 0 || (moveOutput && moveOutput.trim() !== "ok")
+            migrationFailed(rejected ? "compositor rejected the move batch" : "destination verification failed")
+            return
+          }
+          currentStation = plan.station
+          migrationCommit = { mapping: plan.to, pending: null,
+            preview: state === "previewing" ? previewBaseline : null, revision: workspaceData.revision + 1 }
+          migrationPhase = "commit"
+          workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
         })
-        if (failed) { migrationFailed("destination verification failed"); return }
-        currentStation = plan.station
-        migrationCommit = { mapping: plan.to, pending: null,
-          preview: state === "previewing" ? previewBaseline : null, revision: workspaceData.revision + 1 }
-        migrationPhase = "commit"
-        workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
       })
     })
   }

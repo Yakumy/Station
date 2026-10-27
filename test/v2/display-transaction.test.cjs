@@ -135,7 +135,14 @@ function harness() {
         order.push('workspace:' + match[1] + ':' + match[2]);
       });
   }
-  c.evalLua = (lua, done) => jobs.push(() => { apply(lua); if (done) done(0, 'ok'); });
+  c.evalLua = (lua, done) => jobs.push(() => {
+    apply(lua);
+    if (!done) return;
+    if (c.rejectAppliedMoves && /workspace\.move/.test(lua)) {
+      c.rejectAppliedMoves = false;
+      done(1, 'false');
+    } else done(0, 'ok');
+  });
   function reload() {
     order.push('reload');
     live.forEach(m => { m.disabled = false; m.mirrorOf = 'none'; event('monitoradded', m.name); });
@@ -352,6 +359,23 @@ test('Single -> Mirror -> Extend re-edits preserve station identities and remain
   assert.deepEqual(h.windows().map(w => w.workspace.id), [1, 1, 3, 3]);
   c.revertPreview(''); h.drain();
   assert.deepEqual(h.windows(), before);
+});
+
+test('Mirror source -> Single sink commits moves that verify after an aggregate rejection', () => {
+  const h = harness(), c = h.c;
+  c.lanes = { A: 2, B: 1 };
+  c.syncDisplayDraft();
+  c.setModeValue('mirror', ''); h.drain();
+  assert.ok(h.monitorCalls.some(call => call.name === 'A' && call.mirror === 'B'));
+
+  c.rejectAppliedMoves = true;
+  assert.equal(c.setModeValue('single', 'A'), 'started');
+  h.drain();
+
+  assert.equal(c.layoutError, '');
+  assert.equal(c.state, 'previewing');
+  assert.deepEqual(h.windows().map(window => window.monitor), ['A', 'A', 'A', 'A']);
+  assert.deepEqual(c.workspaceMap.outputs, ['A']);
 });
 
 test('restart recovery restores original assignments from the preview journal', () => {

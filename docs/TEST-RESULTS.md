@@ -1,5 +1,13 @@
 # Station v2 test results
 
+## Mirror source to Single sink migration — 2026-10-27
+
+- Live reproduction confirmed that detaching the mirrored eDP-1 sink, focusing
+  it, and moving the recorded workspaces are each accepted by Hyprland.
+- Migration now checks workspace-rule installation separately and always reads
+  back window destinations after the move batch. A compositor double covers an
+  aggregate rejected result after all destinations were actually applied.
+
 ## Mirror editor geometry — 2026-10-27
 
 - Live Mirror state reported eDP-1 and HDMI-A-2 at the same `0x300` runtime
@@ -19,7 +27,7 @@
   and mirrored outputs. They also refuse recovery without a healthy survivor. A
   source-contract test keeps the single output cycle after settled Keep or Revert
   and out of the active preview interval.
-- All 198 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+- All 200 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
   scanning reports 36 source files with zero violations, and live-Wayland QML
   compilation passes.
 

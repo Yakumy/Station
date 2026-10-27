@@ -32,6 +32,7 @@ function harness({ from = { outputs: ['A'] }, to = { outputs: ['A', 'B'] }, pend
       }
       for (const m of lua.matchAll(/workspace\.move\(\{ workspace = (\d+), monitor = "([A-Z])"/g))
         context.clients.filter(c => c.workspace.id === Number(m[1])).forEach(c => c.monitor = m[2]);
+      if (context.rejectAppliedMoves && /workspace\.move/.test(lua)) { done(1, 'false'); return; }
       if (done) done(0, 'ok');
     },
   };
@@ -77,6 +78,23 @@ test('failed moves retain journal and failed journal save does not move windows'
   assert.equal(failedMove.writes.length, 1);
   assert.ok(failedMove.c.workspaceData.pending);
   assert.deepEqual(failedMove.c.workspaceMap.outputs, ['A']);
+});
+
+test('verified destinations commit when Hyprland rejects an already-applied move batch', () => {
+  const { c, writes, evals } = harness({ from: { outputs: ['A', 'B'] }, to: { outputs: ['B'] } });
+  c.clients.forEach((client, index) => {
+    client.monitor = index % 2 ? 'B' : 'A';
+    client.workspace = { id: index + 1, name: String(index + 1) };
+  });
+  c.reconcile();
+  c.rejectAppliedMoves = true;
+  c.migrationSaved();
+  assert.equal(evals.length, 2, 'workspace rules and move dispatches are separate batches');
+  assert.ok(writes[1] && writes[1].pending === null,
+    'fresh destination verification overrides the aggregate false move result');
+  c.migrationSaved();
+  assert.deepEqual(c.workspaceMap.outputs, ['B']);
+  assert.equal(c.workspaceData.pending, null);
 });
 
 test('restarted service uses saved per-window destinations after a partial expansion', () => {

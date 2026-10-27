@@ -157,8 +157,9 @@ bindings, stock-widget lease, and lifecycle flags live in `state.json`.
 
 `workspace-map.json` contains the committed mapping and any pending migration.
 The service waits for the FileView saved signal before executing a migration.
-It applies workspace rules, moves the snapshotted window addresses, places
-existing destination workspaces on their outputs, then verifies live results.
+It applies workspace rules in their own checked batch, moves the snapshotted
+window addresses, places existing destination workspaces on their outputs, then
+verifies live results even when the aggregate move dispatch reports failure.
 Only after the commit write succeeds does it expose the new mapping to window
 commands. A failed move or interrupted shell keeps the old mapping and journal;
 a restart retries the same logical destinations, matching address, PID, and
