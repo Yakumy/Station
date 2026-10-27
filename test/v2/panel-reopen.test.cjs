@@ -141,6 +141,18 @@ test('a monitor removal closes and acknowledges the old output before reopening 
     'the safety close must not be recorded as a user dismissal');
 });
 
+test('panel evacuation allows the bridged closed-panel poll and unmap acknowledgment', () => {
+  const bridgePoll = panel.match(/interval: root\.opened \? (\d+) : (\d+)/);
+  const unmapWait = panel.match(/id: monitorTransferAck[\s\S]*?interval: (\d+)/);
+  const evacuation = service.match(/id: panelEvacuationTimeout[\s\S]*?interval: (\d+)/);
+  assert.ok(bridgePoll && unmapWait && evacuation);
+  const worstPoll = Number(bridgePoll[2]);
+  const acknowledgement = Number(unmapWait[1]);
+  const timeout = Number(evacuation[1]);
+  assert.ok(timeout >= worstPoll + acknowledgement + 500,
+    'safety timeout retains scheduling margin after proxy polling and Wayland unmap');
+});
+
 test('Revert uses the same safe close when the saved Single target differs', () => {
   assert.match(service, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(config\) : ""/);
   assert.match(service, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);

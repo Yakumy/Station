@@ -2546,7 +2546,11 @@ Item {
   Timer { id: screenRecoveryEnable; interval: 250; onTriggered: root.finishScreenRecovery() }
   Timer {
     id: panelEvacuationTimeout
-    interval: 1200
+    // A replacement-bar widget polls every 1000 ms once its panel starts
+    // closing, then waits 180 ms for the layer surface to unmap. Keep enough
+    // scheduling margin for that guarded acknowledgement; no monitor rule is
+    // dispatched until it arrives, and expiry still aborts safely.
+    interval: 2500
     onTriggered: if (root.panelEvacuationWaiting) root.panelEvacuationTimedOut()
   }
   Timer {

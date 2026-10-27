@@ -1,5 +1,14 @@
 # Station v2 test results
 
+## Single eDP panel evacuation — 2026-10-27
+
+- Live state showed a healthy Extend topology and journal, with Single eDP
+  aborting only at the HDMI panel-close acknowledgement. The same transition
+  completed when reproduced immediately afterward.
+- The replacement bar can switch from its 250 ms open-panel bridge poll to a
+  1000 ms closed-panel poll before the 180 ms unmap acknowledgement. The safety
+  timeout now provides 2.5 seconds, with a regression test enforcing margin.
+
 ## Mirror role-source migration — 2026-10-27
 
 - Live state captured HDMI-A-2 saved as role 1 while it remained the mirrored
@@ -36,7 +45,7 @@
   and mirrored outputs. They also refuse recovery without a healthy survivor. A
   source-contract test keeps the single output cycle after settled Keep or Revert
   and out of the active preview interval.
-- All 201 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+- All 202 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
   scanning reports 36 source files with zero violations, and live-Wayland QML
   compilation passes.
 

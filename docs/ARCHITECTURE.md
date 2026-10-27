@@ -172,6 +172,10 @@ replace a migration callback. Removal grace retains the old map; adding a
 monitor before the grace expires cancels compaction. The first upgrade from
 state version 1 explicitly decodes the previous three-slot grid.
 
+Panel evacuation allows 2.5 seconds for the replacement bar's bridge poll and
+the post-hide Wayland unmap acknowledgement. Expiry still aborts before any
+output is disabled or mirrored.
+
 The Keep path writes candidates inside Station's state directory, backs up
 `monitors.lua`, atomically replaces it, lets Hyprland's file watcher apply it,
 and checks `hyprctl configerrors`. Failure restores the backup and reloads
