@@ -2158,6 +2158,14 @@ Item {
       onTriggered: slot.applyContentImageZoom()
     }
 
+    // Clock minute/format changes rebuild vertical Repeater delegates even
+    // when their total size is unchanged. Rescan after the rebuild settles.
+    Connections {
+      target: slot.moduleName === "omarchy.clock" ? slot.activeItem : null
+      ignoreUnknownSignals: true
+      function onDisplayTextChanged() { slot.scheduleContentImageZoom() }
+    }
+
     Rectangle {
       id: openPanelIndicator
 
@@ -2372,7 +2380,7 @@ Item {
 
     function injectProps() {
       var target = activeItem
-      if (!target) return
+      if (!target || !root) return
       if ("bar" in target) target.bar = firstParty
         ? root : root.pluginBarApiFor(pluginApiId, moduleName, registered)
       if ("moduleName" in target) target.moduleName = moduleName

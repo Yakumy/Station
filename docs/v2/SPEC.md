@@ -252,6 +252,13 @@ Load config/state → recovery check (§9 stale preview token → rollback) → 
 
 IPC methods on the service root (explicit names; `switch` is a reserved word and invalid as a QML function name): `switchStation(n)`, `sendToStation(n)`, `sendSilent(n)`, `goDirection(d)`, `shiftWindow(d)`, `togglePanel()`. All arguments are strings validated against enums/integers. Command: `omarchy-shell yakumy.station <method> <arg>`, a **service-owned `IpcHandler`** with target `yakumy.station`. (`omarchy-shell shell call` only reaches loaded panels, not services; do not use `keepLoaded` to hide this, since the host also uses it to retain services across hot-reloads.) Description: `Station: <label>`.
 
+Numbered requests received during a station switch retain the latest target
+and return `queued`. After the current batch finishes, that target runs if the
+mapping is still ready. A topology operation invalidates queued intent along
+with the old generation. Preview, migration, and window moves still return
+`busy`; station switching never moves client windows. A Lua error response must
+not update the saved station even if the process exits successfully.
+
 **Apply rules (this replaces any blanket "unbind then bind"):**
 
 - `hl.unbind(combo)` is allowed only for (a) intentional replacements (the Omarchy defaults in the table), (b) combos the user approved with "Replace and unbind it", (c) combos Station itself applied earlier, recorded in `state.appliedBinds` (this makes a plain shell restart idempotent, since runtime binds survive it). Anything else must never be unbound.

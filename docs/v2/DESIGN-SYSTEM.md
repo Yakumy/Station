@@ -1,5 +1,9 @@
 # Station — Design System (v2)
 
+For promotional artwork and the optional Station desktop theme, see the
+[Station branding palette](../BRANDING.md). Runtime plugin UI continues to use
+the selected Omarchy theme's tokens as specified here.
+
 Supersedes the earlier draft in this repo. Tags: **[V]** confirmed in this codebase or in M0 testing, **[VERIFY]** Codex must confirm the exact token/name against the installed `qs.Commons`/`qs.Ui` before relying on it, **[DECISION]** a rule, not a fact.
 
 ## 0. Why this version exists

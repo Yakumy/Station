@@ -1,5 +1,9 @@
 # README media
 
+For new recordings and regenerated media, follow the approved
+[Station branding palette](../../BRANDING.md). The existing GIFs below predate
+that palette decision and have not yet been replaced with consistent captures.
+
 These GIFs are local, silent, looping assets. They do not depend on an external
 image host.
 

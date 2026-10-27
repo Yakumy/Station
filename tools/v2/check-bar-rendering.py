@@ -9,6 +9,9 @@ source = (repo / 'lib/MonitorBar.qml').read_text()
 start = source.index('    function walkContentImages(')
 end = source.index('    function scheduleContentImageZoom(', start)
 policy = source[start:end]
+watch_start = source.index('    Connections {', source.index('id: contentImageTimer'))
+watch_end = source.index('\n\n    Rectangle {', watch_start)
+watch = source[watch_start:watch_end]
 size_start = source.index('  readonly property int defaultContentSize:')
 size_end = source.index('  readonly property real screenLength:', size_start)
 sizing = source[size_start:size_end].replace('Style.font.body', '12').replace('Style.spacing.sm', '4')
@@ -41,15 +44,26 @@ Item {
   Item {
     id: slot
     property var activeItem: contents
+    property string moduleName: "omarchy.clock"
     property real contentZoom: 1
     property var imageContentRoot: null
     property var imageSourceBaselines: new Map()
     property var textRenderBaselines: new Map()
     property var layerTextureBaselines: new Map()
-''' + policy + '''
+''' + policy + watch + '''
+    function scheduleContentImageZoom() { rescan.restart() }
+    Timer { id: rescan; interval: 0; onTriggered: slot.applyContentImageZoom() }
   }
   Item {
     id: contents
+    property string displayText: "10\\n22"
+    Column {
+      Repeater {
+        id: digits
+        model: contents.displayText.split("\\n")
+        Text { required property string modelData; text: modelData; renderType: Text.NativeRendering }
+      }
+    }
     Text { id: label; text: "Sunday 00:11"; renderType: Text.NativeRendering }
     Item {
       Text { id: glyph; text: "★"; renderType: Text.NativeRendering }
@@ -76,6 +90,17 @@ Item {
       root.barSize = 48
       tryCompare(root, "maximumContentSize", 40)
       compare(root.effectiveContentSize, 24)
+    }
+    function test_clock_rebuild_without_size_change() {
+      slot.contentZoom = 1.75
+      slot.applyContentImageZoom()
+      compare(digits.itemAt(1).renderType, Text.QtRendering)
+      contents.displayText = "10\\n23"
+      tryVerify(function() { return digits.itemAt(1).renderType === Text.QtRendering })
+      contents.displayText = "10\\n24"
+      tryVerify(function() { return digits.itemAt(1).renderType === Text.QtRendering })
+      slot.contentZoom = 1
+      slot.applyContentImageZoom()
     }
     function test_zoom_and_restore() {
       slot.contentZoom = 1.75
