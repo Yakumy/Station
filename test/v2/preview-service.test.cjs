@@ -20,6 +20,7 @@ for (const reason of ['', 'Preview timed out.']) {
       pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
       pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
       previewBusy: false, previewBaseline: null, previewAbortReason: '', keepOptions: null,
+      screenHealthChecks: 0,
       stateDir: '/tmp/station-test', pendingDisplayConfig: {}, layoutError: '',
       config: { mode: 'extend', singleTarget: '', enabled: ['eDP-1', 'HDMI-A-2'] },
       lanes: { 'eDP-1': 1, 'HDMI-A-2': 2 },
@@ -31,6 +32,7 @@ for (const reason of ['', 'Preview timed out.']) {
       enqueue(args, done) { commands.push({ args, done }); },
       refresh(includeClients, done) { assert.equal(includeClients, true); snapshot = done; },
       applyRuntime() { runtimeCalls++; },
+      armScreenHealthCheck() { this.screenHealthChecks++; },
     };
     c.root = c;
     for (const name of ['clearPanelEvacuation', 'clearPreviewApplyStage', 'revertPreview',
@@ -66,6 +68,7 @@ for (const reason of ['', 'Preview timed out.']) {
     assert.equal(c.draftMode, 'extend');
     assert.equal(c.draftSingleTarget, '');
     assert.equal(runtimeCalls, 1);
+    assert.equal(c.screenHealthChecks, 1);
     assert.equal(c.layoutError, reason);
     assert.equal(c.revertPreview(reason), 'idle');
     assert.equal(commands.length, 0);

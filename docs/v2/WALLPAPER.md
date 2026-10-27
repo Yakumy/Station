@@ -80,6 +80,10 @@ network access, or extra package is needed.
 The persistent service draws non-interactive bottom-layer surfaces above the
 stock background. Default Same on all defers to stock; missing images also reveal
 stock. Surface lifetime handles disable/removal and shell restart, with no hook
-cleanup or background-daemon replacement. ScreenMoveRemap follows the host's
-position-change workaround. Animated images are static first frames; HDR, video,
-bezel correction, physical-DPI matching and image export are out of scope.
+cleanup or background-daemon replacement. After Keep or Revert settles, Station
+checks that every enabled, non-mirrored Hyprland output exists in Quickshell's
+screen list. If Qt failed to recover an output and therefore lost the stock
+background, Station runs the stock shell restart only after preview recovery is
+disarmed. ScreenMoveRemap follows the host's position-change workaround. Animated
+images are static first frames; HDR, video, bezel correction, physical-DPI matching
+and image export are out of scope.

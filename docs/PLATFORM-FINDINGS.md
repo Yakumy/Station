@@ -579,6 +579,16 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - [SRC] The host's `Ui.ScreenMoveRemap` remaps layer surfaces after output origin
   changes. Wallpaper surfaces reuse it and have an empty input region and no
   keyboard focus. Their lifetime follows the persistent service.
+- [LIVE][SRC] On 2026-10-27, repeated Station Mirror/Single/Extend changes left
+  Hyprland reporting both `eDP-1` and `HDMI-A-2` enabled and unmirrored, while
+  `hyprctl layers -j` showed no layer at all on `eDP-1` (neither
+  `omarchy-background` nor `omarchy-bar`). The running shell had logged
+  `attempted to use dangling screen object` and then an eDP-1 removal that its
+  Hyprland integration said was not previously tracked. This is a stale Qt screen
+  list, not a wallpaper path or decode failure. After a committed/reverted Station
+  topology change, compare active independent Hyprland outputs with
+  `Quickshell.screens`; if one is absent after 2.5 seconds, invoke the stock shell
+  restart after preview recovery is disarmed.
 - [SRC] [Wallpaper Cutter](https://github.com/renanmt/omarchy-wallpaper-cutter)
   documents per-output bottom-layer surfaces above stock, crop preview and
   native-resolution exports. Station uses the layering approach, but renders

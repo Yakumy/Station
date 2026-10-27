@@ -12,6 +12,7 @@ import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
 import "lib/Events.js" as Events
 import "lib/Grid.js" as Grid
+import "lib/ScreenHealth.js" as ScreenHealth
 import "lib" as Station
 import "lib/BarBridge.js" as BarBridge
 
@@ -163,6 +164,7 @@ Item {
   property bool refreshClientsToo: true
   property bool snapshotBusy: false
   property var snapshotQueue: []
+  property bool screenRecoveryStarted: false
 
   readonly property string configDir: Quickshell.env("HOME") + "/.config/omarchy/station"
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/station"
@@ -712,6 +714,19 @@ Item {
 
   function saveState() {
     if (stateLoaded && dirsReady) stateFile.setText(JSON.stringify(persisted, null, 2) + "\n")
+  }
+
+  function armScreenHealthCheck() {
+    if (!screenRecoveryStarted) screenHealthCheck.restart()
+  }
+
+  function verifyScreenHealth() {
+    if (screenRecoveryStarted) return
+    var missing = ScreenHealth.missingScreens(monitors, Quickshell.screens)
+    if (!missing.length) return
+    screenRecoveryStarted = true
+    console.warn("Station: restarting Omarchy shell after display recovery missed " + missing.join(", "))
+    Quickshell.execDetached(["omarchy", "restart", "shell"])
   }
 
   function enqueue(command, done) {
@@ -1820,6 +1835,7 @@ Item {
       root.state = "idle"
       root.syncDisplayDraft()
       root.applyRuntime()
+      root.armScreenHealthCheck()
     })
   }
 
@@ -1860,6 +1876,7 @@ Item {
       root.updateAssignments()
       root.applyBinds()
       root.reconcile()
+      root.armScreenHealthCheck()
     })
   }
 
@@ -2444,6 +2461,7 @@ Item {
   Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
   Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
   Timer { id: leaseVerify; interval: 600; onTriggered: if (!pluginList.running) pluginList.running = true }
+  Timer { id: screenHealthCheck; interval: 2500; onTriggered: root.verifyScreenHealth() }
   Timer {
     id: panelEvacuationTimeout
     interval: 1200

@@ -30,6 +30,7 @@ function harness() {
     lanes: { A: 1, B: 2 }, monitors: copy(live), clients: copy(windows), displayDraft: [],
     migrationPhase: '', migrationAttempts: 0, migrationCommit: null, migrationFocus: null,
     topologyDirty: false, currentStation: 2, layoutError: '', expect: {},
+    screenHealthChecks: 0,
     panelWanted: true, panelScreenName: 'B', panelTransferUntil: 0,
     panelEvacuationSerial: 0, panelEvacuationWaiting: 0,
     panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
@@ -145,6 +146,7 @@ function harness() {
     if (done) done(0, '');
   });
   c.previewArm = {};
+  c.armScreenHealthCheck = () => { c.screenHealthChecks++; };
   Object.defineProperty(c.previewArm, 'running', { set(value) { if (value) jobs.push(() => c.applyPreview()); } });
   c.keepTransaction = {};
   Object.defineProperty(c.keepTransaction, 'running', { set(value) {

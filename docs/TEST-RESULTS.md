@@ -1,5 +1,17 @@
 # Station v2 test results
 
+## Post-topology shell screen recovery — 2026-10-27
+
+- Live diagnosis found both outputs enabled in Hyprland, but no background or bar
+  layer on eDP-1; the shell log recorded a dangling Qt screen object and an
+  untracked eDP-1 removal.
+- The pure screen-health tests cover a missing active output and exclude disabled
+  and mirrored outputs. A source-contract test keeps recovery after settled Keep
+  or Revert and out of the active preview interval.
+- All 193 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+  scanning reports 36 source files with zero violations, and live-Wayland QML
+  compilation passes.
+
 ## Unequal-height side placement — 2026-10-24
 
 - Edge attachment and parallel-edge alignment now use distinct snap thresholds.
