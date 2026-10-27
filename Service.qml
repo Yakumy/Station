@@ -71,6 +71,7 @@ Item {
   property var unmanaged: []
   property int currentStation: persisted.lastStation || 1
   property int gen: 0
+  property int queuedStation: 0
   property bool configLoaded: false
   onConfigLoadedChanged: Qt.callLater(syncFocusedBarMenu)
   property bool stateLoaded: false
@@ -233,6 +234,7 @@ Item {
   }
 
   function begin(nextState) {
+    queuedStation = 0
     gen += 1
     state = nextState
     return gen
@@ -821,6 +823,9 @@ Item {
   function showStation(stationValue) {
     var stationNumber = Number(stationValue)
     if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
+    // Keep the latest numbered-key intent while the compositor batch runs.
+    // Dropping a quick return to S1 leaves the user looking at an empty S2/S3.
+    if (state === "switching") { queuedStation = stationNumber; return "queued" }
     if (!readyForWindows()) return "busy"
     var available = workspaceMap.outputs
     var generation = begin("switching")
@@ -829,14 +834,17 @@ Item {
     var statements = rules.slice()
     statements = statements.concat(stationFocusStatements(stationNumber, focused ? focused.name : available[0]))
     expect = { kinds: ["workspace", "focusedmon"], outputs: available.slice(), until: Date.now() + 2000 }
-    evalLua(Hypr.batch(statements), function(code) {
+    evalLua(Hypr.batch(statements), function(code, message) {
       if (generation !== gen) return
-      if (code === 0) {
+      if (code === 0 && (!message || message.trim() === "ok")) {
         currentStation = stationNumber
         persisted.lastStation = stationNumber
         saveState()
       }
+      var next = queuedStation
+      queuedStation = 0
       finish(generation)
+      if (next && readyForWindows()) showStation(next)
     })
     return "started"
   }

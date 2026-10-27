@@ -726,3 +726,36 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   when focus changes, without moving a bar. This also makes choosing the same
   menu edge on two different monitors observable. Mirrors are deferred while
   Station's panel is open and never override a pending external menu request.
+
+## Intermittent clock blur and rapid switching (2026-10-27)
+
+- [SRC][QTTEST] The installed clock's vertical `Repeater` replaces its native
+  text delegates on minute/format changes. Equal-sized replacements do not
+  trigger MonitorBar's geometry-based rendering rescan. The clock now schedules
+  a rescan on `displayTextChanged`, after delegate replacement settles.
+  `check-bar-rendering.py` changes equal-sized clock lines twice: the new test
+  fails on the old rendering policy and passes with the notification hook.
+- [LIVE] On the installed pre-repair code (18982f9), simultaneous numbered IPC
+  requests returned `busy` for two of three requests. [SRC] A return to an
+  occupied station can therefore be dropped while another switch is running.
+  The service now retains the latest numbered target, cancels it on generation
+  changes, and checks Lua response text before recording a successful switch.
+  This is a demonstrated lost-request defect, not proof that it explains every
+  reported missing-window incident.
+- [LIVE] Slow S1→S2→S3→S1 switching preserved the surviving clients' workspace
+  IDs. A disposable terminal moved right twice and left twice across the
+  rotated eDP/HDMI arrangement, including station boundaries, through the
+  installed `shiftWindow` IPC. The registered default is Super+Ctrl+Shift+Arrow;
+  Ctrl+Shift+Arrow alone is not a Station binding. A physical keypress has not
+  been tested by the agent.
+- [SRC] Delayed bar property injection now stops if its bar root has already
+  been destroyed; the session journal contained this teardown exception.
+- Verification: 190 Node tests, 5 rendering Qt checks, 23 layout Qt checks,
+  theme-token scan, and Wayland component compilation passed. The layout
+  fixture emits existing missing-token warnings against Omarchy 4.0.6.
+  Node's spawned Lua processes time out in the sandbox (including `print(123)`);
+  the complete suite passes with session access. Plugin validation passed on
+  a clean tracked-tree export containing the changed runtime files; validation
+  of the source directory encounters ignored video `node_modules` symlinks.
+  Live snapshots and probe scripts are under `/tmp/station-20261027-before`
+  and `/tmp/station-*-probe.py`, not committed.
