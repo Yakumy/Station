@@ -587,8 +587,12 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   Hyprland integration said was not previously tracked. This is a stale Qt screen
   list, not a wallpaper path or decode failure. After a committed/reverted Station
   topology change, compare active independent Hyprland outputs with
-  `Quickshell.screens`; if one is absent after 2.5 seconds, invoke the stock shell
-  restart after preview recovery is disarmed.
+  `Quickshell.screens`. A shell restart and `hyprctl reload` both left eDP-1
+  absent. Explicitly disabling eDP-1 and restoring its exact rule republished the
+  Wayland output; both `omarchy-background` and `omarchy-bar` returned while the
+  shell stayed healthy. Recovery therefore cycles a missing output once after
+  preview recovery is disarmed, and only with another active shell-visible output
+  as the survivor.
 - [SRC] [Wallpaper Cutter](https://github.com/renanmt/omarchy-wallpaper-cutter)
   documents per-output bottom-layer surfaces above stock, crop preview and
   native-resolution exports. Station uses the layering approach, but renders

@@ -164,7 +164,10 @@ Item {
   property bool refreshClientsToo: true
   property bool snapshotBusy: false
   property var snapshotQueue: []
-  property bool screenRecoveryStarted: false
+  property bool screenRecoveryActive: false
+  property int screenRecoveryAttempts: 0
+  property string screenRecoveryTarget: ""
+  property string screenRecoveryRule: ""
 
   readonly property string configDir: Quickshell.env("HOME") + "/.config/omarchy/station"
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/station"
@@ -717,16 +720,66 @@ Item {
   }
 
   function armScreenHealthCheck() {
-    if (!screenRecoveryStarted) screenHealthCheck.restart()
+    if (screenRecoveryActive) return
+    screenRecoveryAttempts = 0
+    screenHealthCheck.restart()
   }
 
   function verifyScreenHealth() {
-    if (screenRecoveryStarted) return
-    var missing = ScreenHealth.missingScreens(monitors, Quickshell.screens)
-    if (!missing.length) return
-    screenRecoveryStarted = true
-    console.warn("Station: restarting Omarchy shell after display recovery missed " + missing.join(", "))
-    Quickshell.execDetached(["omarchy", "restart", "shell"])
+    if (screenRecoveryActive || screenRecoveryAttempts > 0) return
+    if (state !== "idle") { screenHealthCheck.restart(); return }
+    var target = ScreenHealth.recoveryTarget(monitors, Quickshell.screens)
+    if (!target) return
+    try {
+      var monitor = monitors.find(function(item) { return item.name === target })
+      var display = MonitorsLua.validateDisplay({ name: target, mode: Model.currentMode(monitor),
+        availableModes: monitor.availableModes, x: Math.round(Number(monitor.x) || 0),
+        y: Math.round(Number(monitor.y) || 0), scale: Number(monitor.scale),
+        transform: Number(monitor.transform), enabled: true, lane: lanes[target] || 1 })
+      screenRecoveryRule = MonitorsLua.monitorRule(display, { disabled: false, mirror: "" })
+      screenRecoveryTarget = target
+      screenRecoveryActive = true
+      screenRecoveryAttempts += 1
+      state = "recoveringScreen"
+      expect = { kinds: ["monitor", "workspace"], outputs: [target], until: Date.now() + 3000 }
+      console.warn("Station: cycling stale Wayland output " + target)
+      evalLua(MonitorsLua.monitorRule(display, { geometry: false, disabled: true, mirror: "" }),
+        function(code, output) {
+          if (code !== 0 || (output && output.trim() !== "ok")) {
+            root.screenRecoveryActive = false
+            root.screenRecoveryTarget = ""
+            root.screenRecoveryRule = ""
+            root.state = "idle"
+            root.layoutError = "Could not recover the display surface for " + target + "."
+            return
+          }
+          screenRecoveryEnable.restart()
+        })
+    } catch (error) {
+      screenRecoveryActive = false
+      screenRecoveryTarget = ""
+      screenRecoveryRule = ""
+      state = "idle"
+      layoutError = "Could not safely recover the display surface."
+      console.warn("Station screen recovery:", error)
+    }
+  }
+
+  function finishScreenRecovery() {
+    var rule = screenRecoveryRule
+    var target = screenRecoveryTarget
+    expect = { kinds: ["monitor", "workspace"], outputs: [target], until: Date.now() + 3000 }
+    evalLua(rule, function(code, output) {
+      root.screenRecoveryActive = false
+      root.screenRecoveryTarget = ""
+      root.screenRecoveryRule = ""
+      root.state = "idle"
+      if (code !== 0 || (output && output.trim() !== "ok")) {
+        root.layoutError = "Could not restore the display after surface recovery. Reload Hyprland."
+        return
+      }
+      root.refresh(true, function() { if (root.state === "idle") root.reconcile() })
+    })
   }
 
   function enqueue(command, done) {
@@ -2462,6 +2515,7 @@ Item {
   Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
   Timer { id: leaseVerify; interval: 600; onTriggered: if (!pluginList.running) pluginList.running = true }
   Timer { id: screenHealthCheck; interval: 2500; onTriggered: root.verifyScreenHealth() }
+  Timer { id: screenRecoveryEnable; interval: 250; onTriggered: root.finishScreenRecovery() }
   Timer {
     id: panelEvacuationTimeout
     interval: 1200

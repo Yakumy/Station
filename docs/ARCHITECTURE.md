@@ -141,9 +141,10 @@ Pure modules under `lib/` isolate policy from QML:
   theme mode leaves the stock surface visible. After a committed or reverted display
   topology change, `ScreenHealth.js` compares enabled, non-mirrored Hyprland outputs
   with Quickshell's screen list. A missing screen means the host lost every surface
-  for that output, so Station launches the stock shell restart command after the
-  preview token is gone. No theme hooks or external daemon are installed. A
-  1.5-second read-only poll observes the current theme/background;
+  for that output. After the preview token is gone, and only when another active
+  output remains visible to the shell, Station cycles the missing output once and
+  restores its validated exact rule. No theme hooks or external daemon are
+  installed. A 1.5-second read-only poll observes the current theme/background;
   theme changes invalidate an unfinished snapshot job while following Omarchy.
 - `Transactions.js` and `Recovery.js` contain fixed shell templates. Dynamic
   values reach them only as validated positional arguments.
