@@ -1455,7 +1455,11 @@ Item {
     for (var i = 0; i < monitors.length; i++) if (next[monitors[i].name]) config.lanes[ids[i]] = next[monitors[i].name]
     saveConfig()
     syncDisplayDraft()
-    reconcile()
+    // In Mirror, the preferred role also selects the physical source. Apply
+    // that topology before migrating the compact mapping; otherwise a role
+    // swap tries to place workspaces on the old mirrored sink and Hyprland
+    // rejects the move batch, leaving every later layout action busy.
+    applyRuntime()
     return "started"
   }
 

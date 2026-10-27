@@ -1,5 +1,14 @@
 # Station v2 test results
 
+## Mirror role-source migration — 2026-10-27
+
+- Live state captured HDMI-A-2 saved as role 1 while it remained the mirrored
+  sink of eDP-1. The resulting eDP-1-to-HDMI-A-2 journal could not place either
+  workspace and blocked every later display action.
+- Role swaps now apply the new Mirror source/sink topology before reconciling
+  the compact workspace map. A transaction test asserts source activation,
+  sink mirroring, then migration in that order.
+
 ## Mirror source to Single sink migration — 2026-10-27
 
 - Live reproduction confirmed that detaching the mirrored eDP-1 sink, focusing
@@ -27,7 +36,7 @@
   and mirrored outputs. They also refuse recovery without a healthy survivor. A
   source-contract test keeps the single output cycle after settled Keep or Revert
   and out of the active preview interval.
-- All 200 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+- All 201 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
   scanning reports 36 source files with zero violations, and live-Wayland QML
   compilation passes.
 

@@ -162,7 +162,9 @@ identified by state version 1. Subsequent starts use only the saved compact map.
 
 Swap display preferences, then use the same journaled migration from old to new
 output order. Each window retains its station and physical display, while its
-workspace ID changes to the display's new dense slot.
+workspace ID changes to the display's new dense slot. In Mirror, the preferred
+role selects the source output: apply the new source/sink topology before the
+migration so no destination is still a mirrored sink.
 
 ### 5.6 More than three monitors
 

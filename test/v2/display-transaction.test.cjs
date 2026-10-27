@@ -378,6 +378,28 @@ test('Mirror source -> Single sink commits moves that verify after an aggregate 
   assert.deepEqual(c.workspaceMap.outputs, ['A']);
 });
 
+test('a Mirror role swap changes the source before migrating workspaces', () => {
+  const h = harness(), c = h.c;
+  c.setModeValue('mirror', ''); h.drain();
+  c.keepPreview(); h.drain();
+  assert.equal(c.state, 'idle');
+  assert.deepEqual(c.workspaceMap.outputs, ['A']);
+
+  h.monitorCalls.length = 0;
+  h.order.length = 0;
+  assert.equal(c.swapRole('B', 0), 'started');
+  h.drain();
+
+  const source = h.order.indexOf('monitor:B:on');
+  const sink = h.order.indexOf('monitor:A:mirror');
+  const migrated = h.order.findIndex(item => item.startsWith('workspace:') && item.endsWith(':B'));
+  assert.ok(source !== -1 && sink !== -1 && migrated !== -1);
+  assert.ok(source < sink, 'the new source is made independent before the old source mirrors it');
+  assert.ok(sink < migrated, 'workspace migration starts only after the Mirror topology is valid');
+  assert.deepEqual(c.workspaceMap.outputs, ['B']);
+  assert.equal(c.layoutError, '');
+});
+
 test('restart recovery restores original assignments from the preview journal', () => {
   const h = harness(), before = h.windows();
   h.c.setModeValue('single', 'A'); h.drain();

@@ -164,6 +164,8 @@ Only after the commit write succeeds does it expose the new mapping to window
 commands. A failed move or interrupted shell keeps the old mapping and journal;
 a restart retries the same logical destinations, matching address, PID, and
 initial class. It never decodes partially migrated IDs as a fresh source map.
+Mirror role swaps apply their new source/sink monitor rules before starting this
+migration, so the new compact-map destination is already an independent output.
 
 Snapshot requests are queued so concurrent topology and focus events cannot
 replace a migration callback. Removal grace retains the old map; adding a
