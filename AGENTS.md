@@ -222,6 +222,10 @@ When explicitly requested to merge, push, and submit an update:
    `https://github.com/Yakumy/Station`; `### Target commit` = full 40-character
    published default-branch HEAD; `### Verification acknowledgment` with
    `- [x] I understand that only the exact target commit can become a verified marketplace snapshot and that verification is not a security audit.`
+   Do not add any headings or notes that the issue form did not generate; the
+   parser rejects changed headings. Include `### Standard installation
+   acknowledgment` only when requesting that optional form action. Put release
+   notes in a normal issue comment after the form validates, if they are useful.
    Use a temporary body file with `gh issue create --body-file`; do not add
    maintainer approval labels. This request is distinct from installing locally.
 5. Inspect the bot comments and linked Actions runs. Report the issue URL,
