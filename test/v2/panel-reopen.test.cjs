@@ -153,6 +153,17 @@ test('panel evacuation allows the bridged closed-panel poll and unmap acknowledg
     'safety timeout retains scheduling margin after proxy polling and Wayland unmap');
 });
 
+test('a mode action actively probes the bridge for its evacuation request', () => {
+  const probe = panel.match(/id: evacuationProbe[\s\S]*?interval: (\d+)[\s\S]*?attempts < (\d+)/);
+  const evacuation = service.match(/id: panelEvacuationTimeout[\s\S]*?interval: (\d+)/);
+  assert.ok(probe && evacuation);
+  assert.match(panel, /root\.syncBridge\(\)\n {6}root\.handlePanelEvacuation\(\)/);
+  assert.match(panel, /Number\(root\.service\.panelEvacuationSerial\) > startingSerial/);
+  assert.match(panel, /if \(result === "started"\) \{\n {6}evacuationProbe\.attempts = 0\n {6}evacuationProbe\.startingSerial = startingSerial\n {6}evacuationProbe\.restart\(\)/);
+  assert.ok(Number(probe[1]) * Number(probe[2]) >= Number(evacuation[1]),
+    'the operation-scoped probe spans the full service safety window');
+});
+
 test('Revert uses the same safe close when the saved Single target differs', () => {
   assert.match(service, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(config\) : ""/);
   assert.match(service, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);

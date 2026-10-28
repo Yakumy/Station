@@ -8,6 +8,10 @@
 - The replacement bar can switch from its 250 ms open-panel bridge poll to a
   1000 ms closed-panel poll before the 180 ms unmap acknowledgement. The safety
   timeout now provides 2.5 seconds, with a regression test enforcing margin.
+- An uninterrupted mode click could still leave the replacement-bar snapshot
+  stale for the whole transaction. Mode actions now run a bounded 30 ms bridge
+  probe until the asynchronous evacuation request is handled; regression
+  coverage verifies that it spans the full safety window.
 
 ## Mirror role-source migration — 2026-10-27
 
@@ -45,7 +49,7 @@
   and mirrored outputs. They also refuse recovery without a healthy survivor. A
   source-contract test keeps the single output cycle after settled Keep or Revert
   and out of the active preview interval.
-- All 202 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
+- All 203 Node/M0 tests and all 23 offscreen layout cases pass. Theme-token
   scanning reports 36 source files with zero violations, and live-Wayland QML
   compilation passes.
 

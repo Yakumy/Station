@@ -172,8 +172,10 @@ replace a migration callback. Removal grace retains the old map; adding a
 monitor before the grace expires cancels compaction. The first upgrade from
 state version 1 explicitly decodes the previous three-slot grid.
 
-Panel evacuation allows 2.5 seconds for the replacement bar's bridge poll and
-the post-hide Wayland unmap acknowledgement. Expiry still aborts before any
+Panel evacuation allows 2.5 seconds for the post-hide Wayland unmap
+acknowledgement. A mode action on the replacement-bar proxy runs a bounded
+30 ms bridge probe so its later asynchronous evacuation request is delivered
+without relying on the general panel poll. Expiry still aborts before any
 output is disabled or mirrored.
 
 The Keep path writes candidates inside Station's state directory, backs up

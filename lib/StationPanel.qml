@@ -128,6 +128,28 @@ Ui.Panel {
     onTriggered: root.syncBridge()
   }
 
+  Timer {
+    id: evacuationProbe
+    interval: 30
+    property int attempts: 0
+    property int startingSerial: 0
+    onTriggered: {
+      // setModeValue starts the service transaction synchronously, but a
+      // replacement bar only learns about its later evacuation request from
+      // a bridge snapshot. Probe that operation directly so the panel can
+      // unmap before the safety timeout even when the ordinary poll stalls.
+      root.syncBridge()
+      root.handlePanelEvacuation()
+      if (root.service
+          && Number(root.service.panelEvacuationSerial) > startingSerial
+          && root.handledEvacuationSerial >= Number(root.service.panelEvacuationSerial)) {
+        attempts = 0
+        return
+      }
+      if (attempts < 100) { attempts += 1; restart() } else attempts = 0
+    }
+  }
+
   function syncBridge() {
     // The trusted bar keeps its existing live-service path without polling.
     if (directService) return
@@ -202,8 +224,16 @@ Ui.Panel {
 
   function changeMode(value) {
     if (!service || !service.draftEditable) return
-    if (value.indexOf("single:") === 0) service.setModeValue("single", value.substring(7))
-    else service.setModeValue(value, "")
+    var startingSerial = Number(service.panelEvacuationSerial) || 0
+    var result = value.indexOf("single:") === 0
+      ? service.setModeValue("single", value.substring(7))
+      : service.setModeValue(value, "")
+    if (result === "started") {
+      evacuationProbe.attempts = 0
+      evacuationProbe.startingSerial = startingSerial
+      evacuationProbe.restart()
+    }
+    return result
   }
 
   function beginBindingEdit(binding) {
