@@ -1,7 +1,8 @@
 # Station development guide
 
 Read this before changing Station. This repository is the `yakumy.station`
-Omarchy 4 plugin for Hyprland's Lua configuration. Work on `dev`; do not push.
+Omarchy 4 plugin for Hyprland's Lua configuration. Work on `dev`; push only
+when explicitly requested by the user.
 Check `git status --short` before editing and
 preserve work already in progress.
 
@@ -159,7 +160,7 @@ bug, then reconcile the affected documents in the same change.
    original desktop state after an experiment.
 4. Before a requested commit, inspect the complete diff, stage only the files
    belonging to the task, and inspect the staged diff. Commit or amend only
-   when the user requested it; never push.
+   when the user requested it; push only with explicit user authorization.
 
 ## Installed plugin workflow on this machine
 
@@ -167,7 +168,7 @@ bug, then reconcile the affected documents in the same change.
   separate Git checkouts. Check both branches, status, revisions, and file
   hashes before saying an update is installed. The installed checkout's
   current origin is a local `file://` URL to this repository; verify that
-  before using it. Keep both on `dev` and do not push.
+  before using it. Keep both on `dev`; never push from the installed checkout.
 - When the user asks for an installed update, finish and verify the source
   change first. The stock updater can install only committed source: it fetches
   the source checkout's current `HEAD` and runs `merge --ff-only`. If the user
@@ -192,3 +193,35 @@ bug, then reconcile the affected documents in the same change.
   installed files to source and inspect the running shell's start time. Do not
   mistake an enabled `listPlugins` entry for proof that the running panel uses
   new code; `active: false` was observed even for enabled plugins.
+
+## Publishing and marketplace update validation
+
+When explicitly requested to merge, push, and submit an update:
+
+1. Check the worktree, fetch `origin`, and inspect divergence. Commit reviewed
+   task changes on `dev`. Fast-forward local `main` from `dev`, then return to
+   `dev`. Push both with `git push --atomic origin dev main`; never force push.
+   Verify remote branch SHAs and the GitHub default-branch HEAD.
+2. Use the existing `AGENTS.md` for workflow notes (not a second `AGENT.md`).
+   Commit these notes before submission, because validation binds the exact
+   final SHA. Local plugin validation can use a clean `git archive HEAD` export
+   in a fresh `mktemp -d` directory: ignored video node_modules symlinks make
+   validation of the development checkout fail.
+3. Read the current marketplace instructions and form:
+   https://github.com/omacom/omarchy-plugin-marketplace/blob/main/VERIFICATION.md
+   and `.github/ISSUE_TEMPLATE/verify-plugin.yml` in that repository. Search
+   existing open issues for Station to avoid duplicate requests. Historical
+   update example: issue #12370; old submission #6473 is closed and obsolete.
+4. Create a verification issue in `omacom/omarchy-plugin-marketplace`, titled
+   `[Verify]: Station <manifest version> update`, using these exact headings:
+   `### Verification action` = `Verify and publish a newer upstream commit`;
+   `### Plugin ID` = `yakumy.station`; `### Repository URL` =
+   `https://github.com/Yakumy/Station`; `### Target commit` = full 40-character
+   published default-branch HEAD; `### Verification acknowledgment` with
+   `- [x] I understand that only the exact target commit can become a verified marketplace snapshot and that verification is not a security audit.`
+   Use a temporary body file with `gh issue create --body-file`; do not add
+   maintainer approval labels. This request is distinct from installing locally.
+5. Inspect the bot comments and linked Actions runs. Report the issue URL,
+   target SHA, and actual validation state. Submission is not approval:
+   publication requires marketplace maintainer review and
+   `approved-and-verified`. Do not claim publication until confirmed.
