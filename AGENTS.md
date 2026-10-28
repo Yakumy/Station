@@ -200,7 +200,10 @@ When explicitly requested to merge, push, and submit an update:
 
 1. Check the worktree, fetch `origin`, and inspect divergence. Commit reviewed
    task changes on `dev`. Fast-forward local `main` from `dev`, then return to
-   `dev`. Push both with `git push --atomic origin dev main`; never force push.
+   `dev`. GitHub protects `main` with the `Station portable checks` status:
+   first `git push origin dev`, wait for the `Station checks` Actions run on
+   that exact SHA to succeed, then `git push origin main`. An atomic push of
+   both before CI completes is rejected for both refs. Never force push.
    Verify remote branch SHAs and the GitHub default-branch HEAD.
 2. Use the existing `AGENTS.md` for workflow notes (not a second `AGENT.md`).
    Commit these notes before submission, because validation binds the exact
