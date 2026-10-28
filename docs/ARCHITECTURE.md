@@ -173,7 +173,11 @@ monitor before the grace expires cancels compaction. The first upgrade from
 state version 1 explicitly decodes the previous three-slot grid.
 
 Panel evacuation allows 2.5 seconds for the post-hide Wayland unmap
-acknowledgement. A mode action on the replacement-bar proxy runs a bounded
+acknowledgement. Evacuation also applies when the panel stays on its current
+monitor: KeyboardPanel has dismiss surfaces on peer outputs. Panel restoration
+waits until preview application is no longer busy. Bridge snapshots explicitly
+check the complete evacuation request after updating their fields.
+A mode action on the replacement-bar proxy runs a bounded
 30 ms bridge probe so its later asynchronous evacuation request is delivered
 without relying on the general panel poll. Expiry still aborts before any
 output is disabled or mirrored.

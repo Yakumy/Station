@@ -39,6 +39,7 @@ test('fallback polls only without the trusted service and removes all direct wri
   assert.match(service, /BarBridge\.clear\(barBridge\)/);
   const context = { directService: null, bridgeApi: null, bridgeSnapshot: null, bridgeSnapshotText: '' };
   let current = null;
+  context.handlePanelEvacuation = () => {};
   context.bridgeCurrent = () => current;
   const sync = qmlFunction(panel, 'syncBridge', context);
   const state = { currentStation: 2 };

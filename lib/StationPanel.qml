@@ -167,6 +167,9 @@ Ui.Panel {
       bridgeSnapshotText = serialized
       bridgeSnapshot = next
     }
+    // Snapshot-derived property notifications may arrive in any order.
+    // Check the complete request after every snapshot, not only its serial.
+    handlePanelEvacuation()
   }
 
   function bindingIds(prefix, count) {
@@ -468,6 +471,7 @@ Ui.Panel {
   // output, which can differ from the one the user opened before a move.
   function tryRestorePanel() {
     if (!service || !service.panelWanted) return true
+    if (service.previewBusy || service.panelEvacuationWaiting) return false
     var mine = currentScreenName()
     if (!mine) return false
     var wanted = service.panelScreenName

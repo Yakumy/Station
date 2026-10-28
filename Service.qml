@@ -1573,8 +1573,10 @@ Item {
     previewApplyMigrateFirst = previewApplyActivateLua !== ""
     previewApplyPanelOrigin = panelScreenName
     previewApplyPanelTarget = panelWanted ? panelTransferTarget(options) : ""
+    // KeyboardPanel owns dismiss surfaces on every output, including peers.
+    // Close it even when its own monitor survives the topology change.
     if (panelWanted && previewApplyPanelOrigin && previewApplyPanelTarget
-        && previewApplyPanelOrigin !== previewApplyPanelTarget) {
+        && expectedOutputs.length > 0) {
       requestPanelEvacuation(previewApplyPanelOrigin, previewApplyPanelTarget, "preview")
       return
     }
@@ -1777,7 +1779,7 @@ Item {
     pendingRevertFocusTarget = previewFocusTarget(config)
     pendingRevertActivateLua = activationRule(pendingRevertFocusTarget)
     clearPreviewApplyStage()
-    if (panelWanted && origin && pendingRevertPanelTarget && origin !== pendingRevertPanelTarget) {
+    if (panelWanted && origin && pendingRevertPanelTarget) {
       requestPanelEvacuation(origin, pendingRevertPanelTarget, "revert")
       return "started"
     }
