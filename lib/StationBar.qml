@@ -141,8 +141,12 @@ Grid {
         anchors.centerIn: parent
         width: Style.font.icon
         height: width
-        sourceSize.width: width
-        sourceSize.height: height
+        // Decode at physical pixels, as the stock tray does. The explicit
+        // layer also lets MonitorBar enlarge the effect texture with its
+        // content zoom instead of magnifying MultiEffect's implicit proxy.
+        sourceSize.width: Math.ceil(width * Screen.devicePixelRatio)
+        sourceSize.height: Math.ceil(height * Screen.devicePixelRatio)
+        layer.enabled: true
         source: (appButton.entry && appButton.entry.icon
           ? Quickshell.iconPath(appButton.entry.icon, true) : "")
           || Quickshell.iconPath("application-x-executable", true)
