@@ -6,9 +6,9 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'lib/StationBar.qml').read_text()
-start = source.index('      MultiEffect {\n        id: appMask')
+start = source.index('      MultiEffect {\n        id: inactiveAppEffect')
 end = source.index('      Text {', start)
-effects = source[start:end].replace('appButton.modelData.focused', 'testCase.focused').replace('Commons.Color.accent', 'testCase.accent')
+effects = source[start:end].replace('appButton.modelData.focused', 'testCase.focused')
 with tempfile.TemporaryDirectory(prefix='station-app-colors-') as directory:
     root = Path(directory)
     (root / 'art.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" width="80" height="20">
@@ -24,7 +24,7 @@ Rectangle {
     width: 80; height: 20
     source: "art.svg"
     sourceSize: Qt.size(80, 20)
-    visible: false
+    visible: testCase.focused
     layer.enabled: true
   }
 ''' + effects + '''
@@ -33,20 +33,24 @@ Rectangle {
     name: "AppIconColors"
     when: windowShown
     property bool focused: true
-    property color accent: "#4285c7"
-    function test_focus_tints_black_white_and_color() {
+    function test_original_focus_and_smaller_dimmed_grayscale() {
       tryCompare(appImage, "status", Image.Ready)
       waitForRendering(parent)
       var shot = grabImage(parent)
-      for (var x of [10, 30, 50]) {
-        fuzzyCompare(shot.red(x, 10), 66, 2)
-        fuzzyCompare(shot.green(x, 10), 133, 2)
-        fuzzyCompare(shot.blue(x, 10), 199, 2)
-      }
+      compare(shot.red(10, 10), 0)
+      compare(shot.red(30, 10), 255)
+      compare(shot.green(30, 10), 255)
+      compare(shot.red(50, 10), 255)
+      compare(shot.green(50, 10), 0)
+      compare(shot.blue(50, 10), 0)
+      compare(shot.red(58, 10), 255)
       compare(shot.red(70, 10), 0, "transparent artwork stays transparent")
       focused = false
       waitForRendering(parent)
       shot = grabImage(parent)
+      fuzzyCompare(inactiveAppEffect.scale, 0.8, 0.001)
+      compare(shot.red(58, 10), 0, "artwork shrinks around its center")
+      compare(shot.red(30, 0), 0, "vertical extent also shrinks")
       fuzzyCompare(shot.red(30, 10), 128, 2)
       for (var x of [10, 30, 50]) {
         fuzzyCompare(shot.red(x, 10), shot.green(x, 10), 2)

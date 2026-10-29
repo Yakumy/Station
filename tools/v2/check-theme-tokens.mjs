@@ -16,7 +16,7 @@ const GRADIENT = /(?:^|[^\w])gradient\s*:|\bGradient\s*\{|(?:^|[^\w])stops\s*:/;
 const APPROVED_DIM = /Qt\.darker\([^,()]+,\s*1\.4\s*\)/;
 const APPROVED_ALPHA = /Util\.alpha\(Commons\.Color\.bar\.background,\s*0\.01\s*\)/;
 const APPROVED_PILL_RADIUS = /Math\.min\(width,\s*height\)\s*\/\s*2/;
-const MULTI_EFFECT_KEY = /^(?:id|source|width|height|x|y|visible|enabled|opacity|anchors(?:\.\w+)?)$/;
+const MULTI_EFFECT_KEY = /^(?:id|source|width|height|x|y|visible|enabled|opacity|scale|anchors(?:\.\w+)?)$/;
 const COLORISATION_KEY = /^(?:colorization(?:Enabled|Color)?|saturation)$/;
 
 const stripComments = line => line.replace(/\/\/.*$/, '');
@@ -65,10 +65,7 @@ function checkMultiEffect(path, source) {
       const line = stripComments(raw);
       if (relativeDepth === 0) {
         const key = line.match(/^\s*([A-Za-z_$][\w$.]*)\s*:/);
-        const alphaMask = /lib\/StationBar\.qml$/.test(path)
-          && (/^\s*brightness:\s*1\s*$/.test(line)
-            || /^\s*layer\.enabled:\s*true\s*$/.test(line));
-        if (key && !MULTI_EFFECT_KEY.test(key[1]) && !COLORISATION_KEY.test(key[1]) && !alphaMask) {
+        if (key && !MULTI_EFFECT_KEY.test(key[1]) && !COLORISATION_KEY.test(key[1])) {
           report(path, declarationLine, `MultiEffect property '${key[1]}' outside the icon color adjustment exception`);
         }
       }

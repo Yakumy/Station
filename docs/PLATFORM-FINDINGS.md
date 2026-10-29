@@ -804,3 +804,11 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   colorization. Both source layers remain explicit, allowing the bar's content
   zoom to retain the resolution fix from 2.3.1. The theme checker permits white
   normalization only in this app-icon component; elevation effects stay banned.
+
+### Original focused icons (2.3.3)
+
+- **[QTTEST]** The updated pixel harness verifies original black/white/red
+  artwork when focused, grayscale at 50% opacity when inactive, and centered
+  80% scaling on both axes. The integrated bar smoke check and QML compilation
+  pass. Focused images bypass the effects; the accent/white-mask pipeline from
+  2.3.2 was removed at the user's request after visual review.

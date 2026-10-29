@@ -163,8 +163,10 @@ identified by state version 1. Subsequent starts use only the saved compact map.
 Settings → Show open apps defaults on, including upgrades. Each bar shows one
 icon per mapped, non-hidden window on that physical output's active workspace,
 plus pinned windows and windows on its open special workspace. Only the globally
-focused window uses a solid theme accent tint; other icons are grayscale at
-50% opacity. Missing icons have a generic fallback. Icons follow the bar axis and open the Station panel on click.
+focused window shows its original icon at full size and opacity; other icons
+are grayscale at 50% opacity and 80% size, with button spacing unchanged.
+Missing icons have a generic fallback. Icons follow the bar axis and open the
+Station panel on click.
 A mirrored sink has no independent list; the source carries its windows.
 A service-owned read-only feed follows compositor events independently of the
 transaction snapshots. It uses actual workspace and monitor membership, never

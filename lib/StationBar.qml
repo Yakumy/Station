@@ -152,32 +152,24 @@ Grid {
           ? Quickshell.iconPath(appButton.entry.icon, true) : "")
           || Quickshell.iconPath("application-x-executable", true)
         fillMode: Image.PreserveAspectFit
-        visible: false
+        visible: appButton.modelData.focused
       }
-      // Normalize RGB while retaining alpha: colorization alone preserves
-      // luminance and cannot turn black artwork into the theme accent.
       MultiEffect {
-        id: appMask
+        id: inactiveAppEffect
         anchors.fill: appImage
         source: appImage
-        brightness: 1
-        visible: false
-        layer.enabled: true
-      }
-      MultiEffect {
-        anchors.fill: appImage
-        source: appButton.modelData.focused ? appMask : appImage
-        saturation: appButton.modelData.focused ? 0 : -1
-        colorization: appButton.modelData.focused ? 1 : 0
-        colorizationColor: Commons.Color.accent
-        opacity: appButton.modelData.focused ? 1 : 0.5
+        visible: !appButton.modelData.focused
+        saturation: -1
+        opacity: 0.5
+        scale: 0.8
       }
       Text {
         anchors.centerIn: parent
         visible: appImage.status === Image.Error || appImage.source.toString() === ""
         text: "□"
-        color: appButton.modelData.focused ? Commons.Color.accent : appButton.foreground
+        color: appButton.foreground
         opacity: appButton.modelData.focused ? 1 : 0.5
+        scale: appButton.modelData.focused ? 1 : 0.8
         font.family: Style.font.family
         font.pixelSize: Style.font.icon
       }
