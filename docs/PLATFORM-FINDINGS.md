@@ -774,3 +774,20 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   of the source directory encounters ignored video `node_modules` symlinks.
   Live snapshots and probe scripts are under `/tmp/station-20261027-before`
   and `/tmp/station-*-probe.py`, not committed.
+
+## Open app indicators (2026-10-29, Station 2.3)
+
+- **[SRC]** The app feed uses its own read-only monitor/client/active-window
+  requests and coalesces relevant Hyprland events. It never updates the
+  transaction's client or monitor snapshots. Actual physical placement and
+  active workspace membership determine the list during partial migrations.
+- **[LIVE]** `tools/v2/check-open-apps.py` observed two windows on eDP-1 and one
+  on HDMI-A-2, with only the HDMI-A-2 window focused. No monitor/workspace
+  commands were dispatched. The same harness instantiated horizontal and
+  vertical bar controls offscreen and verified disabling clears the feed.
+  This is a data/geometry check, not a live visual or topology acceptance test.
+- **[QTTEST]** The existing pointer-layout harness passed 23 tests. All 208
+  Node tests, theme-token checks, QML compilation, and plugin validation of a
+  clean export passed. Model cases cover partial migrations, Single/Mirror,
+  role swaps, pinned/special windows, and focus. They do not establish new
+  hardware evidence for hotplug, preview restoration, or three-output setups.

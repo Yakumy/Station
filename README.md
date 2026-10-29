@@ -5,7 +5,7 @@
   <p>Keep your work together. Make each screen your own.</p>
   <p>
     <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=flat-square" alt="Omarchy 4 Quattro"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-2.2-A6B465?style=flat-square" alt="Station 2.2"></a>
+    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-2.3-A6B465?style=flat-square" alt="Station 2.3"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
   </p>
   <p>
@@ -95,6 +95,10 @@ refresh changes save directly through the checked configuration transaction.
 > unverified on the current two-monitor test setup.
 
 ## Bars
+
+Show open apps in Settings is on by default. Icons beside the station indicator
+show each monitor’s current workspace windows; the focused window is colored
+and the others are gray. Pinned and open scratchpad windows are included.
 
 ![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)
 

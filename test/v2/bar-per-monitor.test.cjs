@@ -14,9 +14,9 @@ function qmlFunction(source, name, context = {}) {
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
 
-test('2.2 manifest exposes the full bar alongside the widget and service', () => {
+test('2.3 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '2.2.0');
+  assert.equal(manifest.version, '2.3.0');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });

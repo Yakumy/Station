@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Effects
+import Quickshell
 import qs.Ui as Ui
 import qs.Commons
 import "." as Station
@@ -7,6 +9,7 @@ Grid {
   id: root
   property var bar: null
   property int stationNumber: 1
+  property var apps: []
   property bool opened: false
   property alias anchorItem: logoButton
   signal pressed()
@@ -18,7 +21,7 @@ Grid {
   // Match the menu's painted height, rather than its font's em square.
   readonly property real logoSize: menuInk.height
 
-  columns: vertical ? 1 : 2
+  columns: vertical ? 1 : 2 + apps.length
   spacing: 0
 
   FontMetrics {
@@ -113,4 +116,53 @@ Grid {
           + (root.menuInk.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
     }
   }
+
+  Repeater {
+    model: root.apps
+    delegate: Ui.WidgetButton {
+      id: appButton
+      required property var modelData
+      bar: root.bar
+      text: modelData.title
+      tooltipText: modelData.title
+      labelVisible: false
+      hasVisualContent: true
+      horizontalMargin: 4
+      fixedWidth: root.vertical ? barSize : Style.font.icon + Style.space(8)
+      fixedHeight: root.vertical ? Style.font.icon + Style.space(8) : barSize
+      onPressed: root.pressed()
+      readonly property var entry: {
+        var entries = DesktopEntries.applications.values
+        return DesktopEntries.heuristicLookup(modelData.appId)
+          || DesktopEntries.heuristicLookup(modelData.initialAppId)
+      }
+      Image {
+        id: appImage
+        anchors.centerIn: parent
+        width: Style.font.icon
+        height: width
+        sourceSize.width: width
+        sourceSize.height: height
+        source: (appButton.entry && appButton.entry.icon
+          ? Quickshell.iconPath(appButton.entry.icon, true) : "")
+          || Quickshell.iconPath("application-x-executable", true)
+        fillMode: Image.PreserveAspectFit
+        visible: false
+      }
+      MultiEffect {
+        anchors.fill: appImage
+        source: appImage
+        saturation: appButton.modelData.focused ? 0 : -1
+      }
+      Text {
+        anchors.centerIn: parent
+        visible: appImage.status === Image.Error || appImage.source.toString() === ""
+        text: "□"
+        color: appButton.foreground
+        font.family: Style.font.family
+        font.pixelSize: Style.font.icon
+      }
+    }
+  }
+
 }

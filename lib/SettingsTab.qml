@@ -54,6 +54,19 @@ Column {
   Item { width: 1; height: settingsTab.inset }
 
   PlainToggleRow {
+    label: "Show open apps"
+    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.showOpenApps !== false
+    onClicked: if (settingsTab.panelRoot.service)
+      settingsTab.panelRoot.service.setSetting("showOpenApps", !checked)
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  PlainToggleRow {
     label: "Hide Omarchy's workspace indicator"
     checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideNative
       || settingsTab.panelRoot.service.workspaceWidgetEnabled === false)

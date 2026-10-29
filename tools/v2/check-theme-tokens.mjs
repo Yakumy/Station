@@ -17,7 +17,7 @@ const APPROVED_DIM = /Qt\.darker\([^,()]+,\s*1\.4\s*\)/;
 const APPROVED_ALPHA = /Util\.alpha\(Commons\.Color\.bar\.background,\s*0\.01\s*\)/;
 const APPROVED_PILL_RADIUS = /Math\.min\(width,\s*height\)\s*\/\s*2/;
 const MULTI_EFFECT_KEY = /^(?:id|source|width|height|x|y|visible|enabled|opacity|anchors(?:\.\w+)?)$/;
-const COLORISATION_KEY = /^colorization(?:Enabled|Color)?$/;
+const COLORISATION_KEY = /^(?:colorization(?:Enabled|Color)?|saturation)$/;
 
 const stripComments = line => line.replace(/\/\/.*$/, '');
 let violations = 0;
@@ -66,7 +66,7 @@ function checkMultiEffect(path, source) {
       if (relativeDepth === 0) {
         const key = line.match(/^\s*([A-Za-z_$][\w$.]*)\s*:/);
         if (key && !MULTI_EFFECT_KEY.test(key[1]) && !COLORISATION_KEY.test(key[1])) {
-          report(path, declarationLine, `MultiEffect property '${key[1]}' outside the colorization-only exception`);
+          report(path, declarationLine, `MultiEffect property '${key[1]}' outside the icon color adjustment exception`);
         }
       }
       relativeDepth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;

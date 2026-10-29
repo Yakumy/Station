@@ -6,6 +6,7 @@ QtObject {
   property var snapshot: null
   property var api: null
 
+  readonly property var openApps: snapshot ? snapshot.openApps || ({}) : ({})
   readonly property var config: snapshot ? snapshot.config : ({})
   readonly property var monitorBarMinimums: snapshot ? snapshot.monitorBarMinimums : ({})
   readonly property var monitorBarMaximumContents: snapshot ? snapshot.monitorBarMaximumContents : ({})

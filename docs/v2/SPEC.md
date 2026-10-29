@@ -158,6 +158,20 @@ identified by state version 1. Subsequent starts use only the saved compact map.
 - Arrow navigation moves to the next/previous **existing** station in the step. No wrap. At the edge: no-op.
 - Window moves go to exactly `s±1` (1..10), creating it.
 
+### 5.4a Open app indicators (2.3)
+
+Settings → Show open apps defaults on, including upgrades. Each bar shows one
+icon per mapped, non-hidden window on that physical output's active workspace,
+plus pinned windows and windows on its open special workspace. Only the globally
+focused window is colored; other icons are desaturated. Missing icons have a
+generic fallback. Icons follow the bar axis and open the Station panel on click.
+A mirrored sink has no independent list; the source carries its windows.
+A service-owned read-only feed follows compositor events independently of the
+transaction snapshots. It uses actual workspace and monitor membership, never
+station arithmetic against a partly migrated map. This also applies with Follow
+focus disabled. New snapshots publish only after monitor/client/focus reads
+complete without an intervening relevant event. No window actions are added.
+
 ### 5.5 Role change and swap
 
 Swap display preferences, then use the same journaled migration from old to new

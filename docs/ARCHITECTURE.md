@@ -12,11 +12,21 @@ because its `station` property points back to the service.
 `Panel.qml` and `Service.qml` import the bridge from the same directory. The entry
 passes a reader callback into `StationPanel.qml`; importing the script directly
 from that nested QML type creates a separate `qs:///` library in Quickshell,
-while the service uses `file:///`. Only the replacement-bar path polls (250 ms
-open, 1 s closed); unchanged snapshots do not emit property changes. Panel intent
+while the service uses `file:///`. Only the replacement-bar path polls (150 ms
+with app icons enabled or the panel open, otherwise 1 s); unchanged snapshots
+do not emit property changes. Panel intent
 writes use service setters on both paths. Deferred popout settlement captures
 the persistent API and scalar transfer deadline rather than a proxy destroyed
 by a bar rebuild.
+`OpenAppsController.qml` owns a separate, event-coalesced read-only compositor
+feed. `OpenApps.js` selects actual per-output active-workspace, pinned, and open
+special-workspace windows, so previews and migrations do not require decoding
+partly migrated IDs. Detached `openApps` rows cross the existing bridge; its
+polling interval is 150 ms while the feature is enabled (also while open).
+The default-on `showOpenApps` preference disables the feed when switched off.
+`StationBar.qml` resolves desktop entry icons locally and desaturates unfocused
+windows without exposing service objects or adding window dispatch commands.
+
 `StationBar.qml` keeps the logo and unbracketed station label in separate host
 buttons, arranged as a row on top/bottom bars and a column on left/right bars.
 Its painted geometry follows the Omarchy menu glyph metrics; `StationMark.qml`

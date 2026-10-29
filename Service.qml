@@ -180,9 +180,16 @@ Item {
 
   // Only detached UI data crosses the replacement-bar boundary. In particular,
   // wallpaperController.station must never be reachable from a snapshot.
+  readonly property var openApps: openAppsController.rows
+  Station.OpenAppsController {
+    id: openAppsController
+    active: root.config.showOpenApps !== false
+  }
+
   function barSnapshot() {
     return JSON.parse(JSON.stringify({
       currentStation: currentStation,
+      openApps: openApps,
       displayDraft: displayDraft,
       bindStatuses: bindStatuses,
       config: config,
@@ -2104,6 +2111,7 @@ Item {
       if (value !== "left" && value !== "center") return "invalid"
       config.panelPosition = value
     }
+    else if (name === "showOpenApps") config.showOpenApps = !!value
     else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
       var grace = Number(value)

@@ -34,7 +34,7 @@ test('fallback polls only without the trusted service and removes all direct wri
   assert.match(panel, /typeof bar\.shell\.serviceFor === "function"/);
   assert.match(panel, /service: directService \|\| \(bridgeSnapshot \? bridgeProxy : null\)/);
   assert.match(panel, /running: !root\.directService/);
-  assert.match(panel, /interval: root\.opened \? 250 : 1000/);
+  assert.match(panel, /interval: root\.opened \|\| .*showOpenApps !== false.*\? 150 : 1000/);
   assert.doesNotMatch(panel, /\b(?:service|svc)\.\w+\s*=(?!=)/);
   assert.match(service, /BarBridge\.clear\(barBridge\)/);
   const context = { directService: null, bridgeApi: null, bridgeSnapshot: null, bridgeSnapshotText: '' };
@@ -66,11 +66,14 @@ test('snapshot is detached, including wallpaper, with no controller back-referen
   const context = { manifest: { version: 'test', __sourceDir: '/private/source' } };
   for (const [, key] of proxy.matchAll(/snapshot\.(\w+)/g)) context[key] = 0;
   context.config = { hideNative: false, displays: { 'DP-1': { lane: 1 } } };
+  context.openApps = { 'DP-1': [{ address: '0x123', focused: true }] };
   context.displayDraft = [{ name: 'DP-1' }];
   context.bindStatuses = [{ id: 'switch-1', status: 'conflict' }];
   context.wallpaper = { draft: { framing: { zoom: 1 } }, layout: { displays: [{ name: 'DP-1' }] }, station: context };
   const snapshot = qmlFunction(service, 'barSnapshot', context);
   const data = snapshot();
+  data.openApps['DP-1'][0].focused = false;
+  assert.equal(context.openApps['DP-1'][0].focused, true);
   data.config.displays['DP-1'].lane = 3;
   data.displayDraft[0].name = 'fake';
   data.bindStatuses[0].status = 'free';

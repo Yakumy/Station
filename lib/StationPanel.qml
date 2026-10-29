@@ -121,7 +121,7 @@ Ui.Panel {
   }
 
   Timer {
-    interval: root.opened ? 250 : 1000
+    interval: root.opened || (root.service && root.service.config.showOpenApps !== false) ? 150 : 1000
     running: !root.directService
     repeat: true
     triggeredOnStart: true
@@ -669,6 +669,9 @@ Ui.Panel {
     id: barControls
     bar: root.bar
     stationNumber: root.stationNumber
+    apps: root.service && root.service.config.showOpenApps !== false
+      ? (root.service.openApps[barControls.QsWindow.window && barControls.QsWindow.window.screen
+          ? barControls.QsWindow.window.screen.name : ""] || []) : []
     opened: root.opened
     onPressed: root.toggle()
   }

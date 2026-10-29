@@ -142,7 +142,7 @@ test('a monitor removal closes and acknowledges the old output before reopening 
 });
 
 test('panel evacuation allows the bridged closed-panel poll and unmap acknowledgment', () => {
-  const bridgePoll = panel.match(/interval: root\.opened \? (\d+) : (\d+)/);
+  const bridgePoll = panel.match(/interval: root\.opened[^\n]*\? (\d+) : (\d+)/);
   const unmapWait = panel.match(/id: monitorTransferAck[\s\S]*?interval: (\d+)/);
   const evacuation = service.match(/id: panelEvacuationTimeout[\s\S]*?interval: (\d+)/);
   assert.ok(bridgePoll && unmapWait && evacuation);

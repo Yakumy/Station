@@ -42,6 +42,8 @@ A Choice (either kind) must never use the Action look, and vice versa. The 4 mod
 
 This matches `Style.cornerRadius`'s own flat language and is already the rule for the rest of the panel [V, STATION-V2-SPEC.md §11].
 
+**App indicator saturation (2.3):** A saturation-only `MultiEffect` may desaturate unfocused app icons (`-1`) while leaving the focused icon unchanged (`0`). This is a user-requested icon treatment, with no elevation effects.
+
 **One narrow, named exception [V, host-precedented, RESOLVED].** The ban in this section is on *elevation effects* specifically — not on the `QtQuick.Effects` import as a whole. A `MultiEffect` whose only properties set are `colorization`-related (tinting a monochrome icon, such as the Station logo, to match a theme token) is icon theming, not depth, and is allowed; Omarchy's own Tray widget does exactly this. A `MultiEffect` is still banned the moment it also sets any shadow/blur/glow-family property (`shadowEnabled`, `blurEnabled`, etc.) alongside colorization — **the exception covers a colorization-only instance, not any instance that merely includes colorization among other properties.** `DropShadow`, `Glow`, `Blur` and any gradient property remain banned outright, on any element, not just inside an `Effects` import.
 
 An SVG used as the source of that colorization effect must be a fully opaque
