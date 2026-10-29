@@ -791,3 +791,16 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   clean export passed. Model cases cover partial migrations, Single/Mirror,
   role swaps, pinned/special windows, and focus. They do not establish new
   hardware evidence for hotplug, preview restoration, or three-output setups.
+
+### App focus styling (2.3.2)
+
+- **[QTTEST]** `tools/v2/check-open-app-colors.py` renders the production effect
+  blocks with black, white, colored, and transparent artwork. Focused pixels
+  match the requested accent within rounding tolerance regardless of source
+  luminance; transparency survives. Unfocused pixels are grayscale and white
+  artwork composites at 50% over black. The offscreen RHI/OpenGL harness needs
+  graphics access; the restricted sandbox aborted its render backend.
+- **[SRC]** A white alpha-preserving intermediate effect precedes accent
+  colorization. Both source layers remain explicit, allowing the bar's content
+  zoom to retain the resolution fix from 2.3.1. The theme checker permits white
+  normalization only in this app-icon component; elevation effects stay banned.

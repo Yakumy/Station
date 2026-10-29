@@ -24,8 +24,11 @@ special-workspace windows, so previews and migrations do not require decoding
 partly migrated IDs. Detached `openApps` rows cross the existing bridge; its
 polling interval is 150 ms while the feature is enabled (also while open).
 The default-on `showOpenApps` preference disables the feed when switched off.
-`StationBar.qml` resolves desktop entry icons locally and desaturates unfocused
-windows without exposing service objects or adding window dispatch commands.
+`StationBar.qml` resolves desktop entry icons locally. Focused icons use an
+alpha-preserving white mask followed by theme accent colorization; unfocused
+icons are grayscale at 50% opacity. Explicit image/effect layers retain physical
+pixel resolution through bar content zoom. No service objects are exposed and
+no window dispatch commands are added.
 
 `StationBar.qml` keeps the logo and unbracketed station label in separate host
 buttons, arranged as a row on top/bottom bars and a column on left/right bars.

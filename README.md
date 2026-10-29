@@ -97,8 +97,9 @@ refresh changes save directly through the checked configuration transaction.
 ## Bars
 
 Show open apps in Settings is on by default. Icons beside the station indicator
-show each monitor’s current workspace windows; the focused window is colored
-and the others are gray. Pinned and open scratchpad windows are included.
+show each monitor’s current workspace windows; the focused icon uses the theme
+accent and the others are grayscale at 50% opacity. Pinned and open scratchpad
+windows are included.
 
 ![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)
 

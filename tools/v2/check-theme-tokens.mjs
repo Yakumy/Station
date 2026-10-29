@@ -65,7 +65,10 @@ function checkMultiEffect(path, source) {
       const line = stripComments(raw);
       if (relativeDepth === 0) {
         const key = line.match(/^\s*([A-Za-z_$][\w$.]*)\s*:/);
-        if (key && !MULTI_EFFECT_KEY.test(key[1]) && !COLORISATION_KEY.test(key[1])) {
+        const alphaMask = /lib\/StationBar\.qml$/.test(path)
+          && (/^\s*brightness:\s*1\s*$/.test(line)
+            || /^\s*layer\.enabled:\s*true\s*$/.test(line));
+        if (key && !MULTI_EFFECT_KEY.test(key[1]) && !COLORISATION_KEY.test(key[1]) && !alphaMask) {
           report(path, declarationLine, `MultiEffect property '${key[1]}' outside the icon color adjustment exception`);
         }
       }

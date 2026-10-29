@@ -3,6 +3,7 @@ import QtQuick.Effects
 import Quickshell
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "." as Station
 
 Grid {
@@ -73,7 +74,7 @@ Grid {
       height: root.vertical ? parent.height : Math.max(1, Style.space(2))
       x: root.vertical && root.bar.position === "right" ? 0 : parent.width - width
       y: root.vertical ? 0 : parent.height - height
-      color: Color.accent
+      color: Commons.Color.accent
       radius: Style.cornerRadius
     }
   }
@@ -153,16 +154,30 @@ Grid {
         fillMode: Image.PreserveAspectFit
         visible: false
       }
+      // Normalize RGB while retaining alpha: colorization alone preserves
+      // luminance and cannot turn black artwork into the theme accent.
       MultiEffect {
+        id: appMask
         anchors.fill: appImage
         source: appImage
+        brightness: 1
+        visible: false
+        layer.enabled: true
+      }
+      MultiEffect {
+        anchors.fill: appImage
+        source: appButton.modelData.focused ? appMask : appImage
         saturation: appButton.modelData.focused ? 0 : -1
+        colorization: appButton.modelData.focused ? 1 : 0
+        colorizationColor: Commons.Color.accent
+        opacity: appButton.modelData.focused ? 1 : 0.5
       }
       Text {
         anchors.centerIn: parent
         visible: appImage.status === Image.Error || appImage.source.toString() === ""
         text: "□"
-        color: appButton.foreground
+        color: appButton.modelData.focused ? Commons.Color.accent : appButton.foreground
+        opacity: appButton.modelData.focused ? 1 : 0.5
         font.family: Style.font.family
         font.pixelSize: Style.font.icon
       }
