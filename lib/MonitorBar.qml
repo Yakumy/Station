@@ -2340,6 +2340,9 @@ Item {
         return
       }
       walkContentImages(target, function(item) {
+        // Station app delegates bind their raster size to the live monitor
+        // scale themselves, including same-size delegate replacements.
+        if ("stationRasterManaged" in item && item.stationRasterManaged === true) return
         if (item instanceof Text && item.renderType === Text.NativeRendering) {
           if (!textRenderBaselines.has(item)) textRenderBaselines.set(item, item.renderType)
           item.renderType = Text.QtRendering

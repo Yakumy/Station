@@ -20,6 +20,7 @@ ShellRoot {
     property bool foregroundAnimationEnabled: false
     property bool vertical: false
     property int barSize: 32
+    property real effectiveContentSize: 0
     property string position: "top"
     property string fontFamily: "sans-serif"
     property color barForeground: "white"
@@ -49,6 +50,28 @@ ShellRoot {
     id: finish; interval: 100
     onTriggered: {
       if (bar.height <= bar.width) throw new Error("Icons did not stack vertically")
+      host.effectiveContentSize = 24
+      bar.apps = bar.apps.map(function(row) {
+        return Object.assign({}, row, { focused: !row.focused })
+      })
+      resolutionCheck.start()
+    }
+  }
+  Timer {
+    id: resolutionCheck; interval: 100
+    onTriggered: {
+      var images = []
+      function walk(item) {
+        if ("stationRasterManaged" in item && item.stationRasterManaged) images.push(item)
+        for (var child of item.children || []) walk(child)
+      }
+      walk(bar)
+      if (images.length !== 2) throw new Error("Rebuilt app images missing")
+      for (var item of images) {
+        var expected = Math.ceil(item.width * item.Screen.devicePixelRatio * bar.rasterZoom)
+        if (item.sourceSize.width !== expected || item.layer.textureSize.width !== expected)
+          throw new Error("Rebuilt icon lost physical raster resolution")
+      }
       feed.active = false
       if (Object.keys(feed.rows).length) throw new Error("Disabling did not clear rows")
       console.log("OPEN_APPS_SMOKE_PASSED")

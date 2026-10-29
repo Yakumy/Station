@@ -26,8 +26,10 @@ polling interval is 150 ms while the feature is enabled (also while open).
 The default-on `showOpenApps` preference disables the feed when switched off.
 `StationBar.qml` resolves desktop entry icons locally. Focused icons display
 the source image directly; unfocused icons are grayscale at 50% opacity and
-80% scale within unchanged button geometry. Explicit image layers retain physical
-pixel resolution through bar content zoom. No service objects are exposed and
+80% scale within unchanged button geometry. Each app delegate binds its image
+and layer resolution directly to monitor DPR and bar content zoom; the host
+image scanner skips these managed images. Focus rebuilds therefore retain
+resolution even when the outer widget dimensions stay unchanged. No service objects are exposed and
 no window dispatch commands are added.
 
 `StationBar.qml` keeps the logo and unbracketed station label in separate host

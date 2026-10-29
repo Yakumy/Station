@@ -812,3 +812,14 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   80% scaling on both axes. The integrated bar smoke check and QML compilation
   pass. Focused images bypass the effects; the accent/white-mask pipeline from
   2.3.2 was removed at the user's request after visual review.
+
+### App raster bindings (2.3.4)
+
+- **[SRC]** App image decode and explicit layer texture sizes now bind directly
+  to monitor DPR and the host's effective content size. The generic host scan
+  skips these managed images, so it cannot overwrite their bindings. This also
+  covers focus updates that replace delegates without resizing the module.
+- **[QTTEST]** The integrated smoke harness recreates equal-count delegates
+  with flipped focus, changes host content size, and checks image decode and
+  layer texture dimensions against the required physical raster size. It and
+  QML compilation pass. Final visual sharpness still requires user review.

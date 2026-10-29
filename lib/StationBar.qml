@@ -11,6 +11,8 @@ Grid {
   property var bar: null
   property int stationNumber: 1
   property var apps: []
+  readonly property real rasterZoom: bar && "effectiveContentSize" in bar
+    ? Math.max(1, Number(bar.effectiveContentSize) / Math.max(1, Math.ceil(Style.font.body))) : 1
   property bool opened: false
   property alias anchorItem: logoButton
   signal pressed()
@@ -142,12 +144,14 @@ Grid {
         anchors.centerIn: parent
         width: Style.font.icon
         height: width
-        // Decode at physical pixels, as the stock tray does. The explicit
-        // layer also lets MonitorBar enlarge the effect texture with its
-        // content zoom instead of magnifying MultiEffect's implicit proxy.
-        sourceSize.width: Math.ceil(width * Screen.devicePixelRatio)
-        sourceSize.height: Math.ceil(height * Screen.devicePixelRatio)
+        // Every new delegate owns its resolution, including focus rebuilds
+        // that leave the outer widget's dimensions unchanged.
+        readonly property bool stationRasterManaged: true
+        readonly property int rasterPixels: Math.max(1,
+          Math.ceil(width * Screen.devicePixelRatio * root.rasterZoom))
+        sourceSize: Qt.size(rasterPixels, rasterPixels)
         layer.enabled: true
+        layer.textureSize: Qt.size(rasterPixels, rasterPixels)
         source: (appButton.entry && appButton.entry.icon
           ? Quickshell.iconPath(appButton.entry.icon, true) : "")
           || Quickshell.iconPath("application-x-executable", true)
