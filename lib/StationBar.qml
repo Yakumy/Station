@@ -30,10 +30,20 @@ Item {
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   readonly property real logoSize: menuInk.height
   readonly property real inkCenter: menuReference.y + menuReference.baselineOffset + menuInk.y + logoSize / 2
-  readonly property real appSize: indicatorMetrics.tightBoundingRect("S1").height * 0.85
-  readonly property var stations: Object.keys(stationApps || {}).map(Number).sort(function(a, b) { return a - b })
+  readonly property real appSize: indicatorMetrics.tightBoundingRect("S1").height * 0.85 * 1.2
+  readonly property var stations: {
+    var numbers = Object.keys(stationApps || {}).map(Number)
+    if (numbers.indexOf(stationNumber) === -1) numbers.push(stationNumber)
+    return numbers.sort(function(a, b) { return a - b })
+  }
+  property int groupsRevision: 0
+  readonly property var currentGroup: {
+    var revision = groupsRevision
+    return stationGroups.itemAt(stations.indexOf(stationNumber))
+  }
+  readonly property real currentOffset: currentGroup ? (vertical ? currentGroup.y : currentGroup.x) : 0
   property real revealProgress: expanded && showApps ? 1 : 0
-  readonly property real collapsedExtent: vertical ? barSize : indicatorMetrics.tightBoundingRect(currentLabel.text).width
+  readonly property real collapsedExtent: vertical ? barSize : indicatorMetrics.tightBoundingRect("S" + stationNumber).width
   readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
   readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
   readonly property real logoExtent: vertical ? barSize : logoSize
@@ -97,30 +107,18 @@ Item {
       width: root.vertical ? root.barSize : root.revealExtent
       height: root.vertical ? root.revealExtent : root.barSize
       clip: true
-      Ui.WidgetButton {
-        bar: root.bar
-        text: "S" + root.stationNumber
-        labelVisible: false; hasVisualContent: true
-        fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(currentLabel.text).width
-        fixedHeight: root.barSize
-        opacity: 1 - root.revealProgress
-        visible: root.revealProgress < 1
-        interactive: !root.expanded
-        onPressed: root.stationSelected(root.stationNumber)
-        Text {
-          id: currentLabel
-          text: parent.text; font: indicatorMetrics.font; color: parent.foreground
-          x: root.vertical ? (parent.width - implicitWidth) / 2 : -indicatorMetrics.tightBoundingRect(text).x
-          y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
-        }
-      }
       Grid {
         id: groups
         columns: root.vertical ? 1 : Math.max(1, root.stations.length)
         spacing: root.stationGap
-        opacity: root.revealProgress
-        visible: root.revealProgress > 0
+        // Keep the current label mounted and opaque. Its natural position is
+        // revealed as the preceding station groups slide out from behind it.
+        x: root.vertical ? 0 : -root.currentOffset * (1 - root.revealProgress)
+        y: root.vertical ? -root.currentOffset * (1 - root.revealProgress) : 0
         Repeater {
+          id: stationGroups
+          onItemAdded: root.groupsRevision++
+          onItemRemoved: root.groupsRevision++
           model: root.stations
           delegate: Grid {
             id: group
@@ -134,6 +132,8 @@ Item {
               objectName: "stationLabel-" + group.modelData
               bar: root.bar
               text: "S" + group.modelData
+              opacity: group.modelData === root.stationNumber ? 1 : root.revealProgress
+              Behavior on opacity { enabled: false }
               tooltipText: "Station " + group.modelData
               labelVisible: false; hasVisualContent: true
               fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(stationLabel.text).width
@@ -148,6 +148,7 @@ Item {
             }
             Grid {
               visible: group.apps.length > 0
+              opacity: root.revealProgress
               columns: root.vertical ? 1 : Math.max(1, group.apps.length)
               spacing: root.appGap
               Repeater {

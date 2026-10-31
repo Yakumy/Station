@@ -24,9 +24,11 @@ map, preferring matching migration journal identities while IDs are in transit.
 Scratchpads are excluded; pinned windows retain one home station. Detached
 `openApps` rows cross the bridge, alongside the allowlisted `switchStation`
 action. The default-on `showOpenApps` preference disables the feed when off.
-`StationBar.qml` resolves desktop icons locally, keeps all icons at 85% of label
+`StationBar.qml` resolves desktop icons locally, keeps all icons at 102% of label
 ink height, and dims/grayscales unfocused artwork without changing its size.
-Its hover drawer uses the stock tray's 600 ms OutCubic reveal; theme-scaled
+Its hover drawer uses the stock tray's 600 ms OutCubic reveal, sliding the same
+opaque current-station label into its expanded position while preceding groups
+emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 22/12/8/4 spacing distinguishes primary elements, stations, labels, and apps.
 Each image binds raster resolution to DPR and host content zoom.
 

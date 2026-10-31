@@ -165,13 +165,17 @@ Collapsed bars show the current station and a right chevron. Hovering the statio
 area or chevron reveals every occupied station, configured minimum stations, and
 the current station in numeric order, with one icon per mapped, non-hidden
 window across all outputs. Leaving collapses with the stock tray's 600 ms
-OutCubic motion. Station labels and app icons switch the whole station; the
+OutCubic motion. The current station label stays opaque and slides from its
+collapsed position to its numeric position in the expanded row; preceding
+stations emerge behind it, while other labels and all apps fade in. Closing
+reverses the same motion without replacing or crossfading the current label.
+Station labels and app icons switch the whole station; the
 Station logo still opens settings. Scratchpads have no station and are excluded;
 pinned windows appear once at their home station.
 The service-owned event-coalesced read-only feed uses the saved compact mapping;
 a pending migration's identity journal takes precedence over partly migrated
 workspace IDs. Detached rows and the allowlisted station action cross the bridge.
-Icons share one size (85% of station-label ink height), including focused icons;
+Icons share one size (102% of station-label ink height), including focused icons;
 unfocused icons are grayscale at 50% opacity. Gaps scale with the theme and
 host zoom: 22 between primary elements, 12 between station groups, 8 between
 label and apps, 4 between apps. All painted elements share the Omarchy menu's

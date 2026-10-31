@@ -54,10 +54,19 @@ ShellRoot {
       function test_drawer() {
         tryVerify(function() { return feed.clients.length > 0 }, 4000)
         var collapsed = bar.width
+        var current = findChild(bar, "stationLabel-2")
+        var drawer = findChild(bar, "stationDrawer")
+        compare(current.opacity, 1)
+        compare(current.mapToItem(drawer, 0, 0).x, 0)
         var arrow = findChild(bar, "stationExpander")
         mouseMove(arrow, arrow.width / 2, arrow.height / 2)
         tryCompare(bar, "expanded", true)
+        tryVerify(function() { return bar.revealProgress > 0 && bar.revealProgress < 1 }, 200)
+        compare(findChild(bar, "stationLabel-2"), current)
+        compare(current.opacity, 1)
+        verify(current.mapToItem(drawer, 0, 0).x > 0)
         tryCompare(bar, "revealProgress", 1, 1000)
+        verify(Math.abs(current.mapToItem(drawer, 0, 0).x - bar.currentOffset) < 0.001)
         verify(bar.width > collapsed)
         var first = findChild(bar, "stationLabel-1")
         var app = findChild(bar, "stationApp-a")
@@ -67,7 +76,7 @@ ShellRoot {
         compare(Math.round(secondApp.x - app.x - app.width), Math.round(bar.appGap))
         var group = findChild(bar, "stationGroup-1")
         compare(Math.round(next.x - group.x - group.width), Math.round(bar.stationGap))
-        verify(app.width < bar.logoSize)
+        verify(Math.abs(app.width - bar.appSize) < 0.001)
         var captured = false
         bar.grabToImage(function(result) {
           result.saveToFile("/tmp/station-drawer-preview.png")
@@ -82,6 +91,9 @@ ShellRoot {
         tryCompare(bar, "expanded", false)
         tryCompare(bar, "revealProgress", 0, 1000)
         compare(bar.width, collapsed)
+        compare(findChild(bar, "stationLabel-2"), current)
+        compare(current.opacity, 1)
+        compare(current.mapToItem(drawer, 0, 0).x, 0)
         host.vertical = true
         verify(bar.height > bar.width)
         bar.expanded = true
@@ -108,6 +120,12 @@ ShellRoot {
         bar.showApps = false
         tryCompare(bar, "revealProgress", 0, 1000)
         verify(!arrow.visible)
+        var currentAfterDisable = findChild(bar, "stationLabel-2")
+        compare(currentAfterDisable.opacity, 1)
+        compare(currentAfterDisable.mapToItem(drawer, 0, 0).y, 0)
+        bar.stationApps = ({})
+        wait(50)
+        verify(findChild(bar, "stationLabel-2") !== null)
         console.log("OPEN_APPS_SMOKE_PASSED")
       }
       function cleanupTestCase() { Qt.quit() }
