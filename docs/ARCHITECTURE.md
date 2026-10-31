@@ -30,6 +30,9 @@ Its hover drawer uses the stock tray's 600 ms OutCubic reveal, sliding the same
 opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 22/12/8/4 spacing distinguishes primary elements, stations, labels, and apps.
+Because replacement bars route clicks independently of QML clipping, non-current
+station labels and all app targets remain non-interactive until the drawer reaches
+its open geometry; clipped targets therefore cannot intercept the Station logo.
 Each image binds oversampled raster resolution to DPR and host content zoom,
 with mipmaps for downsampling and no intermediate effect layer.
 

@@ -169,6 +169,8 @@ OutCubic motion. The current station label stays opaque and slides from its
 collapsed position to its numeric position in the expanded row; preceding
 stations emerge behind it, while other labels and all apps fade in. Closing
 reverses the same motion without replacing or crossfading the current label.
+Clipped non-current labels and app icons are not click targets until the drawer
+reaches its open geometry, so the collapsed Station logo always opens the panel.
 Station labels and app icons switch the whole station; the
 Station logo still opens settings. Scratchpads have no station and are excluded;
 pinned windows appear once at their home station.

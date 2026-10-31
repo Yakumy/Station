@@ -133,6 +133,11 @@ Item {
               text: "S" + group.modelData
               opacity: group.modelData === root.stationNumber ? 1 : root.revealProgress
               Behavior on opacity { enabled: false }
+              // MonitorBar routes module clicks through its own registered-target
+              // hit test, which cannot see this drawer viewport's clip. A hidden
+              // preceding station may otherwise extend left over the logo while
+              // the current station is translated into the collapsed position.
+              interactive: group.modelData === root.stationNumber || root.revealProgress > 0.99
               tooltipText: "Station " + group.modelData
               labelVisible: false; hasVisualContent: true
               fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(stationLabel.text).width
@@ -159,6 +164,10 @@ Item {
                   bar: root.bar
                   text: modelData.title
                   tooltipText: "Station " + group.modelData + ": " + modelData.title
+                  // App targets are meaningful only after the drawer has reached
+                  // its open geometry. This also keeps clipped targets from
+                  // intercepting the logo during opening and closing.
+                  interactive: root.revealProgress > 0.99
                   labelVisible: false; hasVisualContent: true
                   fixedWidth: root.vertical ? root.barSize : root.appSize
                   fixedHeight: root.vertical ? root.appSize : root.barSize

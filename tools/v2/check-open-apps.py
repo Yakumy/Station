@@ -37,7 +37,9 @@ ShellRoot {
       id: bar
       bar: host
       property int selected: 0
+      property int panelClicks: 0
       stationNumber: 2
+      onPressed: panelClicks++
       onStationSelected: function(number) { selected = number }
       stationApps: ({ 1: [{ address: "a", appId: "dev.zed.Zed", initialAppId: "", title: "A", focused: true },
         { address: "b", appId: "missing-app-for-fallback", initialAppId: "", title: "B", focused: false }], 2: [], 3: [] })
@@ -57,8 +59,18 @@ ShellRoot {
         var collapsed = bar.width
         var current = findChild(bar, "stationLabel-2")
         var drawer = findChild(bar, "stationDrawer")
+        var hiddenPrevious = findChild(bar, "stationLabel-1")
+        var hiddenApp = findChild(bar, "stationApp-a")
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        verify(current.interactive)
+        verify(!hiddenPrevious.interactive)
+        verify(!hiddenApp.interactive)
+        var logo = bar.anchorItem
+        mouseClick(logo, logo.width / 2, logo.height / 2)
+        compare(bar.panelClicks, 1)
+        compare(bar.selected, 0)
+        compare(bar.stationNumber, 2)
         var arrow = findChild(bar, "stationExpander")
         mouseMove(arrow, arrow.width / 2, arrow.height / 2)
         tryCompare(bar, "expanded", true)
@@ -68,6 +80,8 @@ ShellRoot {
         verify(current.mapToItem(drawer, 0, 0).x > 0)
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         verify(Math.abs(current.mapToItem(drawer, 0, 0).x - bar.currentOffset) < 0.001)
+        verify(hiddenPrevious.interactive)
+        verify(hiddenApp.interactive)
         verify(bar.width > collapsed)
         var first = findChild(bar, "stationLabel-1")
         var app = findChild(bar, "stationApp-a")
@@ -92,6 +106,8 @@ ShellRoot {
         tryCompare(bar, "expanded", false)
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
         compare(bar.width, collapsed)
+        verify(!hiddenPrevious.interactive)
+        verify(!hiddenApp.interactive)
         compare(findChild(bar, "stationLabel-2"), current)
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
