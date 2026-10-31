@@ -25,7 +25,7 @@ Item {
   // with zero spacing between slots in both orientations.
   readonly property real primarySlot: Style.bar.iconSlot
   readonly property real mainGap: 0
-  readonly property real stationGap: Style.spacing.xxl
+  readonly property real stationGap: Style.spacing.xl
   readonly property real labelGap: Style.spacing.xxs
   readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect

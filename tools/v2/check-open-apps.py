@@ -103,7 +103,7 @@ ShellRoot {
         compare(Math.round(secondApp.x - app.x - app.width), Math.round(bar.appGap))
         var group = findChild(bar, "stationGroup-1")
         compare(Math.round(next.x - group.x - group.width), Math.round(bar.stationGap))
-        compare(bar.stationGap, Style.spacing.xxl)
+        compare(bar.stationGap, Style.spacing.xl)
         verify(bar.stationGap > bar.mainGap)
         compare(bar.appSize, bar.indicatorInk.height)
         verify(bar.appSize <= bar.indicatorInk.height)

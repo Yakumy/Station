@@ -33,7 +33,7 @@ opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 Station's logo, collapsed station indicator, and chevron each occupy one
 `Style.bar.iconSlot`, with zero spacing between slots in both orientations—the
-same structure as Omarchy's adjacent status controls. Station groups use 12;
+same structure as Omarchy's adjacent status controls. Station groups use 10;
 the label-to-app gap uses the 2-unit `Style.spacing.xxs` token, while the
 app-to-app gap uses the 4-unit `Style.spacing.sm` token.
 Because replacement bars route clicks independently of QML clipping, non-current
