@@ -54,7 +54,7 @@ Column {
   Item { width: 1; height: settingsTab.inset }
 
   PlainToggleRow {
-    label: "Show open apps"
+    label: "Show stations open apps"
     checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.showOpenApps !== false
     onClicked: if (settingsTab.panelRoot.service)
       settingsTab.panelRoot.service.setSetting("showOpenApps", !checked)

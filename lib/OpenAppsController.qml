@@ -8,14 +8,20 @@ import "OpenApps.js" as OpenApps
 Item {
   id: root
   property bool active: true
-  property var rows: ({})
+  property var mapping: null
+  property var pending: null
+  property int minimum: 1
+  property int current: 1
+  property var focused: null
+  readonly property var rows: active
+    ? OpenApps.rows(mapping, clients, focused, pending, minimum, current) : ({})
   property bool dirty: false
   property bool busy: false
   property var monitors: []
   property var clients: []
+  property var stagedClients: []
   onActiveChanged: {
     if (active) invalidate()
-    else rows = ({})
   }
   Component.onCompleted: invalidate()
   Connections {
@@ -33,8 +39,10 @@ Item {
   }
   function finish(ok, focused) {
     busy = false
-    if (active && ok && !dirty) rows = OpenApps.rows(monitors, clients, focused)
-    else if (!ok) rows = ({})
+    if (active && ok && !dirty) {
+      root.clients = stagedClients
+      root.focused = focused
+    } else if (!ok) root.clients = []
     if (active && dirty) debounce.restart()
   }
   function parse(text, fallback) {
@@ -67,8 +75,8 @@ Item {
     property string output: ""
     stdout: StdioCollector { onStreamFinished: clientRead.output = text }
     onExited: function(code) {
-      root.clients = root.parse(output, null)
-      if (code === 0 && Array.isArray(root.clients)) focusRead.running = true
+      root.stagedClients = root.parse(output, null)
+      if (code === 0 && Array.isArray(root.stagedClients)) focusRead.running = true
       else root.finish(false, null)
     }
   }

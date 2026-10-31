@@ -6,70 +6,73 @@ import qs.Commons
 import qs.Commons as Commons
 import "." as Station
 
-Grid {
+Item {
   id: root
   property var bar: null
   property int stationNumber: 1
-  property var apps: []
-  readonly property real rasterZoom: bar && "effectiveContentSize" in bar
-    ? Math.max(1, Number(bar.effectiveContentSize) / Math.max(1, Math.ceil(Style.font.body))) : 1
+  property var stationApps: ({})
+  property bool showApps: true
+  property bool expanded: false
   property bool opened: false
   property alias anchorItem: logoButton
   signal pressed()
-
+  signal stationSelected(int number)
   readonly property bool vertical: bar ? bar.vertical : false
+  readonly property real barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real contentFontSize: Style.font.body
-  readonly property real controlMargin: Style.spaceReal(7.5)
+  readonly property real rasterZoom: bar && "effectiveContentSize" in bar
+    ? Math.max(1, Number(bar.effectiveContentSize) / Math.max(1, Math.ceil(Style.font.body))) : 1
+  // All distances scale once with the theme, then uniformly with host content zoom.
+  readonly property real mainGap: Style.spaceReal(22)
+  readonly property real stationGap: Style.spacing.xxl
+  readonly property real labelGap: Style.spacing.lg
+  readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
-  // Match the menu's painted height, rather than its font's em square.
   readonly property real logoSize: menuInk.height
-
-  columns: vertical ? 1 : 2 + apps.length
-  spacing: 0
-
-  FontMetrics {
-    id: menuMetrics
-    font.family: "omarchy"
-    font.pixelSize: root.contentFontSize
+  readonly property real inkCenter: menuReference.y + menuReference.baselineOffset + menuInk.y + logoSize / 2
+  readonly property real appSize: indicatorMetrics.tightBoundingRect("S1").height * 0.85
+  readonly property var stations: Object.keys(stationApps || {}).map(Number).sort(function(a, b) { return a - b })
+  property real revealProgress: expanded && showApps ? 1 : 0
+  readonly property real collapsedExtent: vertical ? barSize : indicatorMetrics.tightBoundingRect(currentLabel.text).width
+  readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
+  readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
+  readonly property real logoExtent: vertical ? barSize : logoSize
+  readonly property real arrowExtent: vertical ? barSize : arrowMetrics.tightBoundingRect.width
+  // The preceding stock Omarchy menu contributes its own 7.5-unit end inset.
+  readonly property real leadingInset: Math.max(0, mainGap - Style.spaceReal(7.5)
+    - (menuMetrics.advanceWidth("\ue900") - menuInk.width) / 2)
+  readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showApps ? mainGap + arrowExtent : 0)
+  implicitWidth: vertical ? barSize : length
+  implicitHeight: vertical ? length : barSize
+  onShowAppsChanged: if (!showApps) expanded = false
+  Behavior on revealProgress {
+    // Exact stock tray drawer timing, including closing and interrupted motion.
+    NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
   }
-
-  TextMetrics {
-    id: menuTextMetrics
-    font: menuMetrics.font
-    text: "\ue900"
-  }
+  FontMetrics { id: menuMetrics; font.family: "omarchy"; font.pixelSize: root.contentFontSize }
+  TextMetrics { id: menuTextMetrics; font: menuMetrics.font; text: "\ue900" }
+  FontMetrics { id: indicatorMetrics; font.family: root.bar ? root.bar.fontFamily : Style.font.family; font.pixelSize: root.contentFontSize }
+  TextMetrics { id: arrowMetrics; font.family: indicatorMetrics.font.family; font.pixelSize: root.contentFontSize; text: "\uf054" }
 
   Ui.WidgetButton {
     id: logoButton
+    x: root.vertical ? 0 : root.leadingInset
+    y: root.vertical ? root.leadingInset : 0
     bar: root.bar
     text: "Station"
     tooltipText: "Station"
     labelVisible: false
     hasVisualContent: true
-    horizontalMargin: 7.5
-    fixedWidth: root.vertical ? barSize : root.logoSize + root.controlMargin * 2
-    fixedHeight: root.vertical ? menuMetrics.height + scaledVerticalPadding * 2 : barSize
+    fixedWidth: root.vertical ? root.barSize : root.logoSize
+    fixedHeight: root.barSize
     onPressed: root.pressed()
-
-    // Use the same centered Text line box as Omarchy's WidgetButton, including
-    // Qt's baseline and anchor rounding. FontMetrics.height can differ from it.
-    Text {
-      id: menuReference
-      anchors.centerIn: parent
-      visible: false
-      text: "\ue900"
-      font: menuMetrics.font
-    }
-
+    Text { id: menuReference; anchors.centerIn: parent; visible: false; text: "\ue900"; font: menuMetrics.font }
     Station.StationMark {
-      width: root.logoSize
-      height: root.logoSize
+      width: root.logoSize; height: width
       x: (parent.width - width) / 2
-      // WidgetButton centers the font line box. Match the ink inside it.
-      y: menuReference.y + menuReference.baselineOffset + root.menuInk.y
+      y: root.inkCenter - height / 2
       tint: logoButton.foreground
     }
-
     Rectangle {
       visible: root.opened
       width: root.vertical ? Math.max(1, Style.space(2)) : parent.width
@@ -81,103 +84,139 @@ Grid {
     }
   }
 
-  Ui.WidgetButton {
-    id: stationButton
-    bar: root.bar
-    text: "S" + root.stationNumber
-    tooltipText: "Station"
-    labelVisible: false
-    hasVisualContent: true
-    horizontalMargin: 7.5
-    fontSize: root.contentFontSize
-    fixedWidth: root.vertical ? barSize : indicatorInk.width + root.controlMargin * 2
-    onPressed: root.pressed()
-
-    FontMetrics {
-      id: indicatorMetrics
-      font.family: stationButton.fontFamily
-      font.pixelSize: stationButton.fontSize
+  Item {
+    id: drawer
+    objectName: "stationDrawer"
+    x: root.vertical ? 0 : root.leadingInset + root.logoExtent + root.mainGap
+    y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
+    width: root.vertical ? root.barSize : root.revealExtent + (root.showApps ? root.mainGap + root.arrowExtent : 0)
+    height: root.vertical ? root.revealExtent + (root.showApps ? root.mainGap + root.arrowExtent : 0) : root.barSize
+    HoverHandler { onHoveredChanged: root.expanded = hovered && root.showApps }
+    Item {
+      id: viewport
+      width: root.vertical ? root.barSize : root.revealExtent
+      height: root.vertical ? root.revealExtent : root.barSize
+      clip: true
+      Ui.WidgetButton {
+        bar: root.bar
+        text: "S" + root.stationNumber
+        labelVisible: false; hasVisualContent: true
+        fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(currentLabel.text).width
+        fixedHeight: root.barSize
+        opacity: 1 - root.revealProgress
+        visible: root.revealProgress < 1
+        interactive: !root.expanded
+        onPressed: root.stationSelected(root.stationNumber)
+        Text {
+          id: currentLabel
+          text: parent.text; font: indicatorMetrics.font; color: parent.foreground
+          x: root.vertical ? (parent.width - implicitWidth) / 2 : -indicatorMetrics.tightBoundingRect(text).x
+          y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
+        }
+      }
+      Grid {
+        id: groups
+        columns: root.vertical ? 1 : Math.max(1, root.stations.length)
+        spacing: root.stationGap
+        opacity: root.revealProgress
+        visible: root.revealProgress > 0
+        Repeater {
+          model: root.stations
+          delegate: Grid {
+            id: group
+            objectName: "stationGroup-" + modelData
+            required property int modelData
+            readonly property var apps: root.stationApps[modelData] || []
+            columns: root.vertical ? 1 : 2
+            spacing: root.labelGap
+            Ui.WidgetButton {
+              id: stationButton
+              objectName: "stationLabel-" + group.modelData
+              bar: root.bar
+              text: "S" + group.modelData
+              tooltipText: "Station " + group.modelData
+              labelVisible: false; hasVisualContent: true
+              fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(stationLabel.text).width
+              fixedHeight: root.barSize
+              onPressed: root.stationSelected(group.modelData)
+              Text {
+                id: stationLabel
+                text: stationButton.text; font: indicatorMetrics.font; color: stationButton.foreground
+                x: root.vertical ? (parent.width - implicitWidth) / 2 : -indicatorMetrics.tightBoundingRect(text).x
+                y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
+              }
+            }
+            Grid {
+              visible: group.apps.length > 0
+              columns: root.vertical ? 1 : Math.max(1, group.apps.length)
+              spacing: root.appGap
+              Repeater {
+                model: group.apps
+                delegate: Ui.WidgetButton {
+                  id: appButton
+                  objectName: "stationApp-" + modelData.address
+                  required property var modelData
+                  bar: root.bar
+                  text: modelData.title
+                  tooltipText: "Station " + group.modelData + ": " + modelData.title
+                  labelVisible: false; hasVisualContent: true
+                  fixedWidth: root.vertical ? root.barSize : root.appSize
+                  fixedHeight: root.vertical ? root.appSize : root.barSize
+                  onPressed: root.stationSelected(group.modelData)
+                  readonly property var entry: {
+                    var entries = DesktopEntries.applications.values
+                    return DesktopEntries.heuristicLookup(modelData.appId) || DesktopEntries.heuristicLookup(modelData.initialAppId)
+                  }
+                  Image {
+                    id: appImage
+                    width: root.appSize; height: width
+                    x: (parent.width - width) / 2
+                    y: root.vertical ? 0 : root.inkCenter - height / 2
+                    readonly property bool stationRasterManaged: true
+                    readonly property int rasterPixels: Math.max(1, Math.ceil(width * Screen.devicePixelRatio * root.rasterZoom))
+                    sourceSize: Qt.size(rasterPixels, rasterPixels)
+                    layer.enabled: true
+                    layer.textureSize: Qt.size(rasterPixels, rasterPixels)
+                    source: (appButton.entry && appButton.entry.icon ? Quickshell.iconPath(appButton.entry.icon, true) : "")
+                      || Quickshell.iconPath("application-x-executable", true)
+                    fillMode: Image.PreserveAspectFit
+                    visible: appButton.modelData.focused
+                  }
+                  MultiEffect {
+                    anchors.fill: appImage; source: appImage
+                    visible: !appButton.modelData.focused
+                    saturation: -1; opacity: 0.5
+                  }
+                  Text {
+                    anchors.centerIn: appImage
+                    visible: appImage.status === Image.Error || appImage.source.toString() === ""
+                    text: "□"; font: indicatorMetrics.font; color: appButton.foreground
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
-    TextMetrics {
-      id: indicatorTextMetrics
-      font: indicatorMetrics.font
-      text: stationButton.text
-    }
-    readonly property rect indicatorInk: indicatorTextMetrics.tightBoundingRect
-
-    Text {
-      text: stationButton.text
-      textFormat: Text.PlainText
-      font: indicatorMetrics.font
-      color: stationButton.foreground
-      renderType: Text.NativeRendering
-      // Align painted bounds, including S10, without translating the hit area.
-      x: root.vertical ? (parent.width - stationButton.indicatorInk.width) / 2 - stationButton.indicatorInk.x
-        : root.controlMargin - stationButton.indicatorInk.x
-      y: root.vertical ? (parent.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
-        : menuReference.y + menuReference.baselineOffset + root.menuInk.y
-          + (root.menuInk.height - stationButton.indicatorInk.height) / 2 - indicatorMetrics.ascent - stationButton.indicatorInk.y
-    }
-  }
-
-  Repeater {
-    model: root.apps
-    delegate: Ui.WidgetButton {
-      id: appButton
-      required property var modelData
+    Ui.WidgetButton {
       bar: root.bar
-      text: modelData.title
-      tooltipText: modelData.title
-      labelVisible: false
-      hasVisualContent: true
-      horizontalMargin: 4
-      fixedWidth: root.vertical ? barSize : Style.font.icon + Style.space(8)
-      fixedHeight: root.vertical ? Style.font.icon + Style.space(8) : barSize
-      onPressed: root.pressed()
-      readonly property var entry: {
-        var entries = DesktopEntries.applications.values
-        return DesktopEntries.heuristicLookup(modelData.appId)
-          || DesktopEntries.heuristicLookup(modelData.initialAppId)
-      }
-      Image {
-        id: appImage
-        anchors.centerIn: parent
-        width: Style.font.icon
-        height: width
-        // Every new delegate owns its resolution, including focus rebuilds
-        // that leave the outer widget's dimensions unchanged.
-        readonly property bool stationRasterManaged: true
-        readonly property int rasterPixels: Math.max(1,
-          Math.ceil(width * Screen.devicePixelRatio * root.rasterZoom))
-        sourceSize: Qt.size(rasterPixels, rasterPixels)
-        layer.enabled: true
-        layer.textureSize: Qt.size(rasterPixels, rasterPixels)
-        source: (appButton.entry && appButton.entry.icon
-          ? Quickshell.iconPath(appButton.entry.icon, true) : "")
-          || Quickshell.iconPath("application-x-executable", true)
-        fillMode: Image.PreserveAspectFit
-        visible: appButton.modelData.focused
-      }
-      MultiEffect {
-        id: inactiveAppEffect
-        anchors.fill: appImage
-        source: appImage
-        visible: !appButton.modelData.focused
-        saturation: -1
-        opacity: 0.5
-        scale: 0.8
-      }
+      visible: root.showApps
+      text: "\uf054"
+      labelVisible: false; hasVisualContent: true
+      objectName: "stationExpander"
+      tooltipText: "Stations and open apps"
+      x: root.vertical ? 0 : root.revealExtent + root.mainGap
+      y: root.vertical ? root.revealExtent + root.mainGap : 0
+      fixedWidth: root.arrowExtent
+      fixedHeight: root.barSize
+      onPressed: root.expanded = !root.expanded
       Text {
-        anchors.centerIn: parent
-        visible: appImage.status === Image.Error || appImage.source.toString() === ""
-        text: "□"
-        color: appButton.foreground
-        opacity: appButton.modelData.focused ? 1 : 0.5
-        scale: appButton.modelData.focused ? 1 : 0.8
-        font.family: Style.font.family
-        font.pixelSize: Style.font.icon
+        text: parent.text; font: indicatorMetrics.font; color: parent.foreground
+        x: (parent.width - arrowMetrics.tightBoundingRect.width) / 2 - arrowMetrics.tightBoundingRect.x
+        y: root.inkCenter - arrowMetrics.tightBoundingRect.height / 2 - indicatorMetrics.ascent - arrowMetrics.tightBoundingRect.y
+        rotation: root.vertical ? 90 : 0
       }
     }
   }
-
 }

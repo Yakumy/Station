@@ -19,18 +19,16 @@ writes use service setters on both paths. Deferred popout settlement captures
 the persistent API and scalar transfer deadline rather than a proxy destroyed
 by a bar rebuild.
 `OpenAppsController.qml` owns a separate, event-coalesced read-only compositor
-feed. `OpenApps.js` selects actual per-output active-workspace, pinned, and open
-special-workspace windows, so previews and migrations do not require decoding
-partly migrated IDs. Detached `openApps` rows cross the existing bridge; its
-polling interval is 150 ms while the feature is enabled (also while open).
-The default-on `showOpenApps` preference disables the feed when switched off.
-`StationBar.qml` resolves desktop entry icons locally. Focused icons display
-the source image directly; unfocused icons are grayscale at 50% opacity and
-80% scale within unchanged button geometry. Each app delegate binds its image
-and layer resolution directly to monitor DPR and bar content zoom; the host
-image scanner skips these managed images. Focus rebuilds therefore retain
-resolution even when the outer widget dimensions stay unchanged. No service objects are exposed and
-no window dispatch commands are added.
+feed. `OpenApps.js` groups all normal-workspace windows using the saved compact
+map, preferring matching migration journal identities while IDs are in transit.
+Scratchpads are excluded; pinned windows retain one home station. Detached
+`openApps` rows cross the bridge, alongside the allowlisted `switchStation`
+action. The default-on `showOpenApps` preference disables the feed when off.
+`StationBar.qml` resolves desktop icons locally, keeps all icons at 85% of label
+ink height, and dims/grayscales unfocused artwork without changing its size.
+Its hover drawer uses the stock tray's 600 ms OutCubic reveal; theme-scaled
+22/12/8/4 spacing distinguishes primary elements, stations, labels, and apps.
+Each image binds raster resolution to DPR and host content zoom.
 
 `StationBar.qml` keeps the logo and unbracketed station label in separate host
 buttons, arranged as a row on top/bottom bars and a column on left/right bars.

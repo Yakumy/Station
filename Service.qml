@@ -184,6 +184,10 @@ Item {
   Station.OpenAppsController {
     id: openAppsController
     active: root.config.showOpenApps !== false
+    mapping: root.workspaceMap
+    pending: root.workspaceData.pending
+    minimum: root.config.minStations
+    current: root.currentStation
   }
 
   function barSnapshot() {
@@ -2260,6 +2264,7 @@ Item {
     Qt.callLater(reconcileActiveBarLayout)
     ensureDirs.running = true
     barBridge = BarBridge.publish(function() { return root.barSnapshot() }, {
+      switchStation: function(value) { return root.switchStation(value) },
       setSetting: function(name, value) { return root.setSetting(name, value) },
       setModeValue: function(mode, target) { return root.setModeValue(mode, target) },
       setDirectionValue: function(value) { return root.setDirectionValue(value) },

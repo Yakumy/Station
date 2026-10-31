@@ -96,10 +96,10 @@ refresh changes save directly through the checked configuration transaction.
 
 ## Bars
 
-Show open apps in Settings is on by default. Icons beside the station indicator
-show each monitor’s current workspace windows; the focused icon keeps its original
-appearance, while the others are grayscale at 50% opacity and 80% size.
-Pinned and open scratchpad windows are included.
+Show stations open apps in Settings is on by default. Hover the chevron beside
+the current station to reveal station labels and their apps across all displays.
+Click a label or app to switch to that station; move away to collapse the list.
+Icons keep a consistent size; unfocused icons are grayscale and dimmed.
 
 ![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)
 

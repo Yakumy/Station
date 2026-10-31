@@ -39,6 +39,7 @@ QtObject {
 
   function call(name, args) { return api ? api.call(name, args) : undefined }
 
+  function switchStation(value) { return call("switchStation", [value]) }
   function setSetting(name, value) { return call("setSetting", [name, value]) }
   function setModeValue(mode, target) { return call("setModeValue", [mode, target]) }
   function setDirectionValue(value) { return call("setDirectionValue", [value]) }

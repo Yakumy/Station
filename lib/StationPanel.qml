@@ -669,9 +669,11 @@ Ui.Panel {
     id: barControls
     bar: root.bar
     stationNumber: root.stationNumber
-    apps: root.service && root.service.config.showOpenApps !== false
-      ? (root.service.openApps[barControls.QsWindow.window && barControls.QsWindow.window.screen
-          ? barControls.QsWindow.window.screen.name : ""] || []) : []
+    showApps: root.service && root.service.config.showOpenApps !== false
+    stationApps: root.service ? root.service.openApps : ({})
+    onStationSelected: function(number) {
+      if (root.service) root.service.switchStation(String(number))
+    }
     opened: root.opened
     onPressed: root.toggle()
   }

@@ -160,19 +160,22 @@ identified by state version 1. Subsequent starts use only the saved compact map.
 
 ### 5.4a Open app indicators (2.3)
 
-Settings → Show open apps defaults on, including upgrades. Each bar shows one
-icon per mapped, non-hidden window on that physical output's active workspace,
-plus pinned windows and windows on its open special workspace. Only the globally
-focused window shows its original icon at full size and opacity; other icons
-are grayscale at 50% opacity and 80% size, with button spacing unchanged.
-Missing icons have a generic fallback. Icons follow the bar axis and open the
-Station panel on click.
-A mirrored sink has no independent list; the source carries its windows.
-A service-owned read-only feed follows compositor events independently of the
-transaction snapshots. It uses actual workspace and monitor membership, never
-station arithmetic against a partly migrated map. This also applies with Follow
-focus disabled. New snapshots publish only after monitor/client/focus reads
-complete without an intervening relevant event. No window actions are added.
+Settings → Show stations open apps defaults on, preserving `showOpenApps`.
+Collapsed bars show the current station and a right chevron. Hovering the station
+area or chevron reveals every occupied station, configured minimum stations, and
+the current station in numeric order, with one icon per mapped, non-hidden
+window across all outputs. Leaving collapses with the stock tray's 600 ms
+OutCubic motion. Station labels and app icons switch the whole station; the
+Station logo still opens settings. Scratchpads have no station and are excluded;
+pinned windows appear once at their home station.
+The service-owned event-coalesced read-only feed uses the saved compact mapping;
+a pending migration's identity journal takes precedence over partly migrated
+workspace IDs. Detached rows and the allowlisted station action cross the bridge.
+Icons share one size (85% of station-label ink height), including focused icons;
+unfocused icons are grayscale at 50% opacity. Gaps scale with the theme and
+host zoom: 22 between primary elements, 12 between station groups, 8 between
+label and apps, 4 between apps. All painted elements share the Omarchy menu's
+ink center. Generic icons cover missing desktop entries.
 
 ### 5.5 Role change and swap
 
