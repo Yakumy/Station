@@ -29,7 +29,9 @@ ink height, with original colors and full opacity regardless of focus.
 Its hover drawer uses the stock tray's 600 ms OutCubic reveal, sliding the same
 opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
-22/12/8/4 spacing distinguishes primary elements, stations, labels, and apps.
+The primary gap follows Omarchy's adjacent status-icon rhythm
+(`Style.bar.iconSlot - Style.bar.iconCanvas`); 12/8/4 spacing distinguishes
+station groups, labels, and apps.
 Because replacement bars route clicks independently of QML clipping, non-current
 station labels and all app targets remain non-interactive until the drawer reaches
 its open geometry; clipped targets therefore cannot intercept the Station logo.

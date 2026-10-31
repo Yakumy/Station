@@ -15,6 +15,7 @@ with tempfile.TemporaryDirectory(prefix="station-open-apps-") as directory:
 import QtQuick.Window
 import QtTest
 import Quickshell
+import qs.Commons
 import "Station" as Station
 ShellRoot {
   Station.OpenAppsController { id: feed; mapping: ({ outputs: ["A", "B"] }) }
@@ -56,6 +57,7 @@ ShellRoot {
       when: false
       function test_drawer() {
         tryVerify(function() { return feed.clients.length > 0 }, 4000)
+        compare(bar.mainGap, Style.bar.iconSlot - Style.bar.iconCanvas)
         var collapsed = bar.width
         var current = findChild(bar, "stationLabel-2")
         var drawer = findChild(bar, "stationDrawer")

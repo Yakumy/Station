@@ -181,9 +181,11 @@ Icons share one size (102% of station-label ink height), including focused icons
 All icons use original colors and full opacity, with no focus-based scale or
 effects. Direct image rendering preserves aspect ratio and uses oversampled
 physical-pixel decoding with mipmaps. Gaps scale with the theme and
-host zoom: 22 between primary elements, 12 between station groups, 8 between
-label and apps, 4 between apps. All painted elements share the Omarchy menu's
-ink center. Generic icons cover missing desktop entries.
+host zoom: the primary gap between the Omarchy logo, Station logo, station
+indicator, and chevron equals the host status-icon artwork gap
+(`Style.bar.iconSlot - Style.bar.iconCanvas`); station groups use 12, label to
+apps uses 8, and apps use 4. All painted elements share the Omarchy menu's ink
+center. Generic icons cover missing desktop entries.
 
 ### 5.5 Role change and swap
 

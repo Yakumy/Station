@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='station-bar-test-') as directory:
 import QtQuick
 QtObject {
   property var font: ({family: "monospace", body: 12})
-  property var bar: ({sizeHorizontal: 26})
+  property var bar: ({sizeHorizontal: 26, iconSlot: 27, iconCanvas: 16})
   property int cornerRadius: 0
   function space(n) { return Math.round(n * font.body / 12) }
   function spaceReal(n) { return n * font.body / 12 }
