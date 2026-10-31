@@ -114,7 +114,16 @@ ShellRoot {
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
         host.vertical = true
+        wait(50)
+        compare(bar.mainGap, 0)
         verify(bar.height > bar.width)
+        var logoPoint = bar.anchorItem.mapToItem(bar, 0, 0)
+        var currentPoint = current.mapToItem(bar, 0, 0)
+        var arrowPoint = arrow.mapToItem(bar, 0, 0)
+        compare(Math.round(currentPoint.y + current.height / 2
+          - logoPoint.y - bar.anchorItem.height / 2), Math.round(bar.barSize))
+        compare(Math.round(arrowPoint.y + arrow.height / 2
+          - currentPoint.y - current.height / 2), Math.round(bar.barSize))
         bar.expanded = true
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         host.effectiveContentSize = 24

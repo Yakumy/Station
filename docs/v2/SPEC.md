@@ -185,7 +185,9 @@ host zoom: the primary gap between the Omarchy logo, Station logo, station
 indicator, and chevron equals the host status-icon artwork gap
 (`Style.bar.iconSlot - Style.bar.iconCanvas`); station groups use 12, label to
 apps uses 8, and apps use 4. All painted elements share the Omarchy menu's ink
-center. Generic icons cover missing desktop entries.
+center. Vertical bars stack the full-sized logo, station, and chevron slots with
+zero extra spacing, matching Omarchy's vertical status-icon stack. Generic icons
+cover missing desktop entries.
 
 ### 5.5 Role change and swap
 

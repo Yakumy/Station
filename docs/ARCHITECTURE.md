@@ -31,7 +31,9 @@ opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 The primary gap follows Omarchy's adjacent status-icon rhythm
 (`Style.bar.iconSlot - Style.bar.iconCanvas`); 12/8/4 spacing distinguishes
-station groups, labels, and apps.
+station groups, labels, and apps. On vertical bars the Station controls already
+occupy full bar-sized slots, so they use the host's zero-spacing slot stack;
+adding the horizontal artwork gap between those slots would scale it twice.
 Because replacement bars route clicks independently of QML clipping, non-current
 station labels and all app targets remain non-interactive until the drawer reaches
 its open geometry; clipped targets therefore cannot intercept the Station logo.

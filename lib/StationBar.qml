@@ -24,7 +24,8 @@ Item {
   // Omarchy's adjacent status icons use zero Row spacing and place a
   // Style.bar.iconCanvas inside each Style.bar.iconSlot. The visible gap is
   // therefore the difference between those two host tokens.
-  readonly property real mainGap: Math.max(0, Style.bar.iconSlot - Style.bar.iconCanvas)
+  readonly property real mainGap: vertical ? 0
+    : Math.max(0, Style.bar.iconSlot - Style.bar.iconCanvas)
   readonly property real stationGap: Style.spacing.xxl
   readonly property real labelGap: Style.spacing.lg
   readonly property real appGap: Style.spacing.sm
