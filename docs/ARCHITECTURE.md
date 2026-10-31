@@ -31,8 +31,8 @@ opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 Station's logo, collapsed station indicator, and chevron each occupy one
 `Style.bar.iconSlot`, with zero spacing between slots in both orientations—the
-same structure as Omarchy's adjacent status controls. The 12/8/4 spacing still
-distinguishes station groups, labels, and apps inside the expanded drawer.
+same structure as Omarchy's adjacent status controls. Station groups use 12;
+the label-to-app and app-to-app gaps both use the 4-unit `Style.spacing.sm` token.
 Because replacement bars route clicks independently of QML clipping, non-current
 station labels and all app targets remain non-interactive until the drawer reaches
 its open geometry; clipped targets therefore cannot intercept the Station logo.

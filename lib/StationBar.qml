@@ -26,7 +26,7 @@ Item {
   readonly property real primarySlot: Style.bar.iconSlot
   readonly property real mainGap: 0
   readonly property real stationGap: Style.spacing.xxl
-  readonly property real labelGap: Style.spacing.lg
+  readonly property real labelGap: Style.spacing.sm
   readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   readonly property real logoSize: menuInk.height

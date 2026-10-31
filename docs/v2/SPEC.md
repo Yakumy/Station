@@ -184,7 +184,7 @@ physical-pixel decoding with mipmaps. Gaps scale with the theme and
 host zoom: the Station logo, collapsed station indicator, and chevron each use
 one `Style.bar.iconSlot` with zero spacing, matching the structure and pitch of
 Omarchy's adjacent status controls horizontally and vertically. Station groups
-use 12, label to apps uses 8, and apps use 4. All painted elements share the
+use 12, while label-to-app and app-to-app gaps both use 4. All painted elements share the
 Omarchy menu's ink center. Generic icons cover missing desktop entries.
 
 ### 5.5 Role change and swap
