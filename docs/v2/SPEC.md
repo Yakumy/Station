@@ -177,14 +177,15 @@ pinned windows appear once at their home station.
 The service-owned event-coalesced read-only feed uses the saved compact mapping;
 a pending migration's identity journal takes precedence over partly migrated
 workspace IDs. Detached rows and the allowlisted station action cross the bridge.
-Icons share one size (102% of station-label ink height), including focused icons.
+Icons share one size bounded by the painted station-label guide: station-label
+ink height on horizontal bars and ink width on vertical bars, including focused icons.
 All icons use original colors and full opacity, with no focus-based scale or
 effects. Direct image rendering preserves aspect ratio and uses oversampled
 physical-pixel decoding with mipmaps. Gaps scale with the theme and
 host zoom: the Station logo, collapsed station indicator, and chevron each use
 one `Style.bar.iconSlot` with zero spacing, matching the structure and pitch of
 Omarchy's adjacent status controls horizontally and vertically. Station groups
-use 12, the label-to-app gap uses 3, and the app-to-app gap uses 4. All painted elements share the
+use 12, the label-to-app gap uses 2, and the app-to-app gap uses 4. All painted elements share the
 Omarchy menu's ink center. Generic icons cover missing desktop entries.
 
 ### 5.5 Role change and swap

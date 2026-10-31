@@ -97,12 +97,16 @@ ShellRoot {
         var app = findChild(bar, "stationApp-a")
         var secondApp = findChild(bar, "stationApp-b")
         var next = findChild(bar, "stationGroup-2")
-        compare(bar.labelGap, Style.spacing.xs)
+        compare(bar.labelGap, Style.spacing.xxs)
         verify(bar.labelGap < bar.appGap)
         compare(Math.round(app.mapToItem(bar, 0, 0).x - first.mapToItem(bar, first.width, 0).x), Math.round(bar.labelGap))
         compare(Math.round(secondApp.x - app.x - app.width), Math.round(bar.appGap))
         var group = findChild(bar, "stationGroup-1")
         compare(Math.round(next.x - group.x - group.width), Math.round(bar.stationGap))
+        compare(bar.stationGap, Style.spacing.xxl)
+        verify(bar.stationGap > bar.mainGap)
+        compare(bar.appSize, bar.indicatorInk.height)
+        verify(bar.appSize <= bar.indicatorInk.height)
         verify(Math.abs(app.width - bar.appSize) < 0.001)
         var captured = false
         bar.grabToImage(function(result) {
@@ -126,6 +130,8 @@ ShellRoot {
         host.vertical = true
         wait(50)
         compare(bar.mainGap, 0)
+        compare(bar.appSize, bar.indicatorInk.width)
+        verify(bar.appSize <= bar.indicatorInk.width)
         verify(bar.height > bar.width)
         logoPoint = bar.anchorItem.mapToItem(bar, 0, 0)
         currentPoint = current.mapToItem(bar, 0, 0)

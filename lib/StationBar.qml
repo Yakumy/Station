@@ -26,12 +26,15 @@ Item {
   readonly property real primarySlot: Style.bar.iconSlot
   readonly property real mainGap: 0
   readonly property real stationGap: Style.spacing.xxl
-  readonly property real labelGap: Style.spacing.xs
+  readonly property real labelGap: Style.spacing.xxs
   readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   readonly property real logoSize: menuInk.height
   readonly property real inkCenter: menuReference.y + menuReference.baselineOffset + menuInk.y + logoSize / 2
-  readonly property real appSize: indicatorMetrics.tightBoundingRect("S1").height * 0.85 * 1.2
+  readonly property rect indicatorInk: indicatorMetrics.tightBoundingRect("S" + stationNumber)
+  // Follow the painted station-label guide: its height limits horizontal bars,
+  // and its width limits vertical bars.
+  readonly property real appSize: vertical ? indicatorInk.width : indicatorInk.height
   readonly property var stations: {
     var numbers = Object.keys(stationApps || {}).map(Number)
     if (numbers.indexOf(stationNumber) === -1) numbers.push(stationNumber)

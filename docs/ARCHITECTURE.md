@@ -24,15 +24,17 @@ map, preferring matching migration journal identities while IDs are in transit.
 Scratchpads are excluded; pinned windows retain one home station. Detached
 `openApps` rows cross the bridge, alongside the allowlisted `switchStation`
 action. The default-on `showOpenApps` preference disables the feed when off.
-`StationBar.qml` resolves desktop icons locally, keeps all icons at 102% of label
-ink height, with original colors and full opacity regardless of focus.
+`StationBar.qml` resolves desktop icons locally and bounds every square icon by
+the painted station-label guide: label ink height on horizontal bars and label
+ink width on vertical bars. Icons keep original colors and full opacity
+regardless of focus.
 Its hover drawer uses the stock tray's 600 ms OutCubic reveal, sliding the same
 opaque current-station label into its expanded position while preceding groups
 emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
 Station's logo, collapsed station indicator, and chevron each occupy one
 `Style.bar.iconSlot`, with zero spacing between slots in both orientations—the
 same structure as Omarchy's adjacent status controls. Station groups use 12;
-the label-to-app gap uses the 3-unit `Style.spacing.xs` token, while the
+the label-to-app gap uses the 2-unit `Style.spacing.xxs` token, while the
 app-to-app gap uses the 4-unit `Style.spacing.sm` token.
 Because replacement bars route clicks independently of QML clipping, non-current
 station labels and all app targets remain non-interactive until the drawer reaches
