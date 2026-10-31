@@ -68,6 +68,10 @@ test('station app display mode is a validated three-option dropdown', () => {
   for (const value of ['hover', 'always', 'hide'])
     assert.match(settings, new RegExp('value: "' + value + '"'));
   assert.doesNotMatch(settings, /setSetting\("showOpenApps"/);
+  assert.ok(settings.indexOf('objectName: "stationAppsModeDropdown"')
+    > settings.indexOf('label: "Follow focus'));
+  assert.ok(settings.indexOf('objectName: "stationAppsModeDropdown"')
+    < settings.indexOf('text: "Panel opening position"'));
 
   const context = { config: { stationAppsMode: 'hover' }, saveConfig() {} };
   const setSetting = qmlFunction(service, 'setSetting', context);

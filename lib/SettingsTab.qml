@@ -53,6 +53,47 @@ Column {
 
   Item { width: 1; height: settingsTab.inset }
 
+  PlainToggleRow {
+    label: "Hide Omarchy's workspace indicator"
+    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideNative
+      || settingsTab.panelRoot.service.workspaceWidgetEnabled === false)
+    onClicked: if (settingsTab.panelRoot.service)
+      settingsTab.panelRoot.service.setSetting("hideNative", !checked)
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  PlainToggleRow {
+    label: "Hide Omarchy's Display icon"
+    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideDisplay
+      || settingsTab.panelRoot.service.displayWidgetEnabled === false)
+    onClicked: if (settingsTab.panelRoot.service)
+      settingsTab.panelRoot.service.setSetting("hideDisplay", !checked)
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
+  PlainToggleRow {
+    label: "Follow focus (keep monitors on the same station)"
+    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.followFocus
+    onClicked: if (settingsTab.panelRoot.service)
+      settingsTab.panelRoot.service.setSetting("followFocus", !checked)
+  }
+  Item { width: 1; height: settingsTab.panelRoot.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
@@ -88,47 +129,6 @@ Column {
           settingsTab.panelRoot.service.setSetting("stationAppsMode", value)
       }
     }
-  }
-  Item { width: 1; height: settingsTab.panelRoot.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  PlainToggleRow {
-    label: "Hide Omarchy's workspace indicator"
-    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideNative
-      || settingsTab.panelRoot.service.workspaceWidgetEnabled === false)
-    onClicked: if (settingsTab.panelRoot.service)
-      settingsTab.panelRoot.service.setSetting("hideNative", !checked)
-  }
-  Item { width: 1; height: settingsTab.panelRoot.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  PlainToggleRow {
-    label: "Hide Omarchy's Display icon"
-    checked: settingsTab.panelRoot.service && (settingsTab.panelRoot.service.config.hideDisplay
-      || settingsTab.panelRoot.service.displayWidgetEnabled === false)
-    onClicked: if (settingsTab.panelRoot.service)
-      settingsTab.panelRoot.service.setSetting("hideDisplay", !checked)
-  }
-  Item { width: 1; height: settingsTab.panelRoot.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  PlainToggleRow {
-    label: "Follow focus (keep monitors on the same station)"
-    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.followFocus
-    onClicked: if (settingsTab.panelRoot.service)
-      settingsTab.panelRoot.service.setSetting("followFocus", !checked)
   }
   Item { width: 1; height: settingsTab.panelRoot.space2 }
   Ui.PanelSeparator {
