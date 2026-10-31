@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import qs.Ui as Ui
 import qs.Commons
@@ -174,19 +173,16 @@ Item {
                     x: (parent.width - width) / 2
                     y: root.vertical ? 0 : root.inkCenter - height / 2
                     readonly property bool stationRasterManaged: true
-                    readonly property int rasterPixels: Math.max(1, Math.ceil(width * Screen.devicePixelRatio * root.rasterZoom))
-                    sourceSize: Qt.size(rasterPixels, rasterPixels)
-                    layer.enabled: true
-                    layer.textureSize: Qt.size(rasterPixels, rasterPixels)
+                    readonly property int rasterPixels: Math.max(1,
+                      Math.ceil(width * Screen.devicePixelRatio * root.rasterZoom))
+                    // Decode above the final physical size and mipmap down;
+                    // render directly, without an intermediate effect texture.
+                    sourceSize: Qt.size(Math.max(64, rasterPixels * 2), Math.max(64, rasterPixels * 2))
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
                     source: (appButton.entry && appButton.entry.icon ? Quickshell.iconPath(appButton.entry.icon, true) : "")
                       || Quickshell.iconPath("application-x-executable", true)
-                    fillMode: Image.PreserveAspectFit
-                    visible: appButton.modelData.focused
-                  }
-                  MultiEffect {
-                    anchors.fill: appImage; source: appImage
-                    visible: !appButton.modelData.focused
-                    saturation: -1; opacity: 0.5
                   }
                   Text {
                     anchors.centerIn: appImage
