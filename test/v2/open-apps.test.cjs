@@ -4,9 +4,13 @@ const { rows } = require('../../lib/OpenApps.js');
 const Store = require('../../lib/Store.js');
 const map = { outputs: ['A', 'B'] };
 const client = (address, workspace, extra = {}) => ({ address, workspace: { id: workspace }, mapped: true, class: 'app', ...extra });
-test('default-on preference preserves explicit off', () => {
-  assert.equal(Store.loadConfig({}).showOpenApps, true);
-  assert.equal(Store.loadConfig({ showOpenApps: false }).showOpenApps, false);
+test('station app mode defaults to hover and migrates the boolean preference', () => {
+  assert.equal(Store.loadConfig({}).stationAppsMode, 'hover');
+  assert.equal(Store.loadConfig({ showOpenApps: true }).stationAppsMode, 'hover');
+  assert.equal(Store.loadConfig({ showOpenApps: false }).stationAppsMode, 'hide');
+  assert.equal(Store.loadConfig({ stationAppsMode: 'always' }).stationAppsMode, 'always');
+  assert.equal(Store.loadConfig({ stationAppsMode: 'invalid' }).stationAppsMode, 'hover');
+  assert.equal('showOpenApps' in Store.loadConfig({ showOpenApps: true }), false);
 });
 test('stations aggregate every output, include background stations and preserve empty indicators', () => {
   const cs = [client('a', 1), client('b', 2), client('c', 5), client('d', 6)];

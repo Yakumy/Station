@@ -22,7 +22,7 @@ test('2.3 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 8);
+  assert.equal(Store.CONFIG_VERSION, 9);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
     'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill', contentSize: 18.4 },

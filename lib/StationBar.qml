@@ -10,13 +10,16 @@ Item {
   property var bar: null
   property int stationNumber: 1
   property var stationApps: ({})
-  property bool showApps: true
+  property string appsMode: "hover"
   property bool expanded: false
   property bool opened: false
   property alias anchorItem: logoButton
   signal pressed()
   signal stationSelected(int number)
   readonly property bool vertical: bar ? bar.vertical : false
+  readonly property bool showApps: appsMode !== "hide"
+  readonly property bool alwaysOpen: appsMode === "always"
+  readonly property bool showExpander: appsMode === "hover"
   readonly property real barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real contentFontSize: Style.font.body
   readonly property real rasterZoom: bar && "effectiveContentSize" in bar
@@ -46,17 +49,17 @@ Item {
     return stationGroups.itemAt(stations.indexOf(stationNumber))
   }
   readonly property real currentOffset: currentGroup ? (vertical ? currentGroup.y : currentGroup.x) : 0
-  property real revealProgress: expanded && showApps ? 1 : 0
+  property real revealProgress: showApps && (alwaysOpen || expanded) ? 1 : 0
   readonly property real collapsedExtent: primarySlot
   readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
   readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
   readonly property real logoExtent: primarySlot
   readonly property real arrowExtent: primarySlot
   readonly property real leadingInset: 0
-  readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showApps ? mainGap + arrowExtent : 0)
+  readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0)
   implicitWidth: vertical ? barSize : length
   implicitHeight: vertical ? length : barSize
-  onShowAppsChanged: if (!showApps) expanded = false
+  onAppsModeChanged: if (appsMode !== "hover") expanded = false
   Behavior on revealProgress {
     // Exact stock tray drawer timing, including closing and interrupted motion.
     NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
@@ -101,9 +104,9 @@ Item {
     objectName: "stationDrawer"
     x: root.vertical ? 0 : root.leadingInset + root.logoExtent + root.mainGap
     y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
-    width: root.vertical ? root.barSize : root.revealExtent + (root.showApps ? root.mainGap + root.arrowExtent : 0)
-    height: root.vertical ? root.revealExtent + (root.showApps ? root.mainGap + root.arrowExtent : 0) : root.barSize
-    HoverHandler { onHoveredChanged: root.expanded = hovered && root.showApps }
+    width: root.vertical ? root.barSize : root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0)
+    height: root.vertical ? root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0) : root.barSize
+    HoverHandler { onHoveredChanged: root.expanded = hovered && root.appsMode === "hover" }
     Item {
       id: viewport
       width: root.vertical ? root.barSize : root.revealExtent
@@ -211,7 +214,7 @@ Item {
     }
     Ui.WidgetButton {
       bar: root.bar
-      visible: root.showApps
+      visible: root.showExpander
       text: "\uf054"
       labelVisible: false; hasVisualContent: true
       objectName: "stationExpander"

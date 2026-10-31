@@ -96,9 +96,10 @@ refresh changes save directly through the checked configuration transaction.
 
 ## Bars
 
-Show stations open apps in Settings is on by default. Hover the chevron beside
-the current station to reveal station labels and their apps across all displays.
-Click a label or app to switch to that station; move away to collapse the list.
+Show stations open apps in Settings offers Open on hover (default), Always open,
+and Hide. Hover mode reveals station labels and apps from the chevron; Always
+open keeps them visible without a chevron, and Hide removes both. Click a label
+or app to switch to that station; move away to collapse the hover-mode list.
 Icons keep a consistent size, original colors, and full opacity regardless of focus.
 
 ![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)

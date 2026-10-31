@@ -53,11 +53,41 @@ Column {
 
   Item { width: 1; height: settingsTab.inset }
 
-  PlainToggleRow {
-    label: "Show stations open apps"
-    checked: settingsTab.panelRoot.service && settingsTab.panelRoot.service.config.showOpenApps !== false
-    onClicked: if (settingsTab.panelRoot.service)
-      settingsTab.panelRoot.service.setSetting("showOpenApps", !checked)
+  Item {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    height: Style.space(48)
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - settingsTab.panelRoot.space6 - stationAppsModeValue.width
+      text: "Show stations open apps"
+      elide: Text.ElideRight
+      color: settingsTab.panelRoot.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+    }
+    Ui.Dropdown {
+      id: stationAppsModeValue
+      objectName: "stationAppsModeDropdown"
+      anchors.right: parent.right
+      anchors.rightMargin: settingsTab.panelRoot.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: Style.space(130)
+      showLabel: false
+      value: settingsTab.panelRoot.service ? settingsTab.panelRoot.service.config.stationAppsMode : "hover"
+      options: [
+        { value: "hover", label: "Open on hover" },
+        { value: "always", label: "Always open" },
+        { value: "hide", label: "Hide" }
+      ]
+      foreground: settingsTab.panelRoot.textPrimary
+      onChanged: function(value) {
+        if (settingsTab.panelRoot.service)
+          settingsTab.panelRoot.service.setSetting("stationAppsMode", value)
+      }
+    }
   }
   Item { width: 1; height: settingsTab.panelRoot.space2 }
   Ui.PanelSeparator {

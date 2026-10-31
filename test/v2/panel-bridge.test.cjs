@@ -34,7 +34,7 @@ test('fallback polls only without the trusted service and removes all direct wri
   assert.match(panel, /typeof bar\.shell\.serviceFor === "function"/);
   assert.match(panel, /service: directService \|\| \(bridgeSnapshot \? bridgeProxy : null\)/);
   assert.match(panel, /running: !root\.directService/);
-  assert.match(panel, /interval: root\.opened \|\| .*showOpenApps !== false.*\? 150 : 1000/);
+  assert.match(panel, /interval: root\.opened \|\| .*stationAppsMode !== "hide".*\? 150 : 1000/);
   assert.doesNotMatch(panel, /\b(?:service|svc)\.\w+\s*=(?!=)/);
   assert.match(service, /BarBridge\.clear\(barBridge\)/);
   const context = { directService: null, bridgeApi: null, bridgeSnapshot: null, bridgeSnapshotText: '' };
@@ -60,6 +60,21 @@ test('fallback polls only without the trusted service and removes all direct wri
   context.directService = {};
   context.bridgeCurrent = () => { throw Error('trusted bar must not read bridge'); };
   sync();
+});
+
+test('station app display mode is a validated three-option dropdown', () => {
+  const settings = read('lib/SettingsTab.qml');
+  assert.match(settings, /objectName: "stationAppsModeDropdown"/);
+  for (const value of ['hover', 'always', 'hide'])
+    assert.match(settings, new RegExp('value: "' + value + '"'));
+  assert.doesNotMatch(settings, /setSetting\("showOpenApps"/);
+
+  const context = { config: { stationAppsMode: 'hover' }, saveConfig() {} };
+  const setSetting = qmlFunction(service, 'setSetting', context);
+  assert.equal(setSetting('stationAppsMode', 'invalid'), 'invalid');
+  assert.equal(context.config.stationAppsMode, 'hover');
+  assert.equal(setSetting('stationAppsMode', 'always'), 'ok');
+  assert.equal(context.config.stationAppsMode, 'always');
 });
 
 test('snapshot is detached, including wallpaper, with no controller back-reference or manifest source', () => {

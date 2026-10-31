@@ -160,8 +160,10 @@ identified by state version 1. Subsequent starts use only the saved compact map.
 
 ### 5.4a Open app indicators (2.3)
 
-Settings → Show stations open apps defaults on, preserving `showOpenApps`.
-Collapsed bars show the current station and a right chevron. Hovering the station
+Settings → Show stations open apps is a dropdown with `Open on hover` (default),
+`Always open`, and `Hide`. Config stores validated `stationAppsMode` values
+`hover`, `always`, and `hide`; legacy `showOpenApps: true/false` migrates to
+`hover`/`hide`. Hover-mode bars show the current station and a right chevron. Hovering the station
 area or chevron reveals every occupied station, configured minimum stations, and
 the current station in numeric order, with one icon per mapped, non-hidden
 window across all outputs. Leaving collapses with the stock tray's 600 ms
@@ -169,6 +171,9 @@ OutCubic motion. The current station label stays opaque and slides from its
 collapsed position to its numeric position in the expanded row; preceding
 stations emerge behind it, while other labels and all apps fade in. Closing
 reverses the same motion without replacing or crossfading the current label.
+Always-open mode holds the same expanded geometry without a chevron. Hide mode
+shows only the current station and also omits the chevron; its compositor feed
+is inactive.
 Clipped non-current labels and app icons are not click targets until the drawer
 reaches its open geometry, so the collapsed Station logo always opens the panel.
 Station labels and app icons switch the whole station; the

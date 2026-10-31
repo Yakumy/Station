@@ -183,7 +183,7 @@ Item {
   readonly property var openApps: openAppsController.rows
   Station.OpenAppsController {
     id: openAppsController
-    active: root.config.showOpenApps !== false
+    active: root.config.stationAppsMode !== "hide"
     mapping: root.workspaceMap
     pending: root.workspaceData.pending
     minimum: root.config.minStations
@@ -2115,7 +2115,10 @@ Item {
       if (value !== "left" && value !== "center") return "invalid"
       config.panelPosition = value
     }
-    else if (name === "showOpenApps") config.showOpenApps = !!value
+    else if (name === "stationAppsMode") {
+      if (["hover", "always", "hide"].indexOf(value) === -1) return "invalid"
+      config.stationAppsMode = value
+    }
     else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
       var grace = Number(value)

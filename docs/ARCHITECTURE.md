@@ -23,14 +23,18 @@ feed. `OpenApps.js` groups all normal-workspace windows using the saved compact
 map, preferring matching migration journal identities while IDs are in transit.
 Scratchpads are excluded; pinned windows retain one home station. Detached
 `openApps` rows cross the bridge, alongside the allowlisted `switchStation`
-action. The default-on `showOpenApps` preference disables the feed when off.
+action. The validated `stationAppsMode` preference selects hover reveal,
+always-open groups, or a hidden/disabled feed; legacy `showOpenApps` booleans
+migrate to hover or hide.
 `StationBar.qml` resolves desktop icons locally and bounds every square icon by
 the painted station-label guide: label ink height on horizontal bars and label
 ink width on vertical bars. Icons keep original colors and full opacity
 regardless of focus.
 Its hover drawer uses the stock tray's 600 ms OutCubic reveal, sliding the same
 opaque current-station label into its expanded position while preceding groups
-emerge behind it and all apps fade in. Closing reverses that motion. Theme-scaled
+emerge behind it and all apps fade in. Closing reverses that motion. Always-open
+mode holds the drawer at its expanded geometry and omits the chevron; Hide mode
+omits apps and the chevron. Theme-scaled
 Station's logo, collapsed station indicator, and chevron each occupy one
 `Style.bar.iconSlot`, with zero spacing between slots in both orientations—the
 same structure as Omarchy's adjacent status controls. Station groups use 10;

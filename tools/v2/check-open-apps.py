@@ -167,9 +167,17 @@ ShellRoot {
           wait(50)
           verify(Math.abs(item.paintedWidth / item.paintedHeight - 2) < 0.01)
         }
+        bar.appsMode = "always"
+        tryVerify(function() { return bar.revealProgress === 1 }, 1000)
+        verify(!arrow.visible)
+        verify(findChild(bar, "stationLabel-1").interactive)
+        verify(findChild(bar, "stationApp-a").interactive)
+        bar.expanded = false
+        wait(50)
+        compare(bar.revealProgress, 1)
         feed.active = false
         compare(Object.keys(feed.rows).length, 0)
-        bar.showApps = false
+        bar.appsMode = "hide"
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
         verify(!arrow.visible)
         var currentAfterDisable = findChild(bar, "stationLabel-2")
