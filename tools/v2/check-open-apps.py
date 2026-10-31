@@ -57,7 +57,8 @@ ShellRoot {
       when: false
       function test_drawer() {
         tryVerify(function() { return feed.clients.length > 0 }, 4000)
-        compare(bar.mainGap, Style.bar.iconSlot - Style.bar.iconCanvas)
+        compare(bar.primarySlot, Style.bar.iconSlot)
+        compare(bar.mainGap, 0)
         var collapsed = bar.width
         var current = findChild(bar, "stationLabel-2")
         var drawer = findChild(bar, "stationDrawer")
@@ -69,11 +70,18 @@ ShellRoot {
         verify(!hiddenPrevious.interactive)
         verify(!hiddenApp.interactive)
         var logo = bar.anchorItem
+        var arrow = findChild(bar, "stationExpander")
+        var logoPoint = logo.mapToItem(bar, 0, 0)
+        var currentPoint = current.mapToItem(bar, 0, 0)
+        var arrowPoint = arrow.mapToItem(bar, 0, 0)
+        compare(Math.round(currentPoint.x + current.width / 2
+          - logoPoint.x - logo.width / 2), Math.round(Style.bar.iconSlot))
+        compare(Math.round(arrowPoint.x + arrow.width / 2
+          - currentPoint.x - current.width / 2), Math.round(Style.bar.iconSlot))
         mouseClick(logo, logo.width / 2, logo.height / 2)
         compare(bar.panelClicks, 1)
         compare(bar.selected, 0)
         compare(bar.stationNumber, 2)
-        var arrow = findChild(bar, "stationExpander")
         mouseMove(arrow, arrow.width / 2, arrow.height / 2)
         tryCompare(bar, "expanded", true)
         tryVerify(function() { return bar.revealProgress > 0 && bar.revealProgress < 1 }, 200)
@@ -117,13 +125,13 @@ ShellRoot {
         wait(50)
         compare(bar.mainGap, 0)
         verify(bar.height > bar.width)
-        var logoPoint = bar.anchorItem.mapToItem(bar, 0, 0)
-        var currentPoint = current.mapToItem(bar, 0, 0)
-        var arrowPoint = arrow.mapToItem(bar, 0, 0)
+        logoPoint = bar.anchorItem.mapToItem(bar, 0, 0)
+        currentPoint = current.mapToItem(bar, 0, 0)
+        arrowPoint = arrow.mapToItem(bar, 0, 0)
         compare(Math.round(currentPoint.y + current.height / 2
-          - logoPoint.y - bar.anchorItem.height / 2), Math.round(bar.barSize))
+          - logoPoint.y - bar.anchorItem.height / 2), Math.round(Style.bar.iconSlot))
         compare(Math.round(arrowPoint.y + arrow.height / 2
-          - currentPoint.y - current.height / 2), Math.round(bar.barSize))
+          - currentPoint.y - current.height / 2), Math.round(Style.bar.iconSlot))
         bar.expanded = true
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         host.effectiveContentSize = 24

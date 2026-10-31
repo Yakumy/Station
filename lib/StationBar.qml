@@ -21,11 +21,10 @@ Item {
   readonly property real contentFontSize: Style.font.body
   readonly property real rasterZoom: bar && "effectiveContentSize" in bar
     ? Math.max(1, Number(bar.effectiveContentSize) / Math.max(1, Math.ceil(Style.font.body))) : 1
-  // Omarchy's adjacent status icons use zero Row spacing and place a
-  // Style.bar.iconCanvas inside each Style.bar.iconSlot. The visible gap is
-  // therefore the difference between those two host tokens.
-  readonly property real mainGap: vertical ? 0
-    : Math.max(0, Style.bar.iconSlot - Style.bar.iconCanvas)
+  // Match Omarchy's status controls structurally: one iconSlot per control,
+  // with zero spacing between slots in both orientations.
+  readonly property real primarySlot: Style.bar.iconSlot
+  readonly property real mainGap: 0
   readonly property real stationGap: Style.spacing.xxl
   readonly property real labelGap: Style.spacing.lg
   readonly property real appGap: Style.spacing.sm
@@ -45,14 +44,12 @@ Item {
   }
   readonly property real currentOffset: currentGroup ? (vertical ? currentGroup.y : currentGroup.x) : 0
   property real revealProgress: expanded && showApps ? 1 : 0
-  readonly property real collapsedExtent: vertical ? barSize : indicatorMetrics.tightBoundingRect("S" + stationNumber).width
+  readonly property real collapsedExtent: primarySlot
   readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
   readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
-  readonly property real logoExtent: vertical ? barSize : logoSize
-  readonly property real arrowExtent: vertical ? barSize : arrowMetrics.tightBoundingRect.width
-  // The preceding stock Omarchy menu contributes its own 7.5-unit end inset.
-  readonly property real leadingInset: Math.max(0, mainGap - Style.spaceReal(7.5)
-    - (menuMetrics.advanceWidth("\ue900") - menuInk.width) / 2)
+  readonly property real logoExtent: primarySlot
+  readonly property real arrowExtent: primarySlot
+  readonly property real leadingInset: 0
   readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showApps ? mainGap + arrowExtent : 0)
   implicitWidth: vertical ? barSize : length
   implicitHeight: vertical ? length : barSize
@@ -75,8 +72,8 @@ Item {
     tooltipText: "Station"
     labelVisible: false
     hasVisualContent: true
-    fixedWidth: root.vertical ? root.barSize : root.logoSize
-    fixedHeight: root.barSize
+    fixedWidth: root.vertical ? root.barSize : root.primarySlot
+    fixedHeight: root.vertical ? root.primarySlot : root.barSize
     onPressed: root.pressed()
     Text { id: menuReference; anchors.centerIn: parent; visible: false; text: "\ue900"; font: menuMetrics.font }
     Station.StationMark {
@@ -143,13 +140,14 @@ Item {
               interactive: group.modelData === root.stationNumber || root.revealProgress > 0.99
               tooltipText: "Station " + group.modelData
               labelVisible: false; hasVisualContent: true
-              fixedWidth: root.vertical ? root.barSize : indicatorMetrics.tightBoundingRect(stationLabel.text).width
-              fixedHeight: root.barSize
+              fixedWidth: root.vertical ? root.barSize : root.primarySlot
+              fixedHeight: root.vertical ? root.primarySlot : root.barSize
               onPressed: root.stationSelected(group.modelData)
               Text {
                 id: stationLabel
                 text: stationButton.text; font: indicatorMetrics.font; color: stationButton.foreground
-                x: root.vertical ? (parent.width - implicitWidth) / 2 : -indicatorMetrics.tightBoundingRect(text).x
+                x: (parent.width - indicatorMetrics.tightBoundingRect(text).width) / 2
+                  - indicatorMetrics.tightBoundingRect(text).x
                 y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
               }
             }
@@ -217,8 +215,8 @@ Item {
       tooltipText: "Stations and open apps"
       x: root.vertical ? 0 : root.revealExtent + root.mainGap
       y: root.vertical ? root.revealExtent + root.mainGap : 0
-      fixedWidth: root.arrowExtent
-      fixedHeight: root.barSize
+      fixedWidth: root.vertical ? root.barSize : root.primarySlot
+      fixedHeight: root.vertical ? root.primarySlot : root.barSize
       onPressed: root.expanded = !root.expanded
       Text {
         text: parent.text; font: indicatorMetrics.font; color: parent.foreground

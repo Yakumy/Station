@@ -99,6 +99,9 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 Bar thickness is the exception that starts from the dedicated Omarchy tokens
 `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
 Height control may increase it, but never lowers it below the active token.
+Primary Station bar controls use `Style.bar.iconSlot` along the bar axis and
+zero inter-slot spacing, matching Omarchy's adjacent status controls in either
+orientation. Do not derive a separate gap from `iconSlot` and `iconCanvas`.
 Blurred bars use a nearly clear 1% mask derived from `Color.bar.background`
 through `Util.alpha`; it activates compositor blur without adding a visible
 dark glass tint or a separate palette. Bar appearance
