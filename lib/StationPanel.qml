@@ -753,7 +753,7 @@ Ui.Panel {
                 id: tab
                 required property int index
                 required property string modelData
-                readonly property bool conflicted: index === 3 && root.conflictCount > 0
+                readonly property bool conflicted: index === 4 && root.conflictCount > 0
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.

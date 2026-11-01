@@ -38,7 +38,7 @@ Item {
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
-  onConfigChanged: Qt.callLater(syncFocusedBarMenu)
+  onConfigChanged: { Qt.callLater(syncFocusedBarMenu); Qt.callLater(syncWindowGaps) }
   // While a panel is open, config.bars is the live authority consumed through
   // BarBridge. Delay the redundant shell.json mirror write until the panel is
   // closed: changing that host config can rebuild the complete third-party bar
@@ -1307,6 +1307,17 @@ Item {
     return "ok"
   }
 
+  function windowGapLua(settings) {
+    var bars = {}
+    monitors.forEach(function(monitor) {
+      if (validConnector(monitor.name)) bars[monitor.name] = monitorBar(monitor.name)
+    })
+    return Windows.gapRules(settings, bars)
+  }
+  function syncWindowGaps() {
+    if (started && config.windows) evalLua(windowGapLua(config.windows))
+  }
+
   property bool windowSettingsBusy: false
   function setWindowSetting(key, value) {
     if (windowSettingsBusy) return "busy"
@@ -1316,7 +1327,7 @@ Item {
     next[key] = value
     next = Windows.clean(next)
     windowSettingsBusy = true
-    evalLua(Windows.lua(next), function(code, output) {
+    evalLua(Windows.lua(next) + "; " + windowGapLua(next), function(code, output) {
       root.windowSettingsBusy = false
       if (code !== 0) { root.layoutError = "Window settings failed: " + output; return }
       root.config = Object.assign({}, root.config, { windows: next })
@@ -1328,7 +1339,7 @@ Item {
   function applyRuntime() {
     // A config reload/hotplug during Keep must not reapply the old saved mode.
     if (state === "previewing" || state === "applyingLayout") return
-    if (config.windows) evalLua(Windows.lua(config.windows))
+    if (config.windows) evalLua(Windows.lua(config.windows) + "; " + windowGapLua(config.windows))
     updateAssignments()
     try {
       var displays = Object.keys(lanes).map(function(name) {

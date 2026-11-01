@@ -249,4 +249,4 @@ See [media notes](docs/assets/tours/README.md) for GIF provenance and rendering.
 The **Windows** tab after Bar previews two windows and controls global inner/outer
 gaps, the next Dwindle split, corner roundness, and window animation speed.
 Drag to preview; release to apply and save. Gap sliders mark the selected bar's
-thickness. Outer gaps leave the bar in place. Speed 0 disables animations.
+thickness. Outer gaps leave the bar in place and skip its edge. Speed 0 disables animations.

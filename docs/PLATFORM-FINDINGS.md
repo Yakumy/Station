@@ -839,3 +839,19 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   clean-export plugin validation, and live-backend component compilation passed.
   A parallel watchdog test failed its timing assertion; the sequential run passed.
   Actual slider interaction, geometry and animation feel await user acceptance.
+
+### Windows acceptance corrections (2026-11-01)
+
+- User testing found the split percentage affected the old window. Generation
+  now uses `(100 - nextPercent) / 50`; 28% therefore emits 1.44.
+- [LIVE] `hl.workspace_rule` accepted `workspace="m[eDP-1]"` with a
+  directional `gaps_out` table; `configerrors` stayed empty. Reload restored
+  saved settings. The service generates one monitor selector per connected
+  output and reapplies on preference changes and runtime rebuilds.
+  Syntax follows the installed Lua stubs and
+  https://wiki.hypr.land/configuring/core/rules/workspace-rules/.
+- The preview now swaps once after a changed speed is released, with no repeating
+  timer. Its outer canvas uses BarLayout's dotted pattern, insets and border.
+- 211 regression tests, 23 existing layout tests, theme scan and component
+  compilation passed. Final new-window proportions and visual acceptance remain
+  user checks; the directional-rule probe confirms API acceptance only.

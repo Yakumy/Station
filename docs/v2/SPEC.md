@@ -672,13 +672,14 @@ Files:
 
 Windows follows Bar, with the shared layout/control-column geometry. Two sample
 windows show the full inner gap, outer gap, Dwindle next-window split percentage,
-and actual window corner radius. Their automatic side swap demonstrates window
+and actual window corner radius. A single side swap after changing animation speed demonstrates window
 motion; it never dispatches a move against real windows. Gap tracks mark the
 selected monitor's bar thickness with a hover tooltip. Settings are global.
 
 Sliders preview while dragging and apply on release. Inner gap is the complete
 visible gap (Hyprland `gaps_in` is half this value); outer gap does not write bar
-geometry or layer reservations. Split is Dwindle-only, 25–75%; other layouts
+geometry or layer reservations. Per-monitor workspace rules set outer gap to zero
+on the enabled bar edge; disabled bars keep all four gaps. Split is Dwindle-only, 25–75%; other layouts
 retain their layout policy. Speed 0 disables compositor animations; positive
 values enable them and set window animation duration to 400 ms divided by speed.
 This does not retime workspace, bar, or shell animations. Window previews use

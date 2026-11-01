@@ -11,6 +11,8 @@ Column {
   readonly property var savedValues: panelRoot.service ? panelRoot.service.config.windows : null
   onSavedValuesChanged: values = Windows.clean(savedValues)
   property bool swapped: false
+  property bool animateSwap: false
+  Timer { id: swapEnd; interval: 500; onTriggered: root.animateSwap = false }
   readonly property var barSettings: panelRoot.selectedDisplay && panelRoot.service ? panelRoot.service.monitorBar(panelRoot.selectedDisplay.name) : ({})
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
@@ -19,7 +21,6 @@ Column {
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
-  Timer { interval: 2200; repeat: true; running: root.visible && root.panelRoot.opened; onTriggered: root.swapped = !root.swapped }
   Row {
     width: parent.width
     height: Style.space(428)
@@ -29,24 +30,61 @@ Column {
         width: parent.width; height: Style.space(28)
         Ui.PanelSectionHeader { anchors.left: parent.left; anchors.leftMargin: root.panelRoot.regionPadH; text: "LAYOUT"; foreground: root.panelRoot.textPrimary }
       }
-      Item {
-        width: parent.width; height: Style.space(370)
+      Ui.BorderSurface {
+        width: parent.width - root.panelRoot.regionPadH * 2
+        height: Style.space(370)
+        anchors.horizontalCenter: parent.horizontalCenter
+        clip: true
+        color: Commons.Color.popups.background
+        borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
+        radius: Style.cornerRadius
+        Canvas {
+          anchors.fill: parent
+          opacity: 0.22
+          property color dotColor: Commons.Color.popups.text
+          onDotColorChanged: requestPaint()
+          onWidthChanged: requestPaint()
+          onHeightChanged: requestPaint()
+          onPaint: {
+            var context = getContext("2d")
+            context.clearRect(0, 0, width, height)
+            context.fillStyle = dotColor
+            var gap = Style.space(16), radius = Math.max(Style.space(0.7), 0.5)
+            for (var x = gap; x < width; x += gap) for (var y = gap; y < height; y += gap) {
+              context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill()
+            }
+          }
+        }
+
         Rectangle {
           id: screen
           anchors.centerIn: parent
-          width: parent.width - root.panelRoot.regionPadH * 2
+          width: parent.width * 0.8
           height: width * 0.625
-          color: Commons.Color.popups.background
-          border.color: Commons.Color.popups.text
+          color: Commons.Color.menu.selectedBackground
+          border.color: Commons.Color.accent
           border.width: Style.normalBorderWidth
           radius: Style.cornerRadius
           readonly property real factor: width / 1000
           readonly property real gap: root.values.innerGap * factor
-          readonly property real outer: root.values.outerGap * factor + border.width
+          readonly property var gaps: Windows.gaps(root.values, root.barSettings)
+          readonly property real barSize: root.barSettings.enabled !== false ? root.thickness * factor : 0
+          Rectangle {
+            color: Commons.Color.accent
+            radius: Style.cornerRadius
+            visible: root.barSettings.enabled !== false
+            x: root.barSettings.position === "right" ? parent.width - width : 0
+            y: root.barSettings.position === "bottom" ? parent.height - height : 0
+            width: root.barSettings.position === "left" || root.barSettings.position === "right" ? screen.barSize : parent.width
+            height: root.barSettings.position === "left" || root.barSettings.position === "right" ? parent.height : screen.barSize
+          }
           Item {
             id: area
             anchors.fill: parent
-            anchors.margins: screen.outer
+            anchors.topMargin: screen.gaps.top * screen.factor + screen.border.width + (root.barSettings.position === "top" ? screen.barSize : 0)
+            anchors.rightMargin: screen.gaps.right * screen.factor + screen.border.width + (root.barSettings.position === "right" ? screen.barSize : 0)
+            anchors.bottomMargin: screen.gaps.bottom * screen.factor + screen.border.width + (root.barSettings.position === "bottom" ? screen.barSize : 0)
+            anchors.leftMargin: screen.gaps.left * screen.factor + screen.border.width + (root.barSettings.position === "left" ? screen.barSize : 0)
             Repeater {
               model: 2
               Rectangle {
@@ -55,11 +93,11 @@ Column {
                 width: (area.width - screen.gap) * (index === 0 ? root.values.split / 100 : 1 - root.values.split / 100)
                 height: area.height
                 x: onRight ? area.width - width : 0
-                color: Commons.Color.menu.selectedBackground
+                color: Commons.Color.popups.background
                 border.color: index === 0 ? Commons.Color.accent : Commons.Color.popups.text
                 border.width: Style.normalBorderWidth
                 radius: root.values.rounding * screen.factor
-                Behavior on x { NumberAnimation { duration: root.values.speed === 0 ? 0 : 400 / root.values.speed; easing.type: Easing.OutCubic } }
+                Behavior on x { enabled: root.animateSwap; NumberAnimation { duration: root.values.speed === 0 ? 0 : 400 / root.values.speed; easing.type: Easing.OutCubic } }
                 Caption { anchors.centerIn: parent; text: index === 0 ? "NEXT WINDOW" : "WINDOW" }
               }
             }
@@ -70,7 +108,7 @@ Column {
     Rectangle { width: Math.max(1, Style.normalBorderWidth); height: parent.height; color: Commons.Color.popups.text; opacity: 0.12 }
     Column {
       width: parent.width * 0.424 - Math.max(1, Style.normalBorderWidth)
-      Item { width: parent.width; height: Style.space(28); Caption { anchors.centerIn: parent; text: "All monitors · Dwindle split" } }
+      Item { width: parent.width; height: Style.space(28); Caption { anchors.left: parent.left; anchors.leftMargin: Style.space(28); anchors.verticalCenter: parent.verticalCenter; width: parent.width - Style.space(56); elide: Text.ElideRight; text: root.panelRoot.selectedDisplay ? "Selected: " + root.panelRoot.selectedDisplay.name : "All monitors" } }
       Ui.BorderSurface {
         width: parent.width - Style.space(56); height: Style.space(370)
         anchors.horizontalCenter: parent.horizontalCenter
@@ -99,7 +137,10 @@ Column {
                 integer: true
                 value: root.values[row.modelData.key]
                 onMoved: function(value) { root.preview(row.modelData.key, value) }
-                onReleased: function(value) { root.panelRoot.service.setWindowSetting(row.modelData.key, value) }
+                onReleased: function(value) {
+                  if (row.modelData.key === "speed" && value !== Windows.clean(root.savedValues).speed) { root.animateSwap = true; root.swapped = !root.swapped; swapEnd.restart() }
+                  root.panelRoot.service.setWindowSetting(row.modelData.key, value)
+                }
                 Rectangle {
                   visible: row.index < 2
                   x: Math.min(1, root.thickness / slider.maximum) * parent.width - width / 2
@@ -117,5 +158,5 @@ Column {
     }
   }
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
-  Item { width: parent.width; height: Style.space(64); Caption { anchors.centerIn: parent; text: "Preview swaps automatically · 0 disables animations" } }
+  Item { width: parent.width; height: Style.space(64); Caption { anchors.centerIn: parent; text: "Change animation speed to preview · 0 disables animations" } }
 }
