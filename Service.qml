@@ -1302,7 +1302,7 @@ Item {
       var displays = Object.keys(lanes).map(function(name) {
         return { name: name, lane: lanes[name] }
       })
-      var outputs = MonitorsLua.changedOutputs(displays, config, monitors, false)
+      var outputs = MonitorsLua.runtimeOutputs(displays, config, monitors)
       var monitorRules = MonitorsLua.runtimeModeRules(displays, config, outputs)
       expect = { kinds: ["monitor", "workspace"], outputs: outputs, until: Date.now() + 2000 }
       evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
