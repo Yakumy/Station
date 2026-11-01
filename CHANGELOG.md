@@ -7,3 +7,7 @@
 
 - Corrected next-window split direction, excluded enabled bar edges from outer
   gaps, matched the shared dotted layout canvas, and made speed previews run once.
+- Limited animation speed to nine stops across 0–2× with 1× centered; preserved
+  fractional speeds and full slow-preview duration.
+- Reserved inset bar surfaces in full so Blur, Transparent and Pill cannot
+  overlap tiled windows when the bar-facing window gap is zero.

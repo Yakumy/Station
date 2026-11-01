@@ -143,10 +143,9 @@ Span keeps exact edge-to-edge cards because its image crop is continuous.
 
 **Floating bar edge geometry:** Omarchy-default Solid bars retain the stock
 edge-aligned surface. Pill style and Blur/Transparent backgrounds use
-`Style.gapsOut` as an inward visual offset while preserving the configured bar
-thickness as their layer-shell exclusion zone. `Style.gapsOut` is half the
-compositor's outer window gap, so this centers bar content in the full strip
-between the monitor edge and tiled windows on every bar side.
+`Style.gapsOut` as an inward visual offset. The layer-shell exclusion zone
+covers the entire surface thickness, including the inset. Window gaps may be
+zero on that edge without overlapping the bar.
 The leading and trailing Pill islands use the full outer window gap
 (`Style.gapsOut * 2`) from the monitor sides parallel to the bar, keeping their
 outer edges aligned with tiled windows.

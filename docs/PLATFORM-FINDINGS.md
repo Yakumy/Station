@@ -855,3 +855,17 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - 211 regression tests, 23 existing layout tests, theme scan and component
   compilation passed. Final new-window proportions and visual acceptance remain
   user checks; the directional-rule probe confirms API acceptance only.
+
+### Animation range and inset bar reservation (2026-11-01)
+
+- Animation speed now has nine indexed stops from 0 to 2×. Index 4 is 1×;
+  the requested upper-quarter stop is 1.24×. Fractional values survive service
+  sanitization. A slow preview retains its animation for the full duration.
+- [SRC] Inset bars previously reserved `barSize` while painting through
+  `panelThickness = barSize + edgeCenterOffset`. With zero outer gap on the
+  bar side, the inward extension overlapped tiled windows. Bars now use Auto
+  exclusion for the entire surface in all background/style modes. The explicit
+  `exclusiveZone` setter is removed (it switches Quickshell into Normal mode).
+  API reference: https://quickshell.org/docs/v0.3.0/types/Quickshell/PanelWindow/.
+- 212 Node regression tests, 23 layout tests, theme scan and QML compilation
+  passed. Final rendering requires user acceptance.

@@ -651,10 +651,8 @@ Item {
   readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
   readonly property bool insetPresentation: barStyle === "pill" || backgroundMode !== "solid"
-  // Hyprland leaves its full outer gap between the layer-shell exclusion edge
-  // and tiled windows. Style.gapsOut is half that gap, so extending the visual
-  // surface inward by this amount places the module centerline exactly halfway
-  // between the physical monitor edge and the nearest window edge.
+  // Inset presentations extend inward from the screen edge. Reserve the whole
+  // surface, including that inset, so tiled windows cannot cover the modules.
   readonly property int edgeCenterOffset: insetPresentation ? Style.gapsOut : 0
   readonly property int panelThickness: barSize + edgeCenterOffset
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
@@ -1384,8 +1382,7 @@ Item {
     // keeps the surface alive, so showing is only a margin change.
     visible: !remapGuard.remapping
     exclusionMode: root.barHidden ? ExclusionMode.Ignore
-      : root.insetPresentation ? ExclusionMode.Normal : ExclusionMode.Auto
-    exclusiveZone: root.barSize
+      : ExclusionMode.Auto
 
     ScreenMoveRemap {
       id: remapGuard

@@ -681,7 +681,9 @@ visible gap (Hyprland `gaps_in` is half this value); outer gap does not write ba
 geometry or layer reservations. Per-monitor workspace rules set outer gap to zero
 on the enabled bar edge; disabled bars keep all four gaps. Split is Dwindle-only, 25–75%; other layouts
 retain their layout policy. Speed 0 disables compositor animations; positive
-values enable them and set window animation duration to 400 ms divided by speed.
+values use nine slider positions: 0, 0.25, 0.5, 0.75, 1, 1.24, 1.5, 1.75, 2.
+Normal speed (1×) is the middle position; existing higher values clamp to 2×.
+Positive values enable animations and set window animation duration to 400 ms divided by speed.
 This does not retime workspace, bar, or shell animations. Window previews use
 that duration with an illustrative easing curve.
 

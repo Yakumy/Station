@@ -68,11 +68,11 @@ hide the last bar on an enabled output.
 The default style paints one continuous surface. Pill style paints independently
 rounded left, center, and right islands while reusing the selected Background
 mode; its padding is included in each live bar's non-overlap measurement.
-For Pill, Blur, and Transparent presentations, `MonitorBar` expands only its
-visual/input layer inward by `Style.gapsOut` and keeps the exclusion zone at the
-configured thickness. Omarchy defines that token as half Hyprland's outer
-window gap, which centers module icons in the complete monitor-edge-to-window
-strip without moving tiled windows. Solid default bars retain stock geometry.
+For Pill, Blur, and Transparent presentations, `MonitorBar` extends its
+visual/input layer inward by `Style.gapsOut`. Its automatic exclusion zone
+reserves the complete `panelThickness`, including this inset, so windows cannot
+overlap the visible modules when the bar-facing outer gap is zero.
+Solid default bars retain stock geometry.
 Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
 the bar's parallel monitor edges. The panel's cross-axis stabilization permits
 the half-gap visual extension when validating the remapped bar window; the

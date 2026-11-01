@@ -12,7 +12,7 @@ Column {
   onSavedValuesChanged: values = Windows.clean(savedValues)
   property bool swapped: false
   property bool animateSwap: false
-  Timer { id: swapEnd; interval: 500; onTriggered: root.animateSwap = false }
+  Timer { id: swapEnd; interval: root.values.speed > 0 ? 400 / root.values.speed + 100 : 1; onTriggered: root.animateSwap = false }
   readonly property var barSettings: panelRoot.selectedDisplay && panelRoot.service ? panelRoot.service.monitorBar(panelRoot.selectedDisplay.name) : ({})
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
@@ -131,13 +131,14 @@ Column {
                 width: parent.width - root.panelRoot.space3 * 2
                 anchors.centerIn: parent
                 bar: root.panelRoot.bar
-                minimum: Windows.limits[row.modelData.key][0]
-                maximum: Windows.limits[row.modelData.key][1]
+                minimum: row.index === 4 ? 0 : Windows.limits[row.modelData.key][0]
+                maximum: row.index === 4 ? Windows.speeds.length - 1 : Windows.limits[row.modelData.key][1]
                 enabled: root.panelRoot.service && !root.panelRoot.service.windowSettingsBusy
                 integer: true
-                value: root.values[row.modelData.key]
-                onMoved: function(value) { root.preview(row.modelData.key, value) }
+                value: row.index === 4 ? Windows.speedIndex(root.values.speed) : root.values[row.modelData.key]
+                onMoved: function(value) { root.preview(row.modelData.key, row.index === 4 ? Windows.speeds[value] : value) }
                 onReleased: function(value) {
+                  if (row.index === 4) value = Windows.speeds[value]
                   if (row.modelData.key === "speed" && value !== Windows.clean(root.savedValues).speed) { root.animateSwap = true; root.swapped = !root.swapped; swapEnd.restart() }
                   root.panelRoot.service.setWindowSetting(row.modelData.key, value)
                 }

@@ -267,8 +267,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /insetPresentation: barStyle === "pill" \|\| backgroundMode !== "solid"/);
   assert.match(monitorBar, /edgeCenterOffset: insetPresentation \? Style\.gapsOut : 0/);
   assert.match(monitorBar, /panelThickness: barSize \+ edgeCenterOffset/);
-  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore[\s\S]*?root\.insetPresentation \? ExclusionMode\.Normal : ExclusionMode\.Auto/);
-  assert.match(monitorBar, /exclusiveZone: root\.barSize/);
+  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore[\s\S]*?ExclusionMode\.Auto/);
+  assert.doesNotMatch(monitorBar, /exclusiveZone:/);
   assert.match(monitorBar, /root\.position === "left" \? root\.edgeCenterOffset : 0/);
   assert.match(monitorBar, /root\.position === "top" \? root\.edgeCenterOffset : 0/);
   assert.match(monitorBar, /pillOuterMargin: root\.barStyle === "pill" \? Style\.gapsOut \* 2 : 0/);
