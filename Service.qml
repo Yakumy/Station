@@ -7,6 +7,7 @@ import "lib/Model.js" as Model
 import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
 import "lib/Store.js" as Store
+import "lib/Windows.js" as Windows
 import "lib/Recovery.js" as Recovery
 import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
@@ -192,6 +193,7 @@ Item {
 
   function barSnapshot() {
     return JSON.parse(JSON.stringify({
+      windowSettingsBusy: windowSettingsBusy,
       currentStation: currentStation,
       openApps: openApps,
       displayDraft: displayDraft,
@@ -243,7 +245,7 @@ Item {
     if (typeof value === "number" && isFinite(value) && value >= 0) panelTransferUntil = value
   }
   function setRememberedTab(value) {
-    if (Number.isInteger(value) && value >= 0 && value <= 4) rememberedTab = value
+    if (Number.isInteger(value) && value >= 0 && value <= 5) rememberedTab = value
   }
   function setRememberedDisplayName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) rememberedDisplayName = value
@@ -1305,9 +1307,28 @@ Item {
     return "ok"
   }
 
+  property bool windowSettingsBusy: false
+  function setWindowSetting(key, value) {
+    if (windowSettingsBusy) return "busy"
+    if (!Object.prototype.hasOwnProperty.call(Windows.limits, key)
+        || typeof value !== "number" || !isFinite(value)) return "invalid"
+    var next = Windows.clean(config.windows)
+    next[key] = value
+    next = Windows.clean(next)
+    windowSettingsBusy = true
+    evalLua(Windows.lua(next), function(code, output) {
+      root.windowSettingsBusy = false
+      if (code !== 0) { root.layoutError = "Window settings failed: " + output; return }
+      root.config = Object.assign({}, root.config, { windows: next })
+      root.saveConfig()
+    })
+    return "ok"
+  }
+
   function applyRuntime() {
     // A config reload/hotplug during Keep must not reapply the old saved mode.
     if (state === "previewing" || state === "applyingLayout") return
+    if (config.windows) evalLua(Windows.lua(config.windows))
     updateAssignments()
     try {
       var displays = Object.keys(lanes).map(function(name) {
@@ -2304,6 +2325,7 @@ Item {
       setPanelWanted: function(value) { return root.setPanelWanted(value) },
       setPanelScreenName: function(value) { return root.setPanelScreenName(value) },
       setPanelTransferUntil: function(value) { return root.setPanelTransferUntil(value) },
+      setWindowSetting: function(key, value) { return root.setWindowSetting(key, value) },
       setRememberedTab: function(value) { return root.setRememberedTab(value) },
       setRememberedDisplayName: function(value) { return root.setRememberedDisplayName(value) },
       wallpaperChange: function(key, value) { return root.wallpaper.change(key, value) },

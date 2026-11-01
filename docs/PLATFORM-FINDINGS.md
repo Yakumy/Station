@@ -823,3 +823,19 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   with flipped focus, changes host content size, and checks image decode and
   layer texture dimensions against the required physical raster size. It and
   QML compilation pass. Final visual sharpness still requires user review.
+
+## Windows controls (2026-11-01)
+
+- [LIVE] Hyprland remains 0.56.2 (`efb5099`); bounded `hl.config` gaps,
+  Dwindle split ratio, rounding, animation enable and `hl.animation` window
+  leaves accepted the generated default Windows settings. `configerrors` was
+  empty; a reload restored file-based settings afterward.
+- [SRC] Omaland's installed service only manages its launcher; its saved block
+  currently sets `dwindle.split_width_multiplier`. Disabling that plugin does
+  not erase the block. Station does not write that option.
+- [QTTEST] Current check-layout runner reports Qt 6.12.0 / Omarchy 4.0.6;
+  its 23 existing pointer tests passed. They do not exercise the new Windows UI.
+- Windows validation: 210 Node tests passed sequentially, theme-token scan,
+  clean-export plugin validation, and live-backend component compilation passed.
+  A parallel watchdog test failed its timing assertion; the sequential run passed.
+  Actual slider interaction, geometry and animation feel await user acceptance.

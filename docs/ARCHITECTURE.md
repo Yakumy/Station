@@ -230,3 +230,7 @@ focus its address. Silent moves leave the selected station alone.
 
 `lastWindowAction` in the existing status IPC records reception, selected address,
 and completion result for diagnosing real keys without synthetic input.
+
+WindowsTab uses Windows.js for bounded numeric settings and Lua generation.
+The persistent service owns application/persistence; the replacement-bar proxy
+exposes only `setWindowSetting` and the existing detached config snapshot.

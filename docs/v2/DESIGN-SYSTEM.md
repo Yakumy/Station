@@ -176,3 +176,9 @@ A change passes when, under at least two themes including one light theme (Catpp
 - Keybindings and Settings rows read as a plain hairline list; the only bordered row is one with an active conflict.
 - No rounded corners, shadows or glows appear anywhere, at any theme.
 - Every color, font and spacing value traces to a token in §4–§6, with no literal left in the diff.
+
+### Window geometry preview
+
+The two simulated windows in WindowsTab are the sole exception to the corner
+token rule: their radius is the selected compositor rounding scaled to the
+preview. All surrounding chrome continues to use `Style.cornerRadius`.

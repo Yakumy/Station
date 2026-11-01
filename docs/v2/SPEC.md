@@ -667,3 +667,27 @@ Files:
 - **M2 displays:** panel, canvas (logical coordinates), list, resolution/refresh/scale, role swap, brightness, Mode and Direction dropdowns, preview watchdog, Keep transaction, `monitors.lua` block.
 - **M3 keybindings:** conflict checker, editor, red tab.
 - **M4 polish:** settings tab, docs, marketplace listing and review notes.
+
+## Windows tab (2026-11-01)
+
+Windows follows Bar, with the shared layout/control-column geometry. Two sample
+windows show the full inner gap, outer gap, Dwindle next-window split percentage,
+and actual window corner radius. Their automatic side swap demonstrates window
+motion; it never dispatches a move against real windows. Gap tracks mark the
+selected monitor's bar thickness with a hover tooltip. Settings are global.
+
+Sliders preview while dragging and apply on release. Inner gap is the complete
+visible gap (Hyprland `gaps_in` is half this value); outer gap does not write bar
+geometry or layer reservations. Split is Dwindle-only, 25–75%; other layouts
+retain their layout policy. Speed 0 disables compositor animations; positive
+values enable them and set window animation duration to 400 ms divided by speed.
+This does not retime workspace, bar, or shell animations. Window previews use
+that duration with an illustrative easing curve.
+
+The service stores successful changes under `config.windows`, applies sanitized
+numeric Lua through its command queue, and reapplies on startup/config reload.
+An absent preference leaves existing desktop settings untouched until the first
+edit. Initial preview defaults match stock gaps, equal split, square corners,
+and speed 1. These are preview defaults, not a readback of external overrides.
+The normal removal reload restores file-based Hyprland appearance settings;
+Station does not modify Omaland's block or `looknfeel.lua`.

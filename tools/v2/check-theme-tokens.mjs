@@ -32,7 +32,8 @@ function checkLine(path, line, code) {
   if (HEX.test(code)) report(path, line, 'hex colour literal');
   const radius = code.match(/\bradius\s*:/);
   if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')
-      && !APPROVED_PILL_RADIUS.test(code)) {
+      && !APPROVED_PILL_RADIUS.test(code)
+      && !(path.endsWith("/WindowsTab.qml") && code.trim() === "radius: root.values.rounding * screen.factor")) {
     report(path, line, 'radius not bound to Style.cornerRadius');
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');
