@@ -11,3 +11,5 @@
   fractional speeds and full slow-preview duration.
 - Reserved inset bar surfaces in full so Blur, Transparent and Pill cannot
   overlap tiled windows when the bar-facing window gap is zero.
+- Aligned every bar presentation with the monitor edge and removed pill outer
+  margins while retaining full window-space reservation.

@@ -141,14 +141,10 @@ monitor card by half of `Style.spacing.sm`, producing a compact named gap
 between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
 Span keeps exact edge-to-edge cards because its image crop is continuous.
 
-**Floating bar edge geometry:** Omarchy-default Solid bars retain the stock
-edge-aligned surface. Pill style and Blur/Transparent backgrounds use
-`Style.gapsOut` as an inward visual offset. The layer-shell exclusion zone
-covers the entire surface thickness, including the inset. Window gaps may be
-zero on that edge without overlapping the bar.
-The leading and trailing Pill islands use the full outer window gap
-(`Style.gapsOut * 2`) from the monitor sides parallel to the bar, keeping their
-outer edges aligned with tiled windows.
+**Bar edge geometry:** All backgrounds and styles share edge-aligned geometry.
+The full surface thickness is reserved automatically. Pill islands have no outer
+margin or cross-axis inset; their internal padding remains. Window gaps do not
+move the bar away from the monitor edge.
 
 ## 8. Do-not list
 

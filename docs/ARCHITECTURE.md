@@ -68,15 +68,11 @@ hide the last bar on an enabled output.
 The default style paints one continuous surface. Pill style paints independently
 rounded left, center, and right islands while reusing the selected Background
 mode; its padding is included in each live bar's non-overlap measurement.
-For Pill, Blur, and Transparent presentations, `MonitorBar` extends its
-visual/input layer inward by `Style.gapsOut`. Its automatic exclusion zone
-reserves the complete `panelThickness`, including this inset, so windows cannot
-overlap the visible modules when the bar-facing outer gap is zero.
-Solid default bars retain stock geometry.
-Pill end islands additionally use the full outer gap (`Style.gapsOut * 2`) on
-the bar's parallel monitor edges. The panel's cross-axis stabilization permits
-the half-gap visual extension when validating the remapped bar window; the
-exclusive-zone size exposed to popup placement remains unchanged.
+All styles and backgrounds start at the physical monitor edge. Auto exclusion
+reserves the complete configured thickness. Pill backgrounds have no outer
+inset on either axis; padding stays inside each island. Window gaps do not move
+the bar. The panel's cross-axis stabilization validates remapped bar geometry
+before updating popup placement.
 Content size is stored per monitor as a font-pixel target. Above the default,
 `MonitorBar` renders each module as a uniform zoom of its default-size subtree
 at the requested-to-default ratio — the same proportions as Omarchy's global

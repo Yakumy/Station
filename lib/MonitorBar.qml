@@ -650,11 +650,8 @@ Item {
       targetScreen ? Number(targetScreen.height) : 1) * 0.05))
   readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
-  readonly property bool insetPresentation: barStyle === "pill" || backgroundMode !== "solid"
-  // Inset presentations extend inward from the screen edge. Reserve the whole
-  // surface, including that inset, so tiled windows cannot cover the modules.
-  readonly property int edgeCenterOffset: insetPresentation ? Style.gapsOut : 0
-  readonly property int panelThickness: barSize + edgeCenterOffset
+  // Every presentation starts at the physical edge and reserves its full size.
+  readonly property int panelThickness: barSize
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
   readonly property int contentInset: Math.ceil(Style.spacing.sm)
   property int measuredMaximumContentSize: defaultContentSize
@@ -1427,15 +1424,15 @@ Item {
       width: root.vertical ? root.barSize : root.effectiveBarLength
       height: root.vertical ? root.effectiveBarLength : root.barSize
       x: root.vertical
-        ? (root.position === "left" ? root.edgeCenterOffset : 0)
+        ? 0
         : Math.round((parent.width - width) / 2)
       y: root.vertical
         ? Math.round((parent.height - height) / 2)
-        : (root.position === "top" ? root.edgeCenterOffset : 0)
+        : 0
       readonly property real regionGap: Style.spacing.sm
       readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0
-      readonly property real pillInset: Style.space(2)
-      readonly property real pillOuterMargin: root.barStyle === "pill" ? Style.gapsOut * 2 : 0
+      readonly property real pillInset: 0
+      readonly property real pillOuterMargin: 0
       readonly property real edgeMargin: root.barStyle === "pill"
         ? pillOuterMargin + pillPadding : Style.space(8)
       readonly property real leadingLength: (root.vertical ? leftModules.height : leftModules.width)

@@ -869,3 +869,13 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   API reference: https://quickshell.org/docs/v0.3.0/types/Quickshell/PanelWindow/.
 - 212 Node regression tests, 23 layout tests, theme scan and QML compilation
   passed. Final rendering requires user acceptance.
+
+### Edge-aligned bar correction (2026-11-01)
+
+- User acceptance found the retained floating inset left unwanted gaps against
+  monitor edges. All backgrounds/styles now share zero cross-axis offset and
+  reserve exactly `barSize` via Auto exclusion. Pill islands also remove their
+  outer inset and parallel theme-gap margin; padding remains inside the islands.
+  This revises the earlier floating geometry while retaining overlap protection.
+- 212 Node tests, 23 existing layout tests, theme checks and QML compilation
+  passed. Physical visual acceptance remains a user check.
