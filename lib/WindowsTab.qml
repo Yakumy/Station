@@ -83,6 +83,21 @@ Column {
                   MouseArea { anchors.fill: parent; anchors.margins: -Style.space(5); hoverEnabled: true; onEntered: { if (root.panelRoot.bar) root.panelRoot.bar.showTooltip(parent, "Bar thickness: " + root.thickness + " px") } onExited: { if (root.panelRoot.bar) root.panelRoot.bar.hideTooltip(parent) } }
                 }
               }
+              Text {
+                visible: row.index === 4
+                anchors.left: parent.left
+                anchors.leftMargin: root.panelRoot.space2
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: root.panelRoot.space1
+                width: parent.width - root.panelRoot.space2 * 2
+                horizontalAlignment: Text.AlignLeft
+                wrapMode: Text.NoWrap
+                elide: Text.ElideRight
+                text: "Change animation speed to preview · 0 disables animations"
+                color: root.panelRoot.textDim
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
               Ui.PanelSeparator { visible: row.index < 4; anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
             }
           }
@@ -90,6 +105,4 @@ Column {
       }
     }
   }
-  Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
-  Item { width: parent.width; height: Style.space(64); Caption { anchors.centerIn: parent; text: "Change animation speed to preview · 0 disables animations" } }
 }

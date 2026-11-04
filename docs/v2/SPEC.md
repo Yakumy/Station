@@ -700,7 +700,9 @@ that duration per transfer with an illustrative easing curve and a 120 ms pause
 between transfers. A shared progress value interpolates position and size for
 all windows. Playback captures the released speed; another release during
 playback queues the latest speed for a complete replay, preserving continuity.
-Speed 0 settles the exchange immediately when its replay starts.
+Speed 0 settles the exchange immediately when its replay starts. The preview
+hint sits beneath the Animation Speed slider, using the same spacing and text
+treatment as Displays control notices.
 
 Rounding uses a bounded cache of application window rules (0–20 px), with only
 one active rule. It does not change `decoration.rounding`, which Omarchy also
