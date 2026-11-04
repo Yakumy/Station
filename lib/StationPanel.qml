@@ -62,6 +62,7 @@ Ui.Panel {
   property string editingKey: ""
   readonly property string pluginVersion: service && service.manifest && service.manifest.version ? String(service.manifest.version) : ""
   readonly property real desiredPanelWidth: Style.space(996)
+  readonly property real desiredPanelHeight: Style.space(620)
 
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
   // these; nothing below this block hardcodes a colour, radius or step.
@@ -456,7 +457,10 @@ Ui.Panel {
     if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
   }
 
-  onSelectedTabChanged: if (service && sessionTabRestored) service.setRememberedTab(selectedTab)
+  onSelectedTabChanged: {
+    if (service && sessionTabRestored) service.setRememberedTab(selectedTab)
+    if (tabScroll.contentItem) tabScroll.contentItem.contentY = 0
+  }
 
   // The bar rebuilds this widget wholesale, so the tab it was showing has to
   // come back from the service instead of from this instance.
@@ -680,6 +684,7 @@ Ui.Panel {
 
   Ui.KeyboardPanel {
     id: panel
+    objectName: "stationPanelWindow"
     anchorItem: barControls.anchorItem
     owner: popoutOwner
     bar: panelBarFacade
@@ -690,7 +695,7 @@ Ui.Panel {
     centerOnBar: root.service && root.service.config.panelPosition === "center"
     gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barW, barH,
       root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
-        ? content.implicitHeight + verticalContentInset : 0,
+        ? root.desiredPanelHeight + verticalContentInset : 0,
       margin, Style.gapsOut) : Style.gapsOut
     open: root.opened
     focusTarget: keyCatcher
@@ -698,12 +703,19 @@ Ui.Panel {
     // The reference's wider two-column canvas is approximately 830 logical
     // pixels at the current font scale. The host still caps this to the screen.
     contentWidth: panel.fittedContentWidth(root.desiredPanelWidth)
-    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+    contentHeight: panel.fittedContentHeight(root.desiredPanelHeight)
 
     Ui.PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       onCloseRequested: root.close()
+      onMoveRequested: function(dx, dy) {
+        if (dy && tabScroll.contentItem) {
+          var limit = Math.max(0, tabScroll.contentHeight - tabScroll.height)
+          tabScroll.contentItem.contentY = Math.max(0,
+            Math.min(limit, tabScroll.contentItem.contentY + dy * root.controlHeight))
+        }
+      }
       onTabRequested: function(direction) {
         root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 5)) % 6
       }
@@ -712,6 +724,7 @@ Ui.Panel {
         id: content
         x: 0
         width: parent.width
+        height: parent.height
         spacing: 0
 
         Item {
@@ -835,12 +848,33 @@ Ui.Panel {
         }
 
         Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
-        Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
-        Station.BarTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
-        Station.WindowsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
-        Station.WallpaperTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
-        Station.KeybindingsTab { visible: root.selectedTab === 4; width: parent.width; panelRoot: root }
-        Station.SettingsTab { visible: root.selectedTab === 5; width: parent.width; panelRoot: root }
+        ScrollView {
+          id: tabScroll
+          objectName: "stationTabScroll"
+          width: parent.width
+          height: Math.max(0, content.height - y)
+          contentWidth: availableWidth
+          contentHeight: tabContent.implicitHeight
+          clip: true
+          ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+          ScrollBar.vertical.policy: contentHeight > height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+          Binding {
+            target: tabScroll.contentItem
+            property: "interactive"
+            value: tabScroll.contentHeight > tabScroll.height
+          }
+          Column {
+            id: tabContent
+            objectName: "stationTabContent"
+            width: tabScroll.availableWidth
+            Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
+            Station.BarTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
+            Station.WindowsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
+            Station.WallpaperTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
+            Station.KeybindingsTab { visible: root.selectedTab === 4; width: parent.width; panelRoot: root }
+            Station.SettingsTab { visible: root.selectedTab === 5; width: parent.width; panelRoot: root }
+          }
+        }
       }
     }
   }

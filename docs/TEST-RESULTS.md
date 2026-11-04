@@ -513,3 +513,16 @@ wallpaper pointer harness reports 8 passes, the display layout harness reports
 and manifest validation, live-Wayland QML compilation, Perl syntax, and
 whitespace checks pass. The QML check emits only the existing portal
 registration warning.
+
+## Fixed panel frame (2026-11-04)
+
+The earlier reference-panel content-sizing decision is superseded by the user's
+request for consistent dimensions. The card now has fixed theme-scaled width
+and height targets, capped to the screen, with header/tabs above a bounded
+vertical overflow viewport. The production-panel Wayland harness checks all six
+tabs, expanded content, tab-change scroll reset and a shortened viewport.
+
+Validation: 214 Node tests, 23 existing offscreen layout tests, the isolated
+panel-size harness, theme-token scan, live-backend component compilation and
+whitespace checks passed. The layout harness retains its known theme-double
+warnings. Installed visual acceptance remains a user check.

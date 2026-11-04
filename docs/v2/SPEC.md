@@ -442,7 +442,13 @@ Reference: `reference/gui-reference.html`. Style follows the Omarchy Display plu
 
 **Bar widget:** Station logo (three vertical slabs, middle filled, currentColor) after the Omarchy menu, then `[S n]`. Same height and colour as neighbours.
 
-**Panel:** larger ~830×500 reference frame; header; tab row `Displays | Bar | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
+**Panel:** one fixed frame requests `Style.space(996)` width and
+`Style.space(620)` content height, capped by the host to the available screen.
+Neither dimension follows the active tab, notices or binding editors. Header
+and tabs stay stationary; the tab body scrolls vertically only when it exceeds
+the viewport, with no horizontal scrolling. Switching tabs returns the viewport
+to the top. This revises the earlier content-sized, non-scrollable reference.
+Header; tab row `Displays | Bar | Windows | Wallpaper | Keybindings | Settings` (Keybindings turns red with a badge on conflict). Compact **Direction** and **Mode** text menus sit at the far right of that same row while Displays is selected.
 
 Displays tab:
 

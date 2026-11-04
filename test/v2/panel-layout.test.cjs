@@ -4,15 +4,19 @@ const { readFileSync } = require('node:fs');
 
 const read = name => readFileSync(name, 'utf8');
 
-test('panel follows the fixed, non-scrollable reference structure', () => {
+test('panel keeps the reference layout inside a fixed viewport', () => {
   const panel = read('lib/StationPanel.qml');
   const displays = read('lib/DisplaysTab.qml');
   const bindings = read('lib/KeybindingsTab.qml');
   const settings = read('lib/SettingsTab.qml');
   const wallpaper = read('lib/WallpaperTab.qml');
-  const runtime = [panel, displays, bindings, settings].join('\n');
 
-  assert.doesNotMatch(runtime, /\b(?:ScrollView|Flickable|ListView)\s*\{/);
+  assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
+  assert.match(panel, /contentHeight: panel\.fittedContentHeight\(root\.desiredPanelHeight\)/);
+  assert.doesNotMatch(panel, /content\.implicitHeight/);
+  assert.match(panel, /ScrollView \{\s*id: tabScroll/);
+  assert.match(panel, /height: Math\.max\(0, content\.height - y\)/);
+  assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
   assert.match(panel, /prefix: "Mode: "/);
   assert.match(panel, /prefix: "Direction: "/);
   assert.match(displays, /id: leftColumn/);

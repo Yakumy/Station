@@ -958,3 +958,24 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   areas follow the shared policy: Solid and Blur match, and their difference
   from Transparent equals the selected outer gap at preview zoom. Theme-token
   and whitespace checks passed.
+
+### Fixed panel frame and bounded overflow (2026-11-04)
+
+- [SRC] StationPanel previously passed the visible tab Column's implicit height
+  into KeyboardPanel fitting and centered placement. Shorter tabs therefore
+  shrank the card. It now requests fixed theme-scaled width/height (996/620),
+  retaining host screen limits. Centered placement uses the same fixed request.
+- The earlier non-scrollable reference is revised: header/tabs remain fixed;
+  a shared body viewport scrolls only on vertical overflow. Tab changes reset
+  its position. Existing DisplayLayout pointer-stealing prevention is retained.
+- Isolated Wayland check (`tools/v2/check-panel-size.py`) verified constant card
+  dimensions across all six tabs, synthetic expanded content, scroll reset and
+  a shortened viewport. It runs without a Station service and qualifies bare
+  Color references in its temporary copy to avoid theme-name ambiguity in the
+  isolated context; production geometry and event handling are unchanged.
+  This is a panel harness, not live monitor or keybinding acceptance.
+
+Validation: 214 Node tests, 23 existing offscreen layout tests, the isolated
+panel-size harness, theme-token scan, live-backend component compilation and
+whitespace checks passed. The layout harness retains its known theme-double
+warnings. Installed visual acceptance remains a user check.

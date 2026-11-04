@@ -72,7 +72,10 @@ All styles and backgrounds start at the physical monitor edge. Auto exclusion
 reserves the complete configured thickness. Pill backgrounds have no outer
 inset on either axis; padding stays inside each island. Window gaps do not move
 the bar. The panel's cross-axis stabilization validates remapped bar geometry
-before updating popup placement.
+before updating popup placement. StationPanel requests fixed theme-scaled width
+and height independent of its selected tab; the host caps them to the screen.
+A shared ScrollView below the fixed header/tabs handles vertical overflow,
+resets on tab changes, and leaves the outer card and centered placement stable.
 Content size is stored per monitor as a font-pixel target. Above the default,
 `MonitorBar` renders each module as a uniform zoom of its default-size subtree
 at the requested-to-default ratio — the same proportions as Omarchy's global

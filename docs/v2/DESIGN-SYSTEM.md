@@ -182,3 +182,12 @@ the border does not swallow small preview radii. All surrounding chrome
 continues to use `Style.cornerRadius`. Monitor labels sit above the upper-left
 corner, outside the rectangle. Reserve a label lane in stacked layouts instead
 of removing space from the illustrated window work area.
+
+### Panel frame
+
+Use one tab-independent request of `Style.space(996)` by `Style.space(620)`
+(content size before the host's border inset), fitted to the current screen.
+The header and tab row stay fixed above a shared vertical overflow viewport.
+Short tabs leave unused space; expanded notices and binding editors scroll
+inside that frame. Scrollbars appear only on overflow. This replaces the earlier
+content-driven height; theme/font and screen changes can still refit the frame.
