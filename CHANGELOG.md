@@ -13,6 +13,8 @@
   saving and preserve newer edits during rollback.
 - Fix On → Keep after `omarchy-hyprland-monitor-internal off`: hand off the
   generated Off toggle during the checked save, preserving Revert and rollback.
+- Restore direct Windows slider application on release: save with file watching
+  suspended, remove the fixed one-second wait, and avoid full reload cursor jumps.
 - Fix Windows sliders jumping back during a save: retain the selection through
   dragging and applied-value read-back, including replacement-bar snapshots.
 - See [v3 contract](docs/v3/SYSTEM-AUTHORITY.md) for semantics and hardware limits.

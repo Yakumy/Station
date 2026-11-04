@@ -120,15 +120,20 @@ test('external slider values are displayed without becoming saved slider stops',
 test('window edits stay busy through read-back and always settle after observation errors', () => {
   for (const outcome of ['applied', 'override', 'save failure', 'read failure', 'malformed', 'generation changed']) {
     const queue = [];
-    const c = {Windows:W, SharedConfig:S, Transactions:T, configGeneration:1,
+    const c = {Windows:W, Hypr:require('../../lib/Hypr.js'), Style:{}, SharedConfig:S, Transactions:T, configGeneration:1,
       config:{windows:W.clean(null)}, windowSettingsBusy:false, state:'idle',
       appearanceLoaded:true, appearanceSource:'', appearancePath:'/isolated/looknfeel.lua',
       appearanceFile:{reload(){}}, layoutError:'', console:{warn(){}},
-      enqueue(command, done) { queue.push({command,done}); }};
+      enqueue(command, done, generation) { queue.push({command,done,generation}); }};
     c.root = c;
     c.refreshWindowSettings = fn('refreshWindowSettings',c);
     const set = fn('setWindowSetting',c);
     assert.equal(set('split',65),'ok');
+    assert.equal(queue[0].generation,1);
+    assert.equal(queue[0].command[2],T.windowSetting);
+    assert.match(queue[0].command.at(-1), /assert\(loadfile\(/);
+    assert.match(queue[0].command.at(-1), /default_split_ratio=0\.7/);
+    assert.doesNotMatch(queue[0].command.at(-1), /gaps_in|rounding|hl\.monitor/);
     assert.equal(c.windowSettingsBusy,true);
     c.refreshWindowSettings();
     assert.equal(queue.length,1,'ordinary polling cannot read during the save');

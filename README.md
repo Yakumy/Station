@@ -47,10 +47,12 @@ longer force Station's saved display mode or window appearance back onto the
 system. Temporary terminal changes remain temporary.
 
 Station saves display settings at the beginning of `monitors.lua` and individual
-window controls at the beginning of `looknfeel.lua`, with backups. Personal rules
-placed afterward take precedence. If they override a panel edit, Station reports
-that and shows the applied value. Global rounding also follows Omarchy's shell
-corners; global blur is controlled by Hyprland.
+window controls at the beginning of `looknfeel.lua`, with backups. Window
+sliders apply on release without a full compositor reload or a fixed wait.
+Personal rules placed afterward take precedence on the next reload; Station then
+shows that applied value. Explicit window edits apply to the current session
+immediately. Global rounding also follows Omarchy's shell corners; global blur
+is controlled by Hyprland.
 
 See [the 3.0 ownership and migration contract](docs/v3/SYSTEM-AUTHORITY.md).
 

@@ -37,7 +37,10 @@ bug, then reconcile the affected documents in the same change.
 Read [System authority](docs/v3/SYSTEM-AUTHORITY.md) before changing synchronization.
 Shared compositor settings are observed, never replayed from cached preferences.
 Explicit display/window edits persist leading marked sections in `monitors.lua`
-and `looknfeel.lua`; personal rules later in Lua order win. The recognized Omarchy
+and `looknfeel.lua`; personal rules later in Lua order win on reload. Window
+sliders save with autoreload suspended and apply only the explicit edit directly,
+without a full reload or fixed sleep. Restore autoreload on every exit and keep
+source comparison and conditional failure recovery. The recognized Omarchy
 internal-monitor Off flag is a shared control: explicit On + Keep clears it in a
 checked two-file transaction, never during observation or preview. Preserve the source
 comparison and conditional rollback. The v2 spec and historical findings describe

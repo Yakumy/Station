@@ -107,8 +107,12 @@ follows Omarchy's live `Style.font.body` default.
 Blur is compositor-owned. Station registers its named bar layer rule but never
 forces global blur enabled/size/pass values or restores a stale lease. Global
 window controls are read from Hyprland; explicit individual edits persist in a
-leading marked `looknfeel.lua` section. Their global values also determine normal
-shell appearance. Personal rules remain later in Lua load order.
+leading marked `looknfeel.lua` section. The transaction suspends autoreload,
+compares the source, atomically saves, and directly applies the explicit setting
+without a full reload or fixed sleep. It restores autoreload on every exit;
+failed applies conditionally restore the file and reload for recovery. Personal
+Lua regains normal precedence on the next reload; observation never replays an
+old request. Global values also determine normal shell appearance.
 When Station becomes the active full bar, the service atomically removes its
 persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
 The service also reconciles that row on activation, covering upgrades where

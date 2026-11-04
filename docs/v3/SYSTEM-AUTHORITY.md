@@ -27,24 +27,33 @@ independent workspace column, even when the source's preferred lane is higher.
 
 ## Persistent settings and personal overrides
 
-Station's marked display block is at the **beginning** of `monitors.lua`. Personal
-Lua outside the block follows it and retains final precedence under Hyprland's
-normal rule semantics. Existing v2 blocks are migrated once, with a backup and
-comparison against the source read before replacement. The one-time upgrade
-applies the current Lua configuration, clearing old v2 runtime appearance rules;
-when no block write is needed, it performs one reload for that purpose. Cached
-v2 appearance preferences are not re-enforced. No arbitrary personal Lua is parsed
-or evaluated by Station. New generated blocks include a bounded configuration-time
-DRM presence check (cards 0–15, validated connectors, 32-byte status reads), because
-`hl.get_monitors()` can be empty at cold login. With no discoverable survivor the
-safe Extend fallback remains. The service does not subsequently enforce a mode.
+Station's marked display block is at the **beginning** of `monitors.lua`.
+Personal Lua outside the block follows it and retains final precedence under
+Hyprland's normal rule semantics. Existing v2 blocks are migrated once, with a
+backup and comparison against the source read before replacement. The one-time
+upgrade applies the current Lua configuration, clearing old v2 runtime
+appearance rules; when no block write is needed, it performs one reload for that
+purpose. Cached v2 appearance preferences are not re-enforced. Personal Lua
+remains opaque; window saves compile the complete candidate for syntax
+validation without executing its personal statements. New generated blocks
+include a bounded configuration-time DRM presence check (cards 0–15, validated
+connectors, 32-byte status reads), because `hl.get_monitors()` can be empty at
+cold login. With no discoverable survivor the safe Extend fallback remains. The
+service does not subsequently enforce a mode.
 
 Window control edits update only their entry in a separate marked section at the
-beginning of `looknfeel.lua`. Personal settings later in that file, or later in the
-main Lua load order, can override them. A read-back mismatch displays a notice;
-Station shows the applied value rather than repeatedly trying to restore its
-request. Editing an earlier rule in the Lua load order cannot override a later
-rule: place personal overrides after Station's section or edit its section.
+beginning of `looknfeel.lua`. On release, a checked transaction suspends file
+watching, saves that entry, compiles the candidate without executing personal Lua,
+and applies only the explicit setting through `hyprctl eval`. It restores the
+previous autoreload value and reads back the applied setting. There is no fixed
+sleep and no full reload on success. Shell rounding/gap tokens are refreshed.
+
+This revises the original v3 release path, which used a full watched reload for
+each slider edit. An explicit edit now sets the current runtime value immediately;
+personal settings later in Lua order regain precedence on the next normal reload.
+Station observes that result without replaying its request. Per-window/workspace
+rules retain their existing effect. A read-back mismatch still displays a notice;
+Station shows the applied value rather than repeatedly trying to restore a request.
 
 The v3 window controls represent **global compositor settings**. Rounding follows
 `decoration:rounding`, which Omarchy also uses for shell corners. This replaces
@@ -86,18 +95,21 @@ Stable previews also detect external runtime geometry changes through observatio
 Queued Lua commands are checked against the configuration generation before they
 run. Already executing compositor commands cannot be retroactively cancelled.
 
-A save compares the source read with the file immediately before replacement.
-An intervening edit fails the save. Error rollback checks that the current file
-still matches Station's candidate before restoring its backup. This is optimistic
-conflict detection; ordinary external editors do not share a lock with Station.
-Successful writes use the watched apply and check `configerrors`; they do not
-force a redundant reload. The internal-monitor toggle handoff updates two files:
-it compares both sources, temporarily suspends automatic reloads, backs up and
-removes the recognized flag, saves the layout, and explicitly reloads once.
-It restores the prior autoreload setting on exit. Failure restores both files
-only where newer external edits have not replaced them. Toggle backups use a
-non-`.lua` suffix so Omarchy does not load them as active toggles.
-Failed applies restore the backup and reload it.
+A save compares the source read with the file immediately before replacement. An
+intervening edit fails the save. Error rollback checks that the current file
+still matches Station's candidate before restoring its backup. This is
+optimistic conflict detection; ordinary external editors do not share a lock
+with Station. Successful display writes use the watched apply and check
+`configerrors`; they do not force a redundant reload. Window saves use the
+direct apply described above; failed applies conditionally restore their
+candidate file and reload current configuration to recover any partially applied
+runtime statements. The internal-monitor toggle handoff updates two files: it
+compares both sources, temporarily suspends automatic reloads, backs up and
+removes the recognized flag, saves the layout, and explicitly reloads once. It
+restores the prior autoreload setting on exit. Failure restores both files only
+where newer external edits have not replaced them. Toggle backups use a
+non-`.lua` suffix so Omarchy does not load them as active toggles. Failed
+applies restore the backup and reload it.
 
 The detached watchdog reloads current configuration, not a cached Lua copy.
 Removal cleanup neutralizes mode fields in the current generated monitor rules;
@@ -146,3 +158,24 @@ Off, turn it On in Station, press Keep, and verify it stays On after reload;
 repeat with Revert and timeout to confirm the Off flag remains; use a Station control and verify its saved setting
 survives reload when no later personal rule overrides it; try Single/Mirror
 with Keep and Revert; change bar position through the Omarchy menu.
+
+### Window slider latency regression (2026-11-04)
+
+The pre-v3 path directly applied window settings. The original v3 path instead
+renamed `looknfeel.lua`, causing a full compositor reload, then blocked the shared
+action queue with `sleep 1` before reading back. That introduced a one-second
+minimum busy period plus reload/queue overhead and exposed reload focus/cursor
+side effects. The earlier knob fix retained local values but left this cause.
+
+[LIVE] On Hyprland 0.56.2 / Omarchy 4.0.6, the direct-save transaction changed
+Next Window Size from 37 to 38 and restored 37 in 69.8 and 69.3 ms respectively.
+Socket2 reported zero `configreloaded` events; cursor coordinates remained
+unchanged. The source file bytes, runtime split value and original autoreload
+option were restored; `configerrors` was empty. This tests the transaction,
+not physical slider input or other hardware layouts. Raw results:
+`/tmp/station-window-setting-results.json`.
+
+Validation: 243 Node tests, the isolated window-slider pointer regression, QML
+compilation with session access, theme-token checks, and plugin validation from
+an isolated export passed. Source-conflict and failure-recovery cases include
+restoring autoreload and preserving a newer external file.

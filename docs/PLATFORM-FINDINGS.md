@@ -1018,3 +1018,20 @@ user tests; the automated checks do not establish those results.
   automatic reloads, saves both changes, explicitly reloads once, and restores
   the previous autoreload option. Rejected applies conditionally restore both
   files; modified toggle Lua is not removed. See the v3 authority contract.
+
+## Window slider direct persistence (2026-11-04)
+
+- [SRC] The first v3 window save reused `Transactions.settings`: replacing
+  `looknfeel.lua` triggered a compositor-wide watched reload, and `sleep 1`
+  occupied the service action queue before read-back. The prior local-knob fix
+  did not remove that delay or reload.
+- [SRC] Hyprland v0.56.2's `ConfigWatcher.cpp` removes watches when
+  `misc:disable_autoreload` is true and reattaches them when restored. The
+  dedicated window transaction suspends watches, compares sources again, saves,
+  compiles the file and applies one generated setting, then restores autoreload.
+  Only error recovery reloads; personal Lua wins again on the next normal reload.
+- [LIVE] A reversible 37 → 38 → 37 split test took 69.8 / 69.3 ms per transaction,
+  with no socket2 reload event and identical cursor coordinates before and after.
+  Original file bytes, runtime split and autoreload were restored; config errors
+  were empty. This tested the helper, not physical pointer input in the panel.
+  Evidence: `/tmp/station-window-setting-results.json`.

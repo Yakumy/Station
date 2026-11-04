@@ -1335,11 +1335,14 @@ Item {
     next[key] = value
     next = Windows.clean(next)
     var source
-    try { source = SharedConfig.setWindow(appearanceSource, key, Windows.settingLua(key, next[key])) }
+    var lua = Windows.settingLua(key, next[key])
+    try { source = SharedConfig.setWindow(appearanceSource, key, lua) }
     catch (error) { layoutError = String(error); return "invalid" }
     windowSettingsBusy = true
-    enqueue(["sh", "-c", Transactions.settings, "sh", appearancePath, appearanceSource, source], function(code, output) {
+    enqueue(["sh", "-c", Transactions.windowSetting, "sh", appearancePath, appearanceSource, source,
+      "assert(loadfile(" + Hypr.luaString(appearancePath) + ")); " + lua], function(code, output) {
       appearanceFile.reload()
+      if (code === 0 && typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
       if (code === 0) root.layoutError = ""
       if (code !== 0) root.layoutError = code === 4 ? "Configuration changed while saving; try again." : "Could not save window setting: " + output
       root.refreshWindowSettings(function(observed) {
@@ -1347,7 +1350,7 @@ Item {
         if (code === 0 && observed && Math.abs(Number(root.config.windows[key]) - next[key]) > 0.02)
           root.layoutError = "A personal Hyprland rule overrides this setting. Station shows the applied value."
       }, true)
-    })
+    }, configGeneration)
     return "ok"
   }
 
