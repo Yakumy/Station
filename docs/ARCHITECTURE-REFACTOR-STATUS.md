@@ -7,7 +7,8 @@ This checkpoint lets the maintainer or a later coding session resume the approve
 
 The user authorized implementation and one commit per completed step on `dev`.
 Do not push. Do not install an update or change the running desktop under this
-scope. Preserve human review before M5 and before M6. M2 deletion requires its
+scope. The latest user instruction is to stop after the M3 commit. Do not start
+M4 or other implementation until the user resumes the work. Preserve human review before M5 and before M6. M2 deletion requires its
 cross-version and detached-recovery proof. M8 and M9 remain optional.
 
 ## Completed work
@@ -35,6 +36,25 @@ warnings. No live topology, installation, restart, wallpaper or user configurati
 experiment was run. Portable checks need unrestricted subprocess execution on
 this machine because the sandbox rejects some Node/Lua fixtures.
 
+M2 compatibility evaluation is committed as `8e4f7cf`. M3 is completed in this
+checkpoint revision. Work stops after its commit at the user's request.
+
+## M3: bar settings owner
+
+`BarSettingsController.qml` owns pending/observed rows, measured limits and its
+publication timer. Service keeps 24 forwarding methods and the same detached
+snapshot fields. Root config storage, panel intent and compositor effect ownership
+remain unchanged. The controller receives finite ports and no Service QObject.
+
+The retained bar scenarios now execute production owner functions through a test
+adapter. Three new portable cases check ownership, forwarding and scoped ports.
+`python3 tools/v2/check-bar-settings.py` exercises the production QML owner with
+fake effects: five behavior cases plus setup/cleanup passed. It checks reactive
+preferences, deferred flush, external-row supersession, load gating and failure.
+All 274 Node cases passed. All 26 runtime QML components compiled. Theme scan:
+46 files, no violations. Plugin validation passed on a clean export with the
+current changes overlaid. No installed bar or compositor state changed.
+
 ## M2: retain plain-copy persistence
 
 Deletion is deferred. The pinned pre-v3 cleanup at
@@ -59,8 +79,9 @@ M3 and M4 do not depend on that deletion.
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Keep the M2 writer and argument contract intact unless its full gate passes.
-5. Continue M3/M4 with plain-copy persistence retained. Stop before M5 for its review packet.
+4. Wait for the user to resume implementation. M4 has not started.
+5. After resumption, keep M2 persistence intact and continue M4. Stop before M5
+   for its review packet.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.
 

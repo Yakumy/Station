@@ -62,6 +62,12 @@ detached copy of the shared layout with that connector's saved position,
 width, thickness, background mode, and surface style.
 The wrapper coordinates popouts across those isolated copies so opening a
 panel on one output closes the panel already open on another.
+`BarSettingsController.qml` is a persistent child of Service. It owns pending
+bar rows, observed host rows, measured limits, menu synchronization and the
+250 ms publication timer. Service keeps forwarding methods and detached snapshot
+fields. The controller receives bar data and finite persistence, host-publication,
+panel-retention and layer-sync ports. It never receives the Service QObject.
+The checked layer-rule probe and command queue remain on Service.
 Presence, position, width, height, content size, background, and style live in both Station's
 validated `config.bars` preferences and the shell bar's `monitors` map. While
 the panel is open, the full bar reads

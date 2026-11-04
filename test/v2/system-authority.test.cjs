@@ -14,6 +14,8 @@ const S = require('../../lib/SharedConfig.js');
 const T = require('../../lib/Transactions.js');
 const service = readFileSync('Service.qml', 'utf8');
 function fn(name, context) {
+  const moved = require('./helpers/bar-settings.cjs').ownerFunction(name, context);
+  if (moved) return moved;
   const start = service.indexOf('  function ' + name + '(');
   const end = service.indexOf('\n  }', start) + 4;
   return runInNewContext('(' + service.slice(start, end) + ')', context);
@@ -100,7 +102,7 @@ test('queued writes from an obsolete configuration generation never execute', ()
   assert.equal(c.action.command,undefined);
 });
 test('external bar rows replace pending local values and row removal restores inheritance', () => {
-  const c = {configLoaded:true,shell:{}, activeStationBar:()=>true,
+  const c = {configLoaded:true,shell:{barConfig:{id:"yakumy.station"}}, activeStationBar:()=>true,
     hostBarsSignature:JSON.stringify({A:{position:'right',width:80}}),
     observedHostBars:{A:{position:'left'}}, config:{bars:{A:{position:'left'}}},
     pendingMonitorBars:{A:{position:'bottom'}}, validConnector:()=>true,

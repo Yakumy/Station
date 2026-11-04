@@ -4,11 +4,14 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 
 const read = name => readFileSync(name, 'utf8');
+const { ownerFunction } = require('./helpers/bar-settings.cjs');
 const Store = require('../../lib/Store.js');
 const service = read('Service.qml');
 
 function qmlFunction(source, name, context = {}) {
   context.Tabs = require('../../lib/Tabs.js');
+  const moved = ownerFunction(name, context);
+  if (moved) return moved;
   const start = source.indexOf('  function ' + name + '(');
   assert.notEqual(start, -1, name + ' exists');
   const end = source.indexOf('\n  }', start) + 4;

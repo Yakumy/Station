@@ -1083,7 +1083,8 @@ this audit.
 completed step on `dev`. Do not push. Preserve the mandatory M5/M6 human-review
 checkpoints and the M2 compatibility proof gate. Optional M8/M9 still require
 evidence of a maintainability benefit. Installed updates, live tests and
-publishing remain outside this authorization.
+publishing remain outside this authorization. The latest user instruction stops
+implementation after the M3 commit. M4 has not started. Resume only when requested.
 
 ### Mandatory human-review checkpoints before M5 and M6
 
@@ -1188,7 +1189,7 @@ plain bytes, **do not remove the production writer, argument contract or save
 barrier**. Keep historical fixtures and all existing user files. M6 can proceed
 later with the old plain-copy mechanism retained once its own gate is approved.
 
-### M3 — Extract bar-settings protocol at current paths
+### M3 — Extract bar-settings protocol at current paths (implemented)
 
 - **Priority / effort / risk:** P2; medium, 2–4 days; medium.
 - **Goal/files:** new `lib/BarSettingsController.qml`, Service bar state/functions,
