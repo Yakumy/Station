@@ -37,7 +37,9 @@ bug, then reconcile the affected documents in the same change.
 Read [System authority](docs/v3/SYSTEM-AUTHORITY.md) before changing synchronization.
 Shared compositor settings are observed, never replayed from cached preferences.
 Explicit display/window edits persist leading marked sections in `monitors.lua`
-and `looknfeel.lua`; personal rules later in Lua order win. Preserve the source
+and `looknfeel.lua`; personal rules later in Lua order win. The recognized Omarchy
+internal-monitor Off flag is a shared control: explicit On + Keep clears it in a
+checked two-file transaction, never during observation or preview. Preserve the source
 comparison and conditional rollback. The v2 spec and historical findings describe
 older replay policy; this accepted revision supersedes that policy.
 
@@ -93,6 +95,8 @@ older replay policy; this accepted revision supersedes that policy.
   whole file: backup, marker-checked replacement, watched Hyprland apply,
   `hyprctl configerrors`, rollback on failure. A successful watched apply must
   not also force a second reload or replay unchanged monitor rules.
+  The internal-monitor toggle handoff suspends autoreload, saves both files and
+  explicitly reloads once, then restores autoreload; rollback preserves newer edits.
   Recovery/rollback and removal still reload when required. `configreloaded`
   clears runtime binds and workspace rules; reapply them once per generation,
   with the existing debounce and expected-event handling.

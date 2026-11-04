@@ -33,7 +33,7 @@ normal rule semantics. Existing v2 blocks are migrated once, with a backup and
 comparison against the source read before replacement. The one-time upgrade
 applies the current Lua configuration, clearing old v2 runtime appearance rules;
 when no block write is needed, it performs one reload for that purpose. Cached
-v2 appearance preferences are not re-enforced. No personal Lua is parsed
+v2 appearance preferences are not re-enforced. No arbitrary personal Lua is parsed
 or evaluated by Station. New generated blocks include a bounded configuration-time
 DRM presence check (cards 0–15, validated connectors, 32-byte status reads), because
 `hl.get_monitors()` can be empty at cold login. With no discoverable survivor the
@@ -60,6 +60,13 @@ Global blur now follows the user's compositor configuration. Choosing Blur on a
 bar requests its layer effect but cannot override disabled global blur. Legacy
 blur leases are retired without restoring stale globals.
 
+Omarchy's generated `internal-monitor-disable.lua` flag is a shared control,
+not an immutable personal override. Station observes it without changing it.
+When the user enables that internal output and presses **Keep**, Station clears
+only the exact recognized Omarchy Off flag as part of saving the layout. Preview,
+Revert, timeout, and unrelated side-control saves leave the flag alone. Modified
+or unrecognized toggle Lua is preserved.
+
 ## Transactions and conflicts
 
 Display previews retain panel evacuation, survivor activation, window migration,
@@ -75,7 +82,13 @@ An intervening edit fails the save. Error rollback checks that the current file
 still matches Station's candidate before restoring its backup. This is optimistic
 conflict detection; ordinary external editors do not share a lock with Station.
 Successful writes use the watched apply and check `configerrors`; they do not
-force a redundant reload. Failed applies restore the backup and reload it.
+force a redundant reload. The internal-monitor toggle handoff updates two files:
+it compares both sources, temporarily suspends automatic reloads, backs up and
+removes the recognized flag, saves the layout, and explicitly reloads once.
+It restores the prior autoreload setting on exit. Failure restores both files
+only where newer external edits have not replaced them. Toggle backups use a
+non-`.lua` suffix so Omarchy does not load them as active toggles.
+Failed applies restore the backup and reload it.
 
 The detached watchdog reloads current configuration, not a cached Lua copy.
 Removal cleanup neutralizes mode fields in the current generated monitor rules;
@@ -96,7 +109,9 @@ isolated test is not proof of those hardware paths. Missing DRM access retains
 the safe fallback rather than guessing which output can survive.
 
 Suggested user test: edit a display or global gap in Lua after Station's block,
-apply it, and confirm the panel follows; try the internal-display toggle with
-an external display active; use a Station control and verify its saved setting
+apply it, and confirm the panel follows; with an external display active run
+`omarchy-hyprland-monitor-internal off`, confirm Station shows the internal display
+Off, turn it On in Station, press Keep, and verify it stays On after reload;
+repeat with Revert and timeout to confirm the Off flag remains; use a Station control and verify its saved setting
 survives reload when no later personal rule overrides it; try Single/Mirror
 with Keep and Revert; change bar position through the Omarchy menu.

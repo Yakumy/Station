@@ -215,7 +215,12 @@ output is disabled or mirrored.
 
 The Keep path writes candidates inside Station's state directory, backs up
 `monitors.lua`, atomically replaces it, lets Hyprland's file watcher apply it,
-and checks `hyprctl configerrors`. Failure restores the backup and reloads
+and checks `hyprctl configerrors`. Explicitly enabling an internal output also
+clears Omarchy's recognized Off flag at Keep: this two-file handoff temporarily
+suspends automatic reloads, compares/backups both sources, reloads once, and
+restores the prior autoreload setting. Preview and Revert never remove the flag.
+The `setDisplayEnabled(name, enabled)` IPC uses the same guarded UI action for
+repeatable live regression checks. Failure restores unchanged candidates and reloads
 Hyprland for recovery. Disable and removal start a detached cleanup that waits
 through shell restart, distinguishes a still
 enabled plugin, restores the stock widget, replaces mode rules with plain

@@ -103,6 +103,9 @@ Topology edits offer a **12-second Keep/Revert preview**, backed by an independe
 20-second recovery watchdog. Station keeps at least one real output enabled and
 moves its open panel to a surviving screen when needed. Scale, resolution, and
 refresh changes save directly through the checked configuration transaction.
+If you disabled the laptop display with `omarchy-hyprland-monitor-internal off`,
+Station follows that state. Turning it On in Station and pressing **Keep** clears
+Omarchy's Off toggle and saves your new layout. Revert leaves the toggle intact.
 
 > [!NOTE]
 > Station manages at most three independent outputs; additional outputs are

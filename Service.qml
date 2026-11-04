@@ -140,6 +140,9 @@ Item {
   property string layoutWriteKind: ""
   property bool keepFilesPending: false
   property string keepSourceBaseline: ""
+  property string keepDisableToggle: ""
+  property string internalDisableSource: ""
+  readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
   property bool candidateReady: false
   property bool plainCandidateReady: false
   property var displayDraft: []
@@ -2004,6 +2007,8 @@ Item {
 
   function startKeepFiles(source, plain, kind) {
     keepSourceBaseline = monitorsSource
+    keepDisableToggle = kind === "preview" && pendingDisplayConfig && keepOptions
+      ? MonitorsLua.disableToggleToClear(internalDisableSource, pendingDisplayConfig.displays, keepOptions) : ""
     state = "applyingLayout"
     layoutWriteKind = kind || "direct"
     keepFilesPending = true
@@ -2487,6 +2492,16 @@ Item {
   }
 
   FileView {
+    id: internalDisableFile
+    path: root.internalDisablePath
+    watchChanges: true
+    printErrors: false
+    onLoaded: root.internalDisableSource = text()
+    onLoadFailed: root.internalDisableSource = ""
+    onFileChanged: reload()
+  }
+
+  FileView {
     id: appearanceFile
     path: root.appearancePath
     watchChanges: true
@@ -2583,7 +2598,7 @@ Item {
   Process {
     id: keepTransaction
     command: ["sh", "-c", Transactions.keep, "sh", root.candidatePath, root.monitorsPath,
-      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", root.keepSourceBaseline]
+      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", root.keepSourceBaseline, root.internalDisablePath, root.keepDisableToggle]
     property string errors: ""
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: keepTransaction.errors = text }
     onRunningChanged: if (running) errors = ""
@@ -2746,6 +2761,7 @@ Item {
     function shiftWindow(value: string): string { return root.shiftWindow(value) }
     function togglePanel(): string { return root.togglePanel() }
     function previewLayout(): string { return root.previewLayout() }
+    function setDisplayEnabled(name: string, enabled: bool): string { return root.setDisplayEnabled(name, enabled) }
     function keepPreview(): string { return root.keepPreview() }
     function revertPreview(): string { return root.revertPreview("") }
     function setMode(value: string): string {

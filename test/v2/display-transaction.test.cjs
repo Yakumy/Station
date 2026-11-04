@@ -40,7 +40,7 @@ function harness() {
     previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
     pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
     pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
-    stateDir: '/fake-state', monitorsSource: '', draftMirrorSource: '', previewObservedSignature: '',
+    stateDir: '/fake-state', monitorsSource: '', internalDisableSource: '', draftMirrorSource: '', previewObservedSignature: '',
     configGeneration: 0, appliedGeneration: 0, lastTopologyMs: 0,
     previewCountdown: { running: false, restart() { this.running = true; }, stop() { this.running = false; } },
     removalGrace: { running: false, stop() { this.running = false; } },

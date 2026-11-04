@@ -11,6 +11,8 @@
 - Respect global blur and outer gaps instead of restoring Station-only overrides.
 - Cancel previews on external configuration changes; compare source files before
   saving and preserve newer edits during rollback.
+- Fix On → Keep after `omarchy-hyprland-monitor-internal off`: hand off the
+  generated Off toggle during the checked save, preserving Revert and rollback.
 - See [v3 contract](docs/v3/SYSTEM-AUTHORITY.md) for semantics and hardware limits.
 
 ## Earlier development history
