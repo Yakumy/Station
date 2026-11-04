@@ -116,6 +116,9 @@ ShellRoot {
       if (phase === 0) {
         var name = findObject(layout, "monitorName-eDP-1")
         if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }
+        if (a.x >= remaining.x || b.x >= findObject(layout, "windowPreview-2").x) {
+          fail("window order"); return
+        }
         first = {x:a.x,y:a.y,width:a.width,height:a.height,remaining:remaining.width}
         second = {x:b.x,y:b.y,width:b.width,height:b.height}
         layout.previewExchange(0.5)
@@ -128,7 +131,7 @@ ShellRoot {
       if (phase === 1) {
         if (layout.progress === 1) {
           sawMiddle = true
-          if (remaining.width <= first.remaining || b.height >= second.height) { fail("reflow"); return }
+          if (remaining.width <= first.remaining || findObject(layout, "windowPreview-2").height >= second.height) { fail("reflow"); return }
         }
         if (layout.animating) return
         if (!sawMiddle || a.x !== second.x || a.y !== second.y || b.x !== first.x || b.y !== first.y) {
@@ -143,8 +146,8 @@ ShellRoot {
         return
       }
       if (layout.animating || layout.queuedSpeed >= 0) return
-      tab.preview("rounding", 40)
-      if (outline.radius !== 40 || outline.scale !== layout.zoom || !outline.antialiasing
+      tab.preview("rounding", 20)
+      if (outline.radius !== 20 || outline.scale !== layout.zoom || !outline.antialiasing
           || outline.border.pixelAligned) { fail("scaled radius"); return }
       layout.previewExchange(0)
       if (layout.animating || layout.progress !== 2) { fail("zero speed"); return }

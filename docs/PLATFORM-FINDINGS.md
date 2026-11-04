@@ -885,7 +885,8 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - [SRC] Installed `qs.Commons.Style.cornerRadius` mirrors Hyprland's global
   `decoration.rounding` (Style.qml). The Windows slider now uses application
   window rules rather than changing that global value. A cache bounded to the
-  41 allowed radii reuses handles and disables the previous active rule.
+  original 41 preview radii (later corrected to 21 supported radii below)
+  reuses handles and disables the previous active rule.
 - [LIVE] Generated rounding rule accepted without configuration errors; the
   global corner value stayed 7 before/after applying radius 12. Reload restored
   saved runtime configuration after the probe.
@@ -923,3 +924,19 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   layout harness passed 23 tests with its existing incomplete-theme-double
   warnings; theme-token scan, clean-tree plugin validation, live-backend QML
   compilation and diff whitespace checks passed.
+
+### Window-rule rounding limit and tile order correction (2026-11-04)
+
+- [LIVE, user report] Hyprland rejected the generated window rule at rounding 32
+  with "value 32 is more than the maximum of 20". The previous radius-12 probe
+  established acceptance only at 12; rendering a radius-40 preview did not
+  establish compositor support. Station now bounds rounding to 0–20 in shared
+  sanitization, slider limits and Lua generation. Previously saved higher values
+  clamp to 20 on read. The rule cache therefore has 21 supported values.
+- WINDOW now occupies the left tile and NEXT WINDOW the right tile, whose
+  width follows the next-window split percentage. During arrival the right tile
+  splits vertically, placing the incoming WINDOW above NEXT WINDOW; the left
+  resident WINDOW remains in place. Departure expands the remaining tile.
+- Validation: all 214 regression tests, the isolated host-token render/exchange
+  check, theme-token scan and whitespace checks passed. The render check now
+  uses the supported upper bound of 20 and asserts WINDOW precedes NEXT WINDOW.

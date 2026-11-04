@@ -13,9 +13,10 @@ test('preview transfers one window at a time and reflows every occupied tile', (
     assert.deepEqual(middle[0], areas[0], 'remaining window fills source');
     assert.ok(middle[2].width < areas[1].width);
     const outgoing = swapped ? 3 : 1, returning = swapped ? 1 : 3;
-    assert.ok(middle[returning].height < start[returning].height, 'resident shrinks for arrival');
-    assert.equal(middle[outgoing].x, middle[returning].x);
-    assert.equal(middle[outgoing].y, middle[returning].y + middle[returning].height + 10);
+    assert.ok(middle[2].height < start[2].height, 'next window shrinks for arrival');
+    assert.equal(middle[returning].x, areas[1].x, 'resident WINDOW remains left');
+    assert.equal(middle[outgoing].x, middle[2].x);
+    assert.equal(middle[2].y, middle[outgoing].y + middle[outgoing].height + 10);
     assert.deepEqual(end, P.frame(areas, [0,1], !swapped, 0, 35, 10), 'replay starts without a jump');
     for (let i = 0; i < 6; i++) {
       assert.deepEqual(P.rect(i, areas, [0,1], swapped, 1, 35, 10), middle[i]);
@@ -23,6 +24,15 @@ test('preview transfers one window at a time and reflows every occupied tile', (
       for (const key of ['x','y','width','height']) assert.equal(halfway[key], (start[i][key] + middle[i][key]) / 2);
     }
     assert.deepEqual(start.slice(4), middle.slice(4), 'third monitor stays still');
+    for (const frame of [start, end]) {
+      for (const monitor of [0, 1, 2]) {
+        const next = frame[monitor * 2];
+        const window = frame.find((rect, id) => id % 2 === 1 && rect.y === next.y && rect.x < next.x
+          && rect.x >= areas[monitor].x);
+        assert.ok(window, 'WINDOW stays left of NEXT WINDOW');
+        assert.equal(next.width, (areas[monitor].width - 10) * 0.35);
+      }
+    }
   }
   assert.deepEqual(P.frame(areas, [1], false, 0, 50, 0), P.frame(areas, [1], false, 2, 50, 0));
   assert.deepEqual(P.frame(areas, [0,2], false, 0, 50, 0).slice(2,4),
@@ -59,5 +69,10 @@ test('speed has nine discrete positions with normal speed at the midpoint', () =
 
 test('window rounding leaves the shell corner token unchanged', () => {
   assert.doesNotMatch(W.lua({rounding:30}), /decoration/);
-  assert.match(W.lua({rounding:30}), /hl.window_rule.*rounding=30/);
+  assert.deepEqual(W.limits.rounding, [0, 20, 0]);
+  for (const radius of [20, 21, 32, 40, 999]) {
+    assert.equal(W.clean({rounding:radius}).rounding, 20);
+    assert.match(W.lua({rounding:radius}), /hl.window_rule.*rounding=20/);
+    assert.doesNotMatch(W.lua({rounding:radius}), /rounding=(21|32|40|999)\b/);
+  }
 });

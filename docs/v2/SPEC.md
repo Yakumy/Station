@@ -671,8 +671,9 @@ Files:
 ## Windows tab (2026-11-01)
 
 Windows follows Bar, with the shared layout/control-column geometry. Two sample windows on each monitor show the full inner gap, outer gap, Dwindle next-window split percentage,
-and actual window corner radius. Monitor names sit outside each rectangle at its
-upper left, with a label lane reserved for stacked displays. No name padding is
+and actual window corner radius. WINDOW occupies the left tile; NEXT WINDOW
+occupies the right tile at the selected split percentage. Monitor names sit
+outside each rectangle at its upper left, with a label lane reserved for stacked displays. No name padding is
 reserved inside the work area. After changing animation speed, the WINDOW on
 the first enabled monitor transfers to the second enabled monitor. Its remaining
 NEXT WINDOW expands to fill the source while the destination tiles shrink to
@@ -698,7 +699,7 @@ all windows. Playback captures the released speed; another release during
 playback queues the latest speed for a complete replay, preserving continuity.
 Speed 0 settles the exchange immediately when its replay starts.
 
-Rounding uses a bounded cache of application window rules (0–40 px), with only
+Rounding uses a bounded cache of application window rules (0–20 px), with only
 one active rule. It does not change `decoration.rounding`, which Omarchy also
 uses for shell corners. The monitor preview uses the Bar layout geometry with
 neutral bar indicators, including three segments for Pill. No monitor is selected.
