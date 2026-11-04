@@ -119,6 +119,16 @@ without a full reload or fixed sleep. It restores autoreload on every exit;
 failed applies conditionally restore the file and reload for recovery. Personal
 Lua regains normal precedence on the next reload; observation never replays an
 old request. Global values also determine normal shell appearance.
+
+`WindowSettingsController.qml` owns the appearance FileView, source/load state,
+edit busy state and save/readback callbacks as one persistent Service child.
+It receives only applied window values, operation state, configuration generation
+and finite queue, observed-value, error and theme-refresh ports. Service keeps
+`setWindowSetting` and `refreshWindowSettings` forwarding methods and a synchronous
+read-only busy projection for both direct consumers and detached snapshots.
+Observed values merge into root config without saving cached compositor settings.
+The fixed transaction script, markers and public return values are unchanged.
+
 When Station becomes the active full bar, the service atomically removes its
 persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
 The service also reconciles that row on activation, covering upgrades where

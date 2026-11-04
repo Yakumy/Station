@@ -16,6 +16,8 @@ const service = readFileSync('Service.qml', 'utf8');
 function fn(name, context) {
   const moved = require('./helpers/bar-settings.cjs').ownerFunction(name, context);
   if (moved) return moved;
+  const windowOwner = require('./helpers/window-settings.cjs').ownerFunction(name, context);
+  if (windowOwner) return windowOwner;
   const start = service.indexOf('  function ' + name + '(');
   const end = service.indexOf('\n  }', start) + 4;
   return runInNewContext('(' + service.slice(start, end) + ')', context);

@@ -7,8 +7,11 @@ This checkpoint lets the maintainer or a later coding session resume the approve
 
 The user authorized implementation and one commit per completed step on `dev`.
 Do not push. Do not install an update or change the running desktop under this
-scope. The latest user instruction is to stop after the M3 commit. Do not start
-M4 or other implementation until the user resumes the work. Preserve human review before M5 and before M6. M2 deletion requires its
+scope. The user resumed after M3; M4 is completed in this checkpoint revision.
+The latest user instruction is to stop after the M4 commit. Stop at the pre-M5
+human gate. Its [review packet](ARCHITECTURE-M5-REVIEW.md)
+is ready; explicit M5 approval is pending. Preserve separate human review before
+M6. M2 deletion requires its
 cross-version and detached-recovery proof. M8 and M9 remain optional.
 
 ## Completed work
@@ -36,8 +39,8 @@ warnings. No live topology, installation, restart, wallpaper or user configurati
 experiment was run. Portable checks need unrestricted subprocess execution on
 this machine because the sandbox rejects some Node/Lua fixtures.
 
-M2 compatibility evaluation is committed as `8e4f7cf`. M3 is completed in this
-checkpoint revision. Work stops after its commit at the user's request.
+M2 compatibility evaluation is committed as `8e4f7cf`. M3 is committed as
+`40f0d8b`. M4 is completed in this checkpoint revision.
 
 ## M3: bar settings owner
 
@@ -54,6 +57,37 @@ preferences, deferred flush, external-row supersession, load gating and failure.
 All 274 Node cases passed. All 26 runtime QML components compiled. Theme scan:
 46 files, no violations. Plugin validation passed on a clean export with the
 current changes overlaid. No installed bar or compositor state changed.
+
+## M4: explicit window-save/readback owner
+
+`WindowSettingsController.qml` owns the appearance FileView/source/load state,
+busy flag and both temporal methods. Service retains two forwarding methods,
+its command queue, config generation, config merge and shared error field.
+The owner receives data and finite ports; no whole Service or shell QObject.
+No transaction script, schema, marker, proxy or display-preview behavior changed.
+
+The existing six save/readback outcome scenarios now execute the owner bodies.
+Three added Node cases cover forwarding/ownership, an observation started before
+an edit, and rejection gates. All 277 Node cases passed (baseline: 274).
+Seven before/after save traces matched, including command argv, generation,
+busy transitions and final observed/error state.
+The new offscreen owner/proxy check passed five behavior cases plus setup/cleanup.
+Its FileView, command queue and theme effects are doubled; it verifies Qt binding
+and callback order, not real filesystem watching or compositor effects.
+The existing slider harness passed two cases plus setup/cleanup; layout passed
+23 Qt results. All 27 runtime QML components compiled using real installed imports.
+Theme scan: 47 files, no violations. Plugin validation passed from a clean export
+with the current milestone files overlaid. Whitespace checks passed.
+
+The injected malformed read intentionally logs an incomplete-settings warning.
+Compilation retained the host-portal registration warning. Existing pointer/layout
+doubles emitted painting/token warnings without test failures. A sandboxed focused
+Node run failed at subprocess fixtures; the unrestricted focused run passed all
+15 cases and the unrestricted full suite passed all 277. No dependencies were
+installed, no live desktop changes were made and nothing was pushed.
+
+M5 is not started. Its packet describes proposed ownership and required evidence;
+it does not authorize implementation or hardware tests. M2 plain copies remain.
 
 ## M2: retain plain-copy persistence
 
@@ -79,9 +113,8 @@ M3 and M4 do not depend on that deletion.
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Wait for the user to resume implementation. M4 has not started.
-5. After resumption, keep M2 persistence intact and continue M4. Stop before M5
-   for its review packet.
+4. Obtain explicit approval of the M5 review packet before any M5 implementation.
+5. Keep M2 persistence intact. M6 requires a separate packet and approval after M5.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.
 

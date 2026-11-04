@@ -1083,8 +1083,10 @@ this audit.
 completed step on `dev`. Do not push. Preserve the mandatory M5/M6 human-review
 checkpoints and the M2 compatibility proof gate. Optional M8/M9 still require
 evidence of a maintainability benefit. Installed updates, live tests and
-publishing remain outside this authorization. The latest user instruction stops
-implementation after the M3 commit. M4 has not started. Resume only when requested.
+publishing remain outside this authorization. The user resumed after M3. M4 is
+implemented in this revision. The user requested a stop after the M4 commit.
+Stop before M5 for review of
+[the concrete packet](ARCHITECTURE-M5-REVIEW.md); approval is still pending.
 
 ### Mandatory human-review checkpoints before M5 and M6
 
@@ -1204,7 +1206,7 @@ later with the old plain-copy mechanism retained once its own gate is approved.
   Root no longer owns a second copy of pending/observed bar rows.
 - **Rollback:** revert extraction, retain unchanged on-disk config and public API.
 
-### M4 — Extract explicit window-save/readback owner
+### M4 — Extract explicit window-save/readback owner (implemented)
 
 - **Priority / effort / risk:** P2; medium, 2–3 days; medium.
 - **Goal/files:** `lib/WindowSettingsController.qml`, Service window methods and
@@ -1218,6 +1220,15 @@ later with the old plain-copy mechanism retained once its own gate is approved.
   and conditional recovery cases; success emits zero reloads and restores original
   autoreload; busy settles after readback/failure; observed values stay authoritative.
 - **Rollback:** revert owner extraction; schema/markers/return values unchanged.
+- **Implementation:** the owner receives `appliedSettings`, `operationState` and
+  `configGeneration` bindings plus `enqueue`, `publishObserved`, `reportError`
+  and `refreshStyle` ports. The appearance FileView moves intact. Service retains
+  two forwarding methods, its config/queue and shared error field, and a synchronous
+  read-only busy projection. No new edit token or generation policy is introduced.
+  Existing observation generation checks and save/readback ordering are preserved.
+  The real owner/proxy offscreen harness doubles FileView I/O and external effects;
+  compilation separately verifies the real Quickshell types. Wallpaper changes
+  remain deferred and are not included in M4.
 
 ### M5 — Make workspace migration a durable owner
 

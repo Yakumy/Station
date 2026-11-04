@@ -29,3 +29,12 @@ The QML compiler supports `python3 tools/v2/check-qml.py . --list` without a
 session. Compilation includes manifest entries, root QML and recursive runtime
 subtrees. Theme scanning covers root sources, libraries and runtime assets. Only
 the two approved logo SVG paths have branding exclusions in repository mode.
+
+Persistent owner checks are local offscreen Qt harnesses:
+`python3 tools/v2/check-bar-settings.py` and
+`python3 tools/v2/check-window-settings.py`. The window harness uses the production
+owner and proxy with doubled FileView I/O and queue effects. It checks synchronous
+busy publication, readback settlement, file-event wiring and stale-read rejection.
+`python3 tools/v3/check-window-sliders.py` checks the production tab and installed
+slider with pointer events. These harnesses do not run in the portable GitHub job
+and do not prove physical pointer or compositor behavior.

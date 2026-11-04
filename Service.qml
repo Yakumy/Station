@@ -8,8 +8,6 @@ import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
 import "lib/Store.js" as Store
 import "lib/Tabs.js" as Tabs
-import "lib/Windows.js" as Windows
-import "lib/SharedConfig.js" as SharedConfig
 import "lib/Recovery.js" as Recovery
 import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
@@ -57,6 +55,20 @@ Item {
       root.setPanelTransferUntil(Date.now() + 3000)
     }
     requestLayerSync: function() { root.syncBarBlur() }
+  }
+  Station.WindowSettingsController {
+    id: windowSettings
+    appliedSettings: root.config.windows
+    operationState: root.state
+    configGeneration: root.configGeneration
+    enqueue: function(command, done, generation) { root.enqueue(command, done, generation) }
+    publishObserved: function(observed) {
+      root.config = Object.assign({}, root.config, { windows: observed })
+    }
+    reportError: function(message) { root.layoutError = message }
+    refreshStyle: function() {
+      if (typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
+    }
   }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
@@ -167,9 +179,6 @@ Item {
   property int previewSeconds: 0
   property string monitorsSource: ""
   property bool monitorsLoaded: false
-  property string appearanceSource: ""
-  property bool appearanceLoaded: false
-  readonly property string appearancePath: Quickshell.env("HOME") + "/.config/hypr/looknfeel.lua"
   property var expect: ({ kinds: [], outputs: [], until: 0 })
   property double lastTopologyMs: 0
   property var actionQueue: []
@@ -944,55 +953,9 @@ Item {
     return "ok"
   }
 
-  property bool windowSettingsBusy: false
-  function setWindowSetting(key, value) {
-    if (windowSettingsBusy) return "busy"
-    if (!Object.prototype.hasOwnProperty.call(Windows.limits, key)
-        || typeof value !== "number" || !isFinite(value)) return "invalid"
-    if (state !== "idle" || !appearanceLoaded) return "busy"
-    var next = Windows.clean(config.windows)
-    next[key] = value
-    next = Windows.clean(next)
-    var source
-    var lua = Windows.settingLua(key, next[key])
-    try { source = SharedConfig.setWindow(appearanceSource, key, lua) }
-    catch (error) { layoutError = String(error); return "invalid" }
-    windowSettingsBusy = true
-    enqueue(["sh", "-c", Transactions.windowSetting, "sh", appearancePath, appearanceSource, source,
-      "assert(loadfile(" + Hypr.luaString(appearancePath) + ")); " + lua], function(code, output) {
-      appearanceFile.reload()
-      if (code === 0 && typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
-      if (code === 0) root.layoutError = ""
-      if (code !== 0) root.layoutError = code === 4 ? "Configuration changed while saving; try again." : "Could not save window setting: " + output
-      root.refreshWindowSettings(function(observed) {
-        root.windowSettingsBusy = false
-        if (code === 0 && observed && Math.abs(Number(root.config.windows[key]) - next[key]) > 0.02)
-          root.layoutError = "A personal Hyprland rule overrides this setting. Station shows the applied value."
-      }, true)
-    }, configGeneration)
-    return "ok"
-  }
-
-  function refreshWindowSettings(done, completingEdit) {
-    if (windowSettingsBusy && !completingEdit) return
-    var generation = configGeneration
-    enqueue(["hyprctl", "-j", "--batch", "getoption general:gaps_in; getoption general:gaps_out; getoption dwindle:default_split_ratio; getoption decoration:rounding; getoption animations:enabled; animations"], function(code, output) {
-      if (code !== 0 || generation !== root.configGeneration || (root.windowSettingsBusy && !completingEdit)) {
-        if (done) done(false)
-        return
-      }
-      try {
-        var observed = Windows.observed(output)
-        if (JSON.stringify(observed) !== JSON.stringify(root.config.windows))
-          root.config = Object.assign({}, root.config, { windows: observed })
-      } catch (error) {
-        console.warn("Station settings read:", error)
-        if (done) done(false)
-        return
-      }
-      if (done) done(true)
-    })
-  }
+  readonly property bool windowSettingsBusy: windowSettings.windowSettingsBusy
+  function setWindowSetting(key, value) { return windowSettings.setWindowSetting(key, value) }
+  function refreshWindowSettings(done, completingEdit) { return windowSettings.refreshWindowSettings(done, completingEdit) }
 
   function monitorSignature() {
     return JSON.stringify(monitors.map(function(m) { return [m.name, m.disabled, m.mirrorOf, m.x, m.y, m.scale, m.width, m.height, m.refreshRate, m.transform] }))
@@ -2128,16 +2091,6 @@ Item {
     printErrors: false
     onLoaded: root.internalDisableSource = text()
     onLoadFailed: root.internalDisableSource = ""
-    onFileChanged: reload()
-  }
-
-  FileView {
-    id: appearanceFile
-    path: root.appearancePath
-    watchChanges: true
-    printErrors: false
-    onLoaded: { root.appearanceSource = text(); root.appearanceLoaded = true }
-    onLoadFailed: { root.appearanceSource = ""; root.appearanceLoaded = true }
     onFileChanged: reload()
   }
 
