@@ -103,6 +103,17 @@ survivors, explicit Single/Mirror transitions, external reload during preview,
 mirror IDs, source ordering, personal binding conflicts, cold presence guards in
 isolated Lua, persistence precedence, source conflicts, and error rollback.
 
+On 2026-11-04, the installed fix passed 236 Node tests, 23 offscreen layout
+cases, QML compilation, theme-token checks, and plugin validation. The live
+two-monitor regression used the same `setDisplayEnabled` handler as the card:
+On → Revert retained the Omarchy Off flag; two On → Keep cycles cleared it,
+stayed On across explicit reload, and reported no layout conflict. Each cycle
+then ran the exact `omarchy-hyprland-monitor-internal off` command and verified
+Station adopted and retained Off. Autoreload returned to its original false
+value and `configerrors` was empty. Final state was restored to internal Off /
+external On; `monitors.lua` matched its pre-test bytes. This did not exercise
+physical pointer clicks or lid transitions.
+
 Cold login with the new DRM guard, physical reconnects, lid behavior, simultaneous
 hotplug, and three/four-monitor hardware remain manual verification items. An
 isolated test is not proof of those hardware paths. Missing DRM access retains

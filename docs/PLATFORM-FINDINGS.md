@@ -1000,3 +1000,21 @@ theme-token checks, clean-copy plugin validation, live-backend component
 compilation, and whitespace checks passed. The layout fixture retains its
 known theme-double warnings. Hardware transition and visual acceptance remain
 user tests; the automated checks do not establish those results.
+
+## Internal-monitor Off toggle handoff (2026-11-04)
+
+- [SRC] `omarchy-hyprland-monitor-internal off` writes the generated
+  `~/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua` flag.
+  Omarchy loads toggles after user monitor rules, so saving an enabled monitor
+  rule alone cannot persist On while this flag remains.
+- [LIVE] On the two-monitor eDP-1 / HDMI-A-2 setup, Station's explicit On → Keep
+  successfully cleared the recognized flag in two successive cycles. The output
+  remained enabled across reload; no personal-override error or config error
+  appeared. Running the exact Off command again was observed without replay.
+  On → Revert retained the flag. The test used the card handler through IPC,
+  not physical pointer input. Initial internal-Off/external-On state and exact
+  `monitors.lua` bytes were retained afterward.
+- [SRC] Ordinary Keep still uses watched apply. This two-file exception pauses
+  automatic reloads, saves both changes, explicitly reloads once, and restores
+  the previous autoreload option. Rejected applies conditionally restore both
+  files; modified toggle Lua is not removed. See the v3 authority contract.
