@@ -7,6 +7,7 @@ import "lib/Model.js" as Model
 import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
 import "lib/Store.js" as Store
+import "lib/Tabs.js" as Tabs
 import "lib/Windows.js" as Windows
 import "lib/SharedConfig.js" as SharedConfig
 import "lib/Recovery.js" as Recovery
@@ -262,7 +263,7 @@ Item {
     if (typeof value === "number" && isFinite(value) && value >= 0) panelTransferUntil = value
   }
   function setRememberedTab(value) {
-    if (Number.isInteger(value) && value >= 0 && value <= 5) rememberedTab = value
+    if (Tabs.validIndex(value)) rememberedTab = value
   }
   function setRememberedDisplayName(value) {
     if (typeof value === "string" && (value === "" || validConnector(value))) rememberedDisplayName = value
@@ -528,7 +529,7 @@ Item {
     var next = monitorBar(name)
     next.position = position
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -563,7 +564,7 @@ Item {
     var next = monitorBar(name)
     next.enabled = enabled
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -582,7 +583,7 @@ Item {
     var next = monitorBar(name)
     next.width = Math.round(number)
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -605,7 +606,7 @@ Item {
     var next = monitorBar(name)
     next.height = Math.round(number)
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -627,7 +628,7 @@ Item {
     var next = monitorBar(name)
     next.background = background
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -650,7 +651,7 @@ Item {
     var next = monitorBar(name)
     next.style = style
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -674,7 +675,7 @@ Item {
     var next = monitorBar(name)
     next.contentSize = Math.round(number)
     if (panelWanted) {
-      rememberedTab = 1
+      rememberedTab = Tabs.index("bar")
       panelTransferUntil = Date.now() + 3000
     }
     var bars = Object.assign({}, config.bars || {})
@@ -2449,6 +2450,7 @@ Item {
       setWindowSetting: function(key, value) { return root.setWindowSetting(key, value) },
       setRememberedTab: function(value) { return root.setRememberedTab(value) },
       setRememberedDisplayName: function(value) { return root.setRememberedDisplayName(value) },
+      wallpaperChoose: function(identity) { return root.wallpaper.choose(identity) },
       wallpaperChange: function(key, value) { return root.wallpaper.change(key, value) },
       wallpaperFrame: function(value) { return root.wallpaper.frame(value) },
       wallpaperReset: function() { return root.wallpaper.reset() },

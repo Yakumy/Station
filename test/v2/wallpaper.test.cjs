@@ -64,7 +64,7 @@ test('malformed settings are bounded; remote and control-character paths are rej
 function controller() {
   const source = fs.readFileSync('lib/WallpaperController.qml', 'utf8');
   const methods = source.slice(source.indexOf('  function showNotice('), source.indexOf('\n  Instantiator'));
-  const c = {Wallpaper: W, Qt: {callLater: () => {}}, Image: {Ready: 1, Loading: 2, Null: 0, Error: 3},
+  const c = {Tabs: require('../../lib/Tabs.js'), Wallpaper: W, Qt: {callLater: () => {}}, Image: {Ready: 1, Loading: 2, Null: 0, Error: 3},
     draft: {mode: 'span', followTheme: true, source: '/tmp/image.png', perDisplay: {}, framing: W.framing({}), safe: true},
     dirty: true, busy: false, pickerBusy: false, pendingSave: false, repairPending: false,
     repairPrevious: null, repairLegacyKey: '', importBusy: false, failedLegacyKey: '',
@@ -83,7 +83,7 @@ function controller() {
 test('Follow Omarchy blocks local selection and keeps the panel open with an error', () => {
   const c = controller();
   c.station.panelWanted = true;
-  assert.equal(c.choose('A'), false);
+  assert.equal(c.choose(c.layout.displays[0].identity), false);
   assert.equal(c.notice, 'Turn off Follow Omarchy wallpaper to select your own wallpaper.');
   assert.equal(c.noticeError, true);
   assert.equal(c.station.panelWanted, true);
@@ -92,7 +92,7 @@ test('Follow Omarchy blocks local selection and keeps the panel open with an err
   c.change('followTheme', false);
   assert.equal(c.notice, '');
   assert.equal(c.noticeError, false);
-  assert.equal(c.choose('A'), true);
+  assert.equal(c.choose(c.layout.displays[0].identity), true);
   assert.equal(c.station.panelWanted, false);
   assert.equal(c.pickerDelay.restarts, 1);
 });

@@ -7,6 +7,7 @@ import qs.Ui as Ui
 import qs.Commons
 import "Wallpaper.js" as Wallpaper
 import "Model.js" as Model
+import "Tabs.js" as Tabs
 import "." as Station
 
 Item {
@@ -181,6 +182,7 @@ Item {
     })
   }
   function choose(identity) {
+    if (typeof identity !== "string" || (identity !== "" && !layout.displays.some(function(display) { return display.identity === identity }))) return false
     if (pickerBusy || busy) return false
     if (draft.followTheme) {
       showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
@@ -282,7 +284,7 @@ Item {
     onExited: function(code) {
       if (code === 0) root.prepareSelection(result)
       else if (code !== 1) root.showNotice("The desktop file picker could not open.", true)
-      root.station.rememberedTab = 1
+      root.station.rememberedTab = Tabs.index("wallpaper")
       root.station.panelWanted = true
     }
   }

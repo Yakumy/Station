@@ -1,3 +1,9 @@
+# Unreleased
+
+- Restore wallpaper image selection through the replacement-bar bridge.
+- Enable key capture on the opened Keybindings tab and return to Wallpaper after
+  the image chooser closes. Name tab identities without changing numeric IPC.
+
 # 3.0.0 — System settings are authoritative
 
 - Merged Nitai's PR #5 with its original author and commit preserved.

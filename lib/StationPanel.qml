@@ -6,6 +6,7 @@ import qs.Ui as Ui
 import qs.Commons
 import "Model.js" as Model
 import "Binds.js" as Binds
+import "Tabs.js" as Tabs
 import "PanelPosition.js" as PanelPosition
 import "." as Station
 
@@ -468,7 +469,7 @@ Ui.Panel {
   function restoreSession() {
     if (!service) return
     var remembered = Number(service.rememberedTab)
-    if (remembered >= 0 && remembered <= 5 && selectedTab !== remembered) selectedTab = remembered
+    if (Tabs.validIndex(remembered) && selectedTab !== remembered) selectedTab = remembered
     sessionTabRestored = true
   }
 
@@ -718,7 +719,7 @@ Ui.Panel {
         }
       }
       onTabRequested: function(direction) {
-        root.selectedTab = (root.selectedTab + (direction > 0 ? 1 : 5)) % 6
+        root.selectedTab = Tabs.next(root.selectedTab, direction)
       }
 
       Column {
@@ -762,12 +763,12 @@ Ui.Panel {
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
-              model: ["Displays", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"]
+              model: Tabs.labels()
               delegate: Item {
                 id: tab
                 required property int index
                 required property string modelData
-                readonly property bool conflicted: index === 4 && root.conflictCount > 0
+                readonly property bool conflicted: index === Tabs.index("keybindings") && root.conflictCount > 0
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
@@ -823,7 +824,7 @@ Ui.Panel {
             }
           }
           Row {
-            visible: root.selectedTab === 0
+            visible: root.selectedTab === Tabs.index("displays")
             anchors.right: parent.right
             anchors.rightMargin: root.regionPadH
             anchors.verticalCenter: parent.verticalCenter
@@ -868,12 +869,12 @@ Ui.Panel {
             id: tabContent
             objectName: "stationTabContent"
             width: tabScroll.availableWidth
-            Station.DisplaysTab { visible: root.selectedTab === 0; width: parent.width; panelRoot: root }
-            Station.BarTab { visible: root.selectedTab === 1; width: parent.width; panelRoot: root }
-            Station.WindowsTab { visible: root.selectedTab === 2; width: parent.width; panelRoot: root }
-            Station.WallpaperTab { visible: root.selectedTab === 3; width: parent.width; panelRoot: root }
-            Station.KeybindingsTab { visible: root.selectedTab === 4; width: parent.width; panelRoot: root }
-            Station.SettingsTab { visible: root.selectedTab === 5; width: parent.width; panelRoot: root }
+            Station.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; panelRoot: root }
+            Station.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; panelRoot: root }
+            Station.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; panelRoot: root }
+            Station.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; panelRoot: root }
+            Station.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; panelRoot: root }
+            Station.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; panelRoot: root }
           }
         }
       }

@@ -17,6 +17,7 @@ QtObject {
   readonly property bool dirty: snapshot ? snapshot.dirty === true : false
 
   function call(name, args) { return api ? api.call(name, args) : undefined }
+  function choose(identity) { return call("wallpaperChoose", [identity]) }
   function change(key, value) { return call("wallpaperChange", [key, value]) }
   function frame(value) { return call("wallpaperFrame", [value]) }
   function reset() { return call("wallpaperReset", []) }

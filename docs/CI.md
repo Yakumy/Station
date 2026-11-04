@@ -7,8 +7,8 @@ action revisions, and no repository secrets or persisted checkout credentials.
 Do not run contributor pull requests on a runner attached to your desktop.
 
 The job runs the Node regression suite (including the Lua and Perl helpers),
-the theme-token scanner, and a whitespace check. The three installed-host M0
-contract tests intentionally skip when Omarchy is absent. Passing this job
+the theme-token scanner, and a whitespace check. Four installed-host cases intentionally skip when Omarchy is absent: three M0
+contracts and the internal-toggle command contract. Passing this job
 does not prove QML compilation, final rendering, or physical monitor behavior.
 Run the Omarchy-specific checks in AGENTS.md locally before releasing.
 
@@ -24,3 +24,8 @@ name. This avoids requiring a check that has never been published.
 
 Marketplace verification remains a separate process tied to the final release
 commit, including any manifest version change.
+
+The QML compiler supports `python3 tools/v2/check-qml.py . --list` without a
+session. Compilation includes manifest entries, root QML and recursive runtime
+subtrees. Theme scanning covers root sources, libraries and runtime assets. Only
+the two approved logo SVG paths have branding exclusions in repository mode.

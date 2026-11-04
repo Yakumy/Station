@@ -8,6 +8,7 @@ const Store = require('../../lib/Store.js');
 const service = read('Service.qml');
 
 function qmlFunction(source, name, context = {}) {
+  context.Tabs = require('../../lib/Tabs.js');
   const start = source.indexOf('  function ' + name + '(');
   assert.notEqual(start, -1, name + ' exists');
   const end = source.indexOf('\n  }', start) + 4;
@@ -205,7 +206,8 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const monitorBar = read('lib/MonitorBar.qml');
   const proxy = read('lib/BarServiceProxy.qml');
 
-  assert.match(panel, /\["Displays", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"\]/);
+  assert.match(panel, /model: Tabs\.labels\(\)/);
+  assert.deepEqual(require('../../lib/Tabs.js').labels(), ["Displays", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"]);
   assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Station\.BarLayout/);
   assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);

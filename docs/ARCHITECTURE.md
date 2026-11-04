@@ -122,6 +122,12 @@ then removes the last enable reference and unloads the service normally.
 The bundled bar is an MIT-licensed adaptation of Omarchy 4.0.6; provenance is
 recorded in `THIRD_PARTY_NOTICES.md`.
 
+`Tabs.js` defines named panel identities and their numeric presentation indices.
+Service setters and snapshots retain the numeric compatibility surface. The
+Keybindings tab receives an explicit activation flag. Wallpaper image selection
+uses the same validated `choose(identity)` contract on direct and proxy paths.
+Picker completion restores Wallpaper on success, cancellation and error.
+
 `BindingKeyPicker.qml` captures allowlisted key events and offers a static
 special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text

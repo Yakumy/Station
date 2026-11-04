@@ -6,6 +6,7 @@ import "." as Station
 Column {
   id: keybindingsTab
   required property var panelRoot
+  property bool active: false
   readonly property real inset: panelRoot.regionPadH
   spacing: 0
 
@@ -124,7 +125,7 @@ Column {
               }
               Station.BindingKeyPicker {
                 value: keybindingsTab.panelRoot.editingKey
-                available: keybindingsTab.panelRoot.opened && keybindingsTab.panelRoot.selectedTab === 3
+                available: keybindingsTab.active
                 onPicked: function(key) { keybindingsTab.panelRoot.editingKey = key }
               }
               Ui.Button {

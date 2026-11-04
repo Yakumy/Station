@@ -10,6 +10,7 @@ const proxy = read('lib/BarServiceProxy.qml');
 const wallpaper = read('lib/WallpaperProxy.qml');
 
 function qmlFunction(source, name, context = {}) {
+  context.Tabs = require('../../lib/Tabs.js');
   const start = source.indexOf('  function ' + name + '(');
   assert.notEqual(start, -1, name + ' exists');
   const end = source.indexOf('\n  }', start) + 4;

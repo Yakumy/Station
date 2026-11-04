@@ -1,6 +1,7 @@
 # Station architecture audit and refactoring proposal
 
-Status: proposal only; no implementation authorized by this document. Audited on
+Status: approved direction, implementation in progress. See
+[the implementation checkpoint](ARCHITECTURE-REFACTOR-STATUS.md). Audited on
 2026-11-05 at `d9caad9cf0ccc0ceb2bbe6a0f965e4f3aaa5c0d2` (`dev`, manifest
 3.0.0). The starting worktree was clean. Evidence locations refer to that revision;
 line numbers will move during implementation. Repository-relative links are used
@@ -9,8 +10,10 @@ so this proposal remains useful outside the author's machine.
 Review revision: the user approved the general direction subject to the gates
 below. This revision adds safe compilation/package baselines, mandatory human
 review before M5/M6, a reproducible hardware procedure, conditional M2 deletion,
-and optional M8/M9. Approval does not authorize implementation: M0 will be a
-separate task, and every subsequent milestone needs its own explicit authorization.
+and optional M8/M9. The user subsequently authorized implementation and one
+commit per completed step on `dev`, without pushing. M5/M6 retain their explicit
+human-review gates. M2 deletion remains conditional on its compatibility proof.
+The checkpoint records completed steps and remaining limits.
 
 ## 1. Executive summary
 
@@ -64,8 +67,8 @@ alone.
 
 The user's explicit deliverable overrides skill defaults for a temporary HTML
 report, interactive candidate selection, ADR/JSON persistence, glossary edits, and
-successor-workflow dispatch. No implementation, ADR registration, skill handoff,
-or additional repository document is created. Skill terminology is adapted to
+successor-workflow dispatch. The audit created no implementation, ADR registration, skill handoff,
+or additional repository document. Implementation status is now tracked separately. Skill terminology is adapted to
 QML: a persistent child object is an internal owner, not another plugin service.
 The Omarchy skill is primarily for installed desktop customization; its read-only
 platform guidance is applicable here, but its blanket reload recommendation is
@@ -383,7 +386,10 @@ risks are existing failures. No critical safety vulnerability was established.
 | F8 | Repeated preview geometry and bar-row normalization | Potential improvement | P3; low–medium; reject overgeneralization |
 | F9 | Broad names, flat runtime folder, repeated snapshot work and document drift | Naming/measurement/documentation opportunities | P3; low for names, unknown performance benefit |
 
-### F1. Consumer contracts and tab identity
+### F1. Consumer contracts and tab identity (resolved in M1)
+
+The following evidence describes the audited baseline. M1 fixes these three
+inconsistencies. The checkpoint records tests and implementation details.
 
 Evidence:
 
@@ -1073,11 +1079,11 @@ changes. Every extraction first preserves existing names/paths; file moves occur
 later. Each leaves a functioning repository. No milestone below is executed by
 this audit.
 
-**Authorization rule:** general approval of this proposal is not milestone
-authorization. Stop after this document revision. M0 will be commissioned
-separately; completion of one milestone never authorizes the next. Each subsequent
-milestone, including any optional work, needs its own explicit authorization.
-Installed updates, live tests, commits and publishing retain their separate scopes.
+**Current authorization:** the user authorized implementation and one commit per
+completed step on `dev`. Do not push. Preserve the mandatory M5/M6 human-review
+checkpoints and the M2 compatibility proof gate. Optional M8/M9 still require
+evidence of a maintainability benefit. Installed updates, live tests and
+publishing remain outside this authorization.
 
 ### Mandatory human-review checkpoints before M5 and M6
 
@@ -1392,8 +1398,9 @@ Repeat document and source-preservation checks after this revision.
 These do not block producing or reviewing this proposal. They gate only the
 associated later implementation choice.
 
-1. **Correctness scope:** authorize the three F1 fixes as a small preceding series,
-   or schedule them separately? Recommendation: preceding series with consumer tests.
+1. **Correctness scope resolved:** the user authorized M1. The three F1 fixes
+   retain the existing public numeric tab interface and use named identities
+   internally. Consumer tests now require parity without known-gap exceptions.
 2. **Panel control lifetime:** should a released brightness/text-size request finish
    after panel rebuild, or retain current panel-local lifetime? Preserve current
    behavior until that product decision is explicit.
@@ -1439,5 +1446,6 @@ associated later implementation choice.
 Approval of this document is approval of a proposed direction, not authorization
 to run live topology tests, change schemas, implement milestones, install updates,
 commit or publish. Those are future tasks with their own scoped authorization.
-This revision ends with reporting the proposal changes. M0 remains a separate
-future task; every subsequent milestone also requires its own authorization.
+Implementation now follows the current authorization in §13. Stop at the
+mandatory human-review gates before M5 and M6. Record completed commits and
+verification in the implementation checkpoint.
