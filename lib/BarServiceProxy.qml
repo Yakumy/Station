@@ -5,6 +5,7 @@ QtObject {
   id: root
   property var snapshot: null
   property var api: null
+  signal snapshotRefreshRequested()
 
   readonly property bool windowSettingsBusy: snapshot ? snapshot.windowSettingsBusy === true : false
   readonly property var openApps: snapshot ? snapshot.openApps || ({}) : ({})
@@ -40,7 +41,12 @@ QtObject {
 
   function call(name, args) { return api ? api.call(name, args) : undefined }
 
-  function setWindowSetting(key, value) { return call("setWindowSetting", [key, value]) }
+  function setWindowSetting(key, value) {
+    var result = call("setWindowSetting", [key, value])
+    // Publish the busy state before PanelSlider resets liveValue on release.
+    snapshotRefreshRequested()
+    return result
+  }
   function switchStation(value) { return call("switchStation", [value]) }
   function setSetting(name, value) { return call("setSetting", [name, value]) }
   function setModeValue(mode, target) { return call("setModeValue", [mode, target]) }

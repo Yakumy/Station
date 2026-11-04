@@ -52,3 +52,21 @@ test('clear and replacement retire snapshots and actions without clearing a newe
   next.call('act', []);
   assert.equal(calls, 1);
 });
+
+test('replacement-bar window edits refresh the detached busy snapshot before returning', () => {
+  const source = readFileSync('lib/BarServiceProxy.qml','utf8');
+  const start = source.indexOf('  function setWindowSetting(');
+  const end = source.indexOf('\n  }',start)+4;
+  const b = bridge();
+  let busy = false;
+  const api = b.publish(() => ({windowSettingsBusy:busy}), {
+    setWindowSetting() { busy = true; return 'ok'; },
+  });
+  const c = {api, snapshot:api.snapshot(), call:(name,args)=>api.call(name,args)};
+  c.snapshotRefreshRequested = () => { c.snapshot = api.snapshot(); };
+  const set = runInNewContext('('+source.slice(start,end)+')',c);
+  assert.equal(set('split',65),'ok');
+  assert.equal(c.snapshot.windowSettingsBusy,true);
+  assert.ok(Object.values(c.snapshot).every(value=>typeof value !== 'function'));
+  assert.match(readFileSync('lib/StationPanel.qml','utf8'), /onSnapshotRefreshRequested: root.syncBridge\(\)/);
+});

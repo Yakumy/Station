@@ -10,7 +10,13 @@ Column {
   required property var panelRoot
   property var values: Windows.displayValues(panelRoot.service ? panelRoot.service.config.windows : null)
   readonly property var savedValues: panelRoot.service ? panelRoot.service.config.windows : null
-  onSavedValuesChanged: values = Windows.displayValues(savedValues)
+  property bool editing: false
+  readonly property bool saving: panelRoot.service ? panelRoot.service.windowSettingsBusy : false
+  function syncValues() {
+    if (!editing && !saving) values = Windows.displayValues(savedValues)
+  }
+  onSavedValuesChanged: syncValues()
+  onSavingChanged: syncValues()
   readonly property var barSettings: panelRoot.selectedDisplay && panelRoot.service ? panelRoot.service.monitorBar(panelRoot.selectedDisplay.name) : ({})
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
@@ -68,11 +74,16 @@ Column {
                 enabled: root.panelRoot.service && !root.panelRoot.service.windowSettingsBusy
                 integer: true
                 value: row.index === 4 ? Windows.speedIndex(root.values.speed) : root.values[row.modelData.key]
-                onMoved: function(value) { root.preview(row.modelData.key, row.index === 4 ? Windows.speeds[value] : value) }
+                onMoved: function(value) {
+                  root.editing = true
+                  root.preview(row.modelData.key, row.index === 4 ? Windows.speeds[value] : value)
+                }
                 onReleased: function(value) {
                   if (row.index === 4) value = Windows.speeds[value]
                   if (row.modelData.key === "speed" && value !== Windows.displayValues(root.savedValues).speed) layout.previewExchange(value)
-                  root.panelRoot.service.setWindowSetting(row.modelData.key, value)
+                  var result = root.panelRoot.service.setWindowSetting(row.modelData.key, value)
+                  root.editing = false
+                  if (result !== "ok") root.syncValues()
                 }
                 Rectangle {
                   visible: row.index < 2

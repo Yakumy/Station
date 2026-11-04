@@ -1339,29 +1339,36 @@ Item {
     catch (error) { layoutError = String(error); return "invalid" }
     windowSettingsBusy = true
     enqueue(["sh", "-c", Transactions.settings, "sh", appearancePath, appearanceSource, source], function(code, output) {
-      root.windowSettingsBusy = false
       appearanceFile.reload()
       if (code === 0) root.layoutError = ""
       if (code !== 0) root.layoutError = code === 4 ? "Configuration changed while saving; try again." : "Could not save window setting: " + output
-      root.refreshWindowSettings(function() {
-        if (code === 0 && Math.abs(Number(root.config.windows[key]) - next[key]) > 0.02)
+      root.refreshWindowSettings(function(observed) {
+        root.windowSettingsBusy = false
+        if (code === 0 && observed && Math.abs(Number(root.config.windows[key]) - next[key]) > 0.02)
           root.layoutError = "A personal Hyprland rule overrides this setting. Station shows the applied value."
-      })
+      }, true)
     })
     return "ok"
   }
 
-  function refreshWindowSettings(done) {
-    if (windowSettingsBusy) return
+  function refreshWindowSettings(done, completingEdit) {
+    if (windowSettingsBusy && !completingEdit) return
     var generation = configGeneration
     enqueue(["hyprctl", "-j", "--batch", "getoption general:gaps_in; getoption general:gaps_out; getoption dwindle:default_split_ratio; getoption decoration:rounding; getoption animations:enabled; animations"], function(code, output) {
-      if (code !== 0 || generation !== root.configGeneration || root.windowSettingsBusy) return
+      if (code !== 0 || generation !== root.configGeneration || (root.windowSettingsBusy && !completingEdit)) {
+        if (done) done(false)
+        return
+      }
       try {
         var observed = Windows.observed(output)
         if (JSON.stringify(observed) !== JSON.stringify(root.config.windows))
           root.config = Object.assign({}, root.config, { windows: observed })
-        if (done) done()
-      } catch (error) { console.warn("Station settings read:", error) }
+      } catch (error) {
+        console.warn("Station settings read:", error)
+        if (done) done(false)
+        return
+      }
+      if (done) done(true)
     })
   }
 

@@ -116,3 +116,38 @@ test('external slider values are displayed without becoming saved slider stops',
   assert.equal(W.displayValues({speed:1.33,rounding:19.5}).speed,1.33);
   assert.equal(W.displayValues({speed:1.33,rounding:19.5}).rounding,19.5);
 });
+
+test('window edits stay busy through read-back and always settle after observation errors', () => {
+  for (const outcome of ['applied', 'override', 'save failure', 'read failure', 'malformed', 'generation changed']) {
+    const queue = [];
+    const c = {Windows:W, SharedConfig:S, Transactions:T, configGeneration:1,
+      config:{windows:W.clean(null)}, windowSettingsBusy:false, state:'idle',
+      appearanceLoaded:true, appearanceSource:'', appearancePath:'/isolated/looknfeel.lua',
+      appearanceFile:{reload(){}}, layoutError:'', console:{warn(){}},
+      enqueue(command, done) { queue.push({command,done}); }};
+    c.root = c;
+    c.refreshWindowSettings = fn('refreshWindowSettings',c);
+    const set = fn('setWindowSetting',c);
+    assert.equal(set('split',65),'ok');
+    assert.equal(c.windowSettingsBusy,true);
+    c.refreshWindowSettings();
+    assert.equal(queue.length,1,'ordinary polling cannot read during the save');
+    queue.shift().done(outcome === 'save failure' ? 4 : 0,'');
+    assert.equal(c.windowSettingsBusy,true,'file completion must not release the slider');
+    assert.equal(set('rounding',8),'busy','a second save waits for read-back');
+    const raw = [{css:'5 5 5 5'}, {css:'10 10 10 10'},
+      {float:outcome === 'applied' ? 0.7 : 1}, {int:0}, {bool:true},
+      [[{name:'windows',enabled:true,speed:4}],[]]].map(JSON.stringify).join('\n\n');
+    if (outcome === 'generation changed') c.configGeneration++;
+    queue.shift().done(outcome === 'read failure' ? 1 : 0, outcome === 'malformed' ? '{}' : raw);
+    assert.equal(c.windowSettingsBusy,false,outcome+' releases busy');
+    if (outcome === 'applied') {
+      assert.equal(c.config.windows.split,65);
+      assert.equal(c.layoutError,'');
+    } else if (outcome === 'override') {
+      assert.equal(c.config.windows.split,50);
+      assert.match(c.layoutError,/personal Hyprland rule/);
+    } else if (outcome === 'save failure') assert.match(c.layoutError,/Configuration changed/);
+    else assert.doesNotMatch(c.layoutError,/personal Hyprland rule/,'failed reads cannot diagnose an override');
+  }
+});

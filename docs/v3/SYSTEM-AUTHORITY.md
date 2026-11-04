@@ -56,6 +56,15 @@ sets the related window leaves together. Custom animation curves/styles are not
 represented by the speed slider. External numeric values are displayed without
 being rounded to a slider stop until the user edits that control.
 
+Window sliders retain their local selection during pointer input and through the
+save's applied-value read-back. Unchanged snapshots and unrelated configuration
+updates cannot reset an active edit. Controls remain busy until read-back finishes,
+including failed reads; then the panel adopts the last observed compositor values.
+A personal override or failed save can therefore return the control to the applied
+value, while successful saves do not briefly jump back to the previous setting.
+Replacement-bar actions refresh their detached busy snapshot synchronously before
+the host slider completes release.
+
 Global blur now follows the user's compositor configuration. Choosing Blur on a
 bar requests its layer effect but cannot override disabled global blur. Legacy
 blur leases are retired without restoring stale globals.
@@ -118,6 +127,17 @@ Cold login with the new DRM guard, physical reconnects, lid behavior, simultaneo
 hotplug, and three/four-monitor hardware remain manual verification items. An
 isolated test is not proof of those hardware paths. Missing DRM access retains
 the safe fallback rather than guessing which output can survive.
+
+The slider regression check is `python3 tools/v3/check-window-sliders.py`.
+It uses production WindowsTab and the installed host PanelSlider with isolated Qt
+pointer events, covering snapshots during dragging/saving, successful read-back,
+personal overrides, and failed saves. Paint tokens and the compositor service are
+doubled; this does not prove physical pointer behavior in the running shell.
+Node tests cover busy/read-back ordering, read failures, stale generations, and the
+replacement-bar snapshot handoff. The fix passed 238 Node tests, the new pointer
+regression (two cases plus setup/cleanup), the existing 23 layout cases, QML
+compilation, theme-token checks, and plugin validation from an isolated export.
+Physical pointer acceptance is left to the user on the updated installed plugin.
 
 Suggested user test: edit a display or global gap in Lua after Station's block,
 apply it, and confirm the panel follows; with an external display active run

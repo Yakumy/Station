@@ -119,6 +119,7 @@ Ui.Panel {
     id: bridgeProxy
     snapshot: root.bridgeSnapshot
     api: root.bridgeApi
+    onSnapshotRefreshRequested: root.syncBridge()
   }
 
   Timer {
