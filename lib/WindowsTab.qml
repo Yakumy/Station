@@ -11,9 +11,6 @@ Column {
   property var values: Windows.clean(panelRoot.service ? panelRoot.service.config.windows : null)
   readonly property var savedValues: panelRoot.service ? panelRoot.service.config.windows : null
   onSavedValuesChanged: values = Windows.clean(savedValues)
-  property bool swapped: false
-  property bool animateSwap: false
-  Timer { id: swapEnd; interval: root.values.speed > 0 ? 400 / root.values.speed + 100 : 1; onTriggered: root.animateSwap = false }
   readonly property var barSettings: panelRoot.selectedDisplay && panelRoot.service ? panelRoot.service.monitorBar(panelRoot.selectedDisplay.name) : ({})
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
@@ -37,8 +34,7 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
         panelRoot: root.panelRoot
         values: root.values
-        swapped: root.swapped
-        animateSwap: root.animateSwap
+        id: layout
       }
     }
     Rectangle { width: Math.max(1, Style.normalBorderWidth); height: parent.height; color: Commons.Color.popups.text; opacity: 0.12 }
@@ -75,7 +71,7 @@ Column {
                 onMoved: function(value) { root.preview(row.modelData.key, row.index === 4 ? Windows.speeds[value] : value) }
                 onReleased: function(value) {
                   if (row.index === 4) value = Windows.speeds[value]
-                  if (row.modelData.key === "speed" && value !== Windows.clean(root.savedValues).speed) { root.animateSwap = true; root.swapped = !root.swapped; swapEnd.restart() }
+                  if (row.modelData.key === "speed" && value !== Windows.clean(root.savedValues).speed) layout.previewExchange(value)
                   root.panelRoot.service.setWindowSetting(row.modelData.key, value)
                 }
                 Rectangle {

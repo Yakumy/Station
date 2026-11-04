@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "Model.js" as Model
 import "Windows.js" as Windows
+import "WindowPreview.js" as Preview
 
 Ui.BorderSurface {
   id: canvas
@@ -11,11 +12,44 @@ Ui.BorderSurface {
   required property var panelRoot
   property var values: ({})
   property bool swapped: false
-  property bool animateSwap: false
+  property real progress: 0
+  property real queuedSpeed: -1
+  property real playbackSpeed: 1
+  readonly property bool animating: exchange.running
+  readonly property var pair: {
+    var enabled = []
+    displays.forEach(function(display, index) {
+      if (service.displayEnabled(display.name)) enabled.push(index)
+    })
+    return enabled.slice(0, 2)
+  }
+  function previewExchange(speed) {
+    if (exchange.running) { queuedSpeed = speed; return }
+    if (pair.length < 2) return
+    if (progress === 2) swapped = !swapped
+    progress = 0
+    playbackSpeed = speed
+    if (speed === 0) { progress = 2; return }
+    exchange.start()
+  }
+  SequentialAnimation {
+    id: exchange
+    NumberAnimation { target: canvas; property: "progress"; to: 1; duration: 400 / canvas.playbackSpeed; easing.type: Easing.OutCubic }
+    PauseAnimation { duration: 120 }
+    NumberAnimation { target: canvas; property: "progress"; to: 2; duration: 400 / canvas.playbackSpeed; easing.type: Easing.OutCubic }
+    onFinished: {
+      if (canvas.queuedSpeed >= 0) {
+        var speed = canvas.queuedSpeed
+        canvas.queuedSpeed = -1
+        canvas.previewExchange(speed)
+      }
+    }
+  }
   readonly property var service: panelRoot.service
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
-  readonly property real verticalInset: height * 0.1
+  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
+  readonly property real verticalInset: Math.max(height * 0.1, labelHeight + Style.spacing.sm)
   readonly property real monitorGap: Style.spacing.sm
   readonly property real barEdgeGap: Style.spacing.sm
   clip: true
@@ -79,14 +113,12 @@ Ui.BorderSurface {
           : Math.floor(Math.min(Number(modelData.width), Number(modelData.height)) * 0.05))
       readonly property real effectiveBarHeight: Math.max(defaultBarHeight,
         Math.min(maximumBarHeight, Number(barSetting.height) > 0 ? Number(barSetting.height) : defaultBarHeight))
-      readonly property real nameInset: canvas.barEdgeGap
-        + Math.max(2, maximumBarHeight * canvas.zoom) + Style.spacing.sm
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2
+        + canvas.monitorGap / 2 + canvas.labelHeight
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
       z: isSelected ? 1 : 0
       color: isSelected ? Commons.Color.menu.selectedBackground : Commons.Color.popups.background
       borderSpec: Border.flat(isSelected
@@ -137,8 +169,9 @@ Ui.BorderSurface {
       }
 
       Text {
-        x: Style.spacing.sm; y: Style.spacing.sm
-        width: parent.width - Style.spacing.sm * 2
+        objectName: "monitorName-" + monitorCard.modelData.name
+        x: 0; y: -height - Style.spacing.sm
+        width: parent.width
         text: monitorCard.modelData.name
         color: canvas.panelRoot.textDim
         font.family: Style.font.family
@@ -147,7 +180,7 @@ Ui.BorderSurface {
       }
     }
   }
-  function windowRect(monitorIndex, next) {
+  function workArea(monitorIndex) {
     var display = displays[monitorIndex]
     if (!display) return {x:0,y:0,width:0,height:0}
     var size = Model.logicalSize(display)
@@ -157,36 +190,41 @@ Ui.BorderSurface {
     var effective = Math.max(minimum, Math.min(service.monitorBarMaximumHeight(display.name), Number(bar.height) || minimum))
     var thickness = bar.enabled ? Math.max(2, effective * zoom) + barEdgeGap * 2 : 0
     var x = originX + display.x * zoom - bounds.x * zoom + monitorGap / 2
-    var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2
-    var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap
+    var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2 + labelHeight
+    var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap - labelHeight
     var left = gaps.left * zoom + (bar.position === "left" ? thickness : 0)
     var right = gaps.right * zoom + (bar.position === "right" ? thickness : 0)
-    var top = Math.max(Style.space(22), gaps.top * zoom + (bar.position === "top" ? thickness : 0))
+    var top = gaps.top * zoom + (bar.position === "top" ? thickness : 0)
     var bottom = gaps.bottom * zoom + (bar.position === "bottom" ? thickness : 0)
-    var gap = values.innerGap * zoom
-    var available = Math.max(0, w - left - right - gap)
-    var first = available * values.split / 100
-    return {x:x + left + (next ? 0 : first + gap), y:y + top,
-      width:next ? first : available - first, height:Math.max(0,h - top - bottom)}
+    return {x:x + left, y:y + top, width:Math.max(0,w - left - right), height:Math.max(0,h - top - bottom)}
+  }
+  function windowRect(index) {
+    var areas = displays.map(function(_, i) { return workArea(i) })
+    return Preview.rect(index, areas, pair, swapped, progress, values.split, values.innerGap * zoom)
   }
   Repeater {
     model: canvas.displays.length * 2
-    Rectangle {
+    Item {
       required property int index
       objectName: "windowPreview-" + index
-      readonly property int home: Math.floor(index / 2)
       readonly property bool nextWindow: index % 2 === 0
-      readonly property int destination: !nextWindow && canvas.swapped && canvas.displays.length > 1
-        ? (home === 0 ? 1 : home === 1 ? 0 : home) : home
-      readonly property var rect: canvas.windowRect(destination, nextWindow)
+      readonly property var rect: canvas.windowRect(index)
       x: rect.x; y: rect.y; width: rect.width; height: rect.height
-      opacity: canvas.service.displayEnabled(canvas.displays[destination].name) ? 1 : canvas.panelRoot.disabledOpacity
-      color: Commons.Color.popups.background
-      border.color: canvas.panelRoot.textDim
-      border.width: Style.normalBorderWidth
-      radius: canvas.values.rounding * canvas.zoom
-      Behavior on x { enabled: canvas.animateSwap; NumberAnimation { duration: canvas.values.speed > 0 ? 400 / canvas.values.speed : 0; easing.type: Easing.OutCubic } }
-      Behavior on y { enabled: canvas.animateSwap; NumberAnimation { duration: canvas.values.speed > 0 ? 400 / canvas.values.speed : 0; easing.type: Easing.OutCubic } }
+      opacity: canvas.service.displayEnabled(canvas.displays[Math.floor(index / 2)].name) ? 1 : canvas.panelRoot.disabledOpacity
+      // Paint in monitor logical pixels, then scale the entire outline. A full
+      // preview-pixel border otherwise swallows small scaled corner radii.
+      Rectangle {
+        objectName: "windowOutline-" + index
+        width: parent.width / canvas.zoom; height: parent.height / canvas.zoom
+        scale: canvas.zoom
+        transformOrigin: Item.TopLeft
+        color: Commons.Color.popups.background
+        border.color: canvas.panelRoot.textDim
+        border.width: Style.normalBorderWidth
+        border.pixelAligned: false
+        antialiasing: true
+        radius: canvas.values.rounding
+      }
       Text {
         anchors.centerIn: parent
         width: Math.max(0,parent.width - Style.spacing.sm * 2)

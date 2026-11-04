@@ -671,9 +671,16 @@ Files:
 ## Windows tab (2026-11-01)
 
 Windows follows Bar, with the shared layout/control-column geometry. Two sample windows on each monitor show the full inner gap, outer gap, Dwindle next-window split percentage,
-and actual window corner radius. After changing animation speed, the WINDOW rectangles on the first two
-monitors exchange places once; NEXT WINDOW rectangles remain in place. This
-demonstrates window motion; it never dispatches a move against real windows. Gap tracks mark the
+and actual window corner radius. Monitor names sit outside each rectangle at its
+upper left, with a label lane reserved for stacked displays. No name padding is
+reserved inside the work area. After changing animation speed, the WINDOW on
+the first enabled monitor transfers to the second enabled monitor. Its remaining
+NEXT WINDOW expands to fill the source while the destination tiles shrink to
+make room for three windows. After a short pause, the destination's original
+WINDOW transfers back, restoring two windows on each monitor. NEXT WINDOW
+identities remain on their home monitor and resize with both transfers. Disabled
+outputs and additional monitors do not participate. This demonstrates window
+motion; it never dispatches a move against real windows. Gap tracks mark the
 selected monitor's bar thickness with a hover tooltip. Settings are global.
 
 Sliders preview while dragging and apply on release. Inner gap is the complete
@@ -685,7 +692,11 @@ values use nine slider positions: 0, 0.25, 0.5, 0.75, 1, 1.24, 1.5, 1.75, 2.
 Normal speed (1×) is the middle position; existing higher values clamp to 2×.
 Positive values enable animations and set window animation duration to 400 ms divided by speed.
 This does not retime workspace, bar, or shell animations. Window previews use
-that duration with an illustrative easing curve.
+that duration per transfer with an illustrative easing curve and a 120 ms pause
+between transfers. A shared progress value interpolates position and size for
+all windows. Playback captures the released speed; another release during
+playback queues the latest speed for a complete replay, preserving continuity.
+Speed 0 settles the exchange immediately when its replay starts.
 
 Rounding uses a bounded cache of application window rules (0–40 px), with only
 one active rule. It does not change `decoration.rounding`, which Omarchy also

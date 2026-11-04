@@ -176,4 +176,9 @@ A change passes when, under at least two themes including one light theme (Catpp
 
 The simulated windows in WindowsLayout are the sole exception to the corner
 token rule: their radius is the selected compositor rounding scaled to the
-preview. All surrounding chrome continues to use `Style.cornerRadius`.
+preview. Paint the outline in logical monitor pixels and scale it as a whole,
+including its border; enable antialiasing and disable border pixel alignment so
+the border does not swallow small preview radii. All surrounding chrome
+continues to use `Style.cornerRadius`. Monitor labels sit above the upper-left
+corner, outside the rectangle. Reserve a label lane in stacked layouts instead
+of removing space from the illustrated window work area.

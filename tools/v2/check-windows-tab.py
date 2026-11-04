@@ -19,7 +19,7 @@ try:
         connection.settimeout(1)
         connection.connect(str(address))
 except OSError as error:
-    raise SystemExit(f"Bar-tab render check needs Wayland access ({error}).")
+    raise SystemExit(f"Windows-tab render check needs Wayland access ({error}).")
 
 output = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="station-bar-tab-render-"))
 output.mkdir(parents=True, exist_ok=True)
@@ -103,23 +103,51 @@ ShellRoot {
     property int phase: 0
     property var first: null
     property var second: null
-    interval: 700; running: true; repeat: true
+    interval: 40; running: true; repeat: true
+    property bool sawMiddle: false
+    function fail(reason) { console.log("WINDOWS_CHECK_FAILED " + reason); Qt.quit(); stop() }
     onTriggered: {
       var layout = findObject(tab, "windowsLayout")
       var a = findObject(layout, "windowPreview-1")
       var b = findObject(layout, "windowPreview-3")
-      if (!layout || !a || !b) { console.log("WINDOWS_CHECK_FAILED missing delegates"); Qt.quit(); return }
+      var remaining = findObject(layout, "windowPreview-0")
+      var outline = findObject(layout, "windowOutline-1")
+      if (!layout || !a || !b || !outline) { fail("missing delegates"); return }
       if (phase === 0) {
-        first = {x:a.x,y:a.y}; second = {x:b.x,y:b.y}
-        tab.animateSwap = true
-        tab.swapped = true
+        var name = findObject(layout, "monitorName-eDP-1")
+        if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }
+        first = {x:a.x,y:a.y,width:a.width,height:a.height,remaining:remaining.width}
+        second = {x:b.x,y:b.y,width:b.width,height:b.height}
+        layout.previewExchange(0.5)
+        if (a.x !== first.x || a.y !== first.y || b.x !== second.x || b.y !== second.y) {
+          fail("startup jump"); return
+        }
         phase++
         return
       }
-      if (a.destination !== 1 || b.destination !== 0 || (a.x === first.x && a.y === first.y)
-          || (b.x === second.x && b.y === second.y)) {
-        console.log("WINDOWS_CHECK_FAILED exchange"); Qt.quit(); return
+      if (phase === 1) {
+        if (layout.progress === 1) {
+          sawMiddle = true
+          if (remaining.width <= first.remaining || b.height >= second.height) { fail("reflow"); return }
+        }
+        if (layout.animating) return
+        if (!sawMiddle || a.x !== second.x || a.y !== second.y || b.x !== first.x || b.y !== first.y) {
+          fail("ordered exchange"); return
+        }
+        var before = {x:a.x,y:a.y,width:a.width,height:a.height}
+        layout.previewExchange(0.25)
+        layout.previewExchange(2)
+        if (a.x !== before.x || a.y !== before.y || a.width !== before.width || a.height !== before.height
+            || layout.playbackSpeed !== 0.25) { fail("replay jump or live retiming"); return }
+        phase++
+        return
       }
+      if (layout.animating || layout.queuedSpeed >= 0) return
+      tab.preview("rounding", 40)
+      if (outline.radius !== 40 || outline.scale !== layout.zoom || !outline.antialiasing
+          || outline.border.pixelAligned) { fail("scaled radius"); return }
+      layout.previewExchange(0)
+      if (layout.animating || layout.progress !== 2) { fail("zero speed"); return }
       capture.grabToImage(function(result) {
         result.saveToFile("OUTPUT/windows-tab.png")
         console.log("WINDOWS_RENDER_AND_EXCHANGE_OK")

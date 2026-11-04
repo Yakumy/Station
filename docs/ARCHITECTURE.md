@@ -229,7 +229,13 @@ and completion result for diagnosing real keys without synthetic input.
 
 WindowsLayout renders all monitor cards and neutral bar previews with the same
 bounds/zoom geometry as BarLayout. Its window delegates live at canvas level so
-the two WINDOW rectangles can exchange monitors without reparenting.
+the two WINDOW rectangles can exchange monitors without reparenting. Monitor
+names have external label lanes. WindowPreview.js builds two-window, intermediate
+one/three-window, and final two-window frames with stable identities. A single
+WindowsLayout timeline interpolates every window's position and size, first
+outbound, then returning. Playback captures its speed and queues the latest
+release during an active exchange. Logical-pixel outlines scale their borders
+and rounding together.
 WindowsTab uses Windows.js for bounded numeric settings and Lua generation.
 The persistent service owns application/persistence; the replacement-bar proxy
 exposes only `setWindowSetting` and the existing detached config snapshot.

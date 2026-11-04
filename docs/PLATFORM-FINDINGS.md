@@ -898,3 +898,28 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   passed. `tools/v2/check-windows-tab.py` renders the production tab with host
   tokens and verifies both exchange destinations/movement. The rendered artifact
   was inspected; this is an isolated preview check, not a live window migration.
+
+### Windows preview labels, rounding and transfer reflow (2026-11-04)
+
+- [SRC] The old preview painted a full preview-pixel border around a radius
+  scaled by monitor zoom. At small zoom that border obscured the requested
+  rounding. The outline now paints at logical monitor size and scales border
+  and radius together, with antialiasing and non-aligned border pixels. This
+  changes only the illustration, not compositor rules or shell corner tokens.
+- [SRC] Independent position Behaviors did not model tile occupancy or animate
+  size. WindowPreview.js now keeps stable identities across two transfers:
+  first monitor to second (one/three tiles), then the original second-monitor
+  window back (two/two tiles). One timeline interpolates all four geometry
+  properties; a released speed is captured and subsequent releases queue the
+  latest replay. Only the first two enabled monitors participate.
+- Isolated Wayland/host-token check: external upper-left names, a non-overlapping
+  label lane on stacked monitors, initial/replay continuity, intermediate tile
+  expansion/shrinking, queued speed, zero speed and radius scaling passed.
+  The rendered 40 px rounding artifact was inspected. This verifies the preview;
+  no real monitor topology or application windows were changed. Animation feel
+  remains subject to user acceptance in the installed panel.
+- Validation: 214 Node tests passed sequentially outside the sandbox. Two Lua
+  subprocess test files timed out inside the sandbox. The existing offscreen
+  layout harness passed 23 tests with its existing incomplete-theme-double
+  warnings; theme-token scan, clean-tree plugin validation, live-backend QML
+  compilation and diff whitespace checks passed.
