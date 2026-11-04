@@ -42,10 +42,11 @@ ShellRoot {
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     property var config: ({windows:{innerGap:26,outerGap:20,split:35,rounding:10,speed:0.5}})
     property bool windowSettingsBusy: false
+    property string testBarBackground: "solid"
     function displayEnabled(name) { return name !== "DP-3" }
     function monitorBar(name) {
       if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur", style: "pill", contentSize: 18}
-      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: "solid", style: "default", contentSize: 0}
+      if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: testBarBackground, style: "default", contentSize: 0}
       return {enabled: false, position: "right", width: 100, height: 0, background: "transparent", style: "default", contentSize: 0}
     }
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
@@ -114,6 +115,18 @@ ShellRoot {
       var outline = findObject(layout, "windowOutline-1")
       if (!layout || !a || !b || !outline) { fail("missing delegates"); return }
       if (phase === 0) {
+        var solidArea = layout.workArea(1)
+        fakeService.testBarBackground = "transparent"
+        var transparentArea = layout.workArea(1)
+        fakeService.testBarBackground = "blur"
+        var blurArea = layout.workArea(1)
+        fakeService.testBarBackground = "solid"
+        if (Math.abs(solidArea.x - blurArea.x) > 0.001) {
+          fail("blur default bar gap"); return
+        }
+        if (Math.abs(solidArea.x - transparentArea.x - tab.values.outerGap * layout.zoom) > 0.001) {
+          fail("solid default bar gap"); return
+        }
         var name = findObject(layout, "monitorName-eDP-1")
         if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }
         if (a.x >= remaining.x || b.x >= findObject(layout, "windowPreview-2").x) {

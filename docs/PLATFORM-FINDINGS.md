@@ -940,3 +940,21 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - Validation: all 214 regression tests, the isolated host-token render/exchange
   check, theme-token scan and whitespace checks passed. The render check now
   uses the supported upper bound of 20 and asserts WINDOW precedes NEXT WINDOW.
+
+### Solid and Blur default bar spacing (2026-11-04)
+
+- [LIVE, user report] Solid color / Omarchy default bars visibly touched tiled
+  windows because Station forced their bar-edge workspace gap to zero.
+- [SRC] The shared Windows.gaps policy now retains the selected outer gap on
+  the Solid color or Blur default bar edge. Transparent and Pill keep the previous
+  zero-extra-gap policy; disabled bars retain all four gaps. WindowsLayout uses
+  the same function as generated workspace rules. Existing config-change
+  synchronization reapplies the policy when background/style is changed.
+  This revises the earlier blanket bar-edge omission; bar reservations are
+  unchanged. Physical acceptance of the added spacing remains a user check.
+- Validation: 214 Node regression tests passed, including all four edges,
+  background/style combinations, enabled/disabled bars and zero/max gaps.
+  The isolated host-token preview check confirmed the solid/blur/transparent work
+  areas follow the shared policy: Solid and Blur match, and their difference
+  from Transparent equals the selected outer gap at preview zoom. Theme-token
+  and whitespace checks passed.

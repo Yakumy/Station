@@ -686,8 +686,11 @@ selected monitor's bar thickness with a hover tooltip. Settings are global.
 
 Sliders preview while dragging and apply on release. Inner gap is the complete
 visible gap (Hyprland `gaps_in` is half this value); outer gap does not write bar
-geometry or layer reservations. Per-monitor workspace rules set outer gap to zero
-on the enabled bar edge; disabled bars keep all four gaps. Split is Dwindle-only, 25–75%; other layouts
+geometry or layer reservations. For an enabled Solid color or Blur bar using Omarchy default
+style, per-monitor workspace rules retain outer gap on its edge, separating tiled
+windows from the bar. Transparent and Pill bars keep zero extra
+outer gap on their edge, with bar height controlling the reservation instead.
+Disabled bars keep all four gaps. The preview uses this same gap policy. Split is Dwindle-only, 25–75%; other layouts
 retain their layout policy. Speed 0 disables compositor animations; positive
 values use nine slider positions: 0, 0.25, 0.5, 0.75, 1, 1.24, 1.5, 1.75, 2.
 Normal speed (1×) is the middle position; existing higher values clamp to 2×.

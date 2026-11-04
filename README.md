@@ -252,4 +252,5 @@ Drag to preview; release to apply and save. Gap sliders mark the selected bar's
 thickness. Monitor names appear above their rectangles. Changing speed previews
 one window moving to the next enabled monitor, then another coming back; the
 remaining tiles expand and shrink to show the layout reflow. Outer gaps leave
-the bar in place and skip its edge. Speed 0 disables animations.
+the bar in place and add spacing beside Solid color or Blur bars using Omarchy default style.
+Transparent and Pill bars use bar height for spacing on their edge. Speed 0 disables animations.

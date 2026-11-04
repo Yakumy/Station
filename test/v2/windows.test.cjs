@@ -48,13 +48,27 @@ test('window settings clamp numeric preferences and reject injected values', () 
   assert.doesNotMatch(W.lua({outerGap:80}), /monitor|reserved|layer_rule/);
 });
 
-test('outer gaps omit only the enabled bar edge on each monitor', () => {
+test('solid and blur default bars retain the outer gap on their edge; other styles use bar height', () => {
   for (const edge of ['top', 'right', 'bottom', 'left']) {
-    const gaps = W.gaps({outerGap:30}, {position:edge, enabled:true});
-    for (const side of Object.keys(gaps)) assert.equal(gaps[side], side === edge ? 0 : 30);
+    for (const background of ['solid', 'transparent', 'blur']) {
+      for (const style of ['default', 'pill']) {
+        for (const enabled of [true, false]) {
+          for (const outerGap of [0, 30, 160]) {
+            const bar = {position:edge, enabled, background, style};
+            const gaps = W.gaps({outerGap}, bar);
+            const omit = enabled && !(['solid', 'blur'].includes(background) && style === 'default');
+            for (const side of Object.keys(gaps)) {
+              assert.equal(gaps[side], omit && side === edge ? 0 : outerGap,
+                JSON.stringify({bar, outerGap, side}));
+            }
+          }
+        }
+      }
+    }
   }
-  assert.deepEqual(W.gaps({outerGap:30}, {position:'top', enabled:false}), {top:30,right:30,bottom:30,left:30});
-  assert.match(W.gapRules({outerGap:30}, {'DP-1':{position:'left'}}), /workspace="m\[DP-1\]",gaps_out=\{top=30,right=30,bottom=30,left=0\}/);
+  assert.deepEqual(W.gaps({outerGap:30}, {position:'top'}), {top:30,right:30,bottom:30,left:30});
+  assert.match(W.gapRules({outerGap:30}, {'DP-1':{position:'left'}}), /workspace="m\[DP-1\]",gaps_out=\{top=30,right=30,bottom=30,left=30\}/);
+  assert.match(W.gapRules({outerGap:30}, {'DP-1':{position:'left',background:'transparent'}}), /gaps_out=\{top=30,right=30,bottom=30,left=0\}/);
   assert.throws(() => W.gapRules({}, {'bad"]':{}}), /invalid connector/);
   assert.match(W.lua({split:28}), /default_split_ratio=1.44/);
 });
