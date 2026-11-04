@@ -16,7 +16,7 @@ cross-version and detached-recovery proof. M8 and M9 remain optional.
 | --- | --- | --- |
 | Proposal | `b5b946f` | Reviewed audit, compatibility gates and hardware checklist |
 | M0 | `07016a1` | 266 Node cases passed, 25 QML components compiled, theme scan 44 files/0 violations, clean-export plugin validation passed |
-| M1 | Included with this checkpoint's introducing commit | 267 Node cases passed, 25 QML components compiled, theme scan 45 files/0 violations. Key-picker pointer harness and 23 layout cases passed |
+| M1 | `cce6819` | 267 Node cases passed, 25 QML components compiled, theme scan 45 files/0 violations. Key-picker pointer harness and 23 layout cases passed |
 
 M1 adds `lib/Tabs.js`. Numeric service setters and snapshot values remain
 compatible. Feature code names tabs. Keybindings receives explicit activation.
@@ -35,13 +35,32 @@ warnings. No live topology, installation, restart, wallpaper or user configurati
 experiment was run. Portable checks need unrestricted subprocess execution on
 this machine because the sandbox rejects some Node/Lua fixtures.
 
+## M2: retain plain-copy persistence
+
+Deletion is deferred. The pinned pre-v3 cleanup at
+`86f6cf4bc488e5217af2a0a8fe72673b528a4e6b` consumes the plain copy.
+The exact payload is retained in `test/v2/fixtures/legacy-plain-cleanup.sh`.
+Its SHA-256 is `2f0516178852c2a63a92c8746725c39fa55c89b8a787de8b3a7aaffaa596c00f`.
+
+Four isolated compatibility cases passed. They demonstrate two deletion hazards:
+legacy cleanup leaves disable/mirror rules intact without the copy, and an old
+copy can restore stale geometry. Both payload generations skip an enabled shell
+restart. Current cleanup neutralizes current rules without the copy.
+
+These cases use the real payloads with temporary paths and fake desktop commands.
+They skip elapsed sleep time. They do not prove the complete supported-version,
+watchdog, interrupted-Keep or code-rollback matrix. No support window was narrowed.
+Production writers, FileViews, argument contracts and retained user files remain
+unchanged. A future deletion requires the full proof and human review in M2.
+M3 and M4 do not depend on that deletion.
+
 ## Resume procedure
 
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Evaluate M2 compatibility before changing its writer or argument contract.
-5. Continue M3/M4 if M2 must remain intact. Stop before M5 for its review packet.
+4. Keep the M2 writer and argument contract intact unless its full gate passes.
+5. Continue M3/M4 with plain-copy persistence retained. Stop before M5 for its review packet.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.
 

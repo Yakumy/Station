@@ -1148,6 +1148,11 @@ plan. M5 approval never authorizes M6.
 - **Rollback:** revert production deletion; old artifacts need no migration or
   restoration. Never delete retained user data to make the rollback work.
 
+M2 evaluation found a concrete legacy consumer. The pinned pre-v3 cleanup cannot
+neutralize mode rules without a plain copy. Deletion remains deferred. See the
+checkpoint and `plain-copy-compatibility.test.cjs` for isolated negative evidence.
+This does not replace the full proof gate below.
+
 #### M2 compatibility proof gate
 
 First enumerate supported upgrade and code-rollback revisions with the reviewer:
