@@ -670,10 +670,10 @@ Files:
 
 ## Windows tab (2026-11-01)
 
-Windows follows Bar, with the shared layout/control-column geometry. Two sample
-windows show the full inner gap, outer gap, Dwindle next-window split percentage,
-and actual window corner radius. A single side swap after changing animation speed demonstrates window
-motion; it never dispatches a move against real windows. Gap tracks mark the
+Windows follows Bar, with the shared layout/control-column geometry. Two sample windows on each monitor show the full inner gap, outer gap, Dwindle next-window split percentage,
+and actual window corner radius. After changing animation speed, the WINDOW rectangles on the first two
+monitors exchange places once; NEXT WINDOW rectangles remain in place. This
+demonstrates window motion; it never dispatches a move against real windows. Gap tracks mark the
 selected monitor's bar thickness with a hover tooltip. Settings are global.
 
 Sliders preview while dragging and apply on release. Inner gap is the complete
@@ -686,6 +686,11 @@ Normal speed (1×) is the middle position; existing higher values clamp to 2×.
 Positive values enable animations and set window animation duration to 400 ms divided by speed.
 This does not retime workspace, bar, or shell animations. Window previews use
 that duration with an illustrative easing curve.
+
+Rounding uses a bounded cache of application window rules (0–40 px), with only
+one active rule. It does not change `decoration.rounding`, which Omarchy also
+uses for shell corners. The monitor preview uses the Bar layout geometry with
+neutral bar indicators, including three segments for Pill. No monitor is selected.
 
 The service stores successful changes under `config.windows`, applies sanitized
 numeric Lua through its command queue, and reapplies on startup/config reload.

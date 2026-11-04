@@ -227,6 +227,9 @@ focus its address. Silent moves leave the selected station alone.
 `lastWindowAction` in the existing status IPC records reception, selected address,
 and completion result for diagnosing real keys without synthetic input.
 
+WindowsLayout renders all monitor cards and neutral bar previews with the same
+bounds/zoom geometry as BarLayout. Its window delegates live at canvas level so
+the two WINDOW rectangles can exchange monitors without reparenting.
 WindowsTab uses Windows.js for bounded numeric settings and Lua generation.
 The persistent service owns application/persistence; the replacement-bar proxy
 exposes only `setWindowSetting` and the existing detached config snapshot.

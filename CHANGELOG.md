@@ -13,3 +13,7 @@
   overlap tiled windows when the bar-facing window gap is zero.
 - Aligned every bar presentation with the monitor edge and removed pill outer
   margins while retaining full window-space reservation.
+- Kept window roundness independent of shell/bar corners using application rules.
+- Added full monitor topology to Windows with neutral per-monitor bar previews,
+  Pill segments, two windows per monitor and a cross-monitor animation exchange.
+- Aligned the Layout heading and removed the selected-monitor caption.

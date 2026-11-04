@@ -879,3 +879,22 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   This revises the earlier floating geometry while retaining overlap protection.
 - 212 Node tests, 23 existing layout tests, theme checks and QML compilation
   passed. Physical visual acceptance remains a user check.
+
+### Full Windows layout and independent rounding (2026-11-04)
+
+- [SRC] Installed `qs.Commons.Style.cornerRadius` mirrors Hyprland's global
+  `decoration.rounding` (Style.qml). The Windows slider now uses application
+  window rules rather than changing that global value. A cache bounded to the
+  41 allowed radii reuses handles and disables the previous active rule.
+- [LIVE] Generated rounding rule accepted without configuration errors; the
+  global corner value stayed 7 before/after applying radius 12. Reload restored
+  saved runtime configuration after the probe.
+- WindowsLayout now shows the full displayDraft topology using BarLayout bounds,
+  sizing and bar geometry. Bars use neutral text color and Pill uses three
+  rounded segments. Each monitor has two windows; changing speed exchanges the
+  WINDOW rectangles on the first two monitors, once. NEXT WINDOW stays put.
+  Header alignment is corrected and the selected-monitor control caption removed.
+- 213 Node tests, 23 existing layout checks, theme scan and component compilation
+  passed. `tools/v2/check-windows-tab.py` renders the production tab with host
+  tokens and verifies both exchange destinations/movement. The rendered artifact
+  was inspected; this is an isolated preview check, not a live window migration.

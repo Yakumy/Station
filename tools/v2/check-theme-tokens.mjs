@@ -33,7 +33,7 @@ function checkLine(path, line, code) {
   const radius = code.match(/\bradius\s*:/);
   if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')
       && !APPROVED_PILL_RADIUS.test(code)
-      && !(path.endsWith("/WindowsTab.qml") && code.trim() === "radius: root.values.rounding * screen.factor")) {
+      && !(path.endsWith("/WindowsLayout.qml") && code.trim() === "radius: canvas.values.rounding * canvas.zoom")) {
     report(path, line, 'radius not bound to Style.cornerRadius');
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');

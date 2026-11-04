@@ -174,6 +174,6 @@ A change passes when, under at least two themes including one light theme (Catpp
 
 ### Window geometry preview
 
-The two simulated windows in WindowsTab are the sole exception to the corner
+The simulated windows in WindowsLayout are the sole exception to the corner
 token rule: their radius is the selected compositor rounding scaled to the
 preview. All surrounding chrome continues to use `Style.cornerRadius`.

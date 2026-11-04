@@ -29,3 +29,8 @@ test('speed has nine discrete positions with normal speed at the midpoint', () =
   assert.equal(W.clean({speed:10}).speed, 2);
   assert.match(W.lua({speed:0.25}), /speed=16/);
 });
+
+test('window rounding leaves the shell corner token unchanged', () => {
+  assert.doesNotMatch(W.lua({rounding:30}), /decoration/);
+  assert.match(W.lua({rounding:30}), /hl.window_rule.*rounding=30/);
+});
