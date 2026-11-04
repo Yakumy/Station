@@ -122,3 +122,57 @@ test('zero-display intervals and removal grace do not replace the saved mapping'
   grace.c.reconcile();
   assert.equal(grace.writes.length, 0);
 });
+
+test('a failed commit acknowledgment keeps old numbering and retries recorded identities after moves', () => {
+  const { c, writes } = harness();
+  c.reconcile();
+  c.migrationSaved();
+  assert.equal(c.migrationPhase, 'commit');
+  assert.deepEqual(c.clients.map(client => client.workspace.id), [1, 3, 5, 7]);
+  c.migrationFailed('commit disk full');
+  assert.deepEqual(c.workspaceMap.outputs, ['A']);
+  assert.ok(c.workspaceData.pending);
+  assert.equal(c.retry, true);
+  c.reconcile();
+  assert.deepEqual(writes[2].pending.windows.map(row => row.station), [1, 2, 3, 4],
+    'retry must not reinterpret already expanded workspace IDs with the old map');
+  c.migrationSaved();
+  assert.deepEqual(c.workspaceMap.outputs, ['A']);
+  c.migrationSaved();
+  assert.deepEqual(copy(c.workspaceMap.outputs), ['A', 'B']);
+});
+
+test('nested preview reconciliation preserves the enclosing operation token and original baseline', () => {
+  const { c, writes } = harness();
+  c.state = 'previewing';
+  c.gen = 42;
+  c.previewBaseline = Grid.plan(c.workspaceMap, c.workspaceMap, c.clients, c.currentStation);
+  const original = copy(c.previewBaseline);
+  c.panelScreenName = 'A';
+  c.stationFocusStatements = () => [];
+  let finished = 0;
+  c.finishPreviewApply = () => finished++;
+  c.reconcile();
+  assert.equal(c.gen, 42);
+  assert.equal(c.state, 'previewing');
+  assert.deepEqual(writes[0].preview, original);
+  c.migrationSaved();
+  c.migrationSaved();
+  assert.equal(c.gen, 42);
+  assert.equal(c.state, 'previewing', 'journal commit must not finish the preview operation');
+  assert.deepEqual(copy(c.previewBaseline), original);
+  assert.deepEqual(writes[1].preview, original);
+  assert.equal(finished, 1);
+});
+
+test('repeated identical migration attempts still serialize distinct acknowledgment revisions', () => {
+  const { c, writes, evals } = harness();
+  c.reconcile();
+  c.migrationFailed('first journal write failed');
+  c.reconcile();
+  assert.equal(evals.length, 0, 'neither attempt has a durable acknowledgment');
+  assert.deepEqual(writes[0].pending, writes[1].pending);
+  assert.equal(writes[1].revision, writes[0].revision + 1);
+  assert.notEqual(JSON.stringify(writes[0]), JSON.stringify(writes[1]),
+    'FileView must see changed text so a retried identical plan can emit saved');
+});

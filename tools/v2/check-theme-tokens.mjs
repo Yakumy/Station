@@ -1,13 +1,16 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, lstat } from 'node:fs/promises';
 import { resolve, relative, extname } from 'node:path';
 
-// Reference palettes and v1 are not v2 runtime code. Scan the whole v2 plugin,
-// including future assets, rather than maintaining individual file exclusions.
+// With no explicit root, scan runtime sources, not docs/tests/developer media.
+// An explicit root retains the whole-tree mode used by scanner security fixtures.
 const explicitRoot = process.argv[2];
 const root = resolve(explicitRoot || '.');
 const repositoryMode = !explicitRoot;
-const repositoryRuntimeFiles = new Set(['Panel.qml', 'Service.qml', 'manifest.json']);
 const textExtensions = new Set(['.qml', '.js', '.mjs', '.json', '.svg', '.css', '.html', '.lua']);
+const runtimeDirectories = new Set(['lib', 'assets']);
+// Approved branding artwork (docs/BRANDING.md), not theme-driven UI palettes.
+// This is an exact-file exception, never an exemption for new files in assets/.
+const brandingArtwork = new Set(['assets/station-main-logo.svg', 'assets/station-main-logo-mask.svg']);
 
 const HEX = /#(?:[\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})(?![\da-f])/i;
 const ELEVATION = /\b(?:DropShadow|FastBlur|GaussianBlur|MaskedBlur|RecursiveBlur|DirectionalBlur|RadialBlur|ZoomBlur|Glow)\s*\{/;
@@ -79,8 +82,8 @@ async function scan(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = resolve(directory, entry.name);
     if (entry.isSymbolicLink()) throw new Error(`Refusing symlink: ${path}`);
-    if (repositoryMode && directory === root && entry.isDirectory() && entry.name !== 'lib') continue;
-    if (repositoryMode && directory === root && !entry.isDirectory() && !repositoryRuntimeFiles.has(entry.name)) continue;
+    if (repositoryMode && directory === root && entry.isDirectory() && !runtimeDirectories.has(entry.name)) continue;
+    if (repositoryMode && brandingArtwork.has(relative(root, path))) continue;
     if (entry.isDirectory()) await scan(path);
     else if (textExtensions.has(extname(path))) {
       files++;
@@ -92,6 +95,20 @@ async function scan(directory) {
 }
 
 try {
+  if (repositoryMode) {
+    const manifestPath = resolve(root, 'manifest.json');
+    if ((await lstat(manifestPath)).isSymbolicLink()) throw new Error(`Refusing symlink: ${manifestPath}`);
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    if (!manifest.entryPoints || typeof manifest.entryPoints !== 'object' || Array.isArray(manifest.entryPoints))
+      throw new Error('manifest.entryPoints must be an object');
+    // Include declared runtime subtrees even if they eventually move outside lib/.
+    for (const entry of Object.values(manifest.entryPoints)) {
+      if (typeof entry !== 'string' || /[\\\x00-\x1f]/.test(entry)
+          || entry.split('/').some(part => ['', '.', '..'].includes(part)))
+        throw new Error(`Unsafe entry point: ${JSON.stringify(entry)}`);
+      if (entry.includes('/')) runtimeDirectories.add(entry.split('/')[0]);
+    }
+  }
   await scan(root);
   console.log(`Theme tokens: scanned ${files} source files; ${violations} violations.`);
   process.exitCode = violations ? 1 : 0;
