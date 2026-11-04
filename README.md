@@ -5,7 +5,7 @@
   <p>Keep your work together. Make each screen your own.</p>
   <p>
     <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=flat-square" alt="Omarchy 4 Quattro"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-2.3-A6B465?style=flat-square" alt="Station 2.3"></a>
+    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-3.0.0-A6B465?style=flat-square" alt="Station 3.0.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
   </p>
   <p>
@@ -38,6 +38,21 @@ Station manages that numbering for you, including when a display disconnects.
 | **Make room on every screen** | Independent bar placement, visibility, size, background, and Pill style. |
 | **Frame your desktop** | The same wallpaper everywhere, one image per monitor, or a single image spanning the layout. |
 | **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, monitor-aware bar-position controls, and drag-to-position. |
+
+## System settings in 3.0
+
+Station follows applied Hyprland settings and changes made through Omarchy.
+External display changes update its panel and workspace mapping; reloads no
+longer force Station's saved display mode or window appearance back onto the
+system. Temporary terminal changes remain temporary.
+
+Station saves display settings at the beginning of `monitors.lua` and individual
+window controls at the beginning of `looknfeel.lua`, with backups. Personal rules
+placed afterward take precedence. If they override a panel edit, Station reports
+that and shows the applied value. Global rounding also follows Omarchy's shell
+corners; global blur is controlled by Hyprland.
+
+See [the 3.0 ownership and migration contract](docs/v3/SYSTEM-AUTHORITY.md).
 
 ## Install
 

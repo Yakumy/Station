@@ -37,7 +37,7 @@ test('Mirror runtime coordinates do not collapse the saved editable layout', () 
       x: 0, y: 300, scale: 1, transform: 0, lane: 1 },
   ];
   const context = {
-    Model, MonitorsLua,
+    Model, MonitorsLua, draftMirrorSource: "",
     monitorsSource: MonitorsLua.generate(saved, { mode: 'mirror', enabled: saved.map(d => d.name) }).block,
     monitors: saved.map(display => ({ ...display, x: 0, y: 300, mirrorOf: display.name === 'eDP-1' ? '1' : 'none',
       width: Number(display.mode.split('x')[0]), height: Number(display.mode.split('x')[1].split('@')[0]), refreshRate: 60 })),
@@ -61,7 +61,7 @@ test('successive position previews reconfigure only the output being moved', () 
   const draft = before.map((monitor, index) => ({ ...monitor, mode: monitor.availableModes[0], enabled: true, lane: index + 1 }));
   const calls = [];
   const context = {
-    Model, MonitorsLua,
+    Model, MonitorsLua, draftMirrorSource: "",
     previewBaseline: {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',
@@ -98,7 +98,7 @@ test('a mode-only preview enables the new single output first without geometry r
   const draft = before.map((monitor, index) => ({ ...monitor, mode: monitor.availableModes[0], enabled: true, lane: index + 1 }));
   const calls = [];
   const context = {
-    Model, MonitorsLua,
+    Model, MonitorsLua, draftMirrorSource: "",
     previewBaseline: {},
     Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
     state: 'previewing', stateDir: '/tmp/station-preview-test',

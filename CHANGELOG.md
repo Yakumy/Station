@@ -1,3 +1,19 @@
+# 3.0.0 — System settings are authoritative
+
+- Merged Nitai's PR #5 with its original author and commit preserved.
+- Replaced background monitor/appearance enforcement with compositor observation.
+- Adopt external display state, mirror sources, bar settings and personal binding
+  conflicts; preserve workspace journal identity across topology changes.
+- Put Station's saved monitor rules before personal overrides and migrate older
+  blocks with backups. Add bounded physical-presence guards for cold startup.
+- Persist individual window controls in `looknfeel.lua`, read back applied values,
+  and report personal overrides. Global rounding now also follows shell corners.
+- Respect global blur and outer gaps instead of restoring Station-only overrides.
+- Cancel previews on external configuration changes; compare source files before
+  saving and preserve newer edits during rollback.
+- See [v3 contract](docs/v3/SYSTEM-AUTHORITY.md) for semantics and hardware limits.
+
+## Earlier development history
 
 ### Windows controls
 

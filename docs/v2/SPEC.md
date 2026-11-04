@@ -1,4 +1,8 @@
-# Station v2 — Build Spec (final)
+# Station v2 — Build Spec (historical baseline)
+
+**3.0 revision:** [System authority](../v3/SYSTEM-AUTHORITY.md) supersedes the
+shared-setting replay, EOF block precedence, and appearance ownership contracts
+below. Station-owned workspace and transaction safety contracts remain binding.
 
 Plugin id `yakumy.station` for Omarchy 4 (Quattro), Hyprland 0.56.x (Lua config).
 Tags: **[V]** verified on the author's machine, **[A]** assumption. Every [A] that affects architecture is eliminated in **M0** (§15) before M1 starts. Record observed results in the M0 table; do not design around an unverified assumption.

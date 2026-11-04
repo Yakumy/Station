@@ -83,6 +83,7 @@ Item {
     property bool previewBusy: false
     property string draftMode: "extend"
     property string draftSingleTarget: ""
+    property string draftMirrorSource: ""
     property string layoutError: ""
     ''' + editable + '''
     property var displayDraft: []

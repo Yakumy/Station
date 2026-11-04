@@ -979,3 +979,24 @@ Validation: 214 Node tests, 23 existing offscreen layout tests, the isolated
 panel-size harness, theme-token scan, live-backend component compilation and
 whitespace checks passed. The layout harness retains its known theme-double
 warnings. Installed visual acceptance remains a user check.
+
+
+## Station 3.0 system authority (2026-11-04)
+
+- [SRC] Shared monitor and appearance preferences are no longer replayed by
+  `applyRuntime`. Effective state updates the panel and workspace map. Personal
+  bindings override automatic stock replacements; global blur remains external.
+- [SRC] Persisted monitor and window-setting blocks precede personal rules.
+  Compare-before-replace and conditional rollback preserve intervening edits.
+- [SRC] Executed Node/Lua tests cover cold physical-presence guards, external
+  topology adoption, numeric mirror IDs, and preview cancellation on reload.
+- [SRC] This is a revision to the design consequences in §9, not a claim that
+  Hyprland's documented reload behavior changed. See
+  [the v3 contract](v3/SYSTEM-AUTHORITY.md). Cold login and physical hotplug under
+  this version still require user verification.
+
+Validation before installation: 226 Node tests, 23 offscreen layout cases,
+theme-token checks, clean-copy plugin validation, live-backend component
+compilation, and whitespace checks passed. The layout fixture retains its
+known theme-double warnings. Hardware transition and visual acceptance remain
+user tests; the automated checks do not establish those results.

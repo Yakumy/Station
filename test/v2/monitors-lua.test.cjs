@@ -169,13 +169,14 @@ test('position-only preview touches only the moved output', () => {
   assert.equal(L.positionOnlyRules(before, before, 'mirror', 'extend'), null);
 });
 
-test('managed block is unique, replaced at EOF, and malformed markers fail closed', () => {
+test('managed block is unique, placed before personal overrides, and malformed markers fail closed', () => {
   const generated = L.generate(displays(), { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] });
   const once = L.replaceManagedBlock('require("defaults")\n', generated.block);
   const twice = L.replaceManagedBlock(once, generated.block);
   assert.equal((twice.match(/>>> station/g) || []).length, 1);
   assert.equal(twice, once);
-  assert.ok(twice.trimEnd().endsWith(L.END));
+  assert.ok(twice.startsWith(L.START));
+  assert.ok(twice.trimEnd().endsWith('require("defaults")'));
   assert.equal(L.removeManagedBlock(once).trim(), 'require("defaults")');
   assert.throws(() => L.replaceManagedBlock(`${L.START}\nbroken\n`, generated.block), /invalid Station markers/);
 });

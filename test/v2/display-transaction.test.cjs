@@ -40,7 +40,7 @@ function harness() {
     previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
     pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
     pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
-    stateDir: '/fake-state', monitorsSource: '',
+    stateDir: '/fake-state', monitorsSource: '', draftMirrorSource: '', previewObservedSignature: '',
     configGeneration: 0, appliedGeneration: 0, lastTopologyMs: 0,
     previewCountdown: { running: false, restart() { this.running = true; }, stop() { this.running = false; } },
     removalGrace: { running: false, stop() { this.running = false; } },
@@ -77,6 +77,7 @@ function harness() {
     },
   });
   c.applyBinds = () => {};
+  c.refreshWindowSettings = () => {};
   // Blur uses a separate compositor probe, not the display transaction queue.
   // Its lease/probe behavior is covered by bar-per-monitor.test.cjs.
   c.syncBarBlur = () => {};
@@ -172,8 +173,9 @@ function harness() {
     assert.ok(limit, 'transaction converges');
     assert.equal(c.layoutError, error, 'transaction reports the expected result');
   }
-  return { c, drain, writes, monitorCalls, order, topologyEvents, windows: () => copy(windows),
-    setWindows(value) { windows = copy(value); } };
+  return { c, drain, writes, monitorCalls, order, topologyEvents, event, windows: () => copy(windows),
+    setWindows(value) { windows = copy(value); },
+    setMonitors(value) { live = copy(value); c.monitors = copy(value); } };
 }
 
 test('Single preview migrates immediately, transfers panel, then Keep survives reload events', () => {
@@ -262,14 +264,15 @@ test('an unchanged side control performs no write or compositor apply', () => {
   assert.deepEqual(h.order, []);
 });
 
-test('runtime reconciliation leaves matching monitor rules alone', () => {
+test('runtime reconciliation adopts external topology without monitor commands', () => {
   const h = harness();
   h.c.applyRuntime(); h.drain();
   assert.deepEqual(h.monitorCalls, []);
   h.c.config.mode = 'single';
   h.c.config.singleTarget = 'A';
   h.c.applyRuntime(); h.drain();
-  assert.deepEqual(h.monitorCalls.map(call => call.name), ['B']);
+  assert.deepEqual(h.monitorCalls, []);
+  assert.equal(h.c.config.mode, 'extend');
   h.monitorCalls.length = 0;
   h.c.applyRuntime(); h.drain();
   assert.deepEqual(h.monitorCalls, []);
@@ -305,7 +308,7 @@ test('Single HDMI evacuates an eDP panel and focuses HDMI before disabling eDP',
 
 test('saved Single eDP -> Single HDMI migrates windows before removing eDP', () => {
   const h = harness(), c = h.c;
-  c.config = Object.assign({}, c.config, { mode: 'single', singleTarget: 'A' });
+  h.setMonitors(c.monitors.map(m => ({ ...m, disabled: m.name === 'B' })));
   c.applyRuntime();
   h.drain();
   c.syncDisplayDraft();
@@ -408,7 +411,7 @@ test('a Mirror role swap changes the source before migrating workspaces', () => 
   const migrated = h.order.findIndex(item => item.startsWith('workspace:') && item.endsWith(':B'));
   assert.ok(source !== -1 && sink !== -1 && migrated !== -1);
   assert.ok(source < sink, 'the new source is made independent before the old source mirrors it');
-  assert.ok(sink < migrated, 'workspace migration starts only after the Mirror topology is valid');
+  assert.ok(source < migrated && migrated < sink, 'migrate after enabling the new source, before mirroring the old source');
   assert.deepEqual(c.workspaceMap.outputs, ['B']);
   assert.equal(c.layoutError, '');
 });
@@ -452,4 +455,18 @@ test('a failed candidate write never starts Keep and rolls back migrated windows
   assert.equal(c.keepStarted, undefined);
   assert.equal(c.config.mode, 'extend');
   assert.deepEqual(h.windows(), before);
+});
+
+
+test('an external reload cancels preview without restoring stale monitor intent', () => {
+  const h = harness(), c = h.c;
+  c.setModeValue('single', 'A'); h.drain();
+  h.setMonitors(c.monitors.map(m => ({...m, disabled:m.name === 'A', mirrorOf:'none'})));
+  h.monitorCalls.length = 0;
+  h.event('configreloaded', '');
+  h.drain('Display configuration reloaded; preview cancelled.');
+  assert.equal(c.state, 'idle');
+  assert.deepEqual(h.monitorCalls, []);
+  assert.equal(c.config.singleTarget, 'B');
+  assert.deepEqual(c.workspaceMap.outputs, ['B']);
 });

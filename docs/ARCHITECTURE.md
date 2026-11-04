@@ -1,4 +1,9 @@
-# Station v2 architecture
+# Station architecture
+
+The [v3 system-authority contract](v3/SYSTEM-AUTHORITY.md) supersedes older
+monitor/appearance replay and final-block precedence descriptions below. Shared
+settings are observed; only explicit edits persist them. Workspace journals,
+binds owned by Station, and its bar layer rule retain service ownership.
 
 Omarchy loads one persistent `Service.qml` for behavior and IPC, and a
 `Panel.qml` bar widget and Display-style popout per output. Under the trusted
@@ -99,13 +104,11 @@ minimum width. The tray slot removes Omarchy's unpainted collapsed drawer
 reserve from its flow extent and adds it back as the reveal animation advances,
 so the Pill island follows the visible tray. A zero stored value
 follows Omarchy's live `Style.font.body` default.
-Blur is compositor-owned. The service keeps a persisted lease of the prior
-global Hyprland blur state, enables one named layer rule for the shared
-`omarchy-bar` namespace, temporarily uses size 8 with three passes, and
-restores the prior global enabled/size/pass values after the final connected
-Blur bar changes mode. Fully transparent surface regions are
-excluded, which matters because partial bars retain a full-screen coordinate
-surface for correct popup anchoring.
+Blur is compositor-owned. Station registers its named bar layer rule but never
+forces global blur enabled/size/pass values or restores a stale lease. Global
+window controls are read from Hyprland; explicit individual edits persist in a
+leading marked `looknfeel.lua` section. Their global values also determine normal
+shell appearance. Personal rules remain later in Lua load order.
 When Station becomes the active full bar, the service atomically removes its
 persisted widget row and `MonitorBar` supplies a virtual copy beside the menu.
 The service also reconciles that row on activation, covering upgrades where

@@ -2,8 +2,9 @@ const { execFileSync } = require('node:child_process');
 
 // Execute the generated configuration in real Lua, with no compositor access.
 // A regex over source would incorrectly apply both sides of an if/else.
-function monitorRules(source, discovery = 'function() return {{name="eDP-1"}, {name="HDMI-A-2"}} end') {
+function monitorRules(source, discovery = 'function() return {{name="eDP-1"}, {name="HDMI-A-2"}} end', ioMock = 'nil') {
   const script = `
+io = ${ioMock}
 hl = {
   env = function() end,
   get_monitors = ${discovery},

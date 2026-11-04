@@ -49,7 +49,7 @@ test('watchdog reverts an abandoned preview but stands down on a re-armed token'
     const fresh = join(root, 'fresh.token');
     writeFileSync(fresh, '');
     const pending = run('2', fresh);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     // A later preview applies inside the window: this watchdog stands down.
     writeFileSync(fresh, '');
     assert.equal(await pending, 0);
@@ -67,7 +67,7 @@ test('watchdog reverts an abandoned preview but stands down on a re-armed token'
   }
 });
 
-test('cleanup executable replaces the literal-parenthesis marker block with plain geometry', () => {
+test('cleanup neutralizes current generated mode fields without restoring stale geometry', () => {
   const root = mkdtempSync(join(tmpdir(), 'station-cleanup-'));
   try {
     const state = join(root, 'state');
@@ -78,7 +78,7 @@ test('cleanup executable replaces the literal-parenthesis marker block with plai
     writeFileSync(join(state, 'state.json'), JSON.stringify({
       stockLease: { wasEnabled: true }, displayLease: { wasEnabled: true }, appliedBinds: ['x'],
     }));
-    writeFileSync(monitors, 'before\n-- >>> station (managed; edited by the Station panel) >>>\nlocal up = {}\nhl.monitor({ output = "A", disabled = true })\n-- <<< station <<<\nafter\n');
+    writeFileSync(monitors, 'before\n-- >>> station (managed; edited by the Station panel) >>>\nlocal up = {}\nhl.monitor({ output = "A", scale = 1.6, disabled = true })\n-- <<< station <<<\nafter\n');
     const commands = {
       'omarchy-shell': '#!/bin/sh\n[ "$2" = ping ] && exit 0\nprintf "[]\\n"\n',
       omarchy: '#!/bin/sh\nexit 0\n',
@@ -92,8 +92,8 @@ test('cleanup executable replaces the literal-parenthesis marker block with plai
       { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
     assert.equal(result.status, 0, result.stderr);
     const cleaned = readFileSync(monitors, 'utf8');
-    assert.match(cleaned, /output = "A", scale = 1/);
-    assert.doesNotMatch(cleaned, /local up|disabled/);
+    assert.match(cleaned, /output = "A", scale = 1.6, disabled = false/);
+    assert.doesNotMatch(cleaned, /disabled = true/);
     assert.deepEqual(JSON.parse(readFileSync(join(state, 'state.json'), 'utf8')),
       { stockLease: null, displayLease: null, appliedBinds: [] });
   } finally {

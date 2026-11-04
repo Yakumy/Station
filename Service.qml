@@ -8,6 +8,7 @@ import "lib/Hypr.js" as Hypr
 import "lib/Binds.js" as Binds
 import "lib/Store.js" as Store
 import "lib/Windows.js" as Windows
+import "lib/SharedConfig.js" as SharedConfig
 import "lib/Recovery.js" as Recovery
 import "lib/MonitorsLua.js" as MonitorsLua
 import "lib/Transactions.js" as Transactions
@@ -27,6 +28,10 @@ Item {
     ? String(Hyprland.focusedMonitor.name || "") : ""
   onFocusedBarScreenNameChanged: Qt.callLater(syncFocusedBarMenu)
   property string lastGlobalBarPosition: ""
+  property var observedHostBars: ({})
+  readonly property string hostBarsSignature: JSON.stringify(shell && shell.barConfig
+    ? ((shell.barConfig.bar || shell.barConfig).monitors || {}) : {})
+  onHostBarsSignatureChanged: Qt.callLater(adoptHostBars)
   readonly property string globalBarPosition: {
     var value = shell && shell.barConfig ? (shell.barConfig.bar || shell.barConfig).position : ""
     return ["top", "bottom", "left", "right"].indexOf(value) !== -1 ? value : ""
@@ -38,7 +43,7 @@ Item {
     ? manifest.__sourceDir.replace(/\/$/, "") : ""
   onPluginDirChanged: Qt.callLater(wallpaperController.prepareLegacyWallpaper)
   property var config: Store.configDefaults()
-  onConfigChanged: { Qt.callLater(syncFocusedBarMenu); Qt.callLater(syncWindowGaps) }
+  onConfigChanged: Qt.callLater(syncFocusedBarMenu)
   // While a panel is open, config.bars is the live authority consumed through
   // BarBridge. Delay the redundant shell.json mirror write until the panel is
   // closed: changing that host config can rebuild the complete third-party bar
@@ -75,7 +80,7 @@ Item {
   property int gen: 0
   property int queuedStation: 0
   property bool configLoaded: false
-  onConfigLoadedChanged: Qt.callLater(syncFocusedBarMenu)
+  onConfigLoadedChanged: { Qt.callLater(syncFocusedBarMenu); Qt.callLater(adoptHostBars) }
   property bool stateLoaded: false
   property bool dirsReady: false
   property bool previewLoaded: false
@@ -84,6 +89,7 @@ Item {
   property int configGeneration: 0
   property int appliedGeneration: -1
   property var bindStatuses: []
+  property int bindProbeGeneration: -1
   property string menuBindingsText: ""
   property bool menuBindingsOk: false
   property string hyprBindingsText: ""
@@ -133,13 +139,16 @@ Item {
   property var keepOptions: null
   property string layoutWriteKind: ""
   property bool keepFilesPending: false
+  property string keepSourceBaseline: ""
   property bool candidateReady: false
   property bool plainCandidateReady: false
   property var displayDraft: []
   property string draftMode: "extend"
   property string draftSingleTarget: ""
+  property string draftMirrorSource: ""
   property var previewBefore: []
   property var previewApplied: null
+  property string previewObservedSignature: ""
   property var pendingDisplayConfig: null
   property string previewApplyLua: ""
   property bool previewApplyStaged: false
@@ -157,12 +166,17 @@ Item {
   property string layoutError: ""
   property int previewSeconds: 0
   property string monitorsSource: ""
+  property bool monitorsLoaded: false
+  property string appearanceSource: ""
+  property bool appearanceLoaded: false
+  readonly property string appearancePath: Quickshell.env("HOME") + "/.config/hypr/looknfeel.lua"
   property var expect: ({ kinds: [], outputs: [], until: 0 })
   property double lastTopologyMs: 0
   property var actionQueue: []
   property var currentAction: null
   property var refreshDone: null
   property bool refreshClientsToo: true
+  property string observedMonitorSignature: ""
   property bool snapshotBusy: false
   property var snapshotQueue: []
   property bool screenRecoveryActive: false
@@ -268,6 +282,25 @@ Item {
 
   function validConnector(value) {
     try { MonitorsLua.connector(value); return true } catch (error) { return false }
+  }
+
+  function adoptHostBars() {
+    if (!configLoaded || !shell || !activeStationBar()) return
+    var rows = parseJson(hostBarsSignature, {})
+    var bars = Object.assign({}, config.bars || {}), pending = Object.assign({}, pendingMonitorBars), changed = false
+    Object.keys(Object.assign({}, observedHostBars, rows)).forEach(function(name) {
+      if (!validConnector(name) || JSON.stringify(rows[name]) === JSON.stringify(observedHostBars[name])) return
+      if (!Object.prototype.hasOwnProperty.call(rows, name)) {
+        delete bars[name]; delete pending[name]; changed = true; return
+      }
+      var input = {}; input[name] = rows[name]
+      var clean = Store.loadConfig({ bars: input }).bars[name]
+      if (JSON.stringify(bars[name]) !== JSON.stringify(clean)) { bars[name] = clean; changed = true }
+      delete pending[name]
+    })
+    observedHostBars = JSON.parse(JSON.stringify(rows))
+    pendingMonitorBars = pending
+    if (changed) { config = Object.assign({}, config, { bars: bars }); saveConfig() }
   }
 
   function monitorBar(name) {
@@ -687,37 +720,8 @@ Item {
       }
       return
     }
-    var globalEnabled = enabledOption.bool === true
-    var currentSize = sizeOption.int
-    var currentPasses = passesOption.int
-    var wanted = barBlurWanted()
-    var lease = persisted.barBlurLease
-    var options = ({})
-    if (wanted) {
-      if (!lease) {
-        lease = { originalEnabled: globalEnabled, changed: !globalEnabled,
-          originalSize: currentSize, originalPasses: currentPasses }
-        persisted.barBlurLease = lease
-        saveState()
-      } else if (!Number.isInteger(lease.originalSize) || !Number.isInteger(lease.originalPasses)) {
-        lease.originalSize = currentSize
-        lease.originalPasses = currentPasses
-        persisted.barBlurLease = lease
-        saveState()
-      }
-      if (!globalEnabled) options.enabled = true
-      if (currentSize !== 8) options.size = 8
-      if (currentPasses !== 3) options.passes = 3
-    } else if (lease) {
-      if (globalEnabled !== lease.originalEnabled) options.enabled = lease.originalEnabled
-      if (Number.isInteger(lease.originalSize) && currentSize !== lease.originalSize)
-        options.size = lease.originalSize
-      if (Number.isInteger(lease.originalPasses) && currentPasses !== lease.originalPasses)
-        options.passes = lease.originalPasses
-      persisted.barBlurLease = null
-      saveState()
-    }
-    evalLua(Hypr.barBlur(wanted, options))
+    if (persisted.barBlurLease) { persisted.barBlurLease = null; saveState() }
+    evalLua(Hypr.barBlur(barBlurWanted(), {}))
     if (barBlurSyncQueued) {
       barBlurSyncQueued = false
       Qt.callLater(syncBarBlur)
@@ -795,8 +799,8 @@ Item {
     })
   }
 
-  function enqueue(command, done) {
-    actionQueue = actionQueue.concat([{ command: command, done: done || null }])
+  function enqueue(command, done, expectedGeneration) {
+    actionQueue = actionQueue.concat([{ command: command, done: done || null, generation: expectedGeneration }])
     runNext()
   }
 
@@ -804,13 +808,20 @@ Item {
     if (action.running || currentAction || actionQueue.length === 0) return
     currentAction = actionQueue[0]
     actionQueue = actionQueue.slice(1)
+    if (currentAction.generation !== undefined && currentAction.generation !== configGeneration) {
+      var stale = currentAction
+      currentAction = null
+      if (stale.done) stale.done(1, "Configuration changed before applying the command.")
+      runNext()
+      return
+    }
     action.command = currentAction.command
     action.running = true
   }
 
   function evalLua(lua, done) {
     if (!String(lua || "").trim()) { if (done) done(0, ""); return }
-    enqueue(["hyprctl", "eval", lua], done)
+    enqueue(["hyprctl", "eval", lua], done, configGeneration)
   }
 
   function refresh(includeClients, done) {
@@ -847,24 +858,23 @@ Item {
 
   function updateAssignments() {
     var connected = monitors.filter(function(m) { return root.validConnector(m.name) })
-    var ids = Model.identities(connected)
-    if (config.enabled.length) connected.forEach(function(m, i) {
-      if (!config.lanes[ids[i]] && config.enabled.indexOf(m.name) === -1)
-        config.enabled = config.enabled.concat([m.name])
-    })
     var assigned = Model.assignLanes(connected, config.lanes, lanes)
     lanes = assigned.lanes
     unmanaged = assigned.unmanaged
-    config.lanes = assigned.preferences
+    var observed = state !== "previewing" && state !== "applyingLayout" ? Model.observedOptions(connected) : null
+    config = Object.assign({}, config, observed || {}, { lanes: assigned.preferences })
     saveConfig()
-    if (state !== "previewing" && state !== "applyingLayout") syncDisplayDraft()
+    if (state !== "previewing" && state !== "applyingLayout") {
+      observedMonitorSignature = monitorSignature()
+      syncDisplayDraft()
+    }
   }
 
   function syncDisplayDraft() {
-    var enabled = Model.enabledNames(monitors, config.enabled)
+    var enabled = monitors.filter(function(m) { return !m.disabled }).map(function(m) { return m.name })
     var saved = MonitorsLua.managedGeometry(monitorsSource)
     displayDraft = monitors.filter(function(m) { return root.validConnector(m.name) && lanes[m.name] }).map(function(m) {
-      var geometry = saved[m.name]
+      var geometry = m.disabled || Model.isMirror(m) ? saved[m.name] : null
       if (!geometry || (m.availableModes || []).indexOf(geometry.mode) < 0) geometry = null
       return { name: m.name, description: m.description || m.model || "", width: Number(m.width),
         height: Number(m.height), refreshRate: Number(m.refreshRate), availableModes: m.availableModes || [],
@@ -876,6 +886,7 @@ Item {
     })
     draftMode = config.mode
     draftSingleTarget = config.singleTarget
+    draftMirrorSource = config.mirrorSource || ""
   }
 
   function focusedMonitor() {
@@ -1248,10 +1259,12 @@ Item {
 
   function applyBinds() {
     if (!started || appliedGeneration === configGeneration || keybindings.running || hyprBindSnapshot.running) return
+    bindProbeGeneration = configGeneration
     keybindings.running = true
   }
 
   function finishBindCheck() {
+    if (bindProbeGeneration !== configGeneration) { Qt.callLater(applyBinds); return }
     var definitions = Binds.effectiveDefinitions(config.keybindings)
     var fallback = Binds.parseHypr(hyprBindingsText).concat(Binds.parseLua(personalBindingsText))
     var accepted = []
@@ -1270,7 +1283,9 @@ Item {
       }
     }
     bindStatuses = statuses
-    var lua = Binds.applyLua(accepted, persisted.appliedBinds)
+    var lua = Binds.applyLua(accepted, persisted.appliedBinds.filter(function(combo) {
+      return !statuses.some(function(row) { return Binds.normalize(row.combo) === Binds.normalize(combo) && row.status === "conflict" })
+    }))
     evalLua(lua, function(code) {
       if (code === 0) {
         persisted.appliedBinds = accepted.map(function(item) { return item.combo })
@@ -1307,49 +1322,105 @@ Item {
     return "ok"
   }
 
-  function windowGapLua(settings) {
-    var bars = {}
-    monitors.forEach(function(monitor) {
-      if (validConnector(monitor.name)) bars[monitor.name] = monitorBar(monitor.name)
-    })
-    return Windows.gapRules(settings, bars)
-  }
-  function syncWindowGaps() {
-    if (started && config.windows) evalLua(windowGapLua(config.windows))
-  }
-
   property bool windowSettingsBusy: false
   function setWindowSetting(key, value) {
     if (windowSettingsBusy) return "busy"
     if (!Object.prototype.hasOwnProperty.call(Windows.limits, key)
         || typeof value !== "number" || !isFinite(value)) return "invalid"
+    if (state !== "idle" || !appearanceLoaded) return "busy"
     var next = Windows.clean(config.windows)
     next[key] = value
     next = Windows.clean(next)
+    var source
+    try { source = SharedConfig.setWindow(appearanceSource, key, Windows.settingLua(key, next[key])) }
+    catch (error) { layoutError = String(error); return "invalid" }
     windowSettingsBusy = true
-    evalLua(Windows.lua(next) + "; " + windowGapLua(next), function(code, output) {
+    enqueue(["sh", "-c", Transactions.settings, "sh", appearancePath, appearanceSource, source], function(code, output) {
       root.windowSettingsBusy = false
-      if (code !== 0) { root.layoutError = "Window settings failed: " + output; return }
-      root.config = Object.assign({}, root.config, { windows: next })
-      root.saveConfig()
+      appearanceFile.reload()
+      if (code === 0) root.layoutError = ""
+      if (code !== 0) root.layoutError = code === 4 ? "Configuration changed while saving; try again." : "Could not save window setting: " + output
+      root.refreshWindowSettings(function() {
+        if (code === 0 && Math.abs(Number(root.config.windows[key]) - next[key]) > 0.02)
+          root.layoutError = "A personal Hyprland rule overrides this setting. Station shows the applied value."
+      })
     })
     return "ok"
+  }
+
+  function refreshWindowSettings(done) {
+    if (windowSettingsBusy) return
+    var generation = configGeneration
+    enqueue(["hyprctl", "-j", "--batch", "getoption general:gaps_in; getoption general:gaps_out; getoption dwindle:default_split_ratio; getoption decoration:rounding; getoption animations:enabled; animations"], function(code, output) {
+      if (code !== 0 || generation !== root.configGeneration || root.windowSettingsBusy) return
+      try {
+        var observed = Windows.observed(output)
+        if (JSON.stringify(observed) !== JSON.stringify(root.config.windows))
+          root.config = Object.assign({}, root.config, { windows: observed })
+        if (done) done()
+      } catch (error) { console.warn("Station settings read:", error) }
+    })
+  }
+
+  function monitorSignature() {
+    return JSON.stringify(monitors.map(function(m) { return [m.name, m.disabled, m.mirrorOf, m.x, m.y, m.scale, m.width, m.height, m.refreshRate, m.transform] }))
+  }
+
+  function observeDesktop() {
+    if (!started || snapshotBusy || windowSettingsBusy || removalGrace.running) return
+    if (state === "previewing" && !previewBusy) {
+      refresh(false, function() {
+        if (root.state === "previewing" && !root.previewBusy && root.previewObservedSignature
+            && root.monitorSignature() !== root.previewObservedSignature)
+          root.abandonPreview("External display change accepted; preview cancelled.")
+      })
+      return
+    }
+    if (state !== "idle") return
+    var before = observedMonitorSignature
+    refresh(false, function() {
+      if (root.state !== "idle") return
+      var after = root.monitorSignature()
+      if (before === after) return
+      root.updateAssignments()
+      if (!Grid.equal(root.workspaceMap, root.targetMapping())) root.reconcile()
+    })
+    if (panelWanted) refreshWindowSettings()
+  }
+
+  function finishAuthorityMigration(done, reloadRequired) {
+    function complete(code) {
+      if (code === 0) { root.persisted.systemAuthorityVersion = 3; root.saveState() }
+      else root.layoutError = "Could not reload the user's configuration for the Station 3 upgrade."
+      done()
+    }
+    if (reloadRequired && persisted.systemAuthorityVersion !== 3)
+      enqueue(["hyprctl", "reload"], complete)
+    else complete(0)
+  }
+
+  function migrateMonitorPrecedence(done) {
+    // Existing v2 blocks moved to the front once. Personal Lua bytes survive.
+    var info = MonitorsLua.markerInfo(monitorsSource)
+    if (!info.starts.length && !info.ends.length) { finishAuthorityMigration(done, true); return }
+    try {
+      var next = MonitorsLua.migrateBlock(monitorsSource)
+      if (next === monitorsSource) { finishAuthorityMigration(done, true); return }
+      enqueue(["sh", "-c", Transactions.settings, "sh", monitorsPath, monitorsSource, next], function(code) {
+        if (code !== 0) root.layoutError = "Could not migrate monitor rule precedence; personal configuration was preserved."
+        monitorsFile.reload()
+        if (code === 0) root.finishAuthorityMigration(done, false)
+        else done()
+      })
+    } catch (error) { layoutError = String(error); done() }
   }
 
   function applyRuntime() {
     // A config reload/hotplug during Keep must not reapply the old saved mode.
     if (state === "previewing" || state === "applyingLayout") return
-    if (config.windows) evalLua(Windows.lua(config.windows) + "; " + windowGapLua(config.windows))
     updateAssignments()
-    try {
-      var displays = Object.keys(lanes).map(function(name) {
-        return { name: name, lane: lanes[name] }
-      })
-      var outputs = MonitorsLua.runtimeOutputs(displays, config, monitors)
-      var monitorRules = MonitorsLua.runtimeModeRules(displays, config, outputs)
-      expect = { kinds: ["monitor", "workspace"], outputs: outputs, until: Date.now() + 2000 }
-      evalLua(Hypr.batch(monitorRules), function() { root.reconcile() })
-    } catch (error) { console.warn("Station monitor mode:", error) }
+    reconcile()
+    refreshWindowSettings()
     applyBinds()
     syncBarBlur()
   }
@@ -1405,7 +1476,7 @@ Item {
     var before = displayDraft
     if (setResizedDisplayValue(name, key, value) !== "ok") return "invalid"
     try {
-      var options = { mode: draftMode, singleTarget: draftSingleTarget,
+      var options = { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
         enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
       var generated = MonitorsLua.generate(displayDraft, options)
       var source = MonitorsLua.replaceManagedBlock(monitorsSource || "", generated.block)
@@ -1444,7 +1515,7 @@ Item {
   }
 
   function displayEnabled(name) {
-    var states = MonitorsLua.runtimeModeStates(displayDraft, { mode: draftMode, singleTarget: draftSingleTarget,
+    var states = MonitorsLua.runtimeModeStates(displayDraft, { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
       enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) })
     return states.some(function(d) { return d.name === name && !d.disabled })
   }
@@ -1469,6 +1540,7 @@ Item {
     }
     draftMode = mode
     draftSingleTarget = mode === "single" ? target : ""
+    draftMirrorSource = mode === config.mode ? (config.mirrorSource || "") : ""
     return previewLayout()
   }
 
@@ -1498,11 +1570,9 @@ Item {
     for (var i = 0; i < monitors.length; i++) if (next[monitors[i].name]) config.lanes[ids[i]] = next[monitors[i].name]
     saveConfig()
     syncDisplayDraft()
-    // In Mirror, the preferred role also selects the physical source. Apply
-    // that topology before migrating the compact mapping; otherwise a role
-    // swap tries to place workspaces on the old mirrored sink and Hyprland
-    // rejects the move batch, leaving every later layout action busy.
-    applyRuntime()
+    // A source change is an explicit topology edit and uses the same guarded preview.
+    if (draftMode === "mirror") { draftMirrorSource = name; return previewLayout() }
+    reconcile()
     return "started"
   }
 
@@ -1520,7 +1590,7 @@ Item {
         throw new Error("Displays overlap")
       var generated = MonitorsLua.generate(displayDraft, {
         mode: draftMode, enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }),
-        singleTarget: draftSingleTarget
+        singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource
       })
       // A re-edit joins the session already in progress: keep the baseline
       // the first preview captured, so Revert still means "back to the layout
@@ -1768,6 +1838,7 @@ Item {
       if (code !== 0) { root.revertPreview("Could not renew preview recovery."); return }
       Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", stateDir + "/preview.token"])
       root.previewSeconds = 12
+      root.previewObservedSignature = root.monitorSignature()
       previewCountdown.restart()
       if (root.panelWanted) root.panelTransferUntil = Date.now() + 3000
     })
@@ -1788,9 +1859,9 @@ Item {
         enabled: Model.enabledNames(previewBefore, config.enabled).indexOf(monitor.name) !== -1 })
     })
     var previousOptions = previewApplied ? previewApplied.options : {
-      mode: config.mode, singleTarget: config.singleTarget, enabled: config.enabled
+      mode: config.mode, singleTarget: config.singleTarget, mirrorSource: config.mirrorSource, enabled: config.enabled
     }
-    var nextOptions = { mode: draftMode, singleTarget: draftSingleTarget,
+    var nextOptions = { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
       enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
     var positionRules = MonitorsLua.positionOnlyRules(previous, pendingDisplayConfig.displays,
       previewApplied ? previewApplied.mode : config.mode, draftMode)
@@ -1809,6 +1880,23 @@ Item {
         pendingDisplayConfig.displays, nextOptions, previewBefore, true)
     previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode, options: nextOptions }
     stagePreviewApply(lua, expectedOutputs, nextOptions)
+  }
+
+  function abandonPreview(reason) {
+    previewCountdown.stop()
+    gen += 1
+    configGeneration += 1
+    clearPanelEvacuation()
+    clearPreviewApplyStage()
+    pendingDisplayConfig = null
+    previewApplied = null
+    previewAbortReason = ""
+    previewBusy = false
+    state = migrationPhase ? "migrating" : "idle"
+    layoutError = reason || "External display change accepted; preview cancelled."
+    enqueue(["rm", "-f", stateDir + "/preview.token"], function() {
+      root.refresh(true, function() { root.applyRuntime() })
+    })
   }
 
   function revertPreview(reason) {
@@ -1853,6 +1941,7 @@ Item {
         root.panelTransferUntil = Date.now() + 3000
       }
       root.previewSeconds = 12
+      root.previewObservedSignature = root.monitorSignature()
       previewCountdown.restart()
     }
     function reloadSavedLayout() {
@@ -1902,8 +1991,7 @@ Item {
       if (panelWanted) panelTransferUntil = Date.now() + 3000
       var source = monitorsSource || ""
       var merged = MonitorsLua.replaceManagedBlock(source, pendingDisplayConfig.block)
-      // The managed block is appended last and overrides older rules. Merely
-      // mentioning an output earlier in the file is not a configuration error.
+      // Personal rules follow the Station block and retain final precedence.
       keepOptions = JSON.parse(JSON.stringify(previewApplied.options))
       previewCountdown.stop()
       startKeepFiles(merged, pendingDisplayConfig.plain, "preview")
@@ -1915,6 +2003,7 @@ Item {
   }
 
   function startKeepFiles(source, plain, kind) {
+    keepSourceBaseline = monitorsSource
     state = "applyingLayout"
     layoutWriteKind = kind || "direct"
     keepFilesPending = true
@@ -1966,10 +2055,10 @@ Item {
     if (code !== 0) {
       var failedKind = layoutWriteKind
       layoutWriteKind = ""
-      layoutError = code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
+      layoutError = code === 4 ? "Configuration changed while saving; newer edits were preserved." : code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
         : "Could not save the monitor layout."
       pendingDisplayConfig = null
-      if (code === 3) restoreAppliedLayout()
+      if (code === 3 || code === 4) restoreAppliedLayout()
       else if (failedKind !== "preview") {
         keepOptions = null
         state = "idle"
@@ -1978,9 +2067,12 @@ Item {
       else enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
       return
     }
+    var requestedDisplays = pendingDisplayConfig ? pendingDisplayConfig.displays : []
+    var requestedOptions = keepOptions
     config.enabled = keepOptions.enabled.slice()
     config.mode = keepOptions.mode
     config.singleTarget = keepOptions.singleTarget || ""
+    config.mirrorSource = keepOptions.mirrorSource || ""
     config = Object.assign({}, config)
     pendingDisplayConfig = null
     previewApplied = null
@@ -1996,6 +2088,8 @@ Item {
       // monitor state here creates another topology operation for no benefit;
       // only rebuild bookkeeping, commit any preview journal, and restore
       // runtime binds erased by a config reload.
+      if (requestedDisplays.length && MonitorsLua.changedOutputs(requestedDisplays, requestedOptions, root.monitors, true).length)
+        root.layoutError = "Personal Hyprland rules override part of this layout. Station shows the applied values."
       root.updateAssignments()
       root.applyBinds()
       root.reconcile()
@@ -2004,14 +2098,14 @@ Item {
   }
 
   function maybeStart() {
-    if (started || !dirsReady || !configLoaded || !stateLoaded || !previewLoaded || !mappingLoaded) return
+    if (started || !dirsReady || !configLoaded || !stateLoaded || !previewLoaded || !mappingLoaded || !monitorsLoaded) return
     started = true
     currentStation = persisted.lastStation
     if (previewFound) {
       Quickshell.execDetached(["rm", "-f", stateDir + "/preview.token"])
       Quickshell.execDetached(["hyprctl", "reload"])
     }
-    refresh(true, function() {
+    migrateMonitorPrecedence(function() { refresh(true, function() {
       applyRuntime()
       if (!config.hideNative && persisted.stockLease) restoreStockLease()
       if (!config.hideDisplay && persisted.displayLease) restoreDisplayLease()
@@ -2021,7 +2115,7 @@ Item {
         persisted.activeNoticeShown = true
         saveState()
       }
-    })
+    }) })
   }
 
   function barPlacement(widgetId) {
@@ -2255,16 +2349,17 @@ Item {
     if ((state === "previewing" || state === "applyingLayout")
         && (name.indexOf("monitoradded") === 0 || name.indexOf("monitorremoved") === 0)) {
       topologyDirty = true
-      if (state === "previewing" && !previewBusy && !eventExpected(event))
-        revertPreview("Display connection changed; preview reverted.")
+      if (state === "previewing" && !eventExpected(event))
+        abandonPreview("Display connection changed; preview cancelled.")
       return
     }
     if (name === "configreloaded") {
       configGeneration += 1
+      persisted.appliedBinds = []
+      config.approvedReplacements = []
       if (state === "applyingLayout") return
       if (state === "previewing") {
-        if (previewBusy) previewAbortReason = "Display configuration reloaded; preview reverted."
-        else revertPreview("Display configuration reloaded; preview reverted.")
+        abandonPreview("Display configuration reloaded; preview cancelled.")
         return
       }
       reloadDebounce.restart()
@@ -2383,9 +2478,21 @@ Item {
     printErrors: false
     onLoaded: {
       root.monitorsSource = text()
+      root.monitorsLoaded = true
+      root.maybeStart()
       if (root.started && root.state === "idle") root.syncDisplayDraft()
     }
-    onLoadFailed: root.monitorsSource = ""
+    onLoadFailed: { root.monitorsSource = ""; root.monitorsLoaded = true; root.maybeStart() }
+    onFileChanged: reload()
+  }
+
+  FileView {
+    id: appearanceFile
+    path: root.appearancePath
+    watchChanges: true
+    printErrors: false
+    onLoaded: { root.appearanceSource = text(); root.appearanceLoaded = true }
+    onLoadFailed: { root.appearanceSource = ""; root.appearanceLoaded = true }
     onFileChanged: reload()
   }
 
@@ -2405,9 +2512,9 @@ Item {
     path: Quickshell.env("HOME") + "/.config/hypr/bindings.lua"
     watchChanges: true
     printErrors: false
-    onLoaded: root.personalBindingsText = text()
+    onLoaded: { root.personalBindingsText = text(); root.appliedGeneration = -1; root.applyBinds() }
     onLoadFailed: root.personalBindingsText = ""
-    onFileChanged: { reload(); root.appliedGeneration = -1; root.applyBinds() }
+    onFileChanged: reload()
   }
 
   FileView {
@@ -2476,7 +2583,7 @@ Item {
   Process {
     id: keepTransaction
     command: ["sh", "-c", Transactions.keep, "sh", root.candidatePath, root.monitorsPath,
-      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token"]
+      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", root.keepSourceBaseline]
     property string errors: ""
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: keepTransaction.errors = text }
     onRunningChanged: if (running) errors = ""
@@ -2589,6 +2696,7 @@ Item {
     onTriggered: root.afterNativeMove(before, direction, generation)
   }
 
+  Timer { interval: 1500; running: root.started; repeat: true; onTriggered: root.observeDesktop() }
   Timer { id: reloadDebounce; interval: 300; onTriggered: { root.appliedGeneration = -1; root.refresh(true, function() { root.applyRuntime() }) } }
   Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
   Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
@@ -2649,6 +2757,8 @@ Item {
     }
     function approveBinding(value: string): string { return root.approveBinding(value) }
     function status(): string { return JSON.stringify({ state: root.state, generation: root.gen,
+      version: root.manifest ? root.manifest.version : "", windows: root.config.windows,
+      systemAuthorityVersion: root.persisted.systemAuthorityVersion || 0,
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
       globalBarPosition: root.globalBarPosition, lastGlobalBarPosition: root.lastGlobalBarPosition,
       bars: root.config.bars,

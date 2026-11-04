@@ -14,9 +14,9 @@ function qmlFunction(source, name, context = {}) {
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
 
-test('2.3 manifest exposes the full bar alongside the widget and service', () => {
+test('3.0 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '2.3.4');
+  assert.equal(manifest.version, '3.0.0');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });
@@ -481,7 +481,7 @@ test('bar content size starts at the Omarchy body size and cannot exceed live ge
   assert.equal(setContentSize('DP-1', 33), 'invalid');
 });
 
-test('bar blur leases and restores the prior global compositor setting', () => {
+test('bar blur respects global compositor settings', () => {
   const scripts = [];
   let saves = 0;
   const context = {
@@ -503,15 +503,14 @@ test('bar blur leases and restores the prior global compositor setting', () => {
   const finishProbe = qmlFunction(service, 'finishBarBlurProbe', context);
 
   finishProbe(0, '{"bool":false}\n{"int":8}\n{"int":1}');
-  assert.deepEqual(JSON.parse(JSON.stringify(context.persisted.barBlurLease)),
-    { originalEnabled: false, changed: true, originalSize: 8, originalPasses: 1 });
-  assert.match(scripts.at(-1), /set_enabled\(true\).*enabled = true, passes = 3/);
-
+  assert.equal(context.persisted.barBlurLease, null);
+  assert.match(scripts.at(-1), /set_enabled\(true\)/);
+  assert.doesNotMatch(scripts.at(-1), /hl.config/);
   context.config.bars['DP-1'].background = 'solid';
   finishProbe(0, '{"bool":true}\n{"int":8}\n{"int":3}');
-  assert.equal(context.persisted.barBlurLease, null);
-  assert.match(scripts.at(-1), /set_enabled\(false\).*enabled = false, passes = 1/);
-  assert.equal(saves, 2);
+  assert.match(scripts.at(-1), /set_enabled\(false\)/);
+  assert.doesNotMatch(scripts.at(-1), /hl.config/);
+  assert.equal(saves, 0);
 });
 
 

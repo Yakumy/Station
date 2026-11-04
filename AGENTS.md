@@ -32,6 +32,15 @@ later finding, the current implementation, or a test disagrees with the spec,
 do not silently choose one: determine whether it is a documented revision or a
 bug, then reconcile the affected documents in the same change.
 
+## Station 3.0 authority revision
+
+Read [System authority](docs/v3/SYSTEM-AUTHORITY.md) before changing synchronization.
+Shared compositor settings are observed, never replayed from cached preferences.
+Explicit display/window edits persist leading marked sections in `monitors.lua`
+and `looknfeel.lua`; personal rules later in Lua order win. Preserve the source
+comparison and conditional rollback. The v2 spec and historical findings describe
+older replay policy; this accepted revision supersedes that policy.
+
 ## Repository shape and invariants
 
 - `manifest.json` declares both a bar widget (`Panel.qml`) and a persistent
@@ -79,7 +88,7 @@ bug, then reconcile the affected documents in the same change.
   focusing a survivor, and receiving the panel acknowledgment. Never leave
   zero real outputs. Scale, Resolution, and Refresh are discrete side controls
   that save directly through the safe file transaction without a preview.
-- Keep changes only Station's marked block at the end of
+- Keep changes only Station's marked block at the beginning of
   `~/.config/hypr/monitors.lua`, while the transaction atomically replaces the
   whole file: backup, marker-checked replacement, watched Hyprland apply,
   `hyprctl configerrors`, rollback on failure. A successful watched apply must
@@ -124,7 +133,8 @@ bug, then reconcile the affected documents in the same change.
 - Omarchy and Hyprland behavior is version-sensitive. Read packaged sources
   under `/usr/share/omarchy/` when needed, but never edit them. Cold
   `hl.get_monitors()` can be empty during `monitors.lua` evaluation; guard
-  disabling rules and let the service apply saved mode after discovery.
+  disabling rules; generated v3 blocks use bounded DRM presence reads at config
+  evaluation, with a safe Extend fallback. The service observes the result.
   `mirror = ""` is needed to clear a previous mirror. Record expected monitor
   events before dispatch, and ignore transient workspace events during topology
   changes. Three/four-monitor hardware, simultaneous hotplug, and some

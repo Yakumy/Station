@@ -56,16 +56,3 @@ test('mode and geometry evaluations attribute only changed outputs', () => {
   const moved = displays.map(display => ({ ...display, x: display.x + (display.name === 'eDP-1' ? 10 : 0) }));
   assert.deepEqual(MonitorsLua.changedOutputs(moved, extend, monitors, true), ['eDP-1']);
 });
-
-test('runtime reconciliation keeps an externally disabled output off', () => {
-  const displays = [{ name: 'eDP-1', lane: 1 }, { name: 'HDMI-A-2', lane: 2 }];
-  const monitors = [{ name: 'eDP-1', disabled: true, mirrorOf: 'none' },
-    { name: 'HDMI-A-2', disabled: false, mirrorOf: 'none' }];
-  // Default config (no saved enablement) treats every output as enabled.
-  assert.deepEqual(MonitorsLua.changedOutputs(displays, { mode: 'extend', enabled: [] }, monitors, false), ['eDP-1']);
-  assert.deepEqual(MonitorsLua.runtimeOutputs(displays, { mode: 'extend', enabled: [] }, monitors), []);
-  // Disabling and mirroring still reconcile.
-  const on = monitors.map(m => ({ ...m, disabled: false }));
-  assert.deepEqual(MonitorsLua.runtimeOutputs(displays, { mode: 'single', singleTarget: 'HDMI-A-2' }, on), ['eDP-1']);
-  assert.deepEqual(MonitorsLua.runtimeOutputs(displays, { mode: 'mirror', enabled: ['eDP-1', 'HDMI-A-2'] }, monitors), ['HDMI-A-2']);
-});

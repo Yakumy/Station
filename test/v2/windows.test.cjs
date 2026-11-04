@@ -41,14 +41,14 @@ test('preview transfers one window at a time and reflows every occupied tile', (
 test('window settings clamp numeric preferences and reject injected values', () => {
   assert.deepEqual(W.clean({innerGap:Infinity, outerGap:-10, split:900, rounding:'os.execute()', speed:NaN}),
     {innerGap:10, outerGap:0, split:75, rounding:0, speed:1});
-  assert.equal(W.lua({innerGap:40}).includes('gaps_in=20'), true);
-  assert.equal(W.lua({speed:0}).includes('animations={enabled=false}'), true);
-  assert.equal(W.lua({speed:2}).includes('speed=2'), true);
-  assert.equal(W.lua({split:75}).includes('default_split_ratio=0.5'), true);
-  assert.doesNotMatch(W.lua({outerGap:80}), /monitor|reserved|layer_rule/);
+  assert.equal(W.settingLua('innerGap', 40).includes('gaps_in=20'), true);
+  assert.equal(W.settingLua('speed', 0).includes('animations={enabled=false}'), true);
+  assert.equal(W.settingLua('speed', 2).includes('speed=2'), true);
+  assert.equal(W.settingLua('split', 75).includes('default_split_ratio=0.5'), true);
+  assert.doesNotMatch(W.settingLua('outerGap', 80), /monitor|reserved|layer_rule/);
 });
 
-test('solid and blur default bars retain the outer gap on their edge; other styles use bar height', () => {
+test('all bars respect the observed global outer gap', () => {
   for (const edge of ['top', 'right', 'bottom', 'left']) {
     for (const background of ['solid', 'transparent', 'blur']) {
       for (const style of ['default', 'pill']) {
@@ -56,7 +56,7 @@ test('solid and blur default bars retain the outer gap on their edge; other styl
           for (const outerGap of [0, 30, 160]) {
             const bar = {position:edge, enabled, background, style};
             const gaps = W.gaps({outerGap}, bar);
-            const omit = enabled && !(['solid', 'blur'].includes(background) && style === 'default');
+            const omit = false;
             for (const side of Object.keys(gaps)) {
               assert.equal(gaps[side], omit && side === edge ? 0 : outerGap,
                 JSON.stringify({bar, outerGap, side}));
@@ -67,10 +67,7 @@ test('solid and blur default bars retain the outer gap on their edge; other styl
     }
   }
   assert.deepEqual(W.gaps({outerGap:30}, {position:'top'}), {top:30,right:30,bottom:30,left:30});
-  assert.match(W.gapRules({outerGap:30}, {'DP-1':{position:'left'}}), /workspace="m\[DP-1\]",gaps_out=\{top=30,right=30,bottom=30,left=30\}/);
-  assert.match(W.gapRules({outerGap:30}, {'DP-1':{position:'left',background:'transparent'}}), /gaps_out=\{top=30,right=30,bottom=30,left=0\}/);
-  assert.throws(() => W.gapRules({}, {'bad"]':{}}), /invalid connector/);
-  assert.match(W.lua({split:28}), /default_split_ratio=1.44/);
+  assert.match(W.settingLua('split', 28), /default_split_ratio=1.44/);
 });
 
 test('speed has nine discrete positions with normal speed at the midpoint', () => {
@@ -78,15 +75,15 @@ test('speed has nine discrete positions with normal speed at the midpoint', () =
   assert.equal(W.speeds[4], 1);
   for (const speed of W.speeds) assert.equal(W.clean({speed}).speed, speed);
   assert.equal(W.clean({speed:10}).speed, 2);
-  assert.match(W.lua({speed:0.25}), /speed=16/);
+  assert.match(W.settingLua('speed', 0.25), /speed=16/);
 });
 
-test('window rounding leaves the shell corner token unchanged', () => {
-  assert.doesNotMatch(W.lua({rounding:30}), /decoration/);
+test('rounding edits the shared compositor setting', () => {
+  assert.match(W.settingLua('rounding', 30), /decoration/);
   assert.deepEqual(W.limits.rounding, [0, 20, 0]);
   for (const radius of [20, 21, 32, 40, 999]) {
     assert.equal(W.clean({rounding:radius}).rounding, 20);
-    assert.match(W.lua({rounding:radius}), /hl.window_rule.*rounding=20/);
-    assert.doesNotMatch(W.lua({rounding:radius}), /rounding=(21|32|40|999)\b/);
+    assert.match(W.settingLua('rounding', radius), /hl.config.*rounding=20/);
+    assert.doesNotMatch(W.settingLua('rounding', radius), /rounding=(21|32|40|999)\b/);
   }
 });
