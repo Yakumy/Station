@@ -39,10 +39,12 @@ explicit edit.
 | Enablement, mirror source, geometry, scale, rotation, mode | Applied Hyprland state | Observe on reload, hotplug and every 1.5 s. Migrate workspace bookkeeping to the actual independent outputs. |
 | Global gaps, Dwindle split, rounding, window animation speed | Hyprland options | Read on startup, reload and while the panel is open. Persist only an edited control. |
 | Bar monitor rows, focused-monitor menu position | Omarchy shell config | Adopt changed rows. Discard superseded pending writes for those rows. |
-| Global blur enabled, size, passes | Hyprland | Never force or restore them. Station owns only its bar layer rule. |
+| Global blur enabled, passes | Hyprland, except while a bar is set to Blur | Blur the user enabled stays untouched. While it is off and a bar is set to Blur, Station turns it on at runtime for that configuration, and returns the values it found when no bar wants it. Never written to a file. See [Bars](#bar-background-blur). |
+| Global blur size | Hyprland | Never changed. |
 | Personal keybindings | Hyprland and Omarchy bindings | Report conflicts. Do not replace personal binds without approval. |
 | Wallpaper | Omarchy under Follow, otherwise Station's explicit choice | See [Wallpaper](#wallpaper). |
 | Brightness, text size | Omarchy commands | Connector-specific reads and writes. |
+| Workspace numbering | Station while enabled | Omarchy's per-monitor reconcile is off. See [Workspace authority](#workspace-authority). |
 | Station IDs, lanes, journal, UI preferences | Station | Persist and recover independently. |
 
 Consequences:
@@ -167,7 +169,7 @@ never take scratchpad windows.
 
 ### Move across
 
-For `SHIFT + CTRL + SUPER + arrow`:
+For `SUPER + SHIFT + CTRL + arrow`:
 
 1. Read the actual active window from `hyprctl activewindow -j`, never a cached focus
    entry.
@@ -181,6 +183,19 @@ For `SHIFT + CTRL + SUPER + arrow`:
 
 A reconnected output can retain an unrelated active workspace. If a native move crosses
 an output boundary, the window must keep its source station.
+
+### Workspace authority
+
+Omarchy 4.5 gives each monitor its own block of ten workspaces and reconciles them on
+every reload and hotplug. Station's grid and those blocks disagree about what a number
+means, so the reconcile renumbers station workspaces.
+
+Station writes `~/.local/state/omarchy/toggles/hypr/station-workspaces.lua`, which
+replaces `o.workspaces.reconcile` with a no-op. It must be a file, because a reload runs
+the reconcile before any shell event arrives. Station also evaluates the same line at
+startup, because the running configuration predates the file. Removal cleanup deletes
+the file and reloads, which hands numbering back to Omarchy. A shell restart does
+neither.
 
 ### Follow focus
 
@@ -214,8 +229,8 @@ trigger it.
 | Move window to station n, follow | `SUPER + SHIFT + 1…0` | Omarchy move to workspace |
 | Move window, no follow | `SUPER + SHIFT + ALT + 1…0` | Omarchy move silently |
 | Previous or next station | `CTRL + SUPER + Left/Right` | Omarchy grouped-window focus |
-| Move across outputs and stations | `SHIFT + CTRL + SUPER + arrows` | |
-| (unbind only) | `SUPER + SHIFT + ALT + Left/Right` | Omarchy move workspace to monitor, which breaks the map |
+| Move across outputs and stations | `SUPER + SHIFT + CTRL + arrows` | Omarchy move window to monitor |
+| (unbind only) | `SUPER + SHIFT + ALT + arrows` | Omarchy move workspace to monitor, which renumbers the workspace and breaks the map. A personal bind on the combo stays. |
 
 IPC targets the service-owned handler: `omarchy-shell yakumy.station <method> <arg>`.
 Its methods are `switchStation`, `sendToStation`, `sendSilent`, `goDirection`,
@@ -226,8 +241,10 @@ it.
 
 Rules for applying binds:
 
-- `hl.unbind` removes every entry on a combo. Use it only for known Omarchy defaults in
-  the table, combos the user approved, and combos in `state.appliedBinds`.
+- `hl.unbind` removes every entry on a combo, but only for the modifier order it was
+  registered with. A replacement unbinds every order, otherwise both binds stay and both
+  fire. Use it only for known Omarchy defaults in the table, combos the user approved,
+  and combos in `state.appliedBinds`.
 - Do not apply a combo with an unresolved conflict.
 - Apply once per configuration generation. A reload clears runtime binds.
 
@@ -473,8 +490,22 @@ packaged Omarchy files for per-monitor behavior.
 | Content size | From `Style.font.body` to the live maximum. Above the default, each module zooms uniformly. |
 | Height | From the theme's thickness to 5% of the mode's shorter native side. A live minimum can clamp it. |
 | Width | 1 to 100%. Requests below the measured non-overlap minimum stay visible and the bar clamps. |
-| Background | Solid, Transparent or Blur. Blur requests Station's layer rule and cannot override disabled global blur. |
+| Background | Solid, Transparent or Blur. See [below](#bar-background-blur). |
 | Style | Omarchy default, or Pill with separate left, center and right islands. |
+
+### Bar background blur
+
+A layer rule draws nothing while `decoration:blur:enabled` is false, which is Omarchy's
+default. While at least one enabled bar is set to Blur:
+
+- Station enables its `station-bar-blur` layer rule.
+- If global blur is off, Station turns it on at runtime with 3 passes, records the passes
+  it found, and enables a `no_blur` window rule, so windows look as they did.
+- If global blur is already on, Station changes nothing else. Those settings are the user's.
+
+When no bar wants Blur, Station disables the layer rule and returns what it changed. A
+reload clears the override, and the next sync applies it again. Nothing is written to a
+file or to `state.json`.
 
 - The Omarchy default bar begins at the physical monitor edge. A Pill bar keeps a safe
   space of `Style.space(8)` from that edge and from the ends of its span. Auto exclusion

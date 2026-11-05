@@ -18,6 +18,22 @@ caused flicker. Since 3.0, Station observes effective state and writes only afte
 explicit edit. Personal rules later in Lua order win on reload. See
 [System authority](contracts.md#system-authority).
 
+## Bar Blur may turn on global blur
+
+Station used to hold a persisted lease on global blur, then dropped it to respect the
+user's setting. The result was a Blur option that did nothing on a default Omarchy, where
+global blur is off. Choosing Blur is an explicit request, so it now wins for as long as a
+bar asks for it. The override is runtime only, so no lease is stored and a reload ends it.
+A `no_blur` window rule keeps the effect on the bar.
+
+## Station owns workspace numbering
+
+Omarchy's per-monitor blocks and Station's synchronized grid cannot share numbers: each
+reload renumbers one into the other. Station cannot repair afterward, because a renumbered
+workspace no longer says which station it came from. So it disarms Omarchy's reconcile
+with a file in Omarchy's own toggle directory, which leaves `monitors.lua` alone and is
+deleted on removal.
+
 ## Marked sections at the beginning of files
 
 Station's blocks come first in `monitors.lua` and `looknfeel.lua`, so personal Lua

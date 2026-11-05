@@ -19,7 +19,7 @@ Column {
     { label: "Move silently (no follow)", combo: "SUPER + SHIFT + ALT + 1 … 0", ids: keybindingsTab.bindingIds("silent-", 10) },
     { label: "Station to the left", combo: "SUPER + CTRL + ←", ids: ["go-left"] },
     { label: "Station to the right", combo: "SUPER + CTRL + →", ids: ["go-right"] },
-    { label: "Move across monitors and stations", combo: "SHIFT + CTRL + SUPER + ← → ↑ ↓",
+    { label: "Move across monitors and stations", combo: "SUPER + SHIFT + CTRL + ← → ↑ ↓",
       ids: ["shift-left", "shift-right", "shift-up", "shift-down"] }
   ]
 

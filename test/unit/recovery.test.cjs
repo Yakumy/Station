@@ -16,6 +16,14 @@ test('cleanup waits for shell, distinguishes restart, restores lease, clears it,
   assert.match(R.cleanup, /hyprctl reload/);
 });
 
+test('removal hands workspace numbering back to Omarchy before the final reload', () => {
+  assert.match(R.cleanup, /workspace_authority=\$\{9:-\}/);
+  assert.ok(R.cleanup.indexOf('rm -f -- "$workspace_authority"') < R.cleanup.lastIndexOf('hyprctl reload'));
+  assert.ok(R.cleanup.indexOf('.enabled == true') < R.cleanup.indexOf('rm -f -- "$workspace_authority"'),
+    'a shell restart exits before it can remove the file');
+  assert.equal(R.cleanupCommand('/s', '/m', null, null, '/t/station-workspaces.lua').at(-1), '/t/station-workspaces.lua');
+});
+
 test('preview and Keep templates use positional arguments and rollback on config errors', () => {
   assert.match(T.watchdog, /sleep "\$1"/);
   assert.match(T.watchdog, /\[ -e "\$2" \]/);

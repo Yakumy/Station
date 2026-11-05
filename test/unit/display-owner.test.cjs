@@ -100,11 +100,12 @@ test('root startup waits for owner load gates and routes stale-token recovery on
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
       applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){}};
-    c.root=c;c.store=c;c.compositor=c;c.leases=c;c.stations=c;c.displayController=c;c.workspace=c;
+    c.workspaceAuthority={claim(){calls.push('authority');}};c.root=c;c.store=c;c.compositor=c;c.leases=c;c.stations=c;c.displayController=c;c.workspace=c;
     const start=functionFrom(current,'maybeStart',c);
     start();assert.equal(c.started,false);assert.deepEqual(calls,[]);
     c.previewLoaded=true;start();start();
     assert.equal(c.currentStation,3);
+    assert.equal(calls.shift(),'authority','the renumbering guard is armed before any recovery or reload');
     assert.deepEqual(copy(calls),found ? [['rm','-f','/temporary/preview.token'],['sh','-c',c.Transactions.unparkToggle+'hyprctl reload\n','sh','/temporary/parked','/temporary/flag'],'runtime'] : ['runtime']);
   }
 });
@@ -146,6 +147,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
         if(args[0]==='rm'){assert.deepEqual(copy(args),['rm','-f',token]);rmSync(token);}
         else assert.equal(args[2],c.Transactions.unparkToggle+'hyprctl reload\n');
       };
+      c.workspaceAuthority={claim(){}};
       c.maybeStart();restarted.drain();
       assert.deepEqual(detached.map(args=>args[0]),['rm','sh']);
       assert.equal(existsSync(token),false);assert.equal(c.previewBaseline,null);

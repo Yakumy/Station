@@ -52,9 +52,13 @@ Item {
       }
     }
     bindStatuses = statuses
+    // A personal bind on one of these combos stays: classify reports it as a conflict.
+    var removals = Binds.unbindOnly().filter(function(combo) {
+      return Binds.classify(combo, { ok: menuBindingsOk, text: menuBindingsText }, fallback).status === "replacement"
+    })
     var lua = Binds.applyLua(accepted, persisted.appliedBinds.filter(function(combo) {
       return !statuses.some(function(row) { return Binds.normalize(row.combo) === Binds.normalize(combo) && row.status === "conflict" })
-    }))
+    }), removals)
     evalLua(lua, function(code) {
       if (code === 0) {
         root.persisted.appliedBinds = accepted.map(function(item) { return item.combo })

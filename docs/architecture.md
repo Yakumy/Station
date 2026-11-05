@@ -81,7 +81,8 @@ Service object. Only that owner writes its private state.
 | `DisplayController` | Draft, preview, baseline, Keep and Revert, candidate files, countdown | `monitors.lua`, preview token |
 | `ScreenRecovery` | Stale Wayland output check and one recovery cycle | none |
 | `BarSettingsController` | Per-monitor rows, deferred host publication, measured limits | `config.bars`, shell config |
-| `BarLayerSync` | Station's named bar layer rule | none |
+| `BarLayerSync` | Station's named bar layer rule and the runtime blur override | none |
+| `WorkspaceAuthority` | Stops Omarchy renumbering workspaces | `toggles/hypr/station-workspaces.lua` |
 | `StockWidgetLeases` | Hiding and restoring stock widgets | leases in `state.json` |
 | `KeybindingsController` | Conflict check and bind application, once per generation | `appliedBinds` in `state.json` |
 | `WindowSettingsController` | Explicit window edits, read-back, busy state | `looknfeel.lua` |

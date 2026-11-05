@@ -4,9 +4,10 @@ import qs.Commons
 import "../platform/Hypr.js" as Hypr
 import "../windows/Windows.js" as Windows
 
-// Registers Station's named bar layer rule. Blur itself is compositor-owned:
-// Station reads the global options only to confirm they are observable, never
-// forces them, and drops any lease an older version recorded.
+// Owns Station's named bar layer rule. A layer rule draws nothing while global blur
+// is off, so a bar set to Blur turns it on at runtime, for this configuration only,
+// and returns it when no bar wants it. Files stay untouched, a reload clears the
+// override, and a lease an older version recorded is dropped.
 Item {
   id: root
   property bool active: false
@@ -23,7 +24,11 @@ Item {
   property int configGeneration: 0
   // Monitors that already carry one of Station's gap rules in this configuration.
   property var gapRuled: ({})
-  onConfigGenerationChanged: gapRuled = ({})
+  onConfigGenerationChanged: { gapRuled = ({}); forcedBlur = null }
+  // The passes value to return to while Station holds global blur on. A reload resets it.
+  property var forcedBlur: null
+  // Hyprland's default single pass looks visibly blocky through a nearly clear mask.
+  readonly property int blurPasses: 3
   onWindowValuesChanged: syncBarGaps()
   onDisplaysChanged: syncBarGaps()
 
@@ -85,7 +90,16 @@ Item {
       return
     }
     clearLegacyLease()
-    evalLua(Hypr.barBlur(barBlurWanted(), {}))
+    var wanted = barBlurWanted()
+    var options = {}
+    if (wanted && !enabledOption.bool) {
+      forcedBlur = { passes: passesOption.int }
+      options = { enabled: true, passes: blurPasses, windows: "exclude" }
+    } else if (!wanted && forcedBlur) {
+      options = { enabled: false, passes: forcedBlur.passes, windows: "restore" }
+      forcedBlur = null
+    }
+    evalLua(Hypr.barBlur(wanted, options))
     if (barBlurSyncQueued) {
       barBlurSyncQueued = false
       Qt.callLater(syncBarBlur)

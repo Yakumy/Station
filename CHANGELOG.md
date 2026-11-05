@@ -1,5 +1,13 @@
 # Unreleased
 
+- Fix a window jumping to the next station when moved to another monitor with
+  Super+Shift+Ctrl+arrow. Omarchy's bind on that key was never removed, so one press moved
+  the window twice. Station now removes a replaced bind in any modifier order.
+- Fix windows on the second monitor ending up in station 6 or later after a reload, a theme
+  change or a hotplug. Station turns off Omarchy's per-monitor workspace renumbering while
+  it is enabled, and removes the Super+Shift+Alt+arrow workspace moves that do the same.
+- Make the Blur bar background work when Hyprland's global blur is off, without blurring
+  see-through windows.
 - A Pill bar ignores the outer gap beside it and keeps its safe space from windows too, which
   also centers a Pill bar's content between monitor edge and windows.
 - Windows tab preview windows follow Border roundness at preview scale, use the accent, and

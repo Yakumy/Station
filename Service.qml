@@ -57,6 +57,7 @@ Item {
   readonly property string monitorsPath: Quickshell.env("HOME") + "/.config/hypr/monitors.lua"
   readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
   readonly property string parkedTogglePath: stateDir + "/internal-monitor-disable.parked"
+  readonly property string workspaceAuthorityPath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/station-workspaces.lua"
   readonly property alias monitors: compositor.monitors
   readonly property alias clients: compositor.clients
   readonly property alias currentStation: stations.currentStation
@@ -173,6 +174,11 @@ Item {
     refresh: function(includeClients, done) { compositor.refresh(includeClients, done) }
     reconcile: function() { workspace.reconcile() }
     reportError: function(message) { root.layoutError = message }
+  }
+  Stations.WorkspaceAuthority {
+    id: workspaceAuthority
+    path: root.workspaceAuthorityPath
+    evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
   Bars.BarLayerSync {
     id: barLayers
@@ -523,6 +529,7 @@ Item {
     if (started || !store.dirsReady || !store.configLoaded || !store.stateLoaded
         || !displayController.previewLoaded || !workspace.mappingLoaded || !displayController.monitorsLoaded) return
     started = true
+    workspaceAuthority.claim()
     stations.currentStation = persisted.lastStation
     if (displayController.previewFound) {
       Quickshell.execDetached(["rm", "-f", stateDir + "/preview.token"])
@@ -648,7 +655,7 @@ Item {
 
   Component.onDestruction: {
     BarBridge.clear(barBridge)
-    Quickshell.execDetached(Recovery.cleanupCommand(stateDir, monitorsPath, persisted.stockLease, persisted.displayLease))
+    Quickshell.execDetached(Recovery.cleanupCommand(stateDir, monitorsPath, persisted.stockLease, persisted.displayLease, workspaceAuthorityPath))
   }
 
   Timer { interval: 1500; running: root.started; repeat: true; onTriggered: root.observeDesktop() }

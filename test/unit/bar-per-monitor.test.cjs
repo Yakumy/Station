@@ -512,14 +512,32 @@ test('bar blur respects global compositor settings', () => {
   context.barBlurWanted = qmlFunction(service, 'barBlurWanted', context);
   const finishProbe = qmlFunction(service, 'finishBarBlurProbe', context);
 
+  context.blurPasses = 3;
+  context.forcedBlur = null;
+  // Global blur is off and a bar wants it: turn it on, for this configuration only.
   finishProbe(0, '{"bool":false}\n{"int":8}\n{"int":1}');
   assert.equal(context.persisted.barBlurLease, null);
-  assert.match(scripts.at(-1), /set_enabled\(true\)/);
+  assert.match(scripts.at(-1), /station_bar_blur_rule:set_enabled\(true\)/);
+  assert.match(scripts.at(-1), /blur = \{ enabled = true, passes = 3 \}/);
+  assert.match(scripts.at(-1), /no_blur = true/);
+  assert.equal(context.forcedBlur.passes, 1);
+  // Already on and held by Station: nothing to change.
+  finishProbe(0, '{"bool":true}\n{"int":8}\n{"int":3}');
   assert.doesNotMatch(scripts.at(-1), /hl.config/);
+  // The last Blur bar left: return exactly what was found.
   context.config.bars['DP-1'].background = 'solid';
   finishProbe(0, '{"bool":true}\n{"int":8}\n{"int":3}');
-  assert.match(scripts.at(-1), /set_enabled\(false\)/);
+  assert.match(scripts.at(-1), /station_bar_blur_rule:set_enabled\(false\)/);
+  assert.match(scripts.at(-1), /blur = \{ enabled = false, passes = 1 \}/);
+  assert.match(scripts.at(-1), /station_window_no_blur_rule:set_enabled\(false\)/);
+  assert.equal(context.forcedBlur, null);
+  // Blur the user enabled themselves is left alone in both directions.
+  finishProbe(0, '{"bool":true}\n{"int":4}\n{"int":2}');
   assert.doesNotMatch(scripts.at(-1), /hl.config/);
+  context.config.bars['DP-1'].background = 'blur';
+  finishProbe(0, '{"bool":true}\n{"int":4}\n{"int":2}');
+  assert.doesNotMatch(scripts.at(-1), /hl.config|no_blur/);
+  assert.equal(context.forcedBlur, null);
   assert.equal(saves, 0);
 });
 

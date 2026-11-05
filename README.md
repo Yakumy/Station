@@ -184,7 +184,7 @@ Omarchy’s wallpaper links, theme files, and background history stay intact.
 | Move window to station and follow | `SUPER + SHIFT + 1…0` |
 | Send window without following | `SUPER + SHIFT + ALT + 1…0` |
 | Previous / next existing station | `CTRL + SUPER + Left / Right` |
-| Move across displays and station edges | `SHIFT + CTRL + SUPER + arrows` |
+| Move across displays and station edges | `SUPER + SHIFT + CTRL + arrows` |
 
 The **Keybindings** tab checks personal conflicts before applying a change.
 Choose modifiers, capture the key, then Apply. Conflicting bindings stay inactive

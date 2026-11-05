@@ -94,9 +94,11 @@ session, so check them on every related change.
 - **Observation.** Never replay cached monitor or window settings. Explicit edits persist.
 - **Reloads.** A successful watched apply must not force a second reload. Window sliders
   apply with no full reload and no fixed sleep, and restore autoreload on every exit.
-- **Binds.** Unbind only known Omarchy defaults, approved combos and Station's own applied
-  combos. Use `omarchy menu keybindings --print` for identity. Only real key presses test
+- **Binds.** `hl.unbind` is sensitive to modifier order. Unbind only known Omarchy defaults,
+  approved combos and Station's own applied combos. Use `omarchy menu keybindings --print` for identity. Only real key presses test
   the end-to-end path.
+- **Workspace numbering.** Omarchy's per-monitor reconcile renumbers station workspaces,
+  so `WorkspaceAuthority` must stay armed. See [Workspace authority](docs/contracts.md#workspace-authority).
 - **Restart versus removal.** A shell restart must not trigger removal cleanup.
 - **Delegates.** A Repeater delegate can be destroyed during its own handler. Keep
   follow-up actions in a surviving object.

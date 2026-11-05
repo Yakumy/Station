@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const B = require('../../lib/keybindings/Binds.js');
 const H = require('../../lib/platform/Hypr.js');
 const S = require('../../lib/platform/Store.js');
+const { existsSync, readFileSync: readInstalled } = require('node:fs');
+const tilingLua = (process.env.OMARCHY_PATH || '/usr/share/omarchy') + '/default/hypr/bindings/tiling.lua';
 
 test('binding normalization ignores modifier order and aliases arrows', () => {
   assert.equal(B.normalize('shift + control + SUPER + ←'), 'SUPER+CTRL+SHIFT+LEFT');
@@ -102,8 +104,43 @@ test('store defaults and migrations constrain public values', () => {
 test('bindings use v1 direct exec dispatchers and exact stock modifier spelling', () => {
   const definitions = B.definitions();
   const lua = B.applyLua(definitions, []);
-  assert.match(lua, /hl\.bind\("SHIFT \+ CTRL \+ SUPER \+ LEFT", hl\.dsp\.exec_cmd\("omarchy-shell yakumy\.station shiftWindow left"\)/);
+  assert.match(lua, /hl\.bind\("SUPER \+ SHIFT \+ CTRL \+ LEFT", hl\.dsp\.exec_cmd\("omarchy-shell yakumy\.station shiftWindow left"\)/);
   assert.match(lua, /hl\.unbind\("SUPER \+ CTRL \+ LEFT"\)/);
   assert.match(lua, /hl\.unbind\("SUPER \+ CTRL \+ RIGHT"\)/);
   assert.doesNotMatch(lua, /o\.bind/);
+});
+
+test('a replacement unbinds every modifier order, because hl.unbind matches the registered one', () => {
+  assert.deepEqual(B.spellings('SUPER + LEFT'), ['SUPER + LEFT']);
+  assert.deepEqual(B.spellings('SUPER + CTRL + LEFT'), ['SUPER + CTRL + LEFT', 'CTRL + SUPER + LEFT']);
+  assert.equal(B.spellings('SUPER + SHIFT + CTRL + RIGHT').length, 6);
+  const lua = B.applyLua(B.definitions(), ['SHIFT + CTRL + SUPER + RIGHT']);
+  const unbound = [...lua.matchAll(/hl\.unbind\("([^"]+)"\)/g)].map(match => match[1]);
+  assert.equal(new Set(unbound).size, unbound.length, 'each spelling is unbound once');
+  for (const combo of B.spellings('SUPER + SHIFT + CTRL + RIGHT')) assert.ok(unbound.includes(combo), combo);
+  assert.ok(lua.lastIndexOf('hl.unbind("SUPER + SHIFT + CTRL + RIGHT")') < lua.indexOf('hl.bind("SUPER + SHIFT + CTRL + RIGHT"'));
+});
+
+test('a custom Station combo is not unbound as a replacement', () => {
+  const lua = B.applyLua(B.effectiveDefinitions({ 'shift-left': 'SUPER + ALT + H' }), []);
+  assert.match(lua, /hl\.bind\("SUPER \+ ALT \+ H"/);
+  assert.doesNotMatch(lua, /hl\.unbind\("SUPER \+ ALT \+ H"\)/);
+});
+
+test('workspace-to-monitor defaults are removed without a replacement, unless personal', () => {
+  const removals = B.unbindOnly();
+  assert.equal(removals.length, 4);
+  const lua = B.applyLua([], [], removals);
+  for (const combo of removals) assert.ok(lua.includes(`hl.unbind("${combo}")`), combo);
+  assert.doesNotMatch(lua, /hl\.bind/);
+  const stock = 'SUPER SHIFT ALT + UP → Move workspace to up monitor';
+  assert.equal(B.classify('SUPER + SHIFT + ALT + UP', { ok: true, text: stock }, []).status, 'replacement');
+  assert.equal(B.classify('SUPER + SHIFT + ALT + UP', { ok: true, text: 'SUPER SHIFT ALT + UP → Mine' }, []).status, 'conflict');
+  assert.equal(B.classify('SUPER + SHIFT + ALT + UP', { ok: true, text: stock }, [{ combo: 'SUPER+ALT+SHIFT+UP', source: 'lua' }]).status, 'conflict');
+});
+
+test('every move combo is registered in the installed Omarchy modifier spelling', { skip: !existsSync(tilingLua) }, () => {
+  const source = readInstalled(tilingLua, 'utf8');
+  for (const definition of B.definitions().filter(row => row.id.startsWith('shift-')))
+    assert.ok(source.includes(`"${definition.combo}"`), definition.combo);
 });

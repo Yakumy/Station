@@ -1106,3 +1106,38 @@ user tests; the automated checks do not establish those results.
   step, including a rename over the link and over an image.
 - [LIVE] The former poll cost 5.1 ms of CPU per check: 2.03% of one core at 250 ms and
   0.34% at 1.5 seconds.
+
+## Double move and station 6 (2026-11-05)
+
+- [LIVE] `hl.unbind` matches the registered modifier order. On a free key,
+  `SHIFT + CTRL + SUPER + F23` did not remove a bind registered as
+  `SUPER + SHIFT + CTRL + F23`, and the same spelling did. `CTRL + SUPER + LEFT` showed the
+  same trap earlier, but the 4.5.0 move binds were then added in the wrong order.
+- [LIVE] `hyprctl binds` listed both `Move window to right monitor` and
+  `Station: Move window right` on one key. Omarchy's moved the window to eDP-1, then
+  Station read it there and stepped past the outer edge to the next station.
+  `lastWindowAction` recorded a `right` move starting on eDP-1. The IPC call alone, with
+  disposable terminals, kept the station from HDMI-A-2 to eDP-1 on empty and occupied
+  destinations, which is why earlier IPC runs never showed this.
+- [SRC] Omarchy's `monitor-workspaces.lua` reconciles on `config.reloaded`,
+  `monitor.added` and `monitor.removed`. With eDP-1 in block 0 and HDMI in block 1, an odd
+  Station workspace on HDMI belongs to eDP-1 by number, so `adopt` renumbers it: 1 to 11,
+  3 to 13, 5 to 15. In a two-output grid, 11 is station 6. Station cannot tell a renumbered
+  workspace from a real one, so it adopts the result.
+- [SRC] `test/unit/workspace-authority.test.cjs` runs that module under a fake compositor
+  and records 1 to 11 and 5 to 15. [INFERRED] A Throne window on workspace 15 on HDMI-A-2,
+  found after the 15:51 theme change, is that same renumbering of station 3.
+- [SRC] `SUPER + SHIFT + ALT + arrow` was documented as unbound but never was. It runs
+  `move_to_monitor`, which renumbers the same way.
+- [LIVE] Evaluated Lua shares the configuration's state: `o.workspaces` is the module table
+  that `hl.on` handlers call through, so replacing `reconcile` takes effect at once.
+
+## Bar Blur with global blur off (2026-11-05)
+
+- [LIVE] The `station-bar-blur` layer rule existed and was enabled, and the bar was not
+  blurred, because `decoration:blur:enabled` is false on default Omarchy. Enabling only that
+  option at runtime frosted the pills immediately.
+- [LIVE] At Hyprland's default single pass, a magnified capture shows a blocky lattice. Three
+  passes are smooth, matching the earlier finding on this bar.
+- [INFERRED] `hl.window_rule` accepted `no_blur` on a probe rule with no configuration
+  error. Whether it reaches already open see-through windows was not measured.
