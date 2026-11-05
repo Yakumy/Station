@@ -27,8 +27,14 @@ Item {
   property string themePath: ""
   property string themeName: ""
   property string themeRevision: ""
+  readonly property string themeStateDir: Quickshell.env("HOME") + "/.local/state/omarchy/current"
+  property string themeWatchDirectory: ""
+  property bool themeWatchRestarting: false
+  property bool themeRereadPending: false
+  readonly property bool themeWatching: themeWatch.running
   readonly property string themeKey: JSON.stringify([themeName, themePath])
   readonly property string themeToken: JSON.stringify([themeName, themePath, themeRevision])
+  onConfigLoadedChanged: if (configLoaded) startThemeWatch()
   readonly property var resolved: Wallpaper.resolve(preferences, themeKey, themePath, themeRevision)
   readonly property var applied: secureStoredScene(resolved)
   property var draft: Wallpaper.resolve({}, "", "", "")
@@ -259,6 +265,20 @@ Item {
     })
   }
 
+  // Omarchy names its background and theme with files in one directory. Watching that
+  // directory, and the image's own directory for a replacement in place, costs nothing
+  // until something changes.
+  function startThemeWatch() { if (configLoaded && !themeWatch.running) themeWatch.running = true }
+  function restartThemeWatch() {
+    themeWatchRetry.stop()
+    if (!themeWatch.running) { startThemeWatch(); return }
+    themeWatchRestarting = true
+    themeWatch.running = false
+  }
+  function readTheme() {
+    if (themeRead.running) themeRereadPending = true
+    else themeRead.running = true
+  }
   Instantiator {
     id: validation
     model: []
@@ -272,18 +292,49 @@ Item {
   Process {
     id: themeRead
     command: ["bash", "-c", 'readlink -f -- "$1"; cat -- "$2"; stat -Lc "%i:%s:%y" -- "$1"', "station-background",
-      Quickshell.env("HOME") + "/.local/state/omarchy/current/background",
-      Quickshell.env("HOME") + "/.local/state/omarchy/current/theme.name"]
+      root.themeStateDir + "/background", root.themeStateDir + "/theme.name"]
     stdout: StdioCollector {
       onStreamFinished: {
         var lines = text.trim().split("\n")
         root.themeName = lines.length > 1 ? lines[1] : ""
         root.themePath = Wallpaper.path(lines[0])
         root.themeRevision = lines.length > 2 ? lines[2] : ""
+        var directory = root.themeRevision ? Wallpaper.directory(root.themePath) : ""
+        if (directory !== root.themeWatchDirectory) {
+          root.themeWatchDirectory = directory
+          root.restartThemeWatch()
+        }
       }
     }
+    onExited: function(code) {
+      if (!root.themeRereadPending) return
+      root.themeRereadPending = false
+      Qt.callLater(root.readTheme)
+    }
   }
-  Timer { interval: 250; repeat: true; running: root.configLoaded; triggeredOnStart: true; onTriggered: if (!themeRead.running) themeRead.running = true }
+  Timer { id: themeWatchDebounce; interval: 100; onTriggered: root.restartThemeWatch() }
+  Timer { id: themeWatchRetry; interval: 5000; onTriggered: root.startThemeWatch() }
+  Process {
+    id: themeWatch
+    command: Wallpaper.watchCommand(root.themeStateDir, root.themeWatchDirectory)
+    stdout: SplitParser {
+      onRead: function(line) {
+        if (Wallpaper.watchRelevant(line, root.themeStateDir, root.themePath)) themeWatchDebounce.restart()
+      }
+    }
+    // Read only once the watches exist, so a change made during a restart is not lost.
+    stderr: SplitParser { onRead: function(line) { if (line.indexOf("Watches established") !== -1) root.readTheme() } }
+    onExited: function(code) {
+      if (root.themeWatchRestarting) {
+        root.themeWatchRestarting = false
+        Qt.callLater(root.startThemeWatch)
+        return
+      }
+      // Missing tool, watch limit or a killed process: keep following at a slow rate.
+      root.readTheme()
+      themeWatchRetry.restart()
+    }
+  }
   Process {
     id: picker
     command: ["omarchy", "file", "select", "--title", "Choose wallpaper", "--extensions", "png jpg jpeg webp bmp gif"]

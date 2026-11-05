@@ -78,6 +78,19 @@ The original specification asked for these two. The maintainer declined them on
 A `removeStationBlock` method that no control called was deleted for the same reason.
 Plugin removal has its own cleanup.
 
+## Watch the theme instead of polling it
+
+A 250 ms poll cost about 2% of one core and 57,600 processes an hour on the test laptop.
+`inotify-tools` is in Omarchy's base packages. Omarchy's `theme-set` hook was rejected: it
+would write outside the plugin, runs only after slow app updates, and misses
+`omarchy theme bg set`.
+
+## Panel controls end with their panel
+
+Brightness and text-size requests live in the panel. A request pending when a bar rebuild
+destroys the panel is lost, and the user moves the slider again. Moving them into the
+service would add code to prevent a rare, harmless result.
+
 ## Historical records
 
 These records were removed from the tree. Read them with
@@ -97,9 +110,5 @@ These records were removed from the tree. Read them with
 
 These need a maintainer's decision. The code currently behaves as stated.
 
-1. **Wallpaper poll interval.** Station polls the Omarchy background every 250 ms. An
-   earlier document said 1.5 seconds. Measure the cost, then choose one.
-2. **Panel control lifetime.** A brightness or text-size request ends with its panel
-   instance. Decide whether it must survive a bar rebuild.
-3. **Hardware coverage.** Three outputs, docks, lid and cold login need hardware and an
-   operator. See [Coverage gaps](testing.md#coverage-gaps).
+1. **Hardware coverage.** Lid and cold login still need an operator. See
+   [Coverage gaps](testing.md#coverage-gaps).

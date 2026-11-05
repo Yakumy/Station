@@ -679,6 +679,8 @@ Item {
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
       globalBarPosition: barSettings.globalBarPosition, lastGlobalBarPosition: barSettings.lastGlobalBarPosition,
       bars: root.config.bars,
+      themeFollow: { name: wallpaper.themeName, path: wallpaper.themePath, revision: wallpaper.themeRevision,
+        watching: wallpaper.themeWatching },
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,
       migrationPhase: workspace.migrationPhase, layoutError: root.layoutError,
       lastWindowAction: stations.lastWindowAction,

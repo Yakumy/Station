@@ -154,7 +154,8 @@ Hardware cases that have no recorded pass on the current code:
   passed an ordinary restart, panel open and close, station switching and return, and
   an unchanged-topology preview with Revert. Other evidence predates the move.
 - Physical key presses on the current layout.
-- Three and four outputs, dock attach and detach, lid, suspend and DPMS.
+- Three and four outputs and docks. The maintainer has neither, so these stay unverified.
+- Lid, suspend and DPMS.
 - Cold login with the current DRM presence guard.
 - The direct path in a running shell. This machine runs the bridge path, and
   `panel-composition` covers the direct path in isolation.

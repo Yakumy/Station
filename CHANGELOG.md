@@ -20,6 +20,7 @@
 - Respect global blur and outer gaps instead of restoring Station-only overrides.
 - Cancel previews on external configuration changes; compare source files before
   saving and preserve newer edits during rollback.
+- Follow wallpaper and theme changes through filesystem events instead of a 250 ms poll.
 - Fix Extend and Mirror doing nothing after a saved Single: leaving Single now turns the
   other outputs back on.
 - Fix Single on the laptop display after `omarchy-hyprland-monitor-internal off`: park

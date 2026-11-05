@@ -500,8 +500,11 @@ Its modes are Same on all (the default, following Omarchy), Per monitor, and Spa
   image. The recommended resolution is logical bounds × maximum scale × zoom. It is a
   recommendation, never a limit.
 - Follow mode uses the live background and a profile keyed by theme and background
-  path, keeping the newest 64. A 250 ms read-only poll fingerprints the target, so an
-  image replaced in place refreshes.
+  path, keeping the newest 64. An `inotifywait` process watches Omarchy's
+  `~/.local/state/omarchy/current` directory and the image's directory, and Station
+  reads the theme once for each settled change. An image replaced in place also
+  refreshes. If the watch ends unexpectedly, Station reads once and retries every
+  5 seconds.
 - With Follow off, a pinned profile ignores theme changes. Apply makes the snapshot,
   because a theme may rewrite the same path.
 - Choosing an image closes the panel first, because the native chooser needs focus.

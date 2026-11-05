@@ -193,3 +193,43 @@ test('snapshot script preserves literal filenames and refuses to overwrite a pri
     assert.notEqual(run().status, 0);
   } finally { fs.rmSync(directory, {recursive: true, force: true}); }
 });
+
+test('the theme watch names both directories as arguments and ignores unrelated files', () => {
+  const W = require('../../lib/wallpaper/Wallpaper.js');
+  assert.equal(W.directory('/a/b/c.jpg'), '/a/b');
+  assert.equal(W.directory('relative.jpg'), '');
+  assert.deepEqual(W.watchCommand('/state', '/images').slice(-3), ['--', '/state', '/images']);
+  assert.deepEqual(W.watchCommand('/state', '').slice(-2), ['--', '/state']);
+  assert.deepEqual(W.watchCommand('/state', '/state').slice(-2), ['--', '/state']);
+  assert.equal(W.watchRelevant('/state/theme.name', '/state', '/images/a.jpg'), true);
+  assert.equal(W.watchRelevant('/images/a.jpg', '/state', '/images/a.jpg'), true);
+  assert.equal(W.watchRelevant('/images/other.jpg', '/state', '/images/a.jpg'), false);
+  assert.equal(W.watchRelevant('/state-other/x', '/state', '/images/a.jpg'), false);
+});
+
+const inotify = require('node:child_process').spawnSync('inotifywait', ['--help']).error ? 'inotifywait is not installed' : false;
+test('the real watch reports Omarchy background, theme and in-place image changes', { skip: inotify }, async t => {
+  const fs = require('node:fs'), { join } = require('node:path'), { tmpdir } = require('node:os');
+  const W = require('../../lib/wallpaper/Wallpaper.js');
+  const root = fs.mkdtempSync(join(tmpdir(), 'station-theme-watch-'));
+  const state = join(root, 'current'), images = join(root, 'images'), image = join(images, 'a.jpg');
+  fs.mkdirSync(state); fs.mkdirSync(images); fs.writeFileSync(image, 'a'); fs.writeFileSync(join(state, 'theme.name'), 'one\n');
+  const [program, ...args] = W.watchCommand(state, images);
+  const watch = require('node:child_process').spawn(program, args);
+  t.after(() => { watch.kill(); fs.rmSync(root, { recursive: true, force: true }); });
+  let out = '';
+  watch.stdout.on('data', d => { out += d; });
+  await new Promise(done => { let err = ''; watch.stderr.on('data', d => { err += d; if (err.includes('Watches established')) done(); }); });
+  const changed = async action => {
+    out = ''; action();
+    for (let i = 0; i < 100 && !out; i++) await new Promise(done => setTimeout(done, 10));
+    await new Promise(done => setTimeout(done, 30));
+    return out.trim().split('\n').map(line => W.watchRelevant(line, state, image));
+  };
+  const link = join(state, 'background');
+  assert.ok((await changed(() => fs.symlinkSync(image, link))).includes(true), 'a new background link');
+  assert.ok((await changed(() => { fs.symlinkSync(join(images, 'b.jpg'), link + '.tmp'); fs.renameSync(link + '.tmp', link); })).includes(true), 'ln -nsf renames over it');
+  assert.ok((await changed(() => fs.writeFileSync(join(state, 'theme.name'), 'two\n'))).includes(true), 'a theme name');
+  assert.ok((await changed(() => { fs.writeFileSync(image + '.tmp', 'b'); fs.renameSync(image + '.tmp', image); })).includes(true), 'an image replaced in place');
+  assert.deepEqual([...new Set(await changed(() => fs.writeFileSync(join(images, 'other.jpg'), 'x')))], [false], 'other files do not count');
+});

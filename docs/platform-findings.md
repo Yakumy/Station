@@ -1095,3 +1095,14 @@ user tests; the automated checks do not establish those results.
   output as disabled, and `setModeValue` did not enable it. This needs no flag. Existing
   tests missed it because they left Single inside one preview session, where the draft
   still had both outputs enabled.
+
+## Theme and background change signals (2026-11-05)
+
+- [SRC] `omarchy-theme-set` replaces `current/theme` with a rename, writes
+  `current/theme.name`, and updates the `current/background` link with `ln -nsf`.
+  `omarchy-theme-bg-set` updates only the link. Both also call shell IPC, and only
+  `omarchy-theme-set` runs the `theme-set` hook, after its slower app updates.
+- [LIVE] In a scratch directory, the same operations produced `inotifywait` events for each
+  step, including a rename over the link and over an image.
+- [LIVE] The former poll cost 5.1 ms of CPU per check: 2.03% of one core at 250 ms and
+  0.34% at 1.5 seconds.
