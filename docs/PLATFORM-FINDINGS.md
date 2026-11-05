@@ -1035,3 +1035,25 @@ user tests; the automated checks do not establish those results.
   Original file bytes, runtime split and autoreload were restored; config errors
   were empty. This tested the helper, not physical pointer input in the panel.
   Evidence: `/tmp/station-window-setting-results.json`.
+
+## Architecture refactor installed smoke (2026-11-05)
+
+- [LIVE] The clean installed `dev` checkout advanced from `d9caad9` to `4ffa775`
+  through the stock updater. A shell restart loaded a new Quickshell process.
+  Shell ping succeeded. Station reached idle with the same two-output mapping.
+- [LIVE] Three IPC panel open/close cycles on `HDMI-A-2` mapped two keyboard
+  surfaces, then removed both. Wanted intent followed the actual layer state.
+  The final panel was closed. No display/window setting was edited.
+- [LIVE] Existing client identities, output/workspace placement, monitor geometry,
+  per-monitor bar settings, appearance, leases and autoreload matched the baseline.
+  Config errors were empty. All 36 Station bindings were registered. Their
+  definitions and classifications matched the baseline. Physical keys were not tested.
+- [LIVE][SRC] Normal restart bookkeeping advanced the journal revision with an
+  unchanged map. Focused-menu synchronization changed shell `bar.position` from
+  `right` to the focused output's saved `left` edge. Independent bar rows remained
+  unchanged. This is the existing `syncFocusedBarMenu()` behavior.
+- [LIVE] Known bar-edge binding and implicit `exitCode` warnings remained.
+  The log contained no TypeError, ReferenceError or assignment error. This narrow
+  smoke check does not prove destructive-transition unmapping, detached recovery,
+  hotplug behavior or other physical outputs. Evidence remains in
+  `/tmp/station-installed-m7-xw3mm3q7`. See the architecture checkpoint for scope.

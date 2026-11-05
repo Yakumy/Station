@@ -6,13 +6,16 @@ This checkpoint lets the maintainer or a later coding session resume the approve
 ## Authorization and limits
 
 The user authorized implementation and one commit per completed step on `dev`.
-Do not push. Do not install an update or change the running desktop under this
-scope. M4 is committed as `ddceb48`. After the M5 packet review, the user delegated
+Do not push. The initial implementation scope excluded installed updates and live
+changes. After M7, the user separately authorized an installed update and tests.
+The bounded follow-up below records that execution. Topology/configuration edits,
+crash experiments and dependency installation remain outside this test scope.
+M4 is committed as `ddceb48`. After the M5 packet review, the user delegated
 the decision and instructed continued work. The accepted scope and source SHA
 are recorded in the [M5 review packet](ARCHITECTURE-M5-REVIEW.md).
 M5 is committed as `8395b1a`. The user separately approved the
 [M6 review packet](ARCHITECTURE-M6-REVIEW.md), then instructed continued work.
-M6 is committed as `28c7eba`. M7 is completed in this checkpoint revision.
+M6 is committed as `28c7eba`. M7 is committed as `4ffa775`.
 M0–M7 implementation is complete, with the M2 deletion deferred. M2 deletion requires
 its cross-version and detached-recovery proof. M8 and M9 remain optional.
 
@@ -257,6 +260,71 @@ M8/M9 remain optional and have not started. File moves alone do not demonstrate
 a maintenance benefit. No recurring navigation problem or verified stock-bar
 extraction benefit was established by this milestone. Do not extend this work
 into those optional changes without that evidence.
+
+## Post-M7: optional review and installed smoke check
+
+The user authorized continued work and allowed installed updates for verification
+on 2026-11-05. Source and installed checkouts were clean on `dev` before updating.
+The installed origin was `file:///home/aryan/hdd/Programming/station`.
+The stock updater advanced installed code from `d9caad9` to
+`4ffa775882454306916f090ebed8c4f5d27b0f65`. Source and installed revisions then
+matched. All 178 tracked file paths had matching bytes. One required shell
+restart followed the update. Shell ping returned `ok`. Quickshell reported new
+process 259084, launched at 08:41:56 local time.
+
+Private baseline snapshots and recovery copies remain under
+`/tmp/station-installed-m7-xw3mm3q7`. They include Station status, monitors,
+clients, workspaces, layers, autoreload and relevant persisted files. Station was
+idle before and after, with no pending migration, preview or layout error.
+The committed output order remained `HDMI-A-2`, `eDP-1`.
+
+Three live IPC open/close cycles used the installed Station panel on `HDMI-A-2`.
+Each open mapped two keyboard-panel surfaces and published wanted intent.
+Each close removed both surfaces and cleared intent. Observed open latency was
+148–180 ms. Observed close/unmap latency was 245–260 ms. These include polling
+and IPC overhead. The panel finished closed. This checks actual layer presence,
+but does not establish evacuation acknowledgment ordering during monitor removal.
+
+Both existing clients retained their identities, monitor and workspace. Display
+geometry, active workspaces, Station number, per-monitor bar rows, appearance,
+leases and autoreload matched the baseline. Config errors remained empty.
+All 36 binding definitions and classifications matched, and 36 unique Station
+bindings were registered. Stock-owner label observations became empty after the
+running service had replaced those bindings. The classification logic is unchanged.
+No physical keypress test was performed.
+
+Two automatic persistence changes occurred. Journal revision advanced from
+2685 to 2689 with the same committed map and no pending entry. Shell
+`bar.position` changed from `right` to `left`. The existing focused-menu sync
+mirrors the focused output's saved edge while preserving independent bar rows.
+No display or window setting was edited. Monitor/appearance source files,
+Station preferences, state data and the retained M2 plain copy kept their bytes.
+The runtime log retained the known bar-edge binding warning and implicit
+`exitCode` warning. It contained no TypeError, ReferenceError or assignment error.
+
+This is partial H10 evidence for an ordinary restart and a panel smoke check.
+Disable/remove, destructive topology transitions, watchdog crash recovery,
+physical keys and three/four-output hardware were not tested. H1–H9 and H11
+remain open for their individually scoped hardware checks. The current full-bar
+bridge path was exercised live. The trusted direct path retains isolated evidence.
+
+The bounded M8 review traced M3, M4 and M7 through their owners and callers.
+M3 touched 10 files, M4 touched 11, and M7 touched 35. Directory moves would
+retain those composition/contract callers and add import/tool path changes.
+The six extracted owners are already discoverable by one filename search.
+This review established no recurring owner-location failure or reduced caller
+count that justifies the move risk. M8 remains deferred.
+
+The bounded M9 review examined MonitorBar's zoom/rescan hooks and recent fixes.
+Its loader hooks already converge on one slot-local scheduler and implementation.
+No upstream-update or teardown defect was reproduced. Extracting that code would
+still require its active-item, zoom and widget-rebuild notifications. No measured
+reduction in private caller knowledge was established. M9 remains deferred.
+A future candidate needs concrete benefit evidence and separate authorization.
+
+This checkpoint commit adds documentation only after the installed smoke check.
+Installed/running production code remains the tested `4ffa775` revision.
+Nothing was pushed. M2 persistence remains intact.
 
 ## M2: retain plain-copy persistence
 
