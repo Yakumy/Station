@@ -125,7 +125,7 @@ Ui.BorderSurface {
         ? Commons.Color.accent
         : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
-      radius: Style.cornerRadius
+      radius: 0
       opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
       Rectangle {

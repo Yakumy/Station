@@ -107,7 +107,7 @@ Ui.BorderSurface {
         borderSpec: root.spanning || root.selectedName === monitor.modelData.name
           ? Border.flat(Color.accent, Style.normalBorderWidth * 2)
           : Border.controlSpec("normal", Color.popups.text, Color.accent)
-        radius: Style.cornerRadius
+        radius: 0
       }
       Rectangle {
         anchors.centerIn: parent

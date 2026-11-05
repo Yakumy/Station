@@ -137,7 +137,7 @@ Ui.BorderSurface {
         ? Color.accent
         : Border.controlSpec("normal", Color.popups.text, Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
-      radius: Style.cornerRadius
+      radius: 0
       opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
       Row {
         anchors.centerIn: parent

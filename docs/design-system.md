@@ -26,7 +26,7 @@ A Choice (either kind) must never use the Action look, and vice versa. The 4 mod
 
 ## 2. Corners
 
-**[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`.** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.
+**[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`, except the monitor rectangles in the layout panels, which are always sharp (`radius: 0`).** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.
 
 **Known trap [V]:** a ternary like `selected ? Station.radiusSm : Style.cornerRadius` *looks* compliant because the token appears in the source, but if the first branch is always taken, the token branch is dead code and never executes. The fix must remove the private branch entirely, not just add the token as an unreached fallback next to it.
 
@@ -146,7 +146,8 @@ and the islands keep their internal padding. Window gaps do not move the bar.
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.
 - No hardcoded radius, including `0` — use `Style.cornerRadius`, except the
-  explicit Bar-tab Pill style whose island radius is half its shorter side.
+  explicit Bar-tab Pill style whose island radius is half its shorter side and the
+  monitor rectangles of the layout panels (`radius: 0`).
 - No pill/`radius-full` shapes outside the explicit per-monitor bar Pill style.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
@@ -160,6 +161,11 @@ A change passes when, under at least two themes including one light theme (Catpp
 - Keybindings and Settings rows read as a plain hairline list; the only bordered row is one with an active conflict.
 - No rounded corners, shadows or glows appear anywhere, at any theme.
 - Every color, font and spacing value traces to a token in §4–§6, with no literal left in the diff.
+
+### Layout monitor rectangles
+
+The monitor rectangles in all four layout panels (Displays, Bar, Wallpaper, Windows)
+use a fixed sharp radius of 0 and never follow the theme rounding.
 
 ### Window geometry preview
 

@@ -1,5 +1,6 @@
 # Unreleased
 
+- Layout panels draw monitor rectangles with a fixed sharp radius.
 - Keep a safe space between a Pill bar and the monitor edge and ends.
 - Apply the outer gap beside Solid and Blur bars but not beside Transparent bars (Omarchy
   default or Pill), through runtime per-monitor workspace rules.
