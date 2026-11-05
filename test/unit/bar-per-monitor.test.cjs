@@ -257,7 +257,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(preview, /parent\.height - height - bottomInset/);
   assert.match(layout, /maximumBarHeight \* canvas\.zoom/);
   assert.match(layout, /horizontalAlignment: Text\.AlignHCenter/);
-  assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
+  assert.match(layout, /barEnabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
   assert.match(read('lib/panel/PanelSession.qml'), /sessionTabRestored/);

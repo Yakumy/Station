@@ -1141,3 +1141,15 @@ user tests; the automated checks do not establish those results.
   passes are smooth, matching the earlier finding on this bar.
 - [INFERRED] `hl.window_rule` accepted `no_blur` on a probe rule with no configuration
   error. Whether it reaches already open see-through windows was not measured.
+
+## Bar on/off switch stutter (2026-11-05)
+
+- [SRC] `setMonitorBarEnabled` ran inside the switch's click handler. It updates the live bar
+  preferences, which create or destroy the bar's layer surface, then rewrites the shell
+  configuration, which re-evaluates every bar. All of it shares the thread that advances the
+  switch's 120 ms animation. Omarchy's `MonitorBar` measures a surface rebuild at about 150 ms.
+- [INFERRED] That block outlasts the animation, so the knob jumped instead of sliding. The
+  hitch itself was not timed.
+- [SRC] The other bar controls avoid this by deferring the host write while the panel is open.
+  The enabled state cannot, because the user expects the bar to appear, so the change is
+  delayed by one throw instead.

@@ -15,6 +15,33 @@ Ui.BorderSurface {
   readonly property real verticalInset: height * 0.1
   readonly property real monitorGap: Style.spacing.sm
   readonly property real barEdgeGap: Style.spacing.sm
+  // Applying a bar's on/off state builds or destroys its layer surface on this thread,
+  // which would freeze the switch mid-throw. The switch moves first, then this applies.
+  property string pendingBarName: ""
+  property bool pendingBarEnabled: false
+
+  function requestBarEnabled(name, enabled) {
+    if (pendingBarName && pendingBarName !== name) applyPendingBar()
+    pendingBarName = name
+    pendingBarEnabled = enabled
+    barToggleApply.restart()
+  }
+
+  function applyPendingBar() {
+    barToggleApply.stop()
+    if (!pendingBarName) return
+    if (service) service.setMonitorBarEnabled(pendingBarName, pendingBarEnabled)
+    // Cleared last, so a refused change is what moves the switch back.
+    pendingBarName = ""
+  }
+
+  Timer {
+    id: barToggleApply
+    interval: Style.duration(160)
+    onTriggered: canvas.applyPendingBar()
+  }
+  // Closing the panel right after a click must not lose the change.
+  Component.onDestruction: applyPendingBar()
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
@@ -66,6 +93,8 @@ Ui.BorderSurface {
       readonly property var barSetting: canvas.service
         ? canvas.service.monitorBar(modelData.name)
         : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
+      readonly property bool barEnabled: canvas.pendingBarName === modelData.name
+        ? canvas.pendingBarEnabled : barSetting.enabled === true
       readonly property int minimumBarWidth: canvas.service
         ? canvas.service.monitorBarMinimum(modelData.name) : 1
       readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100
@@ -96,7 +125,7 @@ Ui.BorderSurface {
       Rectangle {
         id: barPreview
         objectName: "barPreview-" + monitorCard.modelData.name
-        visible: monitorCard.barSetting.enabled
+        visible: monitorCard.barEnabled
         color: monitorCard.barSetting.style === "pill" ? "transparent" : Commons.Color.accent
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
@@ -170,7 +199,7 @@ Ui.BorderSurface {
           Text {
             anchors.centerIn: parent
             text: parent.modelData.glyph
-            color: monitorCard.barSetting.enabled
+            color: monitorCard.barEnabled
               && monitorCard.barSetting.position === parent.modelData.position
               ? Commons.Color.accent : Commons.Color.popups.text
             font.family: Style.font.family
@@ -188,14 +217,15 @@ Ui.BorderSurface {
       }
 
       Ui.ToggleSwitch {
+        objectName: "barEnabledSwitch"
         anchors.centerIn: parent
         trackHeight: Math.max(Style.space(18), 14)
-        checked: monitorCard.barSetting.enabled
+        checked: monitorCard.barEnabled
         foreground: Commons.Color.popups.text
         accent: Commons.Color.accent
         onToggled: {
           canvas.displaySelected(monitorCard.modelData.name)
-          canvas.service.setMonitorBarEnabled(monitorCard.modelData.name, !checked)
+          canvas.requestBarEnabled(monitorCard.modelData.name, !checked)
         }
       }
     }

@@ -52,6 +52,7 @@ QtObject {
   property int normalBorderWidth: 1
   property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
   function space(n) { return n * 5 / 6 }
+  function duration(ms) { return ms }
 }
 ''')
     (commons / 'Color.qml').write_text('''pragma Singleton
@@ -102,7 +103,16 @@ Item {
     function monitorBarMinimum(name) { return 1 }
     function monitorBarMaximumHeight(name) { return 108 }
     function setMonitorBarPosition(name, position) {}
-    function setMonitorBarEnabled(name, enabled) {}
+    property var barCalls: []
+    property bool refuseBar: false
+    function setMonitorBarEnabled(name, enabled) {
+      barCalls = barCalls.concat([name + ":" + enabled])
+      if (refuseBar) return "last-bar"
+      var next = Object.assign({}, bars)
+      next[name] = Object.assign({}, monitorBar(name), { enabled: enabled })
+      bars = next
+      return "ok"
+    }
 ''' + setter + '''
     function previewLayout() {
       if (Model.layoutOverlaps(displayDraft).length) throw new Error("Displays overlap")
@@ -150,6 +160,52 @@ Item {
       for (var i = 0; i < layout.children.length; i++)
         if (layout.children[i].modelData && layout.children[i].modelData.name === name) return layout.children[i]
       fail("Missing card " + name)
+    }
+    function barSwitch(name) {
+      var found = findChild(barCard(name), "barEnabledSwitch")
+      verify(found !== null)
+      return found
+    }
+    function resetBars() {
+      barLayout.applyPendingBar()
+      service.bars = ({}); service.barCalls = []; service.refuseBar = false
+    }
+    function test_bar_switch_moves_before_the_bar_change_applies() {
+      resetBars()
+      var control = barSwitch("HDMI-A-2")
+      compare(control.checked, true)
+      control.toggled()
+      compare(control.checked, false, "The switch answers the click at once")
+      compare(service.barCalls.length, 0, "Rebuilding a bar must wait for the throw")
+      tryVerify(function() { return service.barCalls.length === 1 }, 1000)
+      compare(service.barCalls[0], "HDMI-A-2:false")
+      compare(barSwitch("HDMI-A-2").checked, false)
+      resetBars()
+    }
+    function test_bar_switch_returns_when_the_service_refuses() {
+      resetBars()
+      service.refuseBar = true
+      var control = barSwitch("HDMI-A-2")
+      control.toggled()
+      compare(control.checked, false)
+      barLayout.applyPendingBar()
+      compare(service.barCalls.length, 1)
+      compare(control.checked, true, "A refused change moves the switch back")
+      resetBars()
+    }
+    function test_bar_switch_coalesces_and_never_drops_another_monitor() {
+      resetBars()
+      var hdmi = barSwitch("HDMI-A-2"), edp = barSwitch("eDP-1")
+      hdmi.toggled()
+      hdmi.toggled()
+      compare(hdmi.checked, true)
+      compare(service.barCalls.length, 0)
+      edp.toggled()
+      compare(service.barCalls.length, 1, "A second monitor flushes the first change")
+      compare(service.barCalls[0], "HDMI-A-2:true")
+      barLayout.applyPendingBar()
+      compare(service.barCalls[1], "eDP-1:false")
+      resetBars()
     }
     function barCard(name) {
       for (var i = 0; i < barLayout.children.length; i++)

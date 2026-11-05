@@ -1,5 +1,7 @@
 # Unreleased
 
+- Make a bar's on/off switch move smoothly. The switch now finishes its throw before the
+  bar is built or removed, which used to freeze it on the same thread.
 - Fix a window jumping to the next station when moved to another monitor with
   Super+Shift+Ctrl+arrow. Omarchy's bind on that key was never removed, so one press moved
   the window twice. Station now removes a replaced bind in any modifier order.
