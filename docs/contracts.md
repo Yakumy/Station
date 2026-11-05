@@ -611,8 +611,9 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   uses the output's full-screen card and stays clear of the bar on small screens.
 - Settings holds the two Hide switches, follow focus, panel position, grace delay,
   minimum stations, open apps and the installed version.
-- Text size runs `omarchy-display-text-size` and changes shell, GTK and terminal text
-  globally. The per-monitor control is Scale.
+- Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
+  `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
+  The per-monitor control is Scale.
 - Brightness reads and writes carry the selected connector, and a notice belongs to its
   control.
 

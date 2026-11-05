@@ -10,7 +10,7 @@ Item {
   property bool brightnessAvailable: false
   readonly property bool brightnessLoading: brightnessRead.running
   property var pendingBrightnessRequest: null
-  readonly property var textSizeStops: [9, 10, 11, 12, 14, 16, 20]
+  readonly property var textSizeStops: [9, 10, 11, 12, 13, 14, 16, 20]
   property int textSizePreviewIndex: -1
   property int queuedTextSize: -1
   onSelectedDisplayNameChanged: { brightnessAvailable = false; refreshBrightness() }

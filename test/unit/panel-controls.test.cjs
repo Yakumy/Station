@@ -10,7 +10,7 @@ function harness() {
     pendingBrightnessRequest: null,
     brightnessWrite: { running: false },
     brightnessDebounce: { restart() {} },
-    textSizeStops: [9, 10, 11, 12, 14, 16, 20], textSizePreviewIndex: -1,
+    textSizeStops: JSON.parse(source.match(/readonly property var textSizeStops: (\[[^\n]+\])/)[1]), textSizePreviewIndex: -1,
     queuedTextSize: -1, Style: { font: { baseSize: 12 } },
     textSizeWrite: { running: false },
   };
@@ -47,7 +47,7 @@ test('releasing the current text-size stop does not run the global font command'
   c.setTextSizeIndex(3);
   assert.equal(c.textSizeWrite.running, false);
   c.setTextSizeIndex(4);
-  assert.equal(c.textSizeWrite.command.at(-1), '14');
+  assert.equal(c.textSizeWrite.command.at(-1), '13');
   c.setTextSizeIndex(4);
   assert.equal(c.queuedTextSize, -1);
 });
