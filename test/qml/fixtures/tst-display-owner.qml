@@ -95,12 +95,21 @@ Item {
       reset(["eDP-1","HDMI-A-2"]);session.panelScreenName="HDMI-A-2"
       var flag='hl.monitor({ output = "eDP-1", disabled = true })\n'
       file("internal-monitor-disable.lua").readText=flag;file("internal-monitor-disable.lua").loaded()
-      preview("single","eDP-1");compare(session.keepDisableToggle,"")
+      // HDMI stays on, so Omarchy's recover has no reason to touch the flag.
+      preview("extend");compare(owner().parkedToggleSource,"");compare(session.keepDisableToggle,"")
       compare(session.keepPreview(),"started");compare(session.keepDisableToggle,flag)
       acknowledgeCandidates(false);compare(proc("sh").command[11],flag)
       session.settleKeep(0,"");compare(session.state,"idle")
       compare(session.applyDisplaySetting("eDP-1","scale",2),"started")
       compare(session.keepDisableToggle,"")
+    }
+    function test_internal_toggle_is_parked_when_no_external_remains() {
+      reset(["eDP-1","HDMI-A-2"]);session.panelScreenName="HDMI-A-2"
+      var flag='hl.monitor({ output = "eDP-1", disabled = true })\n'
+      file("internal-monitor-disable.lua").readText=flag;file("internal-monitor-disable.lua").loaded()
+      preview("single","eDP-1");compare(owner().parkedToggleSource,flag)
+      compare(session.revertPreview(""),"started");session.drain();session.closePanel()
+      compare(owner().parkedToggleSource,"")
     }
     function test_candidate_and_process_failure_callbacks_data() {return [
       {tag:"candidate",code:2},{tag:"configerrors",code:3},{tag:"source-conflict",code:4}]}

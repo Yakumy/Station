@@ -13,6 +13,7 @@ Item {
   property string stateDir: ""
   property string monitorsPath: ""
   property string internalDisablePath: ""
+  property string parkedTogglePath: ""
   property string candidatePath: ""
   property string plainCandidatePath: ""
   property string plainPath: ""
@@ -81,6 +82,7 @@ Item {
   property bool candidateReady: false
   property bool plainCandidateReady: false
   property string internalDisableSource: ""
+  property string parkedToggleSource: ""
   property string monitorsSource: ""
   property bool monitorsLoaded: false
   property string previewApplyLua: ""
@@ -89,6 +91,7 @@ Item {
   property string previewApplyFocusTarget: ""
   property string previewApplyActivateLua: ""
   property bool previewApplyMigrateFirst: false
+  property string previewApplyParkToggle: ""
   property string previewApplyPanelOrigin: ""
   property string previewApplyPanelTarget: ""
   property string pendingRevertReason: ""
@@ -206,6 +209,10 @@ Item {
       if (!displayDraft.some(function(display) { return display.name === target })) return "invalid"
       setDisplayValue(target, "enabled", true)
     }
+    // Single leaves the other outputs disabled, and the draft reads that back from
+    // the compositor. Leaving Single has to turn them on or nothing would change.
+    if (mode !== "single" && draftMode === "single")
+      displayDraft = displayDraft.map(function(display) { return Object.assign({}, display, { enabled: true }) })
     draftMode = mode
     draftSingleTarget = mode === "single" ? target : ""
     draftMirrorSource = mode === preferences.mode ? (preferences.mirrorSource || "") : ""
@@ -353,6 +360,8 @@ Item {
     previewApplyFocusTarget = previewFocusTarget(options)
     previewApplyActivateLua = activationRule(previewApplyFocusTarget)
     previewApplyMigrateFirst = previewApplyActivateLua !== ""
+    previewApplyParkToggle = parkedToggleSource ? ""
+      : MonitorsLua.disableToggleToPark(internalDisableSource, displayDraft, options)
     previewApplyPanelOrigin = panelScreenName
     previewApplyPanelTarget = panelWanted ? panelTransferTarget(options) : ""
     // KeyboardPanel owns dismiss surfaces on every output, including peers.
@@ -373,6 +382,7 @@ Item {
     previewApplyFocusTarget = ""
     previewApplyActivateLua = ""
     previewApplyMigrateFirst = false
+    previewApplyParkToggle = ""
     previewApplyPanelOrigin = ""
     previewApplyPanelTarget = ""
   }
@@ -394,6 +404,7 @@ Item {
     var expectedOutputs = previewApplyExpectedOutputs.slice()
     var focusTarget = previewApplyFocusTarget
     var activateLua = previewApplyActivateLua
+    var parkToggle = previewApplyParkToggle
     function applyMonitors() {
       if (root.operationState !== "previewing") return
       recordExpectedEvents({ kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 })
@@ -421,27 +432,68 @@ Item {
         else applyMonitors()
       }
       if (!focusTarget) { afterFocus(); return }
-      root.evalLua(Hypr.focusMonitor(focusTarget), function(code, output) {
+      root.focusOutput(focusTarget, activateLua !== "", function(focused) {
         if (root.operationState !== "previewing") return
-        if (code !== 0 || (output && output.trim() !== "ok")) {
+        if (!focused) {
           root.failPreviewApply("Could not focus the surviving display; preview was not applied.")
           return
         }
         afterFocus()
       })
     }
-    // A Single-to-Single switch can target an output that is currently off.
-    // Bring it up on its own, then focus it, and only then remove the old one.
-    recordExpectedEvents({ kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 })
-    if (!activateLua) { focusSurvivor(); return }
-    evalLua(activateLua, function(code, output) {
+    function activateSurvivor() {
       if (root.operationState !== "previewing") return
-      if (code !== 0 || (output && output.trim() !== "ok")) {
-        root.failPreviewApply("Could not enable the surviving display; preview was not applied.")
+      // A Single-to-Single switch can target an output that is currently off.
+      // Bring it up on its own, then focus it, and only then remove the old one.
+      recordExpectedEvents({ kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 })
+      if (!activateLua) { focusSurvivor(); return }
+      root.evalLua(activateLua, function(code, output) {
+        if (root.operationState !== "previewing") return
+        if (code !== 0 || (output && output.trim() !== "ok")) {
+          root.failPreviewApply("Could not enable the surviving display; preview was not applied.")
+          return
+        }
+        focusSurvivor()
+      })
+    }
+    if (!parkToggle) { activateSurvivor(); return }
+    enqueue(["sh", "-c", Transactions.parkToggle, "sh", internalDisablePath, parkedTogglePath, parkToggle], function(code) {
+      if (root.operationState !== "previewing") return
+      if (code !== 0) {
+        root.failPreviewApply("Could not hand off the laptop display Off setting; preview was not applied.")
         return
       }
-      focusSurvivor()
+      root.parkedToggleSource = parkToggle
+      activateSurvivor()
     })
+  }
+
+  // hl.monitor returns before a re-enabled output exists. A focus sent straight
+  // after it can report "monitor not found", so a just-activated target gets a
+  // bounded wait. Anything else, or an output that never appears, is a failure.
+  function focusOutput(name, activated, done) {
+    focusRetry.deadline = activated ? Date.now() + 2000 : 0
+    attemptFocus(name, done)
+  }
+
+  function attemptFocus(name, done) {
+    evalLua(Hypr.focusMonitor(name), function(code, output) {
+      var reply = String(output || "").trim()
+      if (code === 0 && (!reply || reply === "ok")) { done(true); return }
+      if (reply.indexOf("monitor not found") !== -1 && Date.now() < focusRetry.deadline) {
+        focusRetry.target = name
+        focusRetry.done = done
+        focusRetry.restart()
+        return
+      }
+      done(false)
+    })
+  }
+
+  function restoreParkedToggle(done) {
+    if (!parkedToggleSource) { done(); return }
+    parkedToggleSource = ""
+    enqueue(["sh", "-c", Transactions.unparkToggle, "sh", parkedTogglePath, internalDisablePath], function() { done() })
   }
 
   function finishPreviewApply() {
@@ -497,6 +549,7 @@ Item {
 
   function abandonPreview(reason) {
     previewCountdown.stop()
+    focusRetry.stop()
     invalidatePreviewOperation()
     clearPanelEvacuation()
     clearPreviewApplyStage()
@@ -506,8 +559,10 @@ Item {
     previewBusy = false
     setOperationState(migrationPhase ? "migrating" : "idle")
     reportError(reason || "External display change accepted; preview cancelled.")
-    enqueue(["rm", "-f", stateDir + "/preview.token"], function() {
-      root.refresh(true, function() { root.applyRuntime() })
+    restoreParkedToggle(function() {
+      root.enqueue(["rm", "-f", root.stateDir + "/preview.token"], function() {
+        root.refresh(true, function() { root.applyRuntime() })
+      })
     })
   }
 
@@ -567,18 +622,20 @@ Item {
       root.pendingDisplayConfig = null
       if (root.previewBaseline && root.previewBaseline.panelScreenName)
         retainPanel(root.previewBaseline.panelScreenName)
-      root.enqueue(["rm", "-f", root.stateDir + "/preview.token"], function() {
-        root.enqueue(["hyprctl", "reload"], function(code) {
-          if (code !== 0) reportError("Could not reload the saved monitor layout.")
-          root.restoreAppliedLayout()
+      root.restoreParkedToggle(function() {
+        root.enqueue(["rm", "-f", root.stateDir + "/preview.token"], function() {
+          root.enqueue(["hyprctl", "reload"], function(code) {
+            if (code !== 0) reportError("Could not reload the saved monitor layout.")
+            root.restoreAppliedLayout()
+          })
         })
       })
       if (reason) reportError(reason)
     }
     function focusSurvivor() {
       if (!focusTarget) { reloadSavedLayout(); return }
-      root.evalLua(Hypr.focusMonitor(focusTarget), function(code, output) {
-        if (code !== 0 || (output && output.trim() !== "ok")) {
+      root.focusOutput(focusTarget, activateLua !== "", function(focused) {
+        if (!focused) {
           failPreparation("Could not focus the saved display; layout was not restored.")
           return
         }
@@ -691,17 +748,21 @@ Item {
       reportError(code === 4 ? "Configuration changed while saving; newer edits were preserved." : code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
         : "Could not save the monitor layout.")
       pendingDisplayConfig = null
-      if (code === 3 || code === 4) restoreAppliedLayout()
-      else if (failedKind !== "preview") {
-        keepOptions = null
-        setOperationState("idle")
-        syncDisplayDraft()
-      }
-      else enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
+      var wasParked = parkedToggleSource !== ""
+      restoreParkedToggle(function() {
+        if ((code === 3 || code === 4) && !wasParked) root.restoreAppliedLayout()
+        else if (failedKind !== "preview") {
+          root.keepOptions = null
+          root.setOperationState("idle")
+          root.syncDisplayDraft()
+        }
+        else root.enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
+      })
       return
     }
     var requestedDisplays = pendingDisplayConfig ? pendingDisplayConfig.displays : []
     var requestedOptions = keepOptions
+    settleParkedToggle(requestedDisplays, requestedOptions)
     publishDisplayOptions(keepOptions)
     pendingDisplayConfig = null
     previewApplied = null
@@ -724,6 +785,15 @@ Item {
       reconcileWorkspace()
       root.armScreenHealthCheck()
     })
+  }
+
+  function settleParkedToggle(displays, options) {
+    if (!parkedToggleSource) return
+    if (MonitorsLua.disableToggleToClear(parkedToggleSource, displays, options)) {
+      // The accepted layout uses this output, so the flag stays gone.
+      parkedToggleSource = ""
+      enqueue(["rm", "-f", parkedTogglePath], function() {})
+    } else restoreParkedToggle(function() {})
   }
 
   function removeStationBlock() {
@@ -817,6 +887,15 @@ Item {
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: keepTransaction.errors = text }
     onRunningChanged: if (running) errors = ""
     onExited: function(code) { root.finishKeep(code, errors) }
+  }
+
+  Timer {
+    id: focusRetry
+    interval: 100
+    property real deadline: 0
+    property string target: ""
+    property var done: null
+    onTriggered: if (root.operationState === "previewing") root.attemptFocus(target, done)
   }
 
   Timer {

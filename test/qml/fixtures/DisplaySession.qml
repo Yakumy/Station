@@ -43,6 +43,7 @@ Item {
   property string stateDir: "/isolated"
   property string monitorsPath: "/isolated/monitors.lua"
   property string internalDisablePath: "/isolated/internal-monitor-disable.lua"
+  property string parkedTogglePath: "/isolated/internal-monitor-disable.parked"
   property string candidatePath: "/isolated/monitors.lua.candidate"
   property string plainCandidatePath: "/isolated/monitors-block.plain.lua.candidate"
   property string plainPath: "/isolated/monitors-block.plain.lua"

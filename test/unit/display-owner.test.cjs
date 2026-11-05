@@ -98,6 +98,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
     const calls=[];
     const c={started:false,dirsReady:true,configLoaded:true,stateLoaded:true,previewLoaded:false,
       mappingLoaded:true,monitorsLoaded:true,previewFound:found,stateDir:'/temporary',
+      parkedTogglePath:'/temporary/parked',internalDisablePath:'/temporary/flag',Transactions:require('../../lib/platform/Transactions.js'),
       persisted:{lastStation:3,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
@@ -107,7 +108,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
     start();assert.equal(c.started,false);assert.deepEqual(calls,[]);
     c.previewLoaded=true;start();start();
     assert.equal(c.currentStation,3);
-    assert.deepEqual(copy(calls),found ? [['rm','-f','/temporary/preview.token'],['hyprctl','reload'],'runtime'] : ['runtime']);
+    assert.deepEqual(copy(calls),found ? [['rm','-f','/temporary/preview.token'],['sh','-c',c.Transactions.unparkToggle+'hyprctl reload\n','sh','/temporary/parked','/temporary/flag'],'runtime'] : ['runtime']);
   }
 });
 
@@ -146,10 +147,10 @@ test('root startup waits for owner load gates and routes stale-token recovery on
       c.Quickshell.execDetached=args=>{
         detached.push(copy(args));
         if(args[0]==='rm'){assert.deepEqual(copy(args),['rm','-f',token]);rmSync(token);}
-        else assert.deepEqual(copy(args),['hyprctl','reload']);
+        else assert.equal(args[2],c.Transactions.unparkToggle+'hyprctl reload\n');
       };
       c.maybeStart();restarted.drain();
-      assert.deepEqual(detached,[['rm','-f',token],['hyprctl','reload']]);
+      assert.deepEqual(detached.map(args=>args[0]),['rm','sh']);
       assert.equal(existsSync(token),false);assert.equal(c.previewBaseline,null);
       assert.deepEqual(restarted.windows().map(w=>[w.workspace.id,w.monitor]),initial.map(w=>[w.workspace.id,w.monitor]));
       const final=JSON.parse(readFileSync(journal,'utf8'));

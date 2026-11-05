@@ -67,6 +67,14 @@ would block any intentional change. Their scenarios remain as behavior checks.
 Version folders made readers work out which document superseded which. The documents
 now describe current behavior only, and Git keeps the history.
 
+## Features left out of the original specification
+
+The original specification asked for these two. The maintainer declined them on
+2026-11-05, so they are not gaps.
+
+- The panel does not open when a monitor connects.
+- A fourth output is reported only through `status`. The panel shows no message.
+
 ## Historical records
 
 These records were removed from the tree. Read them with
@@ -86,16 +94,12 @@ These records were removed from the tree. Read them with
 
 These need a maintainer's decision. The code currently behaves as stated.
 
-1. **Fourth output message.** Station excludes a fourth independent output from
-   management and reports it in `status`. The panel shows no explanation yet. The
-   original specification asked for one.
-2. **Panel on hotplug.** The panel does not open when a monitor connects. The original
-   specification asked it to open on Displays.
-3. **Remove Station block.** `DisplayController.removeStationBlock()` exists and has
-   tests, but no control calls it. Add a Settings control or delete the method.
-4. **Wallpaper poll interval.** Station polls the Omarchy background every 250 ms. An
+1. **Remove Station block.** `DisplayController.removeStationBlock()` exists and has
+   tests, but no control calls it. The maintainer declined a Settings control. Delete
+   the method or keep it.
+2. **Wallpaper poll interval.** Station polls the Omarchy background every 250 ms. An
    earlier document said 1.5 seconds. Measure the cost, then choose one.
-5. **Panel control lifetime.** A brightness or text-size request ends with its panel
+3. **Panel control lifetime.** A brightness or text-size request ends with its panel
    instance. Decide whether it must survive a bar rebuild.
-6. **Hardware coverage.** Three outputs, docks, lid and cold login need hardware and an
+4. **Hardware coverage.** Three outputs, docks, lid and cold login need hardware and an
    operator. See [Coverage gaps](testing.md#coverage-gaps).

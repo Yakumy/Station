@@ -299,3 +299,18 @@ test('an external reload cancels preview without restoring stale monitor intent'
   assert.equal(c.config.singleTarget, 'B');
   assert.deepEqual(c.workspaceMap.outputs, ['B']);
 });
+
+for (const mode of ['extend', 'mirror'])
+  test(`leaving a saved Single for ${mode} turns the other output back on`, () => {
+    const h = harness(), c = h.c;
+    c.setModeValue('single', 'A'); h.drain();
+    c.keepPreview(); h.drain();
+    h.live().find(m => m.name === 'B').disabled = true;
+    c.monitors = copy(h.live()); c.syncDisplayDraft();
+    assert.equal(c.displayDraft.find(d => d.name === 'B').enabled, false, 'the draft reads Single back as off');
+    assert.equal(c.setModeValue(mode, ''), 'started');
+    assert.equal(c.displayDraft.every(d => d.enabled), true);
+    h.drain();
+    assert.equal(h.live().find(m => m.name === 'B').disabled, false);
+    assert.equal(c.previewApplied.options.enabled.length, 2);
+  });

@@ -102,7 +102,7 @@ moves its open panel to a surviving screen when needed. Scale, resolution, and
 refresh changes save directly through the checked configuration transaction.
 If you disabled the laptop display with `omarchy-hyprland-monitor-internal off`,
 Station follows that state. Turning it On in Station and pressing **Keep** clears
-Omarchy's Off toggle and saves your new layout. Revert leaves the toggle intact.
+Omarchy's Off toggle and saves your new layout. Revert keeps the toggle.
 
 > [!NOTE]
 > Station manages at most three independent outputs. Station reports additional

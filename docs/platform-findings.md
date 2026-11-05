@@ -1074,3 +1074,24 @@ user tests; the automated checks do not establish those results.
 - [LIVE] **Trap:** several directory imports under one QML qualifier fail under the real
   Quickshell loader with `X is not a type`, while offscreen `qmltestrunner` harnesses
   pass. Give each directory its own qualifier. Only `test/lint/compile-qml.py` detects it.
+
+## Internal Off flag and re-enabled outputs (2026-11-05)
+
+- [SRC] `omarchy-hyprland-monitor-watch` runs `omarchy-hyprland-monitor-clamshell` on
+  every monitor event, then 1, 3 and 7 seconds later, and every 2 seconds on a laptop
+  with an active external output. Clamshell calls `monitor-internal recover`, which
+  deletes the Off flag and runs `hyprctl reload` when no external output is active.
+- [LIVE] With the flag present and Single `HDMI-A-2` saved, a preview of Single `eDP-1`
+  showed `eDP-1` on and `HDMI-A-2` removed for about a second. The flag then vanished,
+  the saved layout came back and the preview ended with `Display connection changed`.
+  The same preview without the flag worked.
+- [LIVE] Moving the flag out of the toggle directory fires `configreloaded` when
+  autoreload is on. Moving it back fires nothing.
+- [LIVE] `hyprctl eval` of a full `hl.monitor` rule answers `ok` in about 8 ms, before the
+  output exists. Six raw enable-then-focus runs on `eDP-1`: three answered `monitor not
+  found` first and all three succeeded on the next attempt, within 0.8 seconds. This is
+  what `Could not focus the surviving display` reported.
+- [LIVE] After a saved Single, Extend previewed with no change: the draft reads the other
+  output as disabled, and `setModeValue` did not enable it. This needs no flag. Existing
+  tests missed it because they left Single inside one preview session, where the draft
+  still had both outputs enabled.

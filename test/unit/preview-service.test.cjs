@@ -18,7 +18,7 @@ for (const reason of ['', 'Preview timed out.']) {
       panelEvacuationWaiting: 0, panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
       previewApplyLua: '', previewApplyStaged: false, previewApplyExpectedOutputs: [],
       previewApplyFocusTarget: '', previewApplyActivateLua: '',
-      previewApplyMigrateFirst: false,
+      previewApplyMigrateFirst: false, previewApplyParkToggle: '', parkedToggleSource: '',
       previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
       pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
       pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
@@ -39,7 +39,7 @@ for (const reason of ['', 'Preview timed out.']) {
     };
     c.root = c;
     for (const name of ['clearPanelEvacuation', 'clearPreviewApplyStage', 'revertPreview',
-      'continueRevertPreview', 'restoreAppliedLayout', 'syncDisplayDraft']) {
+      'continueRevertPreview', 'restoreAppliedLayout', 'syncDisplayDraft', 'restoreParkedToggle']) {
       const start = source.indexOf('  function ' + name + '(');
       const end = source.indexOf('\n  function ', start + 1);
       c[name] = ownerFunction(name,c) || runInNewContext('(' + source.slice(start, end).trim() + ')', c);

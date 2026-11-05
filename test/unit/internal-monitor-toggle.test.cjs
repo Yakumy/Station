@@ -53,7 +53,7 @@ test('service requests toggle handoff only at Keep, never a side-control save',(
   save('candidate','plain','preview'); assert.equal(c.keepDisableToggle,flag);
   save('candidate','plain','control'); assert.equal(c.keepDisableToggle,'');
   const preview=source.slice(source.indexOf('  function previewLayout('),source.indexOf('  function keepPreview('));
-  assert.doesNotMatch(preview,/internalDisable|keepDisableToggle/);
+  assert.doesNotMatch(preview,/keepDisableToggle/);
 });
 test('Keep commits both files with one explicit reload and restores autoreload',t=>{
   const f=fixture(t),r=f.run(); assert.equal(r.status,0,r.stderr);
@@ -113,4 +113,92 @@ test('installed omarchy-hyprland-monitor-internal off generates the supported fl
   assert.equal(r.status,0,r.stderr);
   const actual=fs.readFileSync(join(toggles,'internal-monitor-disable.lua'),'utf8');
   assert.equal(actual,flag); assert.equal(L.disableToggleToClear(actual,displays,options),actual);
+});
+
+test('the Off flag is parked only when a preview leaves no external output enabled',()=>{
+  const park=(source,opts)=>L.disableToggleToPark(source,displays,opts);
+  assert.equal(park(flag,{mode:'single',singleTarget:'eDP-1',enabled:['eDP-1','HDMI-A-2']}),flag);
+  assert.equal(park(flag,{mode:'extend',enabled:['eDP-1']}),flag);
+  assert.equal(park(flag,options),'','an external stays active, so recover is a no-op');
+  assert.equal(park(flag,{mode:'mirror',enabled:['eDP-1','HDMI-A-2']}),'','Omarchy counts a mirror as active');
+  assert.equal(park(flag,{mode:'single',singleTarget:'HDMI-A-2',enabled:['eDP-1','HDMI-A-2']}),'');
+  for (const source of ['',flag+'-- personal\n',flag.replace('eDP-1','HDMI-A-2')])
+    assert.equal(park(source,{mode:'single',singleTarget:'eDP-1',enabled:['eDP-1','HDMI-A-2']}),'');
+});
+function parkRun(f,expected=flag,extra={}) {
+  return spawnSync('sh',['-c',T.parkToggle,'sh',f.toggle,join(f.dir,'parked'),expected],{env:{...f.env,...extra},encoding:'utf8'});
+}
+test('parking moves the exact flag with watches suspended and restores autoreload',t=>{
+  const f=fixture(t),r=parkRun(f); assert.equal(r.status,0,r.stderr);
+  assert.equal(fs.existsSync(f.toggle),false); assert.equal(fs.readFileSync(join(f.dir,'parked'),'utf8'),flag);
+  const calls=fs.readFileSync(f.log,'utf8');
+  assert.match(calls,/disable_autoreload=true[\s\S]*disable_autoreload=false/);
+  assert.doesNotMatch(calls,/reload\n/,'parking must not reload the saved layout');
+  fs.rmSync(f.log); assert.equal(parkRun(f).status,4);
+  const g=fixture(t); assert.equal(parkRun(g,'hl.monitor({ output = "eDP-1", disabled = true }) -- other\n').status,4);
+  assert.equal(fs.readFileSync(g.toggle,'utf8'),flag,'a changed flag is preserved');
+  assert.deepEqual(fs.readdirSync(g.dir).filter(n=>/parked/.test(n)),[]);
+});
+test('parking restores an already suspended autoreload as suspended',t=>{
+  const f=fixture(t); assert.equal(parkRun(f,flag,{TEST_AUTO:'true'}).status,0);
+  assert.match(fs.readFileSync(f.log,'utf8'),/disable_autoreload=true\}\}\)\n$/);
+});
+test('unparking restores the flag once and never replaces a newer one',t=>{
+  const f=fixture(t),parked=join(f.dir,'parked'),run=()=>spawnSync('sh',['-c',T.unparkToggle,'sh',parked,f.toggle],{encoding:'utf8'});
+  assert.equal(parkRun(f).status,0); assert.equal(run().status,0);
+  assert.equal(fs.readFileSync(f.toggle,'utf8'),flag); assert.equal(fs.existsSync(parked),false);
+  assert.equal(run().status,0,'unparking with nothing parked is a no-op'); assert.equal(fs.readFileSync(f.toggle,'utf8'),flag);
+  fs.writeFileSync(parked,flag); fs.writeFileSync(f.toggle,'newer\n'); assert.equal(run().status,0);
+  assert.equal(fs.readFileSync(f.toggle,'utf8'),'newer\n'); assert.equal(fs.existsSync(parked),false);
+});
+test('the watchdog returns a parked flag before it reloads',t=>{
+  const f=fixture(t),parked=join(f.dir,'parked');
+  assert.equal(parkRun(f).status,0); fs.rmSync(f.log);
+  f.command('stat','printf 0\n');
+  const r=spawnSync('sh',['-c',T.watchdog,'sh','20',f.token,parked,f.toggle],{env:f.env,encoding:'utf8'}); assert.equal(r.status,0,r.stderr);
+  assert.equal(fs.readFileSync(f.toggle,'utf8'),flag); assert.equal(fs.readFileSync(f.log,'utf8'),'reload\n');
+});
+function controller(extra={}) {
+  const {ownerFunction}=require('../helpers/display-owner.cjs');
+  const calls=[],jobs=[];
+  const c={operationState:'previewing',parkedTogglePath:'/parked',internalDisablePath:'/flag',parkedToggleSource:'',internalDisableSource:flag,
+    previewApplyLua:'final',previewApplyStaged:true,previewApplyExpectedOutputs:['HDMI-A-2'],previewApplyFocusTarget:'eDP-1',
+    previewApplyActivateLua:'activate',previewApplyMigrateFirst:true,previewApplyParkToggle:flag,MonitorsLua:L,Transactions:T,
+    Hypr:{focusMonitor:n=>'focus:'+n},recordExpectedEvents(){calls.push('expect')},reconcileWorkspace(){calls.push('reconcile')},
+    enqueue(a,done){calls.push(a[2]===T.parkToggle?'park':a[2]===T.unparkToggle?'unpark':a.join(' '));jobs.push(()=>done&&done(c.code||0,''))},
+    evalLua(l,done){calls.push(l);jobs.push(()=>done(0,c.replies&&/focus/.test(l)?c.replies.shift():'ok'))},
+    failPreviewApply(m){calls.push('fail:'+m)},
+    focusRetry:{deadline:0,target:'',done:null,stop(){},restart(){jobs.push(()=>c.attemptFocus(this.target,this.done))}},...extra};
+  c.root=c;
+  for (const name of ['continuePreviewApply','focusOutput','attemptFocus','restoreParkedToggle','settleParkedToggle']) c[name]=ownerFunction(name,c);
+  return {c,calls,drain(){while(jobs.length)jobs.shift()();}};
+}
+test('a preview parks the flag before it enables the target or removes the external',()=>{
+  const {c,calls,drain}=controller(); c.continuePreviewApply(); drain();
+  assert.deepEqual(calls,['park','expect','activate','focus:eDP-1','reconcile']);
+  assert.equal(c.parkedToggleSource,flag);
+});
+test('a failed park stops the preview before any output changes',()=>{
+  const {c,calls,drain}=controller({code:4}); c.continuePreviewApply(); drain();
+  assert.equal(calls.length,2); assert.match(calls[1],/^fail:/); assert.equal(c.parkedToggleSource,'');
+});
+test('focus waits for a just-enabled output and fails on anything else',()=>{
+  const notFound='warning: =[C]:-1: hl.focus.monitor: monitor not found';
+  let h=controller({replies:[notFound,notFound,'ok']}),result;
+  h.c.focusOutput('eDP-1',true,v=>{result=v}); h.drain(); assert.equal(result,true);
+  assert.equal(h.calls.filter(l=>/focus/.test(l)).length,3);
+  h=controller({replies:[notFound,'ok']}); h.c.focusOutput('eDP-1',false,v=>{result=v}); h.drain();
+  assert.equal(result,false,'an output that was already on gets no wait');
+  h=controller({replies:['some other failure','ok']}); h.c.focusOutput('eDP-1',true,v=>{result=v}); h.drain(); assert.equal(result,false);
+  h=controller({replies:[notFound,'ok']}); h.c.focusOutput('eDP-1',true,v=>{result=v}); h.c.focusRetry.deadline=0; h.drain();
+  assert.equal(result,false,'the wait is bounded');
+});
+test('Keep drops a parked flag only when the accepted layout uses that output',()=>{
+  const singleInternal={mode:'single',singleTarget:'eDP-1',enabled:['eDP-1','HDMI-A-2']};
+  const singleExternal={mode:'single',singleTarget:'HDMI-A-2',enabled:['eDP-1','HDMI-A-2']};
+  let h=controller({parkedToggleSource:flag}); h.c.settleParkedToggle(displays,singleInternal); h.drain();
+  assert.deepEqual(h.calls,['rm -f /parked']); assert.equal(h.c.parkedToggleSource,'');
+  h=controller({parkedToggleSource:flag}); h.c.settleParkedToggle(displays,singleExternal); h.drain();
+  assert.deepEqual(h.calls,['unpark']); assert.equal(h.c.parkedToggleSource,'');
+  h=controller(); h.c.settleParkedToggle(displays,singleInternal); h.drain(); assert.deepEqual(h.calls,[]);
 });

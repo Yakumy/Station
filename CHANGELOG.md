@@ -20,6 +20,13 @@
 - Respect global blur and outer gaps instead of restoring Station-only overrides.
 - Cancel previews on external configuration changes; compare source files before
   saving and preserve newer edits during rollback.
+- Fix Extend and Mirror doing nothing after a saved Single: leaving Single now turns the
+  other outputs back on.
+- Fix Single on the laptop display after `omarchy-hyprland-monitor-internal off`: park
+  Omarchy's Off flag during the preview so its recovery cannot cancel it. Revert returns
+  the flag.
+- Fix intermittent `Could not focus the surviving display` by waiting up to 2 seconds for
+  an output that was just enabled.
 - Fix On → Keep after `omarchy-hyprland-monitor-internal off`: hand off the
   generated Off toggle during the checked save, preserving Revert and rollback.
 - Restore direct Windows slider application on release: save with file watching

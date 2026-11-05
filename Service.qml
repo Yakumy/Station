@@ -55,6 +55,8 @@ Item {
   readonly property alias configLoaded: store.configLoaded
   readonly property alias stateDir: store.stateDir
   readonly property string monitorsPath: Quickshell.env("HOME") + "/.config/hypr/monitors.lua"
+  readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
+  readonly property string parkedTogglePath: stateDir + "/internal-monitor-disable.parked"
   readonly property alias monitors: compositor.monitors
   readonly property alias clients: compositor.clients
   readonly property alias currentStation: stations.currentStation
@@ -255,7 +257,8 @@ Item {
     id: displayController
     stateDir: root.stateDir
     monitorsPath: root.monitorsPath
-    internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
+    internalDisablePath: root.internalDisablePath
+    parkedTogglePath: root.parkedTogglePath
     candidatePath: root.stateDir + "/monitors.lua.candidate"
     plainCandidatePath: root.stateDir + "/monitors-block.plain.lua.candidate"
     plainPath: root.stateDir + "/monitors-block.plain.lua"
@@ -311,7 +314,8 @@ Item {
     applyRuntime: function() { root.applyRuntime() }
     armScreenHealthCheck: function() { screenRecovery.armScreenHealthCheck() }
     launchWatchdog: function() {
-      Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", root.stateDir + "/preview.token"])
+      Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", root.stateDir + "/preview.token",
+        root.parkedTogglePath, root.internalDisablePath])
     }
     reportError: function(message) { root.layoutError = message }
     ready: function() { root.maybeStart() }
@@ -518,7 +522,8 @@ Item {
     stations.currentStation = persisted.lastStation
     if (displayController.previewFound) {
       Quickshell.execDetached(["rm", "-f", stateDir + "/preview.token"])
-      Quickshell.execDetached(["hyprctl", "reload"])
+      Quickshell.execDetached(["sh", "-c", Transactions.unparkToggle + "hyprctl reload\n", "sh",
+        parkedTogglePath, internalDisablePath])
     }
     displayController.migrateMonitorPrecedence(function() { compositor.refresh(true, function() {
       applyRuntime()

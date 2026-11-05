@@ -362,13 +362,41 @@ exact mode string.
 ### Internal monitor Off flag
 
 Omarchy's `internal-monitor-disable.lua` is a shared control. Station observes it and
-does not change it during observation, preview, Revert, timeout or side-control saves.
+does not change it during observation, Revert, timeout or side-control saves, or during
+a preview that leaves an external output enabled.
 
 When the user turns that output on and presses **Keep**, Station clears only the exact
 recognized flag in a checked two-file transaction: compare both sources, suspend
 autoreload, back up with a non-`.lua` suffix, remove the flag, save, reload once, and
 restore autoreload on every exit. Failure restores only files that newer edits have not
 replaced. Modified or unrecognized toggle Lua is preserved.
+
+A preview that leaves **no external output enabled** cannot leave the flag in place.
+Omarchy's `omarchy-hyprland-monitor-internal recover` runs on every monitor event,
+deletes the flag as soon as no external output is active, and reloads, which replaces
+the preview with the saved layout. For that case only, Station parks the exact flag in
+its state directory before any output changes, with autoreload suspended, because
+removing a loaded file triggers a watched reload.
+
+| Outcome | Parked flag |
+| --- | --- |
+| Keep, the internal output is on | Deleted |
+| Keep, the internal output is off | Returned |
+| Revert, timeout, cancelled preview, failed Keep | Returned before the reload |
+| Watchdog, or a restart that finds a preview token | Returned before the reload |
+
+A parked flag never replaces a flag written since.
+
+### Enabling outputs
+
+`hl.monitor` returns before a re-enabled output exists, so a focus sent straight after it
+can answer `monitor not found`. Station retries that exact answer for up to 2 seconds,
+only for an output it just enabled. Any other answer fails the preview.
+
+Single reads back from the compositor as every other output disabled. Leaving Single
+for Extend or Mirror therefore turns on **every** connected output. An output that was
+switched off with its card before Single comes back on, and the user can turn it off
+again.
 
 ### Screen recovery
 

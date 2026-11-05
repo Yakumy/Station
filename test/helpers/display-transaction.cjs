@@ -38,13 +38,14 @@ function harness({ capture = false } = {}) {
     panelEvacuationFrom: '', panelEvacuationTo: '', panelEvacuationPurpose: '',
     previewApplyLua: '', previewApplyStaged: false, previewApplyExpectedOutputs: [],
     previewApplyFocusTarget: '', previewApplyActivateLua: '',
-    previewApplyMigrateFirst: false,
+    previewApplyMigrateFirst: false, previewApplyParkToggle: '', parkedToggleSource: '',
     previewApplyPanelOrigin: '', previewApplyPanelTarget: '',
     pendingRevertReason: '', pendingRevertPanelTarget: '', pendingRevertPanelOrigin: '',
     pendingRevertFocusTarget: '', pendingRevertActivateLua: '',
-    stateDir: '/fake-state', monitorsSource: '', internalDisableSource: '', draftMirrorSource: '', previewObservedSignature: '',
+    stateDir: '/fake-state', parkedTogglePath: '/fake-state/parked', internalDisablePath: '/fake-toggle', monitorsSource: '', internalDisableSource: '', draftMirrorSource: '', previewObservedSignature: '',
     configGeneration: 0, appliedGeneration: 0, lastTopologyMs: 0,
     previewCountdown: { running: false, restart() { this.running = true; }, stop() { this.running = false; } },
+    focusRetry: { deadline: 0, target: '', done: null, stop() {}, restart() { jobs.push(() => c.attemptFocus(this.target, this.done)); } },
     removalGrace: { running: false, stop() { this.running = false; } },
     reloadDebounce: { stop() {}, restart() { jobs.push(() => c.applyRuntime()); } },
     migrationRetry: { restart() { jobs.push(() => c.reconcile()); } },
@@ -201,7 +202,7 @@ function harness({ capture = false } = {}) {
       screen:c.panelScreenName,serial:c.panelEvacuationSerial,waiting:c.panelEvacuationWaiting,
       clients:c.clients,live:live,windows:windows,error:c.layoutError };
   }
-  return { c, drain, writes, trace, snapshot, monitorCalls, order, topologyEvents, event, windows: () => copy(windows),
+  return { c, live: () => live, drain, writes, trace, snapshot, monitorCalls, order, topologyEvents, event, windows: () => copy(windows),
     setWindows(value) { windows = copy(value); },
     setMonitors(value) { live = copy(value); c.monitors = copy(value); } };
 }

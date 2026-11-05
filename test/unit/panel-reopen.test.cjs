@@ -133,7 +133,7 @@ test('a monitor removal closes and acknowledges the old output before reopening 
   assert.match(service, /function requestPanelEvacuation\(from, to, purpose\)/);
   assert.match(service, /panelEvacuationWaiting = panelEvacuationSerial \+ 1/);
   assert.match(service, /panelEvacuationSerial = panelEvacuationWaiting/);
-  assert.match(displayOwner, /evalLua\(Hypr\.focusMonitor\(focusTarget\)/);
+  assert.match(displayOwner, /root\.focusOutput\(focusTarget, activateLua !== \"\"/);
   assert.ok(displayOwner.indexOf('retainPanel(target)') > displayOwner.indexOf('root.evalLua(lua'),
     'the destination panel is not reopened until the monitor rule succeeds');
   assert.match(panel, /function closeForMonitorTransfer\(serial, screenName\)/);
