@@ -1,5 +1,8 @@
 # Unreleased
 
+- Reorganize the code without changing behavior or persisted formats: Service is now a
+  composition root, runtime code lives in feature folders, all checks live under `test/`
+  with one runner, and all documentation lives in one `docs/` set.
 - Restore wallpaper image selection through the replacement-bar bridge.
 - Enable key capture on the opened Keybindings tab and return to Wallpaper after
   the image chooser closes. Name tab identities without changing numeric IPC.
@@ -23,7 +26,7 @@
   suspended, remove the fixed one-second wait, and avoid full reload cursor jumps.
 - Fix Windows sliders jumping back during a save: retain the selection through
   dragging and applied-value read-back, including replacement-bar snapshots.
-- See [v3 contract](docs/v3/SYSTEM-AUTHORITY.md) for semantics and hardware limits.
+- See [system authority](docs/contracts.md#system-authority) for semantics and hardware limits.
 
 ## Earlier development history
 

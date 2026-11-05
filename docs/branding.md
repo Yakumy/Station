@@ -97,6 +97,6 @@ orange slot.
 
 This document governs branding assets and the optional Station desktop theme.
 The running plugin still uses Omarchy's `qs.Commons` color tokens and follows
-the user's selected theme, as required by the [design system](v2/DESIGN-SYSTEM.md).
+the user's selected theme, as required by the [design system](design-system.md).
 Do not hardcode this branding palette into plugin QML. Apply the Station desktop
 theme to obtain these colors for recordings through the normal theme tokens.

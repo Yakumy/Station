@@ -1,32 +1,28 @@
-# Station — Design System (v2)
+# Design system
 
 For promotional artwork and the optional Station desktop theme, see the
-[Station branding palette](../BRANDING.md). Runtime plugin UI continues to use
+[Station branding palette](branding.md). Runtime plugin UI continues to use
 the selected Omarchy theme's tokens as specified here.
 
-Supersedes the earlier draft in this repo. Tags: **[V]** confirmed in this codebase or in M0 testing, **[VERIFY]** Codex must confirm the exact token/name against the installed `qs.Commons`/`qs.Ui` before relying on it, **[DECISION]** a rule, not a fact.
+Tags: **[V]** confirmed in this codebase or in platform testing, **[VERIFY]** confirm the exact token against the installed `qs.Commons` and `qs.Ui`, **[DECISION]** a signed-off choice.
 
-## 0. Why this version exists
-
-The previous draft specified its own hex palette, its own `colors.toml` blending pipeline, 4–10px rounded corners, and drop-shadow/glow selection halos. None of that matches Omarchy, which M0 already proved exposes live-updating QML singletons (`Color.popups.*`, `Color.menu.*`, `Color.bar.*`, `Color.foreground`, `Color.accent`, `Color.urgent`) and a sharp-cornered, flat, hairline-separated visual language with no shadows or glows [V, §8.6 and §8.5 of `PLATFORM-FINDINGS.md`]. Station must look like it ships with Omarchy, not like a themed web app bolted onto it.
+## 0. The rule
 
 **[DECISION] Station owns zero color or radius of its own.** Every value in this document is a token name or a rule, never a literal. A theme change must repaint every pixel with no restart, because the host already does this for every other panel.
 
 **A comment explaining why a private color or radius constant is "necessary" is not an exception to this rule — it's a sign the component is missing from `qs.Ui`/`qs.Commons`.** Find the existing host component or get the author's sign-off to add one; don't derive a private token to paper over the gap. An audit of this codebase found exactly this pattern: a block of Station-owned radii and nine computed colors (`surfaceOne/Two/Three`, `accentMuted`, `accentHover` via `Qt.lighter`, dim-text variants, a halo radius), each justified by its own comment. All of it must be deleted and replaced with aliases to the tokens in §4, with the one exception noted there for dim text.
 
-## 1. The bug this document fixes
+## 1. Actions and choices
 
-`Panel.qml` calls the exact same `Ui.Button { selected: … }` for Scale, Role, **and** Keep/Revert/Replace. That component renders `selected: true` as a strong, filled, high-emphasis state — correct for a button that commits an action, wrong for a chip that is just one of several peers. The result: **Primary** (merely a choice) looks identical in weight to **Keep** (an action with consequences), and **Secondary** looks like a disabled or unimportant option next to it, when really both are just unselected peers.
-
-**[DECISION] These are two different components with two different jobs, and the system must give them two different looks:**
+**[DECISION] Actions and choices are two components with two jobs, and they must look different:**
 
 | Role | Used for | Selected look |
 |---|---|---|
 | **Action** | Keep, Revert, Pick another key, Replace and unbind it, Save | Filled: `Color.accent` background, `Color.popups.background` (or the theme's contrasting foreground) text. This is the *only* place a solid accent fill is allowed. |
-| **Choice: chip group** (the 4 modifier-key toggles) | independently toggled key modifiers | `Station/ChoiceChip.qml` wraps the host's `Ui.Button` choice chrome. Scale and Role no longer use chips in the approved larger-panel render: Scale is a notched slider, Role is a compact number menu in each monitor card. |
+| **Choice: chip group** (the 4 modifier-key toggles) | independently toggled key modifiers | `lib/panel/ChoiceChip.qml` wraps the host's `Ui.Button` choice chrome. Scale and Role no longer use chips in the approved larger-panel render: Scale is a notched slider, Role is a compact number menu in each monitor card. |
 | **Choice: dropdown row** (Mode, Direction, monitor role) | one row selected inside an open list | The larger-panel render uses compact text triggers and host menu color tokens. Resolution and Refresh are now indexed sliders, not dropdowns. |
 
-A Choice (either kind) must never use the Action look, and vice versa. The 4 modifier chips use `Station/ChoiceChip`; Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
+A Choice (either kind) must never use the Action look, and vice versa. The 4 modifier chips use `PanelUi.ChoiceChip`; Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
 
 ## 2. Corners
 
@@ -53,7 +49,7 @@ token even when `colorization` is 1.0.
 
 ## 4. Color tokens
 
-No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `PLATFORM-FINDINGS.md` §8.6]:
+No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `platform-findings.md` §8.6]:
 
 | Token | Role |
 |---|---|
@@ -94,7 +90,7 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 
 ## 6. Spacing
 
-`Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `PLATFORM-FINDINGS.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
+`Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `platform-findings.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
 
 Bar thickness is the exception that starts from the dedicated Omarchy tokens
 `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
@@ -154,14 +150,7 @@ move the bar away from the monitor edge.
 - No pill/`radius-full` shapes outside the explicit per-monitor bar Pill style.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
-- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in `Panel.qml`, `Service.qml`, or any component file. `tools/v2/check-theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
-
-## 10. Functional bugs found during audit (fix with priority — not cosmetic)
-
-**[V] Both fixed in this revision** (§8 the theme check now guards the token choices, so they cannot regress):
-
-1. **Conflict rows never render red.** See the `Color.urgent` entry in §4: the fallback argument of `Border.surfaceSpec` is masked by a primary value `shell.toml` always supplies. A user got no visual warning that a keybinding they were about to apply conflicted with an existing one. Fix directly (`Border.flat(Color.urgent, Style.normalBorderWidth)`), don't pass it as an unreachable fallback.
-2. Every Settings/Keybindings row rendered with an accent-blue border because it was built from `Color.popups.border`, which is not neutral (§4). Fixing the token choice (to `Ui.PanelSeparator` / `Border.controlSpec("normal", …)`) fixes this as a side effect of §4, not a separate task.
+- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in runtime QML. `test/lint/theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
 
 ## 9. Acceptance
 

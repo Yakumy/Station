@@ -1,251 +1,104 @@
 # Station development guide
 
-Read this before changing Station. This repository is the `yakumy.station`
-Omarchy 4 plugin for Hyprland's Lua configuration. Work on `dev`; push only
-when explicitly requested by the user.
-Check `git status --short` before editing and
-preserve work already in progress.
+Station is the `yakumy.station` Omarchy 4 plugin for Hyprland's Lua configuration. Read
+this file before you change anything. [docs/README.md](docs/README.md) indexes the rest.
 
-## Where to look
+## Start here
 
-- [Branding palette](docs/BRANDING.md): approved Station colors and media rules.
-  Read before creating videos, banners, previews, screenshots, GIFs, or themes.
-- [v2 build spec](docs/v2/SPEC.md): product behavior, invariants, security,
-  transaction and removal contracts. Start with §§1–3, then the section for
-  the feature being changed.
-- [Platform findings](docs/PLATFORM-FINDINGS.md): observed Omarchy, Hyprland,
-  Quickshell, and hardware behavior. Read §0 for evidence tags and §11 for
-  known traps. Check §13's stack fingerprint before relying on old findings.
-  Do not repeat a `[LIVE]` experiment just to rediscover a documented result,
-  unless a changed code path needs a regression check.
-  `[SRC]` is a source observation, `[QTTEST]` uses an isolated Qt harness,
-  and `[INFER]` is not a confirmed hardware result.
-- [Architecture](docs/ARCHITECTURE.md) and [README](README.md): current module
-  map and user-visible workflow. [Design system](docs/v2/DESIGN-SYSTEM.md)
-  governs UI work. [M0](docs/v2/M0.md) and
-  [cold-login check](docs/v2/COLD-LOGIN-CHECK.md) are completed evidence, not
-  routine tests.
+| Task | Read first |
+| --- | --- |
+| Any change | [Architecture](docs/architecture.md) to find the owner |
+| Behavior | [Contracts](docs/contracts.md) section for that feature |
+| Platform behavior | [Platform findings](docs/platform-findings.md) §0, §11 and §13 |
+| UI | [Design system](docs/design-system.md) |
+| Videos, banners, screenshots, GIFs, themes | [Branding](docs/branding.md) |
+| Install, publish, marketplace | [Releasing](docs/releasing.md) |
+| A design choice you want to change | [Decisions](docs/decisions.md) |
 
-Some examples and early plans in the spec predate later findings and repairs.
-The spec's behavioral and safety contracts remain authoritative. If a verified
-later finding, the current implementation, or a test disagrees with the spec,
-do not silently choose one: determine whether it is a documented revision or a
-bug, then reconcile the affected documents in the same change.
+## Commands
 
-## Station 3.0 authority revision
+```sh
+git status --short                 # before editing, to preserve work in progress
+python3 test/run.py                # portable checks
+python3 test/run.py qml            # portable checks and all QML harnesses
+python3 test/run.py all            # everything: needs a Wayland session
+node --test test/unit/grid.test.cjs     # one test file
+python3 test/qml/panel-session.py       # one harness
+omarchy-shell yakumy.station status     # running service state
+```
 
-Read [System authority](docs/v3/SYSTEM-AUTHORITY.md) before changing synchronization.
-Shared compositor settings are observed, never replayed from cached preferences.
-Explicit display/window edits persist leading marked sections in `monitors.lua`
-and `looknfeel.lua`; personal rules later in Lua order win on reload. Window
-sliders save with autoreload suspended and apply only the explicit edit directly,
-without a full reload or fixed sleep. Restore autoreload on every exit and keep
-source comparison and conditional failure recovery. The recognized Omarchy
-internal-monitor Off flag is a shared control: explicit On + Keep clears it in a
-checked two-file transaction, never during observation or preview. Preserve the source
-comparison and conditional rollback. The v2 spec and historical findings describe
-older replay policy; this accepted revision supersedes that policy.
+`test/run.py all` changes no monitor, configuration or installed file. It passing does
+not prove a live monitor transaction or final rendering. See [Testing](docs/testing.md).
 
-## Repository shape and invariants
+## Boundaries
 
-- `manifest.json` declares both a bar widget (`Panel.qml`) and a persistent
-  service (`Service.qml`). The service owns IPC, Hyprland events, operation
-  state, and panel hand-off intent; the UI does not own workspace policy.
-- Replacement bars receive no live service. `lib/BarBridge.js` shares only
-  detached `barSnapshot()` data and a closed action allowlist from the single
-  persistent service; `BarServiceProxy.qml` and `WallpaperProxy.qml` implement
-  the panel's surface. Keep the trusted built-in bar's direct lookup and disable
-  bridge polling there. Import the bridge in top-level `Panel.qml` beside
-  `Service.qml` and pass its reader to `StationPanel`: importing from the nested
-  type produces a separate `qs:///` library under Quickshell. Extend the
-  snapshot, allowlist, proxies, and bridge tests
-  together when adding panel service members. Never expose WallpaperController
-  (its `station` points back to the service), instantiate a second service, or
-  capture a widget-owned proxy in deferred hand-off work: capture the bridge API
-  and scalar values instead. Use setters for panel writes on both paths.
-- Station 2.2 also declares a full-bar entry for per-monitor presence and
-  position. `Bar.qml` hosts one isolated `lib/MonitorBar.qml` per connected
-  Quickshell screen; the latter is an attributed Omarchy stock-bar adaptation.
-  Keep the shared layout and host capability facade intact. When activating
-  this bar, remove Station's persisted widget row atomically and let the bar
-  inject its virtual Station slot, so plugin disable/remove unloads the service.
-  Never edit `/usr/share/omarchy` to implement per-monitor behavior.
-- `lib/Grid.js` owns compact workspace numbering and migration plans;
-  `Model.js` owns display identity, lanes, geometry, and mode choices;
-  `Hypr.js`, `Binds.js`, and `MonitorsLua.js` validate and generate runtime
-  commands/rules. `Store.js` handles versioned data. `Transactions.js` and
-  `Recovery.js` contain fixed shell templates with positional arguments.
-- A station has one workspace per active managed output:
-  `(station - 1) * activeOutputCount + outputIndex + 1`. A saved output mapping
-  decodes existing workspace IDs. Single and Mirror have one station-bearing
-  output (a mirrored sink may still be physically enabled); at most three
-  independent outputs are managed. Physical identity, preferred lane, current
-  output slot, and displayed role are different concepts.
-- Window migrations are journaled in `workspace-map.json`. Wait for the
-  FileView save acknowledgment before moving windows; preserve the old mapping
-  until verification and commit. Resume interrupted migrations by saved window
-  identity and station, not by decoding partly migrated IDs. A preview keeps
-  its original per-window baseline so Revert, timeout, and restart can restore
-  it. `FileView.setText` with identical text emits no new save acknowledgment.
-- Display topology edits use a preview, a detached 20-second watchdog, and a
-  12-second Keep/Revert countdown. Never disable or mirror the output that owns
-  an open keyboard-focused panel before closing/unmapping it, enabling and
-  focusing a survivor, and receiving the panel acknowledgment. Never leave
-  zero real outputs. Scale, Resolution, and Refresh are discrete side controls
-  that save directly through the safe file transaction without a preview.
-- Keep changes only Station's marked block at the beginning of
-  `~/.config/hypr/monitors.lua`, while the transaction atomically replaces the
-  whole file: backup, marker-checked replacement, watched Hyprland apply,
-  `hyprctl configerrors`, rollback on failure. A successful watched apply must
-  not also force a second reload or replay unchanged monitor rules.
-  The internal-monitor toggle handoff suspends autoreload, saves both files and
-  explicitly reloads once, then restores autoreload; rollback preserves newer edits.
-  Recovery/rollback and removal still reload when required. `configreloaded`
-  clears runtime binds and workspace rules; reapply them once per generation,
-  with the existing debounce and expected-event handling.
-- Only unbind known Omarchy defaults intentionally replaced, combos the user
-  approved for replacement, or Station's own previously applied combos.
-  `hl.unbind` removes every binding on a combo. Use
-  `omarchy menu keybindings --print` for conflict identity; `hyprctl binds -j`
-  cannot identify Lua `code:` keys. Real keys, not synthetic key events, verify
-  the end-to-end bind path.
-- `config.json` in `~/.config/omarchy/station/` holds preferences;
-  `state.json`, `workspace-map.json`, and preview bookkeeping live under
-  `~/.local/state/omarchy/station/`. On disable/remove, the detached cleanup
-  distinguishes an enabled plugin after shell restart from an actual removal,
-  restores only stock widgets Station leased, neutralizes Single/Mirror rules,
-  and reloads Hyprland. A shell restart must not trigger removal cleanup.
-- Validate connector names, exact allowlisted `availableModes` strings, Lua
-  strings, IPC arguments, and paths before use. EDID-derived description and
-  serial fields are untrusted. Use argv arrays or fixed scripts with validated
-  positional arguments; do not interpolate device text into shell or Lua.
+### Always
 
-## UI and platform specifics
+- Work on `dev`. Preserve existing work and desktop state.
+- Find the owner in `lib/` and read its contract and tests before you change it.
+- Run the focused tests, then `python3 test/run.py all`, before a commit that changes
+  runtime code.
+- Change documents in the same commit as the behavior.
+- Report what you tested versus what you inferred. Use the evidence tags in
+  [Testing](docs/testing.md#evidence-levels).
+- Before a requested commit, inspect the complete diff, stage only the task's files and
+  inspect the staged diff.
+- Before a live experiment, inspect current state and take recoverable backups. Restore
+  the original state afterward.
 
-- Use installed `qs.Ui` components and `qs.Commons` tokens. Colors, corners,
-  spacing, and typography come from `Color`, `Border`, and `Style`; no private
-  palette, hardcoded radius, shadow, glow, or gradient. `Style.space()` scales
-  with theme/font settings, so check actual layout geometry and text wrapping.
-  Compile success alone does not prove a panel looks right or works live.
-- The panel is a bar-widget popout. Bar/output rebuilds destroy its QML
-  instance, so `Service.qml` retains open intent, selected monitor, and tab.
-  Monitor cards are Repeater delegates: changing the model can destroy a
-  delegate during its own handler. Keep follow-up actions in the service or
-  another surviving object.
-- Text size runs `omarchy-display-text-size` and changes shell, GTK, and
-  terminal text globally. Per-monitor apparent size is the Scale control.
-  Brightness reads and writes must carry the selected connector; unavailable
-  notices belong to the matching control. Resolution/refresh selections keep
-  an exact mode string from that monitor's supported list.
-- Omarchy and Hyprland behavior is version-sensitive. Read packaged sources
-  under `/usr/share/omarchy/` when needed, but never edit them. Cold
-  `hl.get_monitors()` can be empty during `monitors.lua` evaluation; guard
-  disabling rules; generated v3 blocks use bounded DRM presence reads at config
-  evaluation, with a safe Extend fallback. The service observes the result.
-  `mirror = ""` is needed to clear a previous mirror. Record expected monitor
-  events before dispatch, and ignore transient workspace events during topology
-  changes. Three/four-monitor hardware, simultaneous hotplug, and some
-  Single/Mirror transitions remain unverified; do not claim a simulator test
-  proves them on hardware.
+### Ask first
 
-## Development and verification
+- Commit or amend, unless the user already authorized it for this task.
+- Update the installed plugin. See [Releasing](docs/releasing.md).
+- Run a topology change, crash, removal or physical-unplug experiment.
+- Run anything under `test/live/`. These runners change the live session.
+- Change a persisted format, or delete the plain geometry copy
+  ([why](docs/decisions.md#keep-the-plain-geometry-copy)).
 
-1. Identify the feature's owner in `lib/` or QML and read the matching spec,
-   findings, and tests. Preserve existing desktop state; use isolated tests
-   before live monitor actions. The M0 and cold-login runners modify the live
-   session and are not routine checks.
-2. Run the relevant focused tests, then the project's standard checks as
-   appropriate to the change:
+### Never
 
-   ```sh
-   node --test test/m0/*.test.mjs test/v2/*.test.cjs
-   node tools/v2/check-theme-tokens.mjs
-   python3 tools/v2/check-layout.py
-   omarchy plugin validate .
-   python3 tools/v2/check-qml.py .
-   git diff --check
-   ```
+- Never push without explicit authorization. Never force push. Never push from the
+  installed checkout.
+- Never edit `/usr/share/omarchy`.
+- Never interpolate device text into shell or Lua. Use argv arrays or fixed scripts with
+  validated positional arguments. EDID-derived fields are untrusted.
+- Never use a private palette, a hardcoded radius, a shadow, a glow or a gradient.
+- Never claim that a simulator test proves a hardware path.
+- Never repeat a `[LIVE]` experiment only to rediscover a documented result.
 
-   `check-layout.py` is an offscreen pointer harness. `check-qml.py` needs the
-   live Wayland backend and compiles components in a temporary Quickshell
-   process without instantiating Station; running it in a sandbox without
-   Wayland access can abort that test process. Neither check proves the live
-   monitor transaction or final visual rendering.
-3. For live work, inspect current monitor/config state and take recoverable
-   backups before changing it. Keep the preview watchdog and rollback path
-   intact. Record what was actually tested versus inferred; restore the
-   original desktop state after an experiment.
-4. Before a requested commit, inspect the complete diff, stage only the files
-   belonging to the task, and inspect the staged diff. Commit or amend only
-   when the user requested it; push only with explicit user authorization.
+## Invariants that are easy to break
 
-## Installed plugin workflow on this machine
+The [contracts](docs/contracts.md) are authoritative. These fail silently or damage a
+session, so check them on every related change.
 
-- The source checkout and `~/.config/omarchy/plugins/yakumy.station` are
-  separate Git checkouts. Check both branches, status, revisions, and file
-  hashes before saying an update is installed. The installed checkout's
-  current origin is a local `file://` URL to this repository; verify that
-  before using it. Keep both on `dev`; never push from the installed checkout.
-- When the user asks for an installed update, finish and verify the source
-  change first. The stock updater can install only committed source: it fetches
-  the source checkout's current `HEAD` and runs `merge --ff-only`. If the user
-  has not also authorized a commit, explain that requirement and ask rather
-  than copying uncommitted files into the installed checkout. For an ordinary
-  committed descendant, run
-  `omarchy plugin update yakumy.station --yes`, then verify both revisions and
-  statuses again. After **every** installed-plugin update, run
-  `omarchy restart shell` once and verify `omarchy-shell shell ping`; do not
-  rely on plugin file watches, a successful updater message, or matching file
-  hashes as proof that the running shell loaded the new code.
-- Never amend merely to make installation convenient. If the user explicitly
-  requests both an amend and an installed update, the installed checkout's old
-  commit will normally diverge and the stock updater will refuse it. Verify
-  that the installed checkout is clean, still uses the expected local origin,
-  and contains no unknown work; fetch that origin and obtain any approval
-  required by the harness before moving **only the installed checkout's**
-  `dev` branch to the exact fetched source commit. Never discard unknown edits,
-  delete/reclone the checkout, or use a broad destructive command as a shortcut.
-- A plugin rescan or file watch may leave an old Quickshell component cached.
-  If the UI still shows old text/geometry after the mandatory restart, compare
-  installed files to source and inspect the running shell's start time. Do not
-  mistake an enabled `listPlugins` entry for proof that the running panel uses
-  new code; `active: false` was observed even for enabled plugins.
-
-## Publishing and marketplace update validation
-
-When explicitly requested to merge, push, and submit an update:
-
-1. Check the worktree, fetch `origin`, and inspect divergence. Commit reviewed
-   task changes on `dev`. Fast-forward local `main` from `dev`, then return to
-   `dev`. GitHub protects `main` with the `Station portable checks` status:
-   first `git push origin dev`, wait for the `Station checks` Actions run on
-   that exact SHA to succeed, then `git push origin main`. An atomic push of
-   both before CI completes is rejected for both refs. Never force push.
-   Verify remote branch SHAs and the GitHub default-branch HEAD.
-2. Use the existing `AGENTS.md` for workflow notes (not a second `AGENT.md`).
-   Commit these notes before submission, because validation binds the exact
-   final SHA. Local plugin validation can use a clean `git archive HEAD` export
-   in a fresh `mktemp -d` directory: ignored video node_modules symlinks make
-   validation of the development checkout fail.
-3. Read the current marketplace instructions and form:
-   https://github.com/omacom/omarchy-plugin-marketplace/blob/main/VERIFICATION.md
-   and `.github/ISSUE_TEMPLATE/verify-plugin.yml` in that repository. Search
-   existing open issues for Station to avoid duplicate requests. Historical
-   update example: issue #12370; old submission #6473 is closed and obsolete.
-4. Create a verification issue in `omacom/omarchy-plugin-marketplace`, titled
-   `[Verify]: Station <manifest version> update`, using these exact headings:
-   `### Verification action` = `Verify and publish a newer upstream commit`;
-   `### Plugin ID` = `yakumy.station`; `### Repository URL` =
-   `https://github.com/Yakumy/Station`; `### Target commit` = full 40-character
-   published default-branch HEAD; `### Verification acknowledgment` with
-   `- [x] I understand that only the exact target commit can become a verified marketplace snapshot and that verification is not a security audit.`
-   Do not add any headings or notes that the issue form did not generate; the
-   parser rejects changed headings. Include `### Standard installation
-   acknowledgment` only when requesting that optional form action. Put release
-   notes in a normal issue comment after the form validates, if they are useful.
-   Use a temporary body file with `gh issue create --body-file`; do not add
-   maintainer approval labels. This request is distinct from installing locally.
-5. Inspect the bot comments and linked Actions runs. Report the issue URL,
-   target SHA, and actual validation state. Submission is not approval:
-   publication requires marketplace maintainer review and
-   `approved-and-verified`. Do not claim publication until confirmed.
+- **One service.** Children receive data and finite ports, never the Service object. Do
+  not instantiate a second service.
+- **Bridge identity.** Import `lib/BarBridge.js` only in the top-level `Panel.qml`,
+  `Service.qml` and `Bar.qml`. Do not move it. A nested import creates a second library
+  instance.
+- **Bridge contract.** Change `lib/panel/ServiceContract.js`, the proxies and the bridge
+  tests together. Expose detached data only, never a QObject. Deferred hand-off work
+  captures the bridge API and scalars, never a proxy.
+- **QML imports.** Give each feature folder its own qualifier. Sharing one breaks only
+  under the real Quickshell loader, so `test/lint/compile-qml.py` is the check.
+- **Journal first.** Wait for the save acknowledgment before moving windows. Keep the old
+  map until verification and commit. Resume by window identity, never by decoding IDs.
+  Identical `FileView.setText` text emits no acknowledgment.
+- **Evacuation.** Never disable or mirror an output that owns an open keyboard-focused
+  panel before the panel closes and acknowledges, and a survivor is enabled and focused.
+  Never leave zero real outputs.
+- **Previews.** Keep the 20-second detached watchdog and the 12-second countdown. Keep the
+  original baseline through re-edits.
+- **File writes.** Change only marked sections at the beginning of `monitors.lua` and
+  `looknfeel.lua`. Keep the source comparison, backup and conditional rollback.
+- **Observation.** Never replay cached monitor or window settings. Explicit edits persist.
+- **Reloads.** A successful watched apply must not force a second reload. Window sliders
+  apply with no full reload and no fixed sleep, and restore autoreload on every exit.
+- **Binds.** Unbind only known Omarchy defaults, approved combos and Station's own applied
+  combos. Use `omarchy menu keybindings --print` for identity. Only real key presses test
+  the end-to-end path.
+- **Restart versus removal.** A shell restart must not trigger removal cleanup.
+- **Delegates.** A Repeater delegate can be destroyed during its own handler. Keep
+  follow-up actions in a surviving object.
+- **Layout.** `Style.space()` scales with the theme. Compiling does not prove that a panel
+  looks right.

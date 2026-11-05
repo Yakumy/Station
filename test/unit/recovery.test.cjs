@@ -100,3 +100,16 @@ test('cleanup neutralizes current generated mode fields without restoring stale 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('cleanup argv restores only leases Station took and rejects malformed ones', () => {
+  const taken = { section: 'center', index: 2, wasEnabled: true, disabledByStation: true };
+  const unowned = { section: 'right', index: 5, wasEnabled: false, disabledByStation: false };
+  const argv = R.cleanupCommand('/state', '/monitors.lua', taken, unowned);
+  assert.deepEqual(argv.slice(0, 3), ['sh', '-c', R.cleanup]);
+  assert.deepEqual(argv.slice(3), ['sh', '/state', '/monitors.lua', 'center', '2', '1', 'right', '5', '0']);
+  for (const bad of [null, { section: 'top', index: 1, wasEnabled: true, disabledByStation: true },
+    { section: 'left', index: -1, wasEnabled: true, disabledByStation: true }]) {
+    const fallback = R.cleanupCommand('/s', '/m', bad, bad);
+    assert.deepEqual(fallback.slice(6), ['left', '0', '0', 'right', '0', '0']);
+  }
+});

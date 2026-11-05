@@ -1,7 +1,7 @@
 # README media
 
 For new recordings and regenerated media, follow the approved
-[Station branding palette](../../BRANDING.md). The existing GIFs below predate
+[Station branding palette](../../branding.md). The existing GIFs below predate
 that palette decision and have not yet been replaced with consistent captures.
 
 These GIFs are local, silent, looping assets. They do not depend on an external
@@ -34,7 +34,7 @@ The video excerpts use this filter, with `-ss 3.3` or `-ss 46.3`, `-t 5.3`,
 To recreate the Bar frames from the repository, with access to a Wayland session:
 
 ```bash
-STATION_README_TOUR=1 python3 tools/v2/check-bar-tab.py /tmp/station-readme-bar
+STATION_README_TOUR=1 python3 test/qml/bar-tab.py /tmp/station-readme-bar
 ffmpeg -framerate 5 -i /tmp/station-readme-bar/frame-%03d.png \
   -filter_complex '[0:v]scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=3' \
   -loop 0 docs/assets/tours/bars.gif

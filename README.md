@@ -13,6 +13,7 @@
     <a href="#stations">Stations</a> ·
     <a href="#displays">Displays</a> ·
     <a href="#bars">Bars</a> ·
+    <a href="#windows">Windows</a> ·
     <a href="#wallpapers">Wallpapers</a> ·
     <a href="#keybindings">Keybindings</a>
   </p>
@@ -20,7 +21,7 @@
 
 ![Animated illustration of switching all displays between stations](docs/assets/tours/stations.gif)
 
-*One shortcut switches the whole setup. Illustrated feature tour; see the current panel previews below.*
+*One shortcut switches the whole setup. This is an illustrated tour. The panel previews below show the current UI.*
 
 ## Meet Station
 
@@ -28,7 +29,7 @@ A **station** is one workspace on each active display. Switch stations and every
 screen follows. Send a window to another station and it stays on the same
 physical monitor.
 
-With two displays, S1 contains workspaces 1 and 2; S2 contains 3 and 4.
+With two displays, S1 contains workspaces 1 and 2, and S2 contains 3 and 4.
 Station manages that numbering for you, including when a display disconnects.
 
 | Your workflow | What Station adds |
@@ -39,22 +40,16 @@ Station manages that numbering for you, including when a display disconnects.
 | **Frame your desktop** | The same wallpaper everywhere, one image per monitor, or a single image spanning the layout. |
 | **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, monitor-aware bar-position controls, and drag-to-position. |
 
-## System settings in 3.0
+## Your settings stay yours
 
-Station follows applied Hyprland settings and changes made through Omarchy.
-External display changes update its panel and workspace mapping; reloads no
-longer force Station's saved display mode or window appearance back onto the
-system. Temporary terminal changes remain temporary.
+Station follows what Hyprland and Omarchy actually apply. If you change a display or a
+gap somewhere else, the panel updates. A reload never forces Station's saved values back
+onto your system, and a temporary terminal change stays temporary.
 
-Station saves display settings at the beginning of `monitors.lua` and individual
-window controls at the beginning of `looknfeel.lua`, with backups. Window
-sliders apply on release without a full compositor reload or a fixed wait.
-Personal rules placed afterward take precedence on the next reload; Station then
-shows that applied value. Explicit window edits apply to the current session
-immediately. Global rounding also follows Omarchy's shell corners; global blur
-is controlled by Hyprland.
-
-See [the 3.0 ownership and migration contract](docs/v3/SYSTEM-AUTHORITY.md).
+When you edit a setting in the panel, Station saves only that setting, in a marked
+section at the beginning of `monitors.lua` or `looknfeel.lua`, with a backup. Your own
+rules later in the file still win on the next reload. See
+[system authority](docs/contracts.md#system-authority) for the details.
 
 ## Install
 
@@ -99,7 +94,7 @@ into corner alignment.
 
 Select a monitor to control brightness, scale, resolution, and refresh rate.
 Available modes come from that monitor. The text-size control changes text
-across Omarchy; display scale changes the apparent size on the selected screen.
+across Omarchy. Display scale changes the apparent size on the selected screen.
 
 Topology edits offer a **12-second Keep/Revert preview**, backed by an independent
 20-second recovery watchdog. Station keeps at least one real output enabled and
@@ -110,28 +105,22 @@ Station follows that state. Turning it On in Station and pressing **Keep** clear
 Omarchy's Off toggle and saves your new layout. Revert leaves the toggle intact.
 
 > [!NOTE]
-> Station manages at most three independent outputs; additional outputs are
-> reported as unmanaged. Three- and four-monitor hardware transitions remain
+> Station manages at most three independent outputs. Station reports additional
+> outputs as unmanaged. Three- and four-monitor hardware transitions remain
 > unverified on the current two-monitor test setup.
 
 ## Bars
 
-Show stations open apps in Settings offers Open on hover (default), Always open,
-and Hide. Hover mode reveals station labels and apps from the chevron; Always
-open keeps them visible without a chevron, and Hide removes both. Click a label
-or app to switch to that station; move away to collapse the hover-mode list.
-Icons keep a consistent size, original colors, and full opacity regardless of focus.
-
 ![Current Station Bar tab showing independent monitor edges, content size, height, width, background, and style](docs/assets/tours/bars.gif)
 
-*Rendered from the current Bar tab with isolated preview data; no desktop settings were changed for this animation.*
+*Rendered from the current Bar tab with isolated preview data. This animation changed no desktop settings.*
 
 **A different bar for each display, with Omarchy’s controls still available.**
 Select a monitor in the **Bar** tab and adjust:
 
 | Control | What it does |
 | --- | --- |
-| **Presence and position** | Show or hide the bar on a display; choose top, bottom, left, or right with the monitor-card arrows. At least one active display keeps a bar. |
+| **Presence and position** | Show or hide the bar on a display. Choose top, bottom, left, or right with the monitor-card arrows. At least one active display keeps a bar. |
 | **Content size** | Enlarge icons and labels together. The live limit reserves padding and prevents the widget groups from overlapping. |
 | **Height** | Change bar thickness, up to 5% of the monitor mode’s shorter dimension, subject to Omarchy’s readable minimum. |
 | **Width** | Choose how much of the edge the bar occupies. Station keeps enough room for the widgets. |
@@ -141,10 +130,24 @@ Select a monitor in the **Bar** tab and adjust:
 Drag a bar’s free area toward a screen edge to move **only that monitor’s bar**.
 Omarchy’s **Bar → Position** menu from `SUPER + Space` changes the bar on the
 **focused monitor**. Station’s monitor-card arrows also control one monitor at
-a time; the other displays keep their positions.
+a time. The other displays keep their positions.
 
 The bar keeps Omarchy’s widgets, shared widget layout, and theme colors.
 Station’s logo renders as a vector so it stays sharp as content size changes.
+
+**Open apps on the bar.** Settings offers Open on hover (the default), Always open, and
+Hide. Click a station label or an app icon to switch to that station. Icons keep their
+original colors at full opacity.
+
+## Windows
+
+**Tune window spacing and motion, and see the result before you release the slider.**
+The **Windows** tab shows sample windows on your monitor layout and controls global
+inner and outer gaps, the next Dwindle split, corner rounding, and animation speed.
+
+Drag to preview, then release to apply and save. Changing speed plays one window moving
+to the next monitor and another coming back. Speed 0 disables animations. Rounding also
+changes Omarchy's shell corners, because both follow the same Hyprland setting.
 
 ## Wallpapers
 
@@ -163,7 +166,7 @@ Station’s logo renders as a vector so it stays sharp as content size changes.
 | **Span** | One large image across the complete monitor layout. Drag the fixed monitor group to frame it and scroll to zoom. |
 
 Span respects monitor positions, gaps, rotation, logical sizes, and scale. A
-recommended source resolution helps you choose an image; smaller images are
+recommended source resolution helps you choose an image. Smaller images are
 still allowed.
 
 **Follow Omarchy wallpaper** is on by default, so theme and background changes
@@ -225,9 +228,10 @@ was unavailable throughout removal, run `hyprctl reload` once it returns.
 | Preferences | `~/.config/omarchy/station/config.json` |
 | Runtime state and recovery | `~/.local/state/omarchy/station/` |
 | Prepared wallpaper copies | `~/.local/state/omarchy/station/wallpapers/` |
-| Managed display block | `~/.config/hypr/monitors.lua` |
+| Managed display section | `~/.config/hypr/monitors.lua` |
+| Managed window section | `~/.config/hypr/looknfeel.lua` |
 
-Station changes only its marked display block, with backup and validation.
+Station changes only its marked sections, with a backup and validation.
 Workspace migrations are journaled before moving windows and can resume after
 an interruption. It does not edit Omarchy’s packaged files.
 
@@ -235,28 +239,15 @@ an interruption. It does not edit Omarchy’s packaged files.
 
 ## Development
 
-Read the [specification](docs/v2/SPEC.md), [architecture](docs/ARCHITECTURE.md),
-[design system](docs/v2/DESIGN-SYSTEM.md), and
-[platform findings](docs/PLATFORM-FINDINGS.md) before changing behavior.
-The findings distinguish hardware observations from isolated tests.
-
-<details>
-<summary><strong>Verification commands</strong></summary>
+Start with the [documentation index](docs/README.md). [AGENTS.md](AGENTS.md) lists the
+rules for changing Station.
 
 ```bash
-node --test test/m0/*.test.mjs test/v2/*.test.cjs
-node tools/v2/check-theme-tokens.mjs
-python3 tools/v2/check-layout.py
-python3 tools/v2/check-wallpaper-layout.py
-omarchy plugin validate .
-python3 tools/v2/check-qml.py .
+python3 test/run.py        # portable checks
+python3 test/run.py all    # everything, needs a Wayland session
 ```
 
-The QML check needs Wayland access but does not instantiate Station or change
-the desktop configuration. Live topology checks are separate release work.
-See [media notes](docs/assets/tours/README.md) for GIF provenance and rendering.
-
-</details>
+These checks do not change your desktop configuration. See [Testing](docs/testing.md).
 
 ---
 
@@ -265,12 +256,3 @@ See [media notes](docs/assets/tours/README.md) for GIF provenance and rendering.
   <a href="LICENSE">Apache License 2.0</a> ·
   <a href="https://github.com/Yakumy/Station/issues">Report an issue</a>
 </div>
-
-The **Windows** tab after Bar previews two windows and controls global inner/outer
-gaps, the next Dwindle split, corner roundness, and window animation speed.
-Drag to preview; release to apply and save. Gap sliders mark the selected bar's
-thickness. Monitor names appear above their rectangles. Changing speed previews
-one window moving to the next enabled monitor, then another coming back; the
-remaining tiles expand and shrink to show the layout reflow. Outer gaps leave
-the bar in place and add spacing beside Solid color or Blur bars using Omarchy default style.
-Transparent and Pill bars use bar height for spacing on their edge. Speed 0 disables animations.

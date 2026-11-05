@@ -1,6 +1,6 @@
-# Hyprland on Omarchy 4 with Quickshell: verified behaviour
+# Platform findings
 
-Purpose: a durable record of how this stack actually behaves, gathered while building Station v2, so a future agent does **not** re-run the same experiments. Read §0 first, then use the sections as a lookup.
+This page records how Hyprland, Omarchy and Quickshell actually behave, so nobody re-runs an experiment to rediscover a result. Read §0 first. Dated sections below §15 record later investigations in order. A finding can describe code that has since changed, so check [Contracts](contracts.md) for required behavior and [Architecture](architecture.md) for current file paths.
 
 ## 0. How to use this document
 
@@ -174,7 +174,7 @@ Purpose: a durable record of how this stack actually behaves, gathered while bui
 | A `MouseArea` inside the panel's vertical `ScrollView` loses its pointer grab to the underlying `Flickable` once a drag is recognized. Quickshell then calls `onCanceled`, so the card visually moves and snaps back without the service entering Preview. Set `preventStealing: true` on draggable monitor cards. The regression harness must embed the production layout in a scrolling `Flickable`; testing the component as a bare `Item` misses this behavior. | [QTTEST][LIVE] |
 | Isolated layout tests cover horizontal placement on either side, vertical placement, negative positions, repeat drags after Revert, click without Preview, edge snapping, selected-mode/scale/rotation geometry, and three large displays fitting the canvas. Scaled/rotated and three-display **hardware** behavior remain unverified. | [QTTEST] |
 | A position-only preview used to evaluate the full managed monitor block, including a rule for every unchanged output. That can reconfigure the other monitor as well as the dragged one. The runtime preview now emits a rule only for each output whose position changed when mode, enablement, scale, rotation, and resolution are unchanged. Keep still writes the complete guarded block. Rotation/topology edits still use the guarded preview; Scale/Resolution/Refresh now bypass preview and persist directly. | [SRC] |
-| Omarchy's stock-adapted bar swaps `root.vertical`-keyed `Loader` components for the section container, center arrangement, and every module Row/Column (stock `Bar.qml` 1287/1557/1746). An axis flip therefore destroyed the Station widget and its popout; the visible asymmetry followed from the open panel being hosted on eDP-1. Station replaces those swaps with orientation-agnostic hosting and `lib/BarModel.positionModules`, preserving the module instances through an ordinary flip. | [SRC] |
+| Omarchy's stock-adapted bar swaps `root.vertical`-keyed `Loader` components for the section container, center arrangement, and every module Row/Column (stock `Bar.qml` 1287/1557/1746). An axis flip therefore destroyed the Station widget and its popout; the visible asymmetry followed from the open panel being hosted on eDP-1. Station replaces those swaps with orientation-agnostic hosting and `BarModel.positionModules`, preserving the module instances through an ordinary flip. | [SRC] |
 | That inner repair was necessary but not sufficient. Live repetitions after `128bee0` found intermittent bursts where a `shell.json` position write caused both `omarchy-bar` surfaces to close and reopen; `hyprctl layers -j` showed new surface addresses, while the Quickshell log created duplicate widget IPC handlers and then evaluated callbacks against invalid `MonitorBar` contexts. Other repetitions were clean, so a simulator or single successful flip does not establish host-window continuity. Station now treats validated `config.bars` as the live authority while its panel is open: top-level `Bar.qml` reads the detached service snapshot and moves locally, and the service writes the redundant `shell.json` `bar.monitors` mirror only after the panel closes. Structural rebuilds and display-origin remaps still use the §10.3 hand-off. | [LIVE][SRC] |
 | After that host-write deferral, same-axis moves were clean and moving the other monitor's bar left the eDP-1 panel stable, but changing the panel-owning eDP-1 bar horizontal↔vertical still produced a shorter glitch. Retaining the panel's Quickshell screen did not remove it. The remaining mismatch is geometry: `bar.position` changes before the owning layer window swaps between full-height/thin and full-width/thin, so `Ui.KeyboardPanel.cardOrigin` briefly evaluates the new edge using old-axis `barW`/`barH` (for example, `top` with the old full-height left-bar `barH`). Station now holds the panel's last geometrically valid edge until the anchor window dimensions match the requested axis. This mechanism is source-derived and awaits the repeated physical flip check. | [LIVE][SRC][INFER] |
 | A live stock-versus-Station screenshot check under the active theme and scale measured the same reserved thickness: 26 logical pixels for top/bottom bars and 28 logical pixels for left/right bars. The menu/icon painted bounds were centered alike. Station should continue using `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; a custom thickness would not repair the reported optical imbalance. | [LIVE] |
@@ -353,7 +353,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   then `previewLayout()` on its own delegate. Publishing the new Repeater model
   destroys that delegate before the second call. The service now owns both steps
   in `setDisplayEnabled()`. The production QML handler is exercised by
-  `tools/v2/check-layout.py`, including destruction during the Off action.
+  `test/qml/layout.py`, including destruction during the Off action.
 - **[SRC]** Preview migration was explicitly blocked by `reconcile()`. Single
   disabled the other output but did not compact/merge its stations until Keep.
   Preview now uses its own effective mode for journaled migration, retains a
@@ -376,7 +376,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   restoration only ran on construction/service binding. The service now chooses
   a usable destination, and existing panels observe transfer/screen changes.
   A still-open copy on the output being disabled cannot block the hand-off.
-- **Verification:** `test/v2/display-transaction.test.cjs` executes production
+- **Verification:** `test/unit/display-transaction.test.cjs` executes production
   service functions with queued compositor events and disk acknowledgments. It
   covers immediate migration, Keep reload races, repeated mode previews,
   timeout, Revert, restart recovery, enabling a Single-mode disabled output,
@@ -463,7 +463,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   Station first corrects it to the same station on the destination output and
   only then synchronizes display focus. Native tile rearrangement within one
   monitor is unchanged.
-- **Verification:** `test/v2/window-actions.test.cjs` models a reconnected
+- **Verification:** `test/unit/window-actions.test.cjs` models a reconnected
   destination whose active workspace is 12. Moving an S1 window to it must end
   on workspace 2 (S1's second-display slot), retain Station 1, and never focus
   workspaces 11 or 12.
@@ -509,7 +509,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - **[SRC]** Numbered sends now opt into a narrow exception for the active,
   unpinned `special:scratchpad` window on a managed output. Directional actions
   and topology migrations keep their existing exclusions.
-- **Verification:** `test/v2/window-actions.test.cjs` exercises retrieval on
+- **Verification:** `test/unit/window-actions.test.cjs` exercises retrieval on
   either display and on a single display, follow and silent sends, and rejection
   of pinned, unmanaged, named and other special windows. These isolated tests
   do not prove a physical keypress or the installed compositor path.
@@ -558,14 +558,13 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 ## 15. Where evidence lives
 
 | Source | Content |
-|---|---|
-| `docs/v2/M0.md` | 13-item gate with observations |
-| `docs/v2/M0-evidence.json` | source hashes, 20 latency samples, monitor snapshot |
-| `docs/v2/COLD-LOGIN-CHECK.md` | cold-start procedure and result |
-| `docs/TEST-RESULTS.md` | automated and live integration results |
-| `docs/ARCHITECTURE.md` | how the service is structured |
-| `tools/v2/probe-platform.mjs`, `live-m0.py`, `cold-login.py` | read-only probes and the live runner |
-| `archive/dev-before-v2-20261004` | abandoned v1-era history; read-only reference, never merge |
+| --- | --- |
+| `git show 0671e58:docs/v2/M0.md` | 13-item platform gate with observations |
+| `git show 0671e58:docs/v2/M0-evidence.json` | Source hashes, 20 latency samples, monitor snapshot |
+| `git show 0671e58:docs/v2/COLD-LOGIN-CHECK.md` | Cold-start procedure and result |
+| `git show 0671e58:docs/TEST-RESULTS.md` | Automated and live integration results up to 2026-11-04 |
+| `test/live/` | The read-only probe and the live runners |
+| `archive/dev-before-v2-20261004` | Abandoned v1-era history. Read-only reference, never merge. |
 
 ## 16. Wallpaper integration (2026-10-11)
 
@@ -626,7 +625,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   `Text.QtRendering` and omit the loader layer. Image source-size enlargement
   remains in place. Default-size modules restore their original rendering mode;
   Station's directly sized widget remains exempt from subtree zoom.
-- [QTTEST] `python3 tools/v2/check-bar-rendering.py` exercises the production
+- [QTTEST] `python3 test/qml/bar-rendering.py` exercises the production
   traversal with real Qt Text/Image objects: fractional and integer zoom,
   nested glyphs, repeated scans, newly added/destroyed text, and restoration.
   Passed on Qt 6.12.0. This verifies rendering policy, not final desktop pixels;
@@ -781,7 +780,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   requests and coalesces relevant Hyprland events. It never updates the
   transaction's client or monitor snapshots. Actual physical placement and
   active workspace membership determine the list during partial migrations.
-- **[LIVE]** `tools/v2/check-open-apps.py` observed two windows on eDP-1 and one
+- **[LIVE]** `test/qml/open-apps.py` observed two windows on eDP-1 and one
   on HDMI-A-2, with only the HDMI-A-2 window focused. No monitor/workspace
   commands were dispatched. The same harness instantiated horizontal and
   vertical bar controls offscreen and verified disabling clears the feed.
@@ -794,7 +793,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 
 ### App focus styling (2.3.2)
 
-- **[QTTEST]** `tools/v2/check-open-app-colors.py` renders the production effect
+- **[QTTEST]** The since-retired `check-open-app-colors` harness rendered the production effect
   blocks with black, white, colored, and transparent artwork. Focused pixels
   match the requested accent within rounding tolerance regardless of source
   luminance; transparency survives. Unfocused pixels are grayscale and white
@@ -896,7 +895,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   WINDOW rectangles on the first two monitors, once. NEXT WINDOW stays put.
   Header alignment is corrected and the selected-monitor control caption removed.
 - 213 Node tests, 23 existing layout checks, theme scan and component compilation
-  passed. `tools/v2/check-windows-tab.py` renders the production tab with host
+  passed. `test/qml/windows-tab.py` renders the production tab with host
   tokens and verifies both exchange destinations/movement. The rendered artifact
   was inspected; this is an isolated preview check, not a live window migration.
 
@@ -968,7 +967,7 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - The earlier non-scrollable reference is revised: header/tabs remain fixed;
   a shared body viewport scrolls only on vertical overflow. Tab changes reset
   its position. Existing DisplayLayout pointer-stealing prevention is retained.
-- Isolated Wayland check (`tools/v2/check-panel-size.py`) verified constant card
+- Isolated Wayland check (`test/qml/panel-size.py`) verified constant card
   dimensions across all six tabs, synthetic expanded content, scroll reset and
   a shortened viewport. It runs without a Station service and qualifies bare
   Color references in its temporary copy to avoid theme-name ambiguity in the
@@ -992,7 +991,7 @@ warnings. Installed visual acceptance remains a user check.
   topology adoption, numeric mirror IDs, and preview cancellation on reload.
 - [SRC] This is a revision to the design consequences in §9, not a claim that
   Hyprland's documented reload behavior changed. See
-  [the v3 contract](v3/SYSTEM-AUTHORITY.md). Cold login and physical hotplug under
+  [the system authority contract](contracts.md#system-authority). Cold login and physical hotplug under
   this version still require user verification.
 
 Validation before installation: 226 Node tests, 23 offscreen layout cases,
@@ -1056,4 +1055,22 @@ user tests; the automated checks do not establish those results.
   The log contained no TypeError, ReferenceError or assignment error. This narrow
   smoke check does not prove destructive-transition unmapping, detached recovery,
   hotplug behavior or other physical outputs. Evidence remains in
-  `/tmp/station-installed-m7-xw3mm3q7`. See the architecture checkpoint for scope.
+  `/tmp/station-installed-m7-xw3mm3q7`.
+
+## Service composition and feature folders (2026-11-05)
+
+- [LIVE] Commit `0f5fa9e` split Service into owners and moved `lib/` into feature
+  folders. The stock updater installed it and one shell restart loaded it. Shell ping
+  succeeded. Status matched the baseline apart from `globalBarPosition`, which follows
+  the focused output's saved edge.
+- [LIVE] Two IPC panel cycles mapped two extra layer surfaces and removed them. Switching
+  from station 2 to 1 and back moved both outputs together. Invalid arguments returned
+  `invalid`. An unchanged `setMode extend` preview armed the token and ran the countdown,
+  and Revert returned to `idle`. Clients, geometry and source file hashes did not change.
+  This does not test a topology change, physical keys or hardware transitions.
+- [LIVE] The log contained no TypeError or ReferenceError. The known `exitCode` and panel
+  edge binding warnings remained. Quickshell logs `Module path ... is outside of the
+  config folder` once per plugin directory, without effect.
+- [LIVE] **Trap:** several directory imports under one QML qualifier fail under the real
+  Quickshell loader with `X is not a type`, while offscreen `qmltestrunner` harnesses
+  pass. Give each directory its own qualifier. Only `test/lint/compile-qml.py` detects it.
