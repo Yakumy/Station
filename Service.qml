@@ -3,14 +3,21 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import qs.Commons
-import "lib/Model.js" as Model
-import "lib/Tabs.js" as Tabs
-import "lib/Recovery.js" as Recovery
-import "lib/Transactions.js" as Transactions
-import "lib/Events.js" as Events
-import "lib/Grid.js" as Grid
-import "lib/ServiceContract.js" as ServiceContract
-import "lib" as Station
+import "lib/displays/Model.js" as Model
+import "lib/panel/Tabs.js" as Tabs
+import "lib/platform/Recovery.js" as Recovery
+import "lib/platform/Transactions.js" as Transactions
+import "lib/platform/Events.js" as Events
+import "lib/stations/Grid.js" as Grid
+import "lib/panel/ServiceContract.js" as ServiceContract
+import "lib/bars" as Bars
+import "lib/displays" as Displays
+import "lib/keybindings" as Keys
+import "lib/panel" as PanelUi
+import "lib/platform" as Platform
+import "lib/stations" as Stations
+import "lib/wallpaper" as WallpaperUi
+import "lib/windows" as WindowsUi
 import "lib/BarBridge.js" as BarBridge
 
 // Composition root and operation arbiter. Feature protocols live in the owners
@@ -83,7 +90,7 @@ Item {
   readonly property var monitorBarMinimums: barSettings.monitorBarMinimums
   readonly property var monitorBarMaximumContents: barSettings.monitorBarMaximumContents
 
-  Station.SettingsStore {
+  Platform.SettingsStore {
     id: store
     loaded: function() { root.maybeStart() }
     directoriesReady: function() {
@@ -94,19 +101,19 @@ Item {
     configSaved: function() { wallpaperController.preferenceSaved() }
     configSaveFailed: function() { wallpaperController.preferenceFailed() }
   }
-  Station.CompositorLane {
+  Platform.CompositorLane {
     id: compositor
     configGeneration: root.configGeneration
     snapshotFailed: function() { root.handleSnapshotFailure() }
   }
-  Station.PanelIntent {
+  PanelUi.PanelIntent {
     id: panel
     closed: function() { barSettings.panelClosed() }
     continueApply: function() { displayController.continuePreviewApply() }
     continueRevert: function() { displayController.continueRevertPreview() }
     timedOut: function(purpose, from) { displayController.panelEvacuationTimedOut(purpose, from) }
   }
-  Station.StationController {
+  Stations.StationController {
     id: stations
     operationState: root.state
     gen: root.gen
@@ -131,7 +138,7 @@ Item {
       store.saveState()
     }
   }
-  Station.KeybindingsController {
+  Keys.KeybindingsController {
     id: keybindings
     started: root.started
     configGeneration: root.configGeneration
@@ -144,7 +151,7 @@ Item {
     saveState: function() { store.saveState() }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
-  Station.StockWidgetLeases {
+  Bars.StockWidgetLeases {
     id: leases
     shell: root.shell
     started: root.started
@@ -153,7 +160,7 @@ Item {
     saveState: function() { store.saveState() }
     enqueue: function(command, done) { compositor.enqueue(command, done) }
   }
-  Station.ScreenRecovery {
+  Displays.ScreenRecovery {
     id: screenRecovery
     operationState: root.state
     monitors: root.monitors
@@ -165,7 +172,7 @@ Item {
     reconcile: function() { workspace.reconcile() }
     reportError: function(message) { root.layoutError = message }
   }
-  Station.BarLayerSync {
+  Bars.BarLayerSync {
     id: barLayers
     active: root.started && root.configLoaded
     displays: root.displayDraft
@@ -175,7 +182,7 @@ Item {
     }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
-  Station.BarSettingsController {
+  Bars.BarSettingsController {
     id: barSettings
     preferences: root.config.bars || ({})
     hostConfig: root.shell && root.shell.barConfig ? root.shell.barConfig : null
@@ -195,7 +202,7 @@ Item {
     }
     requestLayerSync: function() { barLayers.syncBarBlur() }
   }
-  Station.WindowSettingsController {
+  WindowsUi.WindowSettingsController {
     id: windowSettings
     appliedSettings: root.config.windows
     operationState: root.state
@@ -209,7 +216,7 @@ Item {
       if (typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
     }
   }
-  Station.WorkspaceController {
+  Stations.WorkspaceController {
     id: workspace
     stateDir: root.stateDir
     operationState: root.state
@@ -244,7 +251,7 @@ Item {
     showStation: function(station) { stations.showStation(station) }
     ready: function() { root.maybeStart() }
   }
-  Station.DisplayController {
+  Displays.DisplayController {
     id: displayController
     stateDir: root.stateDir
     monitorsPath: root.monitorsPath
@@ -310,7 +317,7 @@ Item {
     ready: function() { root.maybeStart() }
     finishAuthorityMigration: function(done, reloadRequired) { root.finishAuthorityMigration(done, reloadRequired) }
   }
-  Station.WallpaperController {
+  WallpaperUi.WallpaperController {
     id: wallpaperController
     monitors: root.monitors
     savedPreferences: root.config.wallpaper
@@ -328,7 +335,7 @@ Item {
       panel.panelWanted = true
     }
   }
-  Station.OpenAppsController {
+  Stations.OpenAppsController {
     id: openAppsController
     active: root.config.stationAppsMode !== "hide"
     mapping: root.workspaceMap

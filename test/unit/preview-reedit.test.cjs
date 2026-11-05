@@ -1,0 +1,155 @@
+const test = require('node:test');
+const { runtimeSource } = require('../helpers/runtime-source.cjs');
+const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { join } = require('node:path');
+const Model = require('../../lib/displays/Model.js');
+const MonitorsLua = require('../../lib/displays/MonitorsLua.js');
+
+const read = (...parts) => readFileSync(join(__dirname, '..', '..', ...parts), 'utf8');
+const service = runtimeSource();
+const { source: owner, ownerFunction } = require('../helpers/display-owner.cjs');
+const layout = read('lib', 'displays/DisplayLayout.qml');
+const tab = read('lib', 'displays/DisplaysTab.qml');
+const panel = read('lib', 'panel/StationPanel.qml');
+const panelSession = read('lib', 'panel/PanelSession.qml');
+
+test('the draft stays editable while a preview is pending', () => {
+  assert.match(owner, /readonly property bool draftEditable: \(operationState === "idle" \|\| operationState === "previewing"\) && !previewBusy/);
+  assert.match(owner, /function setDisplayPosition\(name, x, y\) \{\n {4}if \(!draftEditable/);
+  assert.match(owner, /function previewLayout\(\) \{\n {4}if \(!draftEditable\) return "busy"/);
+});
+
+test('a re-edit joins the running session instead of restarting its baseline', () => {
+  const body = owner.match(/function previewLayout\(\) \{([\s\S]*?)\n {2}\}/);
+  assert.ok(body, 'previewLayout is defined');
+  // Revert has to mean "back to the layout this session started from", so a
+  // second preview must not recapture monitors that already moved.
+  assert.match(body[1], /if \(operationState !== "previewing"\) \{ previewBefore = monitors\.slice\(\); previewApplied = null \}/);
+  assert.doesNotMatch(body[1], /\n {6}previewBefore = monitors\.slice\(\)/);
+  assert.match(body[1], /beginPreview\(\)/);
+  assert.match(body[1], /previewArm\.running = true/);
+});
+
+test('Mirror runtime coordinates do not collapse the saved editable layout', () => {
+  const saved = [
+    { name: 'eDP-1', mode: '1920x1080@60.00Hz', availableModes: ['1920x1080@60.00Hz'],
+      x: 1920, y: 0, scale: 1, transform: 3, lane: 2 },
+    { name: 'HDMI-A-2', mode: '1920x1200@59.88Hz', availableModes: ['1920x1200@59.88Hz'],
+      x: 0, y: 300, scale: 1, transform: 0, lane: 1 },
+  ];
+  const context = {
+    Model, MonitorsLua, draftMirrorSource: "",
+    monitorsSource: MonitorsLua.generate(saved, { mode: 'mirror', enabled: saved.map(d => d.name) }).block,
+    monitors: saved.map(display => ({ ...display, x: 0, y: 300, mirrorOf: display.name === 'eDP-1' ? '1' : 'none',
+      width: Number(display.mode.split('x')[0]), height: Number(display.mode.split('x')[1].split('@')[0]), refreshRate: 60 })),
+    config: { mode: 'mirror', enabled: saved.map(d => d.name), singleTarget: '' },
+    lanes: { 'eDP-1': 2, 'HDMI-A-2': 1 }, displayDraft: [], draftMode: '', draftSingleTarget: '',
+    root: { validConnector: () => true },
+  };
+  const sync = ownerFunction('syncDisplayDraft',context);
+  sync();
+  assert.deepEqual(context.displayDraft.map(display => [display.name, display.x, display.y]),
+    [['eDP-1', 1920, 0], ['HDMI-A-2', 0, 300]]);
+});
+
+test('successive position previews reconfigure only the output being moved', () => {
+  const before = [
+    { name: 'eDP-1', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 0, y: 0, scale: 1, transform: 0 },
+    { name: 'HDMI-A-2', width: 1920, height: 1200, refreshRate: 59.88, availableModes: ['1920x1200@59.88Hz'], x: 1920, y: 0, scale: 1, transform: 0 },
+  ];
+  const draft = before.map((monitor, index) => ({ ...monitor, mode: monitor.availableModes[0], enabled: true, lane: index + 1 }));
+  const calls = [];
+  const context = {
+    Model, MonitorsLua, draftMirrorSource: "",
+    previewBaseline: {},
+    Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
+    state: 'previewing', stateDir: '/tmp/station-preview-test',
+    config: { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] },
+    previewBefore: before, previewApplied: null, draftMode: 'extend', draftSingleTarget: '',
+    displayDraft: draft, previewCountdown: { restart() {} },
+    evalLua(lua) { calls.push(lua); },
+  };
+  context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
+  const body = owner.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
+  assert.ok(body);
+  const apply = ownerFunction('applyPreviewSnapshot',context);
+  draft[1].x = 2400;
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'extend', enabled: context.config.enabled });
+  apply();
+  assert.equal((calls[0].match(/hl\.monitor/g) || []).length, 1);
+  assert.match(calls[0], /output = "HDMI-A-2"/);
+  draft[1].x = 2600;
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'extend', enabled: context.config.enabled });
+  apply();
+  assert.equal((calls[1].match(/hl\.monitor/g) || []).length, 1);
+  assert.match(calls[1], /position = "2600x0"/);
+  draft[1].transform = 1;
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'extend', enabled: context.config.enabled });
+  apply();
+  assert.ok((calls[2].match(/hl\.monitor/g) || []).length >= 2, 'rotation changes keep the full guarded transaction');
+});
+
+test('a mode-only preview enables the new single output first without geometry rules', () => {
+  const before = [
+    { name: 'eDP-1', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 0, y: 0, scale: 1, transform: 0 },
+    { name: 'HDMI-A-2', width: 1920, height: 1080, refreshRate: 60, availableModes: ['1920x1080@60.00Hz'], x: 1920, y: 0, scale: 1, transform: 0 },
+  ];
+  const draft = before.map((monitor, index) => ({ ...monitor, mode: monitor.availableModes[0], enabled: true, lane: index + 1 }));
+  const calls = [];
+  const context = {
+    Model, MonitorsLua, draftMirrorSource: "",
+    previewBaseline: {},
+    Quickshell: { execDetached() {} }, Transactions: { watchdog: '' },
+    state: 'previewing', stateDir: '/tmp/station-preview-test',
+    config: { mode: 'single', singleTarget: 'eDP-1', enabled: ['eDP-1', 'HDMI-A-2'] },
+    previewBefore: before, previewApplied: null, draftMode: 'single', draftSingleTarget: 'HDMI-A-2',
+    displayDraft: draft, previewCountdown: { restart() {} },
+    evalLua(lua) { calls.push(lua); },
+  };
+  context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
+  const body = owner.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
+  const apply = ownerFunction('applyPreviewSnapshot',context);
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'HDMI-A-2', enabled: context.config.enabled });
+  apply();
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].indexOf('output = "HDMI-A-2", disabled = false')
+    < calls[0].indexOf('output = "eDP-1", disabled = true'));
+  assert.doesNotMatch(calls[0], /mode = |position = |scale = |transform = /);
+  assert.deepEqual([...context.expect.outputs], ['eDP-1', 'HDMI-A-2']);
+  context.draftSingleTarget = 'eDP-1';
+  context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'eDP-1', enabled: context.config.enabled });
+  apply();
+  assert.ok(calls[1].indexOf('output = "eDP-1", disabled = false')
+    < calls[1].indexOf('output = "HDMI-A-2", disabled = true'));
+  assert.deepEqual([...context.expect.outputs], ['eDP-1', 'HDMI-A-2'],
+    'the second preview attributes events against the applied preview, not its original baseline');
+});
+
+test('settling a preview still requires one, and unrelated work stays gated on idle', () => {
+  assert.match(owner, /function revertPreview\(reason\) \{\n {4}if \(operationState !== "previewing"\)/);
+  assert.match(owner, /function keepPreview\(\) \{\n {4}if \(operationState !== "previewing"/);
+  assert.match(owner, /function removeStationBlock\(\) \{\n {4}if \(operationState !== "idle"\) return "busy"/);
+});
+
+test('layout edits stay previewable while side controls require idle', () => {
+  assert.match(layout, /if \(!service \|\| !service\.draftEditable\) return/);
+  assert.match(layout, /enabled: canvas\.service && canvas\.service\.draftEditable/);
+  // Role swaps migrate windows and are intentionally gated on idle; card
+  // position and rotation previews still use draftEditable.
+  assert.match(layout, /else if \(canvas\.service\.state === "idle"\)/);
+  assert.equal((tab.match(/service\.state !== "idle"/g) || []).length, 1);
+  assert.match(tab, /if \(!service \|\| !selectedDisplay \|\| service\.state !== "idle"\) return/);
+  assert.match(tab, /service\.applyDisplaySetting\(selectedDisplay\.name, key, value\)/);
+  assert.doesNotMatch(tab, /service\.previewLayout\(\)/,
+    'Scale, Resolution, and Refresh persist directly instead of entering preview');
+  assert.match(panel, /if \(!service \|\| !service\.draftEditable\) return/);
+});
+
+test('the panel remembers its tab across a bar rebuild but not across a close', () => {
+  assert.match(service, /property int rememberedTab: 0/);
+  assert.match(panelSession, /onSelectedTabChanged: \{\s*if \(isAvailable\(\) && sessionTabRestored\) service\.setRememberedTab\(selectedTab\)/);
+  assert.match(panelSession, /selectedTab !== remembered\) selectedTab = remembered\n    sessionTabRestored = true/);
+  assert.match(panelSession, /if \(!opened\) service\.setRememberedTab\(0\)/);
+  assert.match(panelSession, /service\.rememberedTab/);
+});

@@ -32,9 +32,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends lua5.4 perl python3
-      - name: Run portable regression tests
-        run: node --test test/m0/*.test.mjs test/v2/*.test.cjs
-      - name: Check theme tokens
-        run: node tools/v2/check-theme-tokens.mjs
-      - name: Check whitespace
+      - name: Run portable checks
+        run: python3 test/run.py
+      - name: Check committed whitespace
         run: git show --format= --check HEAD

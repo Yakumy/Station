@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
-import "lib" as Station
+import "lib/bars/omarchy" as OmarchyBar
 import "lib/BarBridge.js" as BarBridge
 
 // Station's full-bar entry. Each connected output owns an isolated copy of
@@ -204,7 +204,7 @@ Item {
     model: Quickshell.screens
 
     delegate: Component {
-      Station.MonitorBar {
+      OmarchyBar.MonitorBar {
         id: monitorBar
         required property var modelData
         targetScreen: root.enabledFor(modelData) ? modelData : null

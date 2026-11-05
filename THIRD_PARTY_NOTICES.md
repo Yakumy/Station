@@ -1,6 +1,6 @@
 # Third-party notices
 
-`lib/MonitorBar.qml` and `lib/BarModel.js` are adapted from the Omarchy 4.0.6
+`lib/bars/omarchy/MonitorBar.qml` and `lib/bars/omarchy/BarModel.js` are adapted from the Omarchy 4.0.6
 stock bar, distributed by the Omarchy project under the MIT License. Station
 keeps these files local so it can create one independently positioned bar per
 monitor without modifying `/usr/share/omarchy`.
