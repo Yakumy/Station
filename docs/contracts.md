@@ -476,8 +476,9 @@ packaged Omarchy files for per-monitor behavior.
 | Background | Solid, Transparent or Blur. Blur requests Station's layer rule and cannot override disabled global blur. |
 | Style | Omarchy default, or Pill with separate left, center and right islands. |
 
-- Bars begin at the physical monitor edge in every style. Auto exclusion reserves the
-  configured thickness. Window gaps never move the bar.
+- The Omarchy default bar begins at the physical monitor edge. A Pill bar keeps a safe
+  space of `Style.space(8)` from that edge and from the ends of its span. Auto exclusion
+  reserves the configured thickness plus that space. Window gaps never move the bar.
 - A side change reflows in place, so an open panel survives. While the panel is open,
   `config.bars` is authoritative and the shell config write waits for close.
 - The panel keeps the last valid edge until the bar window reports the new axis. It

@@ -154,8 +154,8 @@ Item {
         ? Number(root.vertical ? panel.contentHeight : panel.contentWidth) : 0
       readonly property real axisPosition: axisStart + BarModel.popoutAnchor(
         slotRef.region, root.effectiveBarLength, panelLength)
-      x: root.vertical ? 0 : axisPosition
-      y: root.vertical ? axisPosition : 0
+      x: root.vertical ? root.contentOffset : axisPosition
+      y: root.vertical ? axisPosition : root.contentOffset
       width: root.vertical ? root.barSize : 0
       height: root.vertical ? 0 : root.barSize
     }
@@ -650,8 +650,11 @@ Item {
       targetScreen ? Number(targetScreen.height) : 1) * 0.05))
   readonly property int barSize: Math.max(defaultBarSize, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
-  // Every presentation starts at the physical edge and reserves its full size.
-  readonly property int panelThickness: barSize
+  // The default bar starts at the physical edge. Pill floats a safe distance from
+  // the monitor edge and its ends, and the surface reserves that distance too.
+  readonly property real pillEdgeInset: barStyle === "pill" ? Math.round(Style.space(8)) : 0
+  readonly property real contentOffset: position === "top" || position === "left" ? pillEdgeInset : 0
+  readonly property real panelThickness: barSize + pillEdgeInset
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
   readonly property int contentInset: Math.ceil(Style.spacing.sm)
   property int measuredMaximumContentSize: defaultContentSize
@@ -1424,15 +1427,15 @@ Item {
       width: root.vertical ? root.barSize : root.effectiveBarLength
       height: root.vertical ? root.effectiveBarLength : root.barSize
       x: root.vertical
-        ? 0
+        ? root.contentOffset
         : Math.round((parent.width - width) / 2)
       y: root.vertical
         ? Math.round((parent.height - height) / 2)
-        : 0
+        : root.contentOffset
       readonly property real regionGap: Style.spacing.sm
       readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0
       readonly property real pillInset: 0
-      readonly property real pillOuterMargin: 0
+      readonly property real pillOuterMargin: root.pillEdgeInset
       readonly property real edgeMargin: root.barStyle === "pill"
         ? pillOuterMargin + pillPadding : Style.space(8)
       readonly property real leadingLength: (root.vertical ? leftModules.height : leftModules.width)

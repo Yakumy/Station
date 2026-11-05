@@ -1,5 +1,6 @@
 # Unreleased
 
+- Keep a safe space between a Pill bar and the monitor edge and ends.
 - Apply the outer gap beside Solid and Blur bars but not beside Transparent bars (Omarchy
   default or Pill), through runtime per-monitor workspace rules.
 - Stop reporting a conflict for Omarchy 4.5.0's Super+Ctrl+Shift+arrow move-to-monitor

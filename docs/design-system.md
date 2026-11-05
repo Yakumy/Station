@@ -137,10 +137,10 @@ monitor card by half of `Style.spacing.sm`, producing a compact named gap
 between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
 Span keeps exact edge-to-edge cards because its image crop is continuous.
 
-**Bar edge geometry:** All backgrounds and styles share edge-aligned geometry.
-The full surface thickness is reserved automatically. Pill islands have no outer
-margin or cross-axis inset; their internal padding remains. Window gaps do not
-move the bar away from the monitor edge.
+**Bar edge geometry:** The Omarchy default bar is edge-aligned in every background.
+A Pill bar floats `Style.space(8)` from the monitor edge and from the ends of its span, so
+it never touches the monitor. The surface reserves that space with the bar thickness,
+and the islands keep their internal padding. Window gaps do not move the bar.
 
 ## 8. Do-not list
 
