@@ -583,6 +583,24 @@ Its modes are Same on all (the default, following Omarchy), Per monitor, and Spa
 - The service draws click-through bottom-layer surfaces above the stock background. The
   default mode leaves the stock surface visible.
 - Animated images show a static first frame.
+- Under Follow, a matching theme intro uses the saved wallpaper crop on every output,
+  including Span pan/zoom and per-monitor frames. Station keeps its still visible until
+  OWE confirms that the crop has been presented on every output. The same normalized
+  rectangles apply to the video and its fade into the final still; Station then resumes
+  its saved image framing. The renderer holds the cropped opening frame until Station
+  reveals it and releases playback, so the framing handshake does not skip the opening.
+  The hold expires after two seconds if the covering client disappears. Playback
+  remains one OWE decoder, never one player per screen.
+- Framed intros require OWE's `source-rects` renderer API and `intro_path` status field.
+  Older engines keep Station's still visible. Requests are scoped to the renderer's
+  media generation; stale replies, missing images, unavailable outputs and engine errors
+  cannot reveal an unframed video. Observation is bounded to a theme-change window and
+  ends after a completed intro. Pinned wallpapers do not follow intros.
+- For engines advertising `composition_handoff`, Station keeps its transparent layer
+  mapped throughout playback, restores only its cropped image at the end, and waits
+  for two render frames before acknowledging. OWE enables the stock background only
+  after that acknowledgment. This avoids both a polling gap and the compositor's
+  layer fade exposing the unframed wallpaper.
 
 ### Image safety
 
