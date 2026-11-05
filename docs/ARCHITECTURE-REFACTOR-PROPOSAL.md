@@ -1083,10 +1083,11 @@ this audit.
 completed step on `dev`. Do not push. Preserve the mandatory M5/M6 human-review
 checkpoints and the M2 compatibility proof gate. Optional M8/M9 still require
 evidence of a maintainability benefit. Installed updates, live tests and
-publishing remain outside this authorization. The user resumed after M3. M4 is
-implemented in this revision. The user requested a stop after the M4 commit.
-Stop before M5 for review of
-[the concrete packet](ARCHITECTURE-M5-REVIEW.md); approval is still pending.
+publishing remain outside this authorization. M4 is committed as `ddceb48`.
+After the M5 packet review, the user delegated the decision and instructed
+continued work. The [packet](ARCHITECTURE-M5-REVIEW.md) records the accepted M5
+scope and source SHA. M5 is implemented in this revision. M6 requires a separate
+packet and approval before implementation.
 
 ### Mandatory human-review checkpoints before M5 and M6
 
@@ -1230,7 +1231,7 @@ later with the old plain-copy mechanism retained once its own gate is approved.
   compilation separately verifies the real Quickshell types. Wallpaper changes
   remain deferred and are not included in M4.
 
-### M5 — Make workspace migration a durable owner
+### M5 — Make workspace migration a durable owner (implemented)
 
 - **Priority / effort / risk:** P2; large, 3–6 days; high.
 - **Human checkpoint:** mandatory pre-M5 packet and explicit milestone approval
@@ -1249,6 +1250,12 @@ later with the old plain-copy mechanism retained once its own gate is approved.
   extraction cases are retired.
 - **Rollback:** revert code using unchanged journal format; restart must still
   resume pending identities. No reset or deletion of workspace-map state.
+- **Implementation:** Service composes one `WorkspaceController.qml` with finite
+  ports, four forwarding methods and detached/read-only projections. Explicit
+  mark/clear methods replace the root topology-flag writes at their existing
+  event and fresh-snapshot barriers. Preview baseline and operation arbitration
+  remain root-owned. The journal schema, bytes, revisions, retry interval and
+  callback policy remain compatible. See the checkpoint for actual verification.
 
 ### M6 — Extract display edit/preview transaction ownership
 

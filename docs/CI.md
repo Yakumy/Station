@@ -38,3 +38,19 @@ busy publication, readback settlement, file-event wiring and stale-read rejectio
 `python3 tools/v3/check-window-sliders.py` checks the production tab and installed
 slider with pointer events. These harnesses do not run in the portable GitHub job
 and do not prove physical pointer or compositor behavior.
+
+Workspace ownership has two additional local checks:
+
+```sh
+python3 tools/v2/check-workspace-owner.py
+python3 tools/v2/check-workspace-fileview.py
+```
+
+The first exercises the production owner with controlled FileView signals and
+fake compositor effects. It uses the real retry timer. The second runs real
+Quickshell FileViews against temporary journals with fake dispatch. It checks
+load/save signals, identical-text suppression and resulting disk data. Neither
+instantiates Service or uses the installed journal. Neither proves hardware
+behavior or recovery after a shell crash. The portable Node suite also compares
+pre-M5 and owner effect traces and journal bytes, including rollback in both
+directions after partial movement.

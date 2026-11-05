@@ -1,16 +1,31 @@
 # M5 review packet: workspace migration owner
 
-Packet revision: 1. Status: awaiting explicit human approval. This packet is part
-of the M4 commit; use that commit's full SHA as the candidate review revision.
-The migration implementation was inspected at
-`40f0d8b38527317d164b56f42b18e1d0f59b768b`; M4 changes only window-setting ownership,
-tests and documents. No M5 production changes have been made.
+Packet revision: 1, with the approved topology methods clarified below.
+Status: implemented, with verification recorded in the
+[checkpoint](ARCHITECTURE-REFACTOR-STATUS.md#m5-workspace-migration-owner).
+
+The initial packet shipped in M4. The candidate review revision was
+`ddceb489fe176920ae9f30e861a5f082e0c6a07d`. Initial migration inspection used
+`40f0d8b38527317d164b56f42b18e1d0f59b768b`. M4 changed only window-setting
+ownership, tests and documents. The review against M4 confirmed that migration
+production code was unchanged before M5 approval.
 
 The [proposal](ARCHITECTURE-REFACTOR-PROPOSAL.md#mandatory-human-review-checkpoints-before-m5-and-m6)
 requires this review before implementation. General delegation does not approve
-M5. Record the approved source SHA, packet revision, conditions and authorization
-here when approval arrives. A material change to these boundaries reopens review.
+M5. The approved source SHA, packet revision, conditions and authorization are
+recorded below. A material change to these boundaries reopens review.
 M6 and hardware execution require separate approvals.
+
+Approval recorded 2026-11-05 against source
+`ddceb489fe176920ae9f30e861a5f082e0c6a07d`. After the scope/risk review and explicit
+approval request, the user delegated the decision: “I don't know, consider the
+best decision your self and keep going.” The accepted decision is to proceed with
+M5 only, including explicit `markTopologyDirty()` and `clearTopologyDirty()` owner
+methods for the existing root event/preview writes. Clear remains at the current
+fresh-snapshot barrier. No timing or cancellation-policy change is authorized.
+Preserve M2, run isolated verification, update documentation and commit M5 on
+`dev`. No push, installation, restart, live configuration/topology change or
+dependency installation is authorized. M6 remains separately gated.
 
 ## Concrete transfer
 
@@ -60,7 +75,7 @@ whole Service QObject. The proposed surface is bounded as follows:
 | In | `restorePreviewBaseline(value)`, `finishPreviewApply()`, `failPreview(message)` | Restore/clear baseline, settle enclosing preview, or execute existing exhausted-retry Revert path |
 | In | `focusStatements(station, output)`, `showStation(station)`, `ready()` | Existing focus/show and startup-ready callbacks; `ready()` calls `maybeStart()` |
 | Out | read-only committed map, detached/read-only pending journal data, mapping-loaded and migration-phase projections | Existing consumers continue to use the same root names; OpenApps receives committed map plus pending identities |
-| Methods | `reconcile()`, `reload()`; compatibility forwarding for saved/failure/execute if required by retained tests | No new UI actions, IPC methods, schemas or public return values |
+| Methods | `reconcile()`, `reload()`, `markTopologyDirty()`, `clearTopologyDirty()`; compatibility forwarding for saved/failure/execute if required by retained tests | No new UI actions, IPC methods, schemas or public return values |
 
 This extraction needs more ports than M4 because it coordinates root arbitration
 and display preview. Keep these ports specific. If implementation needs access to
@@ -165,6 +180,6 @@ original desktop state. H9 is distinct from a normal shell restart. No such run
 is authorized or claimed in this packet. Three/four-output, simultaneous dock,
 lid/suspend/cold-login paths remain unverified hardware limits.
 
-Approval decision required: accept this transfer/port scope and temporary-file
-verification strategy, with M2 retained and live tests excluded. Record any added
-conditions before M5 begins. M5 approval does not approve M6.
+The recorded decision accepts this transfer/port scope and temporary-file
+verification strategy, including the explicit topology methods. M2 remains
+retained and live tests remain excluded. M5 approval does not approve M6.

@@ -7,12 +7,12 @@ This checkpoint lets the maintainer or a later coding session resume the approve
 
 The user authorized implementation and one commit per completed step on `dev`.
 Do not push. Do not install an update or change the running desktop under this
-scope. The user resumed after M3; M4 is completed in this checkpoint revision.
-The latest user instruction is to stop after the M4 commit. Stop at the pre-M5
-human gate. Its [review packet](ARCHITECTURE-M5-REVIEW.md)
-is ready; explicit M5 approval is pending. Preserve separate human review before
-M6. M2 deletion requires its
-cross-version and detached-recovery proof. M8 and M9 remain optional.
+scope. M4 is committed as `ddceb48`. After the M5 packet review, the user delegated
+the decision and instructed continued work. The accepted scope and source SHA
+are recorded in the [M5 review packet](ARCHITECTURE-M5-REVIEW.md).
+M5 is completed in this checkpoint revision. Stop before M6 implementation.
+Prepare its separate review packet and obtain approval first. M2 deletion requires
+its cross-version and detached-recovery proof. M8 and M9 remain optional.
 
 ## Completed work
 
@@ -40,7 +40,7 @@ experiment was run. Portable checks need unrestricted subprocess execution on
 this machine because the sandbox rejects some Node/Lua fixtures.
 
 M2 compatibility evaluation is committed as `8e4f7cf`. M3 is committed as
-`40f0d8b`. M4 is completed in this checkpoint revision.
+`40f0d8b`. M4 is committed as `ddceb48`. M5 is completed in this checkpoint revision.
 
 ## M3: bar settings owner
 
@@ -86,8 +86,58 @@ Node run failed at subprocess fixtures; the unrestricted focused run passed all
 15 cases and the unrestricted full suite passed all 277. No dependencies were
 installed, no live desktop changes were made and nothing was pushed.
 
-M5 is not started. Its packet describes proposed ownership and required evidence;
-it does not authorize implementation or hardware tests. M2 plain copies remain.
+## M5: workspace migration owner
+
+`WorkspaceController.qml` now owns the workspace journal FileView, mapping load
+gate, journal/commit phases, revision, retry timer, attempts, focus and topology
+flag. Service retains four forwarding methods and detached/read-only projections.
+Its event handlers mark topology through an owner method. The preview handler
+clears that flag through a second method after the existing fresh snapshot.
+No root handler independently writes migration state.
+
+The owner receives data and finite effect ports, not the Service QObject.
+Root operation arbitration, queues, configuration generation, expected events,
+preview baseline and watchdog remain with Service. Preview reconciliation retains
+the enclosing generation. Journal preview data and consumer snapshots are detached.
+The extraction preserves the existing late-callback policy without adding a token.
+
+All eight migration cases and all 19 display-transaction cases retain their
+assertions and now execute production owner bodies through an external-port
+adapter. Fifteen added Node cases cover ownership, ten old/new trace comparisons,
+both rollback directions, OpenApps identities and detached preview data.
+The pinned pre-M5 function/FileView fixture comes from
+`ddceb489fe176920ae9f30e861a5f082e0c6a07d`. Effect traces and serialized bytes
+match for the same observations. Both implementations load temporary journal
+files from the other implementation through their production load handlers. They resume partial moves without
+conversion or deletion.
+
+`python3 tools/v2/check-workspace-owner.py` passed eight production QML behavior
+cases plus setup/cleanup. It controls FileView signals and fake compositor replies,
+but uses the real 500 ms retry timer. Cases include delayed/failed journal and
+commit acknowledgments, retry exhaustion, superseding topology, partial restart,
+late callbacks and the enclosing preview generation/baseline contract.
+
+`python3 tools/v2/check-workspace-fileview.py` passed with real Quickshell FileView
+objects and temporary journals. It checks valid/invalid/missing loads, actual
+saved/failed signals, identical-text suppression and revision-based writes.
+Python checks the final disk bytes. The real-file fixture starts with a pending
+journal and a partially moved client. All dispatch is fake. This does not prove
+crash durability, detached watchdog survival or hardware behavior.
+
+All 292 Node cases passed. All 28 runtime QML components compiled. Theme scan:
+48 files, no violations. The existing layout harness passed 23 Qt results.
+Plugin validation passed from a clean export with the milestone files overlaid.
+Whitespace checks passed. Documentation lint added no hard findings in changed
+lines. Existing hard findings across the five touched documents decreased from
+249 to 243. Compilation retained the host-portal warning. Layout doubles
+retained their existing painting/token warnings. The real-file fixture deliberately
+logs one failed save and unused graphical-child warnings.
+Sandboxed Node execution again failed/stalled at subprocess fixtures. The
+unrestricted focused and full runs passed. No dependencies were installed.
+No installed plugin, live configuration or topology changed. Nothing was pushed.
+
+M2 plain copies remain. M6 implementation has not started and needs its own
+review packet and approval.
 
 ## M2: retain plain-copy persistence
 
@@ -113,8 +163,8 @@ M3 and M4 do not depend on that deletion.
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Obtain explicit approval of the M5 review packet before any M5 implementation.
-5. Keep M2 persistence intact. M6 requires a separate packet and approval after M5.
+4. Review the completed M5 evidence and prepare the separate M6 review packet.
+5. Keep M2 persistence intact. Obtain explicit M6 approval before implementation.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.
 

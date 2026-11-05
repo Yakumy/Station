@@ -4,6 +4,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { monitorRules } = require('./helpers/monitor-lua.cjs');
 const source = readFileSync('Service.qml', 'utf8');
+const { ownerFunction } = require('./helpers/workspace-owner.cjs');
 const copy = value => JSON.parse(JSON.stringify(value));
 
 // Run the production service functions with asynchronous compositor/saved
@@ -63,7 +64,7 @@ function harness() {
   Object.defineProperty(c, 'workspaceMap', { get: () => c.workspaceData.mapping });
   Object.defineProperty(c, 'draftEditable', { get: () => ['idle', 'previewing'].includes(c.state) && !c.previewBusy });
   for (const match of source.matchAll(/^  function (\w+)\([^\n]*\{\n[^]*?^  \}/gm))
-    c[match[1]] = runInNewContext('(' + match[0].trim() + ')', c);
+    c[match[1]] = ownerFunction(match[1], c) || runInNewContext('(' + match[0].trim() + ')', c);
   let evacuationSerial = 0;
   Object.defineProperty(c, 'panelEvacuationSerial', {
     configurable: true,

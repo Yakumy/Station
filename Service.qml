@@ -70,20 +70,55 @@ Item {
       if (typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
     }
   }
+  Station.WorkspaceController {
+    id: workspace
+    stateDir: root.stateDir
+    operationState: root.state
+    operationGeneration: root.gen
+    removalGraceRunning: removalGrace.running
+    clients: root.clients
+    lanes: root.lanes
+    currentStation: root.currentStation
+    legacyWorkspaceGrid: root.persisted.legacyWorkspaceGrid || false
+    previewBaseline: root.previewBaseline
+    panelScreenName: root.panelScreenName
+    layoutError: root.layoutError
+    targetMapping: function() { return root.targetMapping() }
+    refresh: function(includeClients, done) { root.refresh(includeClients, done) }
+    updateAssignments: function() { root.updateAssignments() }
+    focusedClient: function() { return root.focusedClient() }
+    beginMigration: function() { return root.begin("migrating") }
+    setOperationState: function(value) { root.state = value }
+    evalLua: function(lua, done) { root.evalLua(lua, done) }
+    recordExpectedEvents: function(value) { root.expect = value }
+    reportError: function(message) { root.layoutError = message }
+    setCurrentStation: function(station) { root.currentStation = station }
+    commitMigrationState: function(station) {
+      root.persisted.legacyWorkspaceGrid = false
+      root.persisted.lastStation = station
+      root.saveState()
+    }
+    restorePreviewBaseline: function(value) { root.previewBaseline = value }
+    finishPreviewApply: function() { root.finishPreviewApply() }
+    failPreview: function(message) { root.previewBusy = false; root.revertPreview(message) }
+    focusStatements: function(station, output) { return root.stationFocusStatements(station, output) }
+    showStation: function(station) { root.showStation(station) }
+    ready: function() { root.maybeStart() }
+  }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
   property var persisted: Store.stateDefaults()
   property var monitors: []
   property var clients: []
   property var lanes: ({})
-  property var workspaceData: ({ mapping: null, pending: null })
-  property bool mappingLoaded: false
-  property string migrationPhase: ""
-  property bool topologyDirty: false
-  property int migrationAttempts: 0
+  readonly property var workspaceData: workspace.snapshot
+  readonly property bool mappingLoaded: workspace.mappingLoaded
+  readonly property string migrationPhase: workspace.migrationPhase
+  readonly property bool topologyDirty: workspace.topologyDirty
+  readonly property int migrationAttempts: workspace.migrationAttempts
   property var lastWindowAction: ({})
-  property var migrationFocus: null
-  property var migrationCommit: null
+  readonly property var migrationFocus: workspace.detached(workspace.migrationFocus)
+  readonly property var migrationCommit: workspace.detached(workspace.migrationCommit)
   readonly property var workspaceMap: workspaceData.mapping
   property var unmanaged: []
   property int currentStation: persisted.lastStation || 1
@@ -755,137 +790,19 @@ Item {
   }
 
   function reconcile() {
-    if (state === "applyingLayout") return
-    if (removalGrace.running) return
-    if (migrationPhase || state === "migrating") { topologyDirty = true; return }
-    var preview = state === "previewing"
-    if (!preview) begin("migrating")
-    refresh(true, function() {
-      updateAssignments()
-      var target = targetMapping()
-      if (!Grid.valid(target)) {
-        if (preview) migrationFailed("No usable display after the layout change.")
-        else state = "idle"
-        return
-      }
-      try {
-        var old = workspaceMap || (persisted.legacyWorkspaceGrid ? Grid.legacy(lanes) : target)
-        var pending = workspaceData.pending
-        var plan = pending ? Grid.resume(pending, target, clients) : Grid.plan(old, target, clients, currentStation)
-        if (!preview && previewBaseline) plan = Grid.restorePreview(previewBaseline, plan, clients)
-        var focused = focusedClient()
-        migrationFocus = focused ? Grid.identity(focused) : null
-        // FileView does not emit saved when setText receives identical text.
-        // A revision makes every journal attempt an acknowledged disk write,
-        // including recovery of an otherwise unchanged plan after restart.
-        workspaceData = { mapping: old, pending: plan, preview: previewBaseline,
-          revision: Number(workspaceData.revision || 0) + 1 }
-        topologyDirty = false
-        migrationPhase = "journal"
-        workspaceFile.setText(JSON.stringify(workspaceData, null, 2) + "\n")
-      } catch (error) { migrationFailed(String(error)) }
-    })
+    return workspace.reconcile()
   }
 
   function migrationFailed(message) {
-    migrationPhase = ""
-    var preview = state === "previewing"
-    if (!preview) state = "idle"
-    layoutError = "Workspace migration: " + message
-    // Keep the journal for a later retry; never decode partially moved IDs again.
-    if (++migrationAttempts <= 3) migrationRetry.restart()
-    else if (preview) { previewBusy = false; revertPreview(layoutError) }
+    return workspace.migrationFailed(message)
   }
 
   function migrationSaved() {
-    if (migrationPhase === "journal") {
-      migrationPhase = "moving"
-      executeMigration()
-    } else if (migrationPhase === "commit") {
-      workspaceData = migrationCommit
-      migrationCommit = null
-      migrationPhase = ""
-      migrationAttempts = 0
-      if (layoutError.indexOf("Workspace migration:") === 0) layoutError = ""
-      persisted.legacyWorkspaceGrid = false
-      persisted.lastStation = currentStation
-      saveState()
-      if (state === "previewing") {
-        if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
-        evalLua(Hypr.batch(stationFocusStatements(currentStation, panelScreenName)), function() {
-          root.finishPreviewApply()
-        })
-        return
-      }
-      previewBaseline = null
-      state = "idle"
-      if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
-      showStation(currentStation)
-      if (migrationFocus) {
-        var focused = clients.find(function(c) { return Grid.sameClient(migrationFocus, c) })
-        if (focused && Grid.station(Number(focused.workspace.id), workspaceMap) === currentStation)
-          evalLua("hl.dispatch(hl.dsp.focus({ window = " + Hypr.luaString("address:" + Hypr.address(focused.address)) + " }))")
-      }
-    }
+    return workspace.migrationSaved()
   }
 
   function executeMigration() {
-    var plan = workspaceData.pending
-    var rules = Hypr.compactRules(plan.to.outputs)
-    var statements = []
-    var destinations = {}
-    var affected = {}
-    plan.windows.forEach(function(row) {
-      var client = clients.find(function(c) { return Grid.sameClient(row, c) })
-      if (!client || client.pinned) return
-      if (Number(client.workspace.id) !== row.to || client.monitor !== row.output) {
-        if (client.monitor) affected[client.monitor] = true
-        affected[row.output] = true
-      }
-      if (Number(client.workspace.id) !== row.to) statements.push(Hypr.moveWindow(row.address, row.to, false))
-      destinations[row.to] = row.output
-    })
-    // Workspace rules only place new workspaces. Existing workspaces must also
-    // be placed explicitly after all address-based moves have finished.
-    Object.keys(destinations).forEach(function(id) {
-      statements.push(Hypr.moveWorkspace(Number(id), destinations[id]))
-    })
-    expect = { kinds: ["workspace", "focusedmon"], outputs: Object.keys(affected), until: Date.now() + 2000 }
-    // Install the rules separately so a false result from a later idempotent
-    // move cannot hide whether future workspaces have the correct owner.
-    evalLua(Hypr.batch(rules), function(ruleCode, ruleOutput) {
-      if (ruleCode !== 0 || (ruleOutput && ruleOutput.trim() !== "ok")) {
-        migrationFailed("compositor rejected the workspace rules")
-        return
-      }
-      evalLua(Hypr.batch(statements), function(moveCode, moveOutput) {
-        // Hyprland can apply an earlier dispatch in a Lua batch and still
-        // return false for a later no-op. The durable journal and a fresh
-        // compositor snapshot, not that aggregate return value, determine
-        // whether the migration completed.
-        refresh(true, function() {
-          if (topologyDirty || !Grid.equal(plan.to, targetMapping())) {
-            migrationPhase = ""
-            if (state !== "previewing") state = "idle"
-            reconcile(); return
-          }
-          var failed = plan.windows.some(function(row) {
-            var client = clients.find(function(c) { return Grid.sameClient(row, c) })
-            return client && !client.pinned && (Number(client.workspace.id) !== row.to || client.monitor !== row.output)
-          })
-          if (failed) {
-            var rejected = moveCode !== 0 || (moveOutput && moveOutput.trim() !== "ok")
-            migrationFailed(rejected ? "compositor rejected the move batch" : "destination verification failed")
-            return
-          }
-          currentStation = plan.station
-          migrationCommit = { mapping: plan.to, pending: null,
-            preview: state === "previewing" ? previewBaseline : null, revision: workspaceData.revision + 1 }
-          migrationPhase = "commit"
-          workspaceFile.setText(JSON.stringify(migrationCommit, null, 2) + "\n")
-        })
-      })
-    })
+    return workspace.executeMigration()
   }
 
   function applyBinds() {
@@ -1411,7 +1328,7 @@ Item {
         }
         root.refresh(true, function() {
           // The fresh snapshot has absorbed the expected removal.
-          root.topologyDirty = false
+          workspace.clearTopologyDirty()
           root.finishPreviewApply()
         })
       })
@@ -1945,7 +1862,7 @@ Item {
     // a fresh snapshot; applying saved config here races Keep and resets drafts.
     if ((state === "previewing" || state === "applyingLayout")
         && (name.indexOf("monitoradded") === 0 || name.indexOf("monitorremoved") === 0)) {
-      topologyDirty = true
+      workspace.markTopologyDirty()
       if (state === "previewing" && !eventExpected(event))
         abandonPreview("Display connection changed; preview cancelled.")
       return
@@ -1966,14 +1883,14 @@ Item {
       if (eventExpected(event)) return
       lastTopologyMs = Date.now()
       removalGrace.stop()
-      if (state === "migrating") topologyDirty = true
+      if (state === "migrating") workspace.markTopologyDirty()
       refresh(true, function() { applyRuntime() })
       return
     }
     if (name.indexOf("monitorremoved") === 0) {
       if (eventExpected(event)) return
       lastTopologyMs = Date.now()
-      if (state === "migrating") topologyDirty = true
+      if (state === "migrating") workspace.markTopologyDirty()
       if (state === "switching") {
         gen += 1
         state = "idle"
@@ -2125,30 +2042,6 @@ Item {
   }
 
   FileView {
-    id: workspaceFile
-    path: root.stateDir + "/workspace-map.json"
-    atomicWrites: true
-    printErrors: false
-    onLoaded: {
-      if (root.mappingLoaded) return
-      var data = root.parseJson(text(), null)
-      if (!data || (!Grid.valid(data.mapping) && !(data.pending && data.pending.from && data.pending.from.legacy))) {
-        root.layoutError = "Could not read the saved workspace mapping."
-        return
-      }
-      root.workspaceData = data
-      root.previewBaseline = data.preview || null
-      root.mappingLoaded = true
-      root.maybeStart()
-    }
-    onLoadFailed: {
-      if (!root.mappingLoaded) { root.mappingLoaded = true; root.maybeStart() }
-    }
-    onSaved: root.migrationSaved()
-    onSaveFailed: root.migrationFailed("could not save the migration journal")
-  }
-
-  FileView {
     id: previewToken
     path: root.stateDir + "/preview.token"
     printErrors: false
@@ -2163,7 +2056,7 @@ Item {
       root.dirsReady = true
       configFile.reload()
       stateFile.reload()
-      workspaceFile.reload()
+      workspace.reload()
       previewToken.reload()
       root.maybeStart()
     }
@@ -2297,7 +2190,6 @@ Item {
   Timer { interval: 1500; running: root.started; repeat: true; onTriggered: root.observeDesktop() }
   Timer { id: reloadDebounce; interval: 300; onTriggered: { root.appliedGeneration = -1; root.refresh(true, function() { root.applyRuntime() }) } }
   Timer { id: removalGrace; interval: 5000; onTriggered: root.refresh(true, function() { root.applyRuntime() }) }
-  Timer { id: migrationRetry; interval: 500; onTriggered: root.reconcile() }
   Timer { id: leaseVerify; interval: 600; onTriggered: if (!pluginList.running) pluginList.running = true }
   Timer { id: screenHealthCheck; interval: 2500; onTriggered: root.verifyScreenHealth() }
   Timer { id: screenRecoveryEnable; interval: 250; onTriggered: root.finishScreenRecovery() }

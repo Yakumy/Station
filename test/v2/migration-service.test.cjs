@@ -1,10 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { runInNewContext } = require('node:vm');
 const Grid = require('../../lib/Grid.js');
 const Hypr = require('../../lib/Hypr.js');
-const source = readFileSync('Service.qml', 'utf8');
+const { ownerFunction } = require('./helpers/workspace-owner.cjs');
 const copy = value => JSON.parse(JSON.stringify(value));
 function harness({ from = { outputs: ['A'] }, to = { outputs: ['A', 'B'] }, pending = null } = {}) {
   const writes = [], evals = [];
@@ -39,9 +37,7 @@ function harness({ from = { outputs: ['A'] }, to = { outputs: ['A', 'B'] }, pend
   Object.defineProperty(context, 'workspaceMap', { get: () => context.workspaceData.mapping });
   context.root = context;
   for (const name of ['reconcile', 'migrationFailed', 'migrationSaved', 'executeMigration']) {
-    const start = source.indexOf('  function ' + name + '(');
-    const end = source.indexOf('\n  function ', start + 1);
-    context[name] = runInNewContext('(' + source.slice(start, end).trim() + ')', context);
+    context[name] = ownerFunction(name, context);
   }
   return { c: context, writes, evals };
 }

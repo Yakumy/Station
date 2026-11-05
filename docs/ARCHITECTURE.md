@@ -149,9 +149,9 @@ special-key menu. It updates only the binding draft; Apply retains the existing
 service validation and conflict policy. Station creates no editable text
 controls, avoiding Qt's automatic clipboard retrieval on clipboard changes.
 
-The service keeps six operation states: `idle`, `applyingLayout`,
-`previewing`, `migrating`, `moving`, and `switching`. Switching uses generations to
-discard stale callbacks. Migration is serialized and blocks window commands;
+The service keeps seven operation states: `idle`, `applyingLayout`,
+`previewing`, `migrating`, `moving`, `switching`, and `recoveringScreen`.
+Switching uses generations to discard stale callbacks. Migration is serialized and blocks window commands;
 topology changes during a migration trigger replanning from its journal. Expected monitor and workspace events are recorded before a
 Station-generated Hyprland evaluation so those events cannot trigger a second
 topology operation.
@@ -212,8 +212,23 @@ Station stores user preferences separately from runtime bookkeeping. Display
 identity and preferred lanes live in `config.json`; the last station, applied
 bindings, stock-widget lease, and lifecycle flags live in `state.json`.
 
+`WorkspaceController.qml` is a persistent child of the single Service. It owns
+`workspace-map.json`, its load gate, migration phases, revisions, commit staging,
+focus identity, topology flag and 500 ms retry timer. Service keeps operation
+arbitration, effect/snapshot queues, preview baseline and watchdog. Four root
+methods forward to the owner. Event handlers mark topology through its method.
+Preview completion clears that flag only after its existing fresh snapshot.
+Root and OpenApps read detached journal projections. No controller QObject or
+mutable journal crosses the bar bridge.
+
+The owner receives explicit data bindings and finite callbacks, never the whole
+Service object. Ordinary reconciliation begins a root migration operation.
+Preview reconciliation reuses its enclosing operation and generation. It persists
+a detached preview baseline and restores recovered baseline data through a root
+callback. Only an ordinary committed migration clears that baseline here.
+
 `workspace-map.json` contains the committed mapping and any pending migration.
-The service waits for the FileView saved signal before executing a migration.
+The owner waits for the FileView saved signal before executing a migration.
 It applies workspace rules in their own checked batch, moves the snapshotted
 window addresses, places existing destination workspaces on their outputs, then
 verifies live results even when the aggregate move dispatch reports failure.
