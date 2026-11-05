@@ -162,8 +162,7 @@ ShellRoot {
       }
       if (layout.animating || layout.queuedSpeed >= 0) return
       tab.preview("rounding", 20)
-      if (outline.radius !== 20 || outline.scale !== layout.zoom || !outline.antialiasing
-          || outline.border.pixelAligned) { fail("scaled radius"); return }
+      if (outline.radius !== 20 || outline.scale !== 1 || !outline.antialiasing) { fail("window radius follows the slider"); return }
       layout.previewExchange(0)
       if (layout.animating || layout.progress !== 2) { fail("zero speed"); return }
       capture.grabToImage(function(result) {

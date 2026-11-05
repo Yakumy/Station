@@ -211,17 +211,15 @@ Ui.BorderSurface {
       readonly property var rect: canvas.windowRect(index)
       x: rect.x; y: rect.y; width: rect.width; height: rect.height
       opacity: canvas.service.displayEnabled(canvas.displays[Math.floor(index / 2)].name) ? 1 : canvas.tokens.disabledOpacity
-      // Paint in monitor logical pixels, then scale the entire outline. A full
-      // preview-pixel border otherwise swallows small scaled corner radii.
+      // Every simulated window is active: accent border, selected fill. The corner
+      // radius is the Border roundness value in preview pixels, so it stays visible
+      // at preview zoom and follows the slider while it drags.
       Rectangle {
         objectName: "windowOutline-" + index
-        width: parent.width / canvas.zoom; height: parent.height / canvas.zoom
-        scale: canvas.zoom
-        transformOrigin: Item.TopLeft
-        color: Commons.Color.popups.background
-        border.color: canvas.tokens.textDim
-        border.width: Style.normalBorderWidth
-        border.pixelAligned: false
+        anchors.fill: parent
+        color: Commons.Color.menu.selectedBackground
+        border.color: Commons.Color.accent
+        border.width: Math.max(2, Style.normalBorderWidth)
         antialiasing: true
         radius: canvas.values.rounding
       }

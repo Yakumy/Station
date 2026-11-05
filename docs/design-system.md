@@ -146,8 +146,9 @@ and the islands keep their internal padding. Window gaps do not move the bar.
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.
 - No hardcoded radius, including `0` — use `Style.cornerRadius`, except the
-  explicit Bar-tab Pill style whose island radius is half its shorter side and the
-  monitor rectangles of the layout panels (`radius: 0`).
+  explicit Bar-tab Pill style whose island radius is half its shorter side, the
+  monitor rectangles of the layout panels (`radius: 0`) and the Windows preview
+  windows (Border roundness).
 - No pill/`radius-full` shapes outside the explicit per-monitor bar Pill style.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
@@ -169,14 +170,13 @@ use a fixed sharp radius of 0 and never follow the theme rounding.
 
 ### Window geometry preview
 
-The simulated windows in WindowsLayout are the sole exception to the corner
-token rule: their radius is the selected compositor rounding scaled to the
-preview. Paint the outline in logical monitor pixels and scale it as a whole,
-including its border; enable antialiasing and disable border pixel alignment so
-the border does not swallow small preview radii. All surrounding chrome
-continues to use `Style.cornerRadius`. Monitor labels sit above the upper-left
-corner, outside the rectangle. Reserve a label lane in stacked layouts instead
-of removing space from the illustrated window work area.
+The simulated windows in WindowsLayout are an exception to the corner token rule: their
+radius is the Border roundness value in preview pixels, unscaled, so it stays visible at
+preview zoom and follows the slider while it drags. Every simulated window is active:
+accent border and the selected fill. All other surrounding chrome continues to use
+`Style.cornerRadius`. Monitor labels sit above the upper-left corner, outside the
+rectangle. Reserve a label lane in stacked layouts instead of removing space from the
+illustrated window work area.
 
 ### Panel frame
 

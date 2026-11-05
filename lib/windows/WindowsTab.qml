@@ -119,4 +119,5 @@ Column {
       }
     }
   }
+  Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
 }

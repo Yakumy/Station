@@ -1,6 +1,7 @@
 # Unreleased
 
-- Layout panels draw monitor rectangles with a fixed sharp radius.
+- Windows tab preview windows follow Border roundness at preview scale, use the accent, and
+  the tab gains its bottom line.
 - Keep a safe space between a Pill bar and the monitor edge and ends.
 - Apply the outer gap beside Solid and Blur bars but not beside Transparent bars (Omarchy
   default or Pill), through runtime per-monitor workspace rules.
