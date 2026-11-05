@@ -177,7 +177,6 @@ test('managed block is unique, placed before personal overrides, and malformed m
   assert.equal(twice, once);
   assert.ok(twice.startsWith(L.START));
   assert.ok(twice.trimEnd().endsWith('require("defaults")'));
-  assert.equal(L.removeManagedBlock(once).trim(), 'require("defaults")');
   assert.throws(() => L.replaceManagedBlock(`${L.START}\nbroken\n`, generated.block), /invalid Station markers/);
 });
 

@@ -58,6 +58,7 @@ test('service requests toggle handoff only at Keep, never a side-control save',(
 test('Keep commits both files with one explicit reload and restores autoreload',t=>{
   const f=fixture(t),r=f.run(); assert.equal(r.status,0,r.stderr);
   assert.equal(fs.existsSync(f.toggle),false); assert.equal(fs.readFileSync(f.monitors,'utf8'),'after\n');
+  assert.deepEqual(fs.readdirSync(f.dir).filter(n=>/station-backup/.test(n)),[],'a successful Keep leaves no flag backup');
   assert.equal(fs.existsSync(f.token),false);
   const calls=fs.readFileSync(f.log,'utf8').trim().split('\n');
   assert.equal(calls.filter(x=>x==='reload').length,1);

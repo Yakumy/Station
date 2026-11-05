@@ -796,19 +796,6 @@ Item {
     } else restoreParkedToggle(function() {})
   }
 
-  function removeStationBlock() {
-    if (operationState !== "idle") return "busy"
-    try {
-      var source = MonitorsLua.removeManagedBlock(monitorsSource)
-      if (source === monitorsSource) return "absent"
-      var generated = MonitorsLua.generate(displayDraft, { mode: "extend",
-        enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" })
-      keepOptions = { mode: "extend", enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" }
-      startKeepFiles(source, generated.plain, "direct")
-      return "started"
-    } catch (error) { reportError(String(error.message || error)); return "invalid" }
-  }
-
   function migrateMonitorPrecedence(done) {
     // Existing v2 blocks moved to the front once. Personal Lua bytes survive.
     var info = MonitorsLua.markerInfo(monitorsSource)

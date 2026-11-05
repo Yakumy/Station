@@ -75,6 +75,9 @@ The original specification asked for these two. The maintainer declined them on
 - The panel does not open when a monitor connects.
 - A fourth output is reported only through `status`. The panel shows no message.
 
+A `removeStationBlock` method that no control called was deleted for the same reason.
+Plugin removal has its own cleanup.
+
 ## Historical records
 
 These records were removed from the tree. Read them with
@@ -94,12 +97,9 @@ These records were removed from the tree. Read them with
 
 These need a maintainer's decision. The code currently behaves as stated.
 
-1. **Remove Station block.** `DisplayController.removeStationBlock()` exists and has
-   tests, but no control calls it. The maintainer declined a Settings control. Delete
-   the method or keep it.
-2. **Wallpaper poll interval.** Station polls the Omarchy background every 250 ms. An
+1. **Wallpaper poll interval.** Station polls the Omarchy background every 250 ms. An
    earlier document said 1.5 seconds. Measure the cost, then choose one.
-3. **Panel control lifetime.** A brightness or text-size request ends with its panel
+2. **Panel control lifetime.** A brightness or text-size request ends with its panel
    instance. Decide whether it must survive a bar rebuild.
-4. **Hardware coverage.** Three outputs, docks, lid and cold login need hardware and an
+3. **Hardware coverage.** Three outputs, docks, lid and cold login need hardware and an
    operator. See [Coverage gaps](testing.md#coverage-gaps).

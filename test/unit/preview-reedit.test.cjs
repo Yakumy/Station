@@ -129,7 +129,6 @@ test('a mode-only preview enables the new single output first without geometry r
 test('settling a preview still requires one, and unrelated work stays gated on idle', () => {
   assert.match(owner, /function revertPreview\(reason\) \{\n {4}if \(operationState !== "previewing"\)/);
   assert.match(owner, /function keepPreview\(\) \{\n {4}if \(operationState !== "previewing"/);
-  assert.match(owner, /function removeStationBlock\(\) \{\n {4}if \(operationState !== "idle"\) return "busy"/);
 });
 
 test('layout edits stay previewable while side controls require idle', () => {

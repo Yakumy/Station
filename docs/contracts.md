@@ -369,7 +369,8 @@ When the user turns that output on and presses **Keep**, Station clears only the
 recognized flag in a checked two-file transaction: compare both sources, suspend
 autoreload, back up with a non-`.lua` suffix, remove the flag, save, reload once, and
 restore autoreload on every exit. Failure restores only files that newer edits have not
-replaced. Modified or unrecognized toggle Lua is preserved.
+replaced. Modified or unrecognized toggle Lua is preserved. A successful Keep deletes its
+flag backup.
 
 A preview that leaves **no external output enabled** cannot leave the flag in place.
 Omarchy's `omarchy-hyprland-monitor-internal recover` runs on every monitor event,

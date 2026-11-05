@@ -66,9 +66,6 @@ const scenarios={
     h.drain('Display connection changed; preview cancelled.');},
   candidateFailure(h){preview(h);h.c.candidateFile.setText=()=>h.c.keepFileFailed();
     h.c.keepPreview();h.drain('Could not save the monitor layout.');},
-  explicitBlockRemoval(h){h.c.monitorsSource=h.c.MonitorsLua.generate(h.c.displayDraft,
-    {mode:'extend',enabled:['A','B']}).block+'\n-- personal\n';
-    assert.equal(h.c.removeStationBlock(),'started');h.drain();},
   precedenceMigration(h){h.c.monitorsPath='/fake/monitors.lua';h.c.monitorsSource='-- personal\n'+h.c.MonitorsLua.generate(h.c.displayDraft,
     {mode:'extend',enabled:['A','B']}).block+'\n';h.c.persisted.systemAuthorityVersion=3;
     h.c.migrateMonitorPrecedence(()=>{h.c.completed=true;});h.drain();assert.equal(h.c.completed,true);},
