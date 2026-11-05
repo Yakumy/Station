@@ -108,7 +108,5 @@ These records were removed from the tree. Read them with
 
 ## Open questions
 
-These need a maintainer's decision. The code currently behaves as stated.
-
-1. **Hardware coverage.** Lid and cold login still need an operator. See
-   [Coverage gaps](testing.md#coverage-gaps).
+None. The remaining unverified hardware is listed in
+[Coverage gaps](testing.md#coverage-gaps).

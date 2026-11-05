@@ -146,6 +146,16 @@ Restore file bytes only where the current files are still this run's candidates.
 Otherwise keep the newer edits and report the conflict. Never restore a stale journal
 over live windows. If recovery fails, stop and preserve the evidence.
 
+## Operator results
+
+On 2026-11-05 the maintainer reported these working on the two-monitor setup. Each is an
+operator report without captured evidence:
+
+- The display, key and panel checks requested after the refactor.
+- Closing the lid.
+- Logging out and back in.
+- `omarchy theme set`, with Station following the change.
+
 ## Coverage gaps
 
 Hardware cases that have no recorded pass on the current code:
@@ -153,9 +163,7 @@ Hardware cases that have no recorded pass on the current code:
 - H1 to H9 and H11 on the feature-folder layout. On 2026-11-05 the installed plugin
   passed an ordinary restart, panel open and close, station switching and return, and
   an unchanged-topology preview with Revert. Other evidence predates the move.
-- Physical key presses on the current layout.
 - Three and four outputs and docks. The maintainer has neither, so these stay unverified.
-- Lid, suspend and DPMS.
-- Cold login with the current DRM presence guard.
+- A full reboot with the current DRM presence guard, suspend and DPMS.
 - The direct path in a running shell. This machine runs the bridge path, and
   `panel-composition` covers the direct path in isolation.
