@@ -76,6 +76,7 @@ Item {
   readonly property alias panelEvacuationSerial: panel.panelEvacuationSerial
   readonly property alias panelEvacuationWaiting: panel.panelEvacuationWaiting
   readonly property alias panelEvacuationFrom: panel.panelEvacuationFrom
+  readonly property alias panelEvacuationReleases: panel.panelEvacuationReleases
   readonly property alias rememberedTab: panel.rememberedTab
   readonly property alias rememberedDisplayName: panel.rememberedDisplayName
 
@@ -300,7 +301,7 @@ Item {
     reconcileWorkspace: function() { workspace.reconcile() }
     targetMapping: function() { return root.targetMapping() }
     clearWorkspaceTopologyDirty: function() { workspace.clearTopologyDirty() }
-    requestPanelEvacuation: function(from, to, purpose) { panel.requestPanelEvacuation(from, to, purpose) }
+    requestPanelEvacuation: function(from, to, purpose, releases) { panel.requestPanelEvacuation(from, to, purpose, releases) }
     clearPanelEvacuation: function() { panel.clearPanelEvacuation() }
     // Optional scalars preserve screen-only and deadline-only writes as well as
     // their existing order. Do not capture a visual panel or widget proxy here.

@@ -38,7 +38,7 @@ for (const reason of ['', 'Preview timed out.']) {
       armScreenHealthCheck() { this.screenHealthChecks++; },
     };
     c.root = c;
-    for (const name of ['clearPanelEvacuation', 'clearPreviewApplyStage', 'revertPreview',
+    for (const name of ['clearPanelEvacuation', 'clearPreviewApplyStage', 'outputsLeaving', 'revertPreview',
       'continueRevertPreview', 'restoreAppliedLayout', 'syncDisplayDraft', 'restoreParkedToggle']) {
       const start = source.indexOf('  function ' + name + '(');
       const end = source.indexOf('\n  function ', start + 1);

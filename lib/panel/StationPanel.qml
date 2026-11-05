@@ -90,7 +90,9 @@ Ui.Panel {
   QtObject {
     id: panelIntent
     function acknowledgePanelEvacuation(serial, screenName) { return root.service ? root.service.acknowledgePanelEvacuation(serial, screenName) : undefined }
+    function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
     readonly property var panelEvacuationFrom: root.service ? root.service.panelEvacuationFrom : ""
+    readonly property var panelEvacuationReleases: root.service ? root.service.panelEvacuationReleases : []
     readonly property var panelEvacuationSerial: root.service ? root.service.panelEvacuationSerial : 0
     readonly property var panelEvacuationWaiting: root.service ? root.service.panelEvacuationWaiting : null
     readonly property var panelScreenName: root.service ? root.service.panelScreenName : ""
@@ -187,6 +189,23 @@ Ui.Panel {
     syncBridge: function() { root.syncBridge() }
     refreshControls: function() { displayControls.refreshBrightness() }
     resetScroll: function() { if (tabScroll.contentItem) tabScroll.contentItem.contentY = 0 }
+    setPeerSurfacesVisible: function(names, visible) { return root.setPeerSurfacesVisible(names, visible) }
+    primeFocus: function() { panel.beginFocusPrime() }
+  }
+  // KeyboardPanel keeps its per-output dismiss surfaces private, in a Variants among
+  // its children. False when a host version no longer has it, so the caller closes.
+  function setPeerSurfacesVisible(names, visible) {
+    var children = panel.data
+    for (var i = 0; children && i < children.length; i++) {
+      var instances = children[i] ? children[i].instances : undefined
+      if (!instances || !instances.length) continue
+      for (var j = 0; j < instances.length; j++) {
+        var surface = instances[j]
+        if (surface.screen && names.indexOf(String(surface.screen.name || "")) !== -1) surface.visible = visible
+      }
+      return true
+    }
+    return false
   }
   function currentScreenName() { return session.currentScreenName() }
   function close() { session.close() }

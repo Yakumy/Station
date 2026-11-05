@@ -1,5 +1,7 @@
 # Unreleased
 
+- Keep the panel open when another monitor is turned off, mirrored or left out by Single.
+  It still moves when its own monitor is the one leaving.
 - Make a bar's on/off switch move smoothly. The switch now finishes its throw before the
   bar is built or removed, which used to freeze it on the same thread.
 - Fix a window jumping to the next station when moved to another monitor with

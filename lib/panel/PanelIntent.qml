@@ -29,6 +29,9 @@ Item {
   property string panelEvacuationFrom: ""
   property string panelEvacuationTo: ""
   property string panelEvacuationPurpose: ""
+  // Outputs that leave while the panel's own output survives. The panel then stays
+  // open and only hides its dismiss surfaces there. Empty means close.
+  property var panelEvacuationReleases: []
   // A rebuilt widget would otherwise start back on Displays.
   property int rememberedTab: 0
   // A temporary output disappearance must not erase the inspector's selection.
@@ -62,9 +65,11 @@ Item {
     panelEvacuationFrom = ""
     panelEvacuationTo = ""
     panelEvacuationPurpose = ""
+    panelEvacuationReleases = []
   }
 
-  function requestPanelEvacuation(from, to, purpose) {
+  function requestPanelEvacuation(from, to, purpose, releases) {
+    panelEvacuationReleases = from === to && Array.isArray(releases) ? releases.slice() : []
     panelEvacuationFrom = from
     panelEvacuationTo = to
     panelEvacuationPurpose = purpose

@@ -1153,3 +1153,16 @@ user tests; the automated checks do not establish those results.
 - [SRC] The other bar controls avoid this by deferring the host write while the panel is open.
   The enabled state cannot, because the user expects the bar to appear, so the change is
   delayed by one throw instead.
+
+## Panel closing for another monitor (2026-11-05)
+
+- [SRC] `stagePreviewApply` and `revertPreview` requested evacuation for any topology change
+  while the panel was wanted, so a panel on HDMI closed and reopened when eDP-1 was turned off.
+- [LIVE] With the panel open on HDMI-A-2, `hyprctl layers` lists `omarchy-keyboard-panel` on
+  HDMI-A-2 and `omarchy-keyboard-panel-dismiss` on eDP-1. `KeyboardPanel` gives the twin
+  `WlrKeyboardFocus.None`, and it uses no `HyprlandFocusGrab`.
+- [LIVE] In a scratch Quickshell instance, a `Variants` declared inside a `PanelWindow` appears
+  in its `data`, its `instances` are the windows with their `screen`, and assigning
+  `visible = false` sticks.
+- [SRC] Node transaction tests cover the order of release before the monitor rule.
+  The real output removal with a kept panel has not been run: it is a topology change.

@@ -31,6 +31,10 @@ Item {
   required property var syncBridge
   required property var refreshControls
   required property var resetScroll
+  required property var setPeerSurfacesVisible
+  required property var primeFocus
+  // Outputs whose dismiss surface this open panel hid for the hand-off in progress.
+  property var releasedPeers: []
 
   Timer {
     id: evacuationProbe
@@ -124,7 +128,29 @@ Item {
     var mine = currentScreenName()
     if (!mine || mine !== service.panelEvacuationFrom) return
     handledEvacuationSerial = serial
+    var releases = service.panelEvacuationReleases || []
+    if (opened && releases.length && setPeerSurfacesVisible(releases, false)) {
+      // This output survives, so the panel and its focus stay. Only the surfaces on
+      // the leaving outputs go, with the same wait for them to unmap.
+      releasedPeers = releases.slice()
+      monitorTransferSerial = serial
+      monitorTransferScreen = mine
+      monitorTransferAck.restart()
+      return
+    }
     closeForMonitorTransfer(serial, mine)
+  }
+
+  // Runs when the transaction ends. An output that really left took its surface with
+  // it; one that stayed, after a failure or Revert, needs its dismiss surface back.
+  // Moving windows and focus between outputs can also leave the panel without keys.
+  function finishPeerRelease() {
+    if (!releasedPeers.length || !isAvailable() || service.previewBusy) return
+    var released = releasedPeers
+    releasedPeers = []
+    if (!opened) return
+    setPeerSurfacesVisible(released.filter(function(name) { return service.displayEnabled(name) === true }), true)
+    primeFocus()
   }
 
   function flushIntent() {
@@ -257,6 +283,7 @@ Item {
     function onPanelTransferUntilChanged() { root.requestPanelBack() }
     function onPanelWantedChanged() { root.requestPanelBack() }
     function onPanelEvacuationSerialChanged() { root.handlePanelEvacuation() }
+    function onPreviewBusyChanged() { root.finishPeerRelease() }
   }
   Connections {
     target: Quickshell

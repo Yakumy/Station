@@ -34,6 +34,15 @@ workspace no longer says which station it came from. So it disarms Omarchy's rec
 with a file in Omarchy's own toggle directory, which leaves `monitors.lua` alone and is
 deleted on removal.
 
+## A panel stays open when only another output leaves
+
+Station used to close and reopen the panel for every topology change, because of its
+dismiss surface on other outputs. That was visibly wrong when the panel's own output was
+never at risk. Those surfaces hold no keyboard focus, but Station still removes the one on
+a leaving output before the rule lands, so nothing of the panel's sits on an output being
+removed. They are private to Omarchy's `KeyboardPanel`, so Station finds them through its
+children and falls back to closing if that stops working.
+
 ## Marked sections at the beginning of files
 
 Station's blocks come first in `monitors.lua` and `looknfeel.lua`, so personal Lua

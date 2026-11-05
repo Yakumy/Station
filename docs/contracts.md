@@ -353,13 +353,22 @@ current configuration, never a cached copy.
 
 **Never disable or mirror an output that owns an open keyboard-focused panel.** Its
 layer surface holds a focus grab, and destroying it during monitor removal can crash
-Hyprland. Peer dismiss surfaces make this true for a panel on another output too.
+Hyprland.
 
-1. Publish the request fields, then assign the serial last.
-2. The owning widget closes and waits 180 ms for unmap, then acknowledges with the
-   serial and output.
+A panel on another output stays open. `KeyboardPanel` also keeps a non-focused dismiss
+surface on every other output, so a leaving output sheds that one first. No hand-off
+runs when no output leaves and the panel stays put.
+
+1. Publish the request fields, then assign the serial last. `panelEvacuationReleases`
+   names the leaving outputs when the panel's own output survives.
+2. **The panel's output survives:** the widget hides the dismiss surfaces on those
+   outputs and stays open. **It leaves, or the host's surfaces cannot be found:** the
+   widget closes. Either way it waits 180 ms for unmap, then acknowledges with the serial
+   and output.
 3. Enable and focus the survivor, then apply destructive rules.
-4. Reopen the panel on the survivor only after compositor success.
+4. A closed panel reopens on the survivor only after compositor success. A panel that
+   stayed open takes keyboard focus again when the transaction ends, and shows the
+   dismiss surface again on any output that did not leave.
 
 A missing acknowledgment after 2.5 s aborts. No rule is dispatched. A mode action on
 the proxy probes the bridge every 30 ms during this window, so the request is not left

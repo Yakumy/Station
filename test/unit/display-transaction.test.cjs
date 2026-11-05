@@ -41,17 +41,49 @@ test('Single preview migrates immediately, transfers panel, then Keep survives r
     'the watched config applies one final rule per output without a runtime replay');
 });
 
-test('Mirror closes a panel on the surviving source before removing peer dismiss surfaces', () => {
+test('Mirror keeps a panel open on the surviving source and sheds its peer surface first', () => {
   const h = harness(), c = h.c;
   c.panelScreenName = 'A';
   assert.equal(c.setModeValue('mirror', ''), 'started');
   h.drain();
   assert.equal(c.previewBusy, false);
   assert.equal(c.panelScreenName, 'A');
-  const closed = h.order.indexOf('panel-closed:A');
-  assert.ok(closed >= 0, 'a surviving panel must still close its peer surfaces');
-  assert.ok(h.order.slice(0, closed).every(item => !item.startsWith('monitor:')),
+  assert.ok(!h.order.includes('panel-closed:A'), 'the panel on the surviving output stays open');
+  const released = h.order.indexOf('panel-peers-released:B');
+  assert.ok(released >= 0, 'the leaving output sheds its dismiss surface');
+  assert.ok(h.order.slice(0, released).every(item => !item.startsWith('monitor:')),
     'no monitor mutation precedes panel acknowledgement');
+});
+
+test('Single on the panel output keeps the panel open, and a panel on the leaving output closes', () => {
+  const stays = harness();
+  stays.c.panelScreenName = 'A';
+  assert.equal(stays.c.setModeValue('single', 'A'), 'started');
+  stays.drain();
+  assert.ok(stays.order.includes('panel-peers-released:B'));
+  assert.ok(!stays.order.some(item => item.startsWith('panel-closed')));
+  assert.ok(stays.order.indexOf('panel-peers-released:B') < stays.order.indexOf('monitor:B:off'));
+
+  const moves = harness();
+  moves.c.panelScreenName = 'B';
+  assert.equal(moves.c.setModeValue('single', 'A'), 'started');
+  moves.drain();
+  assert.ok(moves.order.includes('panel-closed:B'), 'a panel cannot stay on an output that leaves');
+  assert.equal(moves.c.panelScreenName, 'A');
+});
+
+test('a hand-off is skipped when no output leaves and the panel stays put', () => {
+  const h = harness(), c = h.c;
+  c.panelScreenName = 'A';
+  assert.equal(c.setDisplayPosition('B', 5000, 0), 'ok');
+  assert.equal(c.previewLayout(), 'started');
+  h.drain();
+  assert.equal(c.panelEvacuationSerial, 0);
+  assert.ok(!h.order.some(item => item.startsWith('panel-')));
+  // Revert re-applies the old position and removes no output either.
+  assert.equal(c.revertPreview(''), 'started');
+  h.drain();
+  assert.equal(c.panelEvacuationSerial, 0);
 });
 
 test('scale side control saves directly with one watched apply and no preview countdown', () => {

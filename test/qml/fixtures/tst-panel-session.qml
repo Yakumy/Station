@@ -13,6 +13,7 @@ Item {
   property var trace: []
   property var peers: []
   property var view: null
+  property bool peerSurfacesFound: true
   property var controls: null
   property var editor: null
   property var screenA: ({name: "A"})
@@ -31,6 +32,9 @@ Item {
     property int panelEvacuationSerial: 0
     property int panelEvacuationWaiting: 0
     property string panelEvacuationFrom: ""
+    property var panelEvacuationReleases: []
+    property var enabledOutputs: []
+    function displayEnabled(name) { return enabledOutputs.indexOf(name) !== -1 }
     property bool previewBusy: false
     property var displayDraft: []
     property bool draftEditable: true
@@ -68,6 +72,8 @@ Item {
       syncBridge: function() { root.record("poll", []) }
       refreshControls: function() { root.record("refresh", []) }
       resetScroll: function() { root.record("scroll", []) }
+      setPeerSurfacesVisible: function(names, visible) { root.record("peers", [names, visible]); return root.peerSurfacesFound }
+      primeFocus: function() { root.record("prime", []) }
     }
   }
   Component { id: controlComponent; Displays.DisplayControls {} }
@@ -91,6 +97,7 @@ Item {
       persistent.rememberedTab = 0; persistent.panelTransferUntil = 0
       persistent.previewBusy = false; persistent.panelEvacuationWaiting = 0
       persistent.panelEvacuationSerial = 0; persistent.panelEvacuationFrom = ""
+      persistent.panelEvacuationReleases = []; persistent.enabledOutputs = []; root.peerSurfacesFound = true
       root.peers = []; root.anchor = {screen: screenA, width: 1920, height: 26}
       root.host = {position: "top", barSize: 26, activePopout: null, moduleWidgets: function() { return root.peers }}
       Quickshell.screens = [screenA, screenB]
@@ -182,6 +189,39 @@ Item {
       compare(count("ack"), 1)
       compare(root.trace[root.trace.length - 1][1], [7, "A"])
       root.view.handlePanelEvacuation(); compare(count("hide"), 1)
+    }
+    function keptOpenHandOff() {
+      root.view.opened = true
+      persistent.previewBusy = true
+      persistent.panelEvacuationWaiting = 8; persistent.panelEvacuationFrom = "A"
+      persistent.panelEvacuationReleases = ["B"]; persistent.panelEvacuationSerial = 8
+    }
+    function test_survivingPanelStaysOpenThroughHandOff() {
+      keptOpenHandOff()
+      compare(count("hide"), 0); verify(root.view.opened)
+      compare(count("peers"), 1); verify(!root.view.monitorTransferClosing)
+      compare(count("ack"), 0)
+      tryVerify(function() { return count("ack") === 1 }, 500)
+      compare(root.trace.filter(function(row) { return row[0] === "ack" })[0][1], [8, "A"])
+      verify(root.view.opened)
+      // The output left, so nothing is shown again, but focus comes back.
+      persistent.previewBusy = false
+      compare(count("prime"), 1)
+      var peers = root.trace.filter(function(row) { return row[0] === "peers" })
+      compare(peers[peers.length - 1][1], [[], true])
+    }
+    function test_outputThatStayedGetsItsDismissSurfaceBack() {
+      keptOpenHandOff()
+      persistent.enabledOutputs = ["A", "B"]
+      persistent.previewBusy = false
+      var peers = root.trace.filter(function(row) { return row[0] === "peers" })
+      compare(peers[peers.length - 1][1], [["B"], true])
+    }
+    function test_unknownHostFallsBackToClosing() {
+      root.peerSurfacesFound = false
+      keptOpenHandOff()
+      compare(count("hide"), 1); verify(root.view.monitorTransferClosing)
+      tryVerify(function() { return count("ack") === 1 }, 500)
     }
     function test_bridgeProbeAndPeerSwitch() {
       root.view.opened = true

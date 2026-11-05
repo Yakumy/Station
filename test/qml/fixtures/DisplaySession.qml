@@ -38,6 +38,7 @@ Item {
   property int panelEvacuationSerial: 0
   property int panelEvacuationWaiting: 0
   property string panelEvacuationFrom: ""
+  property var panelEvacuationReleases: []
   property string panelEvacuationTo: ""
   property string panelEvacuationPurpose: ""
   property string stateDir: "/isolated"

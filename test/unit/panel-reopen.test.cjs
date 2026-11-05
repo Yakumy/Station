@@ -130,7 +130,7 @@ test('the surviving widget accepts a transfer while the removed output still has
 });
 
 test('a monitor removal closes and acknowledges the old output before reopening elsewhere', () => {
-  assert.match(service, /function requestPanelEvacuation\(from, to, purpose\)/);
+  assert.match(service, /function requestPanelEvacuation\(from, to, purpose, releases\)/);
   assert.match(service, /panelEvacuationWaiting = panelEvacuationSerial \+ 1/);
   assert.match(service, /panelEvacuationSerial = panelEvacuationWaiting/);
   assert.match(displayOwner, /root\.focusOutput\(focusTarget, activateLua !== \"\"/);
@@ -171,7 +171,7 @@ test('a mode action actively probes the bridge for its evacuation request', () =
 
 test('Revert uses the same safe close when the saved Single target differs', () => {
   assert.match(displayOwner, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(preferences\) : ""/);
-  assert.match(displayOwner, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);
+  assert.match(displayOwner, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert", leaving\)/);
   assert.match(service, /if \(purpose === "revert"\) continueRevert\(\)/);
   assert.match(service, /continueRevert: function\(\) \{ displayController\.continueRevertPreview\(\) \}/);
 });
@@ -224,4 +224,40 @@ test('hiding either stock bar widget preserves an open panel through the rebuild
   assert.ok(setter, 'setSetting is defined');
   assert.match(setter[1], /name === "hideNative"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
   assert.match(setter[1], /name === "hideDisplay"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
+});
+
+test('a surviving panel hides peer surfaces and stays open, and closes if it cannot', () => {
+  const { qmlFunction } = require('../helpers/runtime-source.cjs');
+  function session(found) {
+    const calls = [];
+    const c = {
+      service: { panelEvacuationWaiting: 1, panelEvacuationSerial: 4, panelEvacuationFrom: 'A', panelEvacuationReleases: ['B'],
+        previewBusy: true, displayEnabled: name => name === 'C' },
+      opened: true, handledEvacuationSerial: 0, releasedPeers: [], monitorTransferSerial: 0, monitorTransferScreen: '',
+      isAvailable: () => true, currentScreenName: () => 'A',
+      monitorTransferAck: { restart() { calls.push('ack-timer'); } },
+      setPeerSurfacesVisible(names, visible) { calls.push(['peers', [...names], visible]); return found; },
+      closeForMonitorTransfer() { calls.push('close'); },
+      primeFocus() { calls.push('prime'); },
+    };
+    c.handle = qmlFunction(panel, 'handlePanelEvacuation', c);
+    c.finish = qmlFunction(panel, 'finishPeerRelease', c);
+    return { c, calls };
+  }
+  const kept = session(true);
+  kept.c.handle();
+  assert.deepEqual(JSON.parse(JSON.stringify(kept.calls)), [['peers', ['B'], false], 'ack-timer']);
+  assert.equal(kept.c.monitorTransferSerial, 4);
+  kept.c.finish();
+  assert.equal(kept.calls.length, 2, 'nothing returns while the transaction is busy');
+  kept.c.service.previewBusy = false;
+  kept.c.finish();
+  assert.deepEqual(JSON.parse(JSON.stringify(kept.calls.slice(2))), [['peers', [], true], 'prime'],
+    'an output that left never gets its surface back');
+  kept.c.finish();
+  assert.equal(kept.calls.length, 4, 'finishes once');
+
+  const unknownHost = session(false);
+  unknownHost.c.handle();
+  assert.deepEqual(unknownHost.calls.at(-1), 'close');
 });

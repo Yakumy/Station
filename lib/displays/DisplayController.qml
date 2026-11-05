@@ -331,6 +331,17 @@ Item {
     return usable.some(function(d) { return d.name === panelScreenName }) ? panelScreenName : usable[0].name
   }
 
+  // Outputs showing their own content now that these options disable or mirror.
+  function outputsLeaving(options) {
+    var states = MonitorsLua.runtimeModeStates(displayDraft, options)
+    return monitors.filter(function(monitor) {
+      var mirror = String(monitor.mirrorOf || "")
+      if (monitor.disabled === true || (mirror && mirror !== "none" && mirror !== "-1")) return false
+      var next = states.find(function(state) { return state.name === monitor.name })
+      return !!next && (next.disabled || !!next.mirror)
+    }).map(function(monitor) { return monitor.name })
+  }
+
   function previewFocusTarget(options) {
     var states = MonitorsLua.runtimeModeStates(displayDraft, options)
     var usable = states.filter(function(d) { return !d.disabled && !d.mirror })
@@ -364,11 +375,14 @@ Item {
       : MonitorsLua.disableToggleToPark(internalDisableSource, displayDraft, options)
     previewApplyPanelOrigin = panelScreenName
     previewApplyPanelTarget = panelWanted ? panelTransferTarget(options) : ""
-    // KeyboardPanel owns dismiss surfaces on every output, including peers.
-    // Close it even when its own monitor survives the topology change.
+    // KeyboardPanel owns dismiss surfaces on every output, so an output that leaves
+    // has to shed one first. A panel whose own output survives stays open for that,
+    // and needs no hand-off at all when no output leaves.
+    var leaving = panelWanted && previewApplyPanelTarget ? outputsLeaving(options) : []
     if (panelWanted && previewApplyPanelOrigin && previewApplyPanelTarget
-        && expectedOutputs.length > 0) {
-      requestPanelEvacuation(previewApplyPanelOrigin, previewApplyPanelTarget, "preview")
+        && expectedOutputs.length > 0
+        && (leaving.length > 0 || previewApplyPanelTarget !== previewApplyPanelOrigin)) {
+      requestPanelEvacuation(previewApplyPanelOrigin, previewApplyPanelTarget, "preview", leaving)
       return
     }
     continuePreviewApply()
@@ -577,8 +591,10 @@ Item {
     pendingRevertFocusTarget = previewFocusTarget(preferences)
     pendingRevertActivateLua = activationRule(pendingRevertFocusTarget)
     clearPreviewApplyStage()
-    if (panelWanted && origin && pendingRevertPanelTarget) {
-      requestPanelEvacuation(origin, pendingRevertPanelTarget, "revert")
+    var leaving = panelWanted && pendingRevertPanelTarget ? outputsLeaving(preferences) : []
+    if (panelWanted && origin && pendingRevertPanelTarget
+        && (leaving.length > 0 || pendingRevertPanelTarget !== origin)) {
+      requestPanelEvacuation(origin, pendingRevertPanelTarget, "revert", leaving)
       return "started"
     }
     continueRevertPreview()

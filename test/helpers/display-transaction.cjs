@@ -84,7 +84,8 @@ function harness({ capture = false } = {}) {
     set(value) {
       evacuationSerial = value;
       if (value) jobs.push(() => {
-        order.push('panel-closed:' + c.panelEvacuationFrom);
+        const released = c.panelEvacuationReleases || [];
+        order.push(released.length ? 'panel-peers-released:' + released.join() : 'panel-closed:' + c.panelEvacuationFrom);
         c.acknowledgePanelEvacuation(value, c.panelEvacuationFrom);
       });
     },

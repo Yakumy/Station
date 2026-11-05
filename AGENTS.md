@@ -86,6 +86,8 @@ session, so check them on every related change.
   Identical `FileView.setText` text emits no acknowledgment.
 - **Evacuation.** Never disable or mirror an output that owns an open keyboard-focused
   panel before the panel closes and acknowledges, and a survivor is enabled and focused.
+  A panel on a surviving output stays open, after hiding its dismiss surface on the
+  leaving output.
   Never leave zero real outputs.
 - **Previews.** Keep the 20-second detached watchdog and the 12-second countdown. Keep the
   original baseline through re-edits.

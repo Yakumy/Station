@@ -25,6 +25,7 @@ QtObject {
   readonly property int panelEvacuationWaiting: snapshot ? Number(snapshot.panelEvacuationWaiting) : 0
   readonly property int panelEvacuationSerial: snapshot ? snapshot.panelEvacuationSerial : 0
   readonly property string panelEvacuationFrom: snapshot ? snapshot.panelEvacuationFrom : ""
+  readonly property var panelEvacuationReleases: snapshot ? snapshot.panelEvacuationReleases || [] : []
   readonly property string panelScreenName: snapshot ? snapshot.panelScreenName : ""
   readonly property double panelTransferUntil: snapshot ? snapshot.panelTransferUntil : 0
   readonly property bool panelWanted: snapshot ? snapshot.panelWanted === true : false

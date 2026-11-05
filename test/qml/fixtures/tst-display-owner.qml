@@ -131,9 +131,9 @@ Item {
       proc("touch").finish(1);compare(session.state,"idle");verify(!session.previewBusy)
       compare(session.effects.length,0);verify(session.layoutError.indexOf("arm preview recovery")>=0)
       reset();session.setModeValue("single","A");session.rejectSnapshots=true;session.drain()
-      verify(session.panelEvacuationWaiting>0);compare(session.effects.length,0)
-      session.rejectSnapshots=false;session.closePanel();session.drain()
-      compare(session.state,"idle");verify(session.layoutError.indexOf("Could not read the display state")>=0)
+      // The saved layout removes no output, so Revert needs no panel hand-off.
+      compare(session.panelEvacuationWaiting,0);compare(session.effects,["reload"])
+      compare(session.state,"idle");verify(session.layoutError.indexOf("Could not read the restored display state")>=0)
     }
     function test_focus_activation_and_token_renewal_failures_data() {return [
       {tag:"focus",phase:"focus"},{tag:"activation",phase:"activation"},{tag:"token",phase:"token"}]}
@@ -190,7 +190,10 @@ Item {
       compare(session.windows.map(function(w){return w.workspace.id+":"+w.monitor}).join(","),"1:A,2:B,3:A,4:B")
     }
     function test_both_evacuation_timeout_paths_dispatch_no_destructive_rule() {
-      session.setModeValue("single","A");session.drain()
+      // Saved Single on A, so Revert has to move the panel off B as well.
+      session.config=Object.assign({},session.config,{mode:"single",singleTarget:"A"})
+      session.setModeValue("single","B");session.drain()
+      compare(session.panelEvacuationPurpose,"preview");compare(session.panelEvacuationReleases,["A"])
       session.panelEvacuationTimedOut();session.drain()
       compare(session.panelEvacuationPurpose,"revert");verify(session.panelEvacuationWaiting>0)
       session.panelEvacuationTimedOut();session.drain()
