@@ -48,17 +48,18 @@ test('window settings clamp numeric preferences and reject injected values', () 
   assert.doesNotMatch(W.settingLua('outerGap', 80), /monitor|reserved|layer_rule/);
 });
 
-test('only a transparent bar removes the outer gap beside it', () => {
+test('a transparent default bar removes the outer gap and a Pill bar uses its safe space', () => {
   for (const edge of ['top', 'right', 'bottom', 'left']) {
     for (const background of ['solid', 'transparent', 'blur']) {
       for (const style of ['default', 'pill']) {
         for (const enabled of [true, false]) {
           for (const outerGap of [0, 30, 160]) {
             const bar = {position:edge, enabled, background, style};
-            const gaps = W.gaps({outerGap}, bar);
-            const omit = enabled && background === 'transparent';
+            const gaps = W.gaps({outerGap}, bar, 7);
+            const omit = enabled && style !== 'pill' && background === 'transparent';
             for (const side of Object.keys(gaps)) {
-              assert.equal(gaps[side], omit && side === edge ? 0 : outerGap,
+              const pill = enabled && style === 'pill' && side === edge;
+              assert.equal(gaps[side], pill ? 7 : omit && side === edge ? 0 : outerGap,
                 JSON.stringify({bar, outerGap, side}));
             }
           }
@@ -67,7 +68,9 @@ test('only a transparent bar removes the outer gap beside it', () => {
     }
   }
   assert.deepEqual(W.gaps({outerGap:30}, {position:'top'}), {top:30,right:30,bottom:30,left:30});
-  assert.deepEqual(W.gaps({outerGap:30}, {position:'left', enabled:true, background:'transparent', style:'pill'}), {top:30,right:30,bottom:30,left:0});
+  assert.deepEqual(W.gaps({outerGap:30}, {position:'left', enabled:true, background:'transparent', style:'pill'}, 7), {top:30,right:30,bottom:30,left:7});
+  assert.deepEqual(W.gaps({outerGap:30}, {position:'top', enabled:true, background:'blur', style:'pill'}, 7), {top:7,right:30,bottom:30,left:30});
+  assert.deepEqual(W.gaps({outerGap:30}, {position:'top', enabled:true, background:'solid', style:'default'}, 7), {top:30,right:30,bottom:30,left:30});
   const rules = W.gapRules({outerGap:20}, {'DP-1':{position:'top',enabled:true,background:'transparent'}, 'eDP-1':{position:'bottom',enabled:true,background:'solid'}});
   assert.match(rules, /m\[DP-1\]",gaps_out=\{top=0,right=20,bottom=20,left=20\}/);
   assert.match(rules, /m\[eDP-1\]",gaps_out=\{top=20,right=20,bottom=20,left=20\}/);
@@ -100,7 +103,7 @@ test('bar gap sync writes runtime rules only for Transparent bars and undoes the
   const bars = { 'DP-1': { enabled: true, position: 'top', background: 'transparent' },
     'eDP-1': { enabled: true, position: 'top', background: 'solid' } };
   const sent = [];
-  const c = { active: true, windowValues: { outerGap: 20 }, gapRuled: {}, Windows: W,
+  const c = { active: true, windowValues: { outerGap: 20 }, gapRuled: {}, Windows: W, pillGap: 7,
     displays: [{ name: 'DP-1' }, { name: 'eDP-1' }, { name: 'HDMI-A-1', disabled: true }],
     monitorBar: name => bars[name], evalLua: lua => sent.push(lua) };
   const sync = qmlFunction(source, 'syncBarGaps', c);
@@ -111,6 +114,10 @@ test('bar gap sync writes runtime rules only for Transparent bars and undoes the
   bars['DP-1'].background = 'blur';
   sync();
   assert.match(sent[1], /m\[DP-1\]",gaps_out=\{top=20,right=20,bottom=20,left=20\}/);
+  bars['eDP-1'].style = 'pill';
+  sync();
+  assert.match(sent[2], /m\[eDP-1\]",gaps_out=\{top=7,right=20,bottom=20,left=20\}/);
+  bars['eDP-1'].style = 'default'; sent.length = 2;
   sync();
   assert.equal(sent.length, 3);
   c.windowValues = {}; sync();

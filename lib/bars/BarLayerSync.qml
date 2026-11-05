@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import qs.Commons
 import "../platform/Hypr.js" as Hypr
 import "../windows/Windows.js" as Windows
 
@@ -15,6 +16,10 @@ Item {
   property var evalLua: null
   property bool barBlurSyncQueued: false
   property var windowValues: ({})
+  property var barPreferences: ({})
+  onBarPreferencesChanged: syncBarGaps()
+  // The same safe space MonitorBar keeps between a Pill bar and the monitor edge.
+  readonly property real pillGap: Math.round(Style.space(8))
   property int configGeneration: 0
   // Monitors that already carry one of Station's gap rules in this configuration.
   property var gapRuled: ({})
@@ -22,7 +27,8 @@ Item {
   onWindowValuesChanged: syncBarGaps()
   onDisplaysChanged: syncBarGaps()
 
-  // The outer gap beside a Transparent bar is zero. Runtime rules only: a reload
+  // The outer gap beside a Transparent bar is zero, and beside a Pill bar it is the
+  // pill's safe space. Runtime rules only: a reload
   // clears them and the next sync restores them. A monitor that once had a rule
   // keeps getting the full-gap rule, so leaving Transparent undoes it.
   function syncBarGaps() {
@@ -33,9 +39,9 @@ Item {
       if (display.disabled) return
       var bar = monitorBar(display.name)
       bars[display.name] = bar
-      if ((bar.enabled && bar.background === "transparent") || gapRuled[display.name]) only.push(display.name)
+      if ((bar.enabled && (bar.background === "transparent" || bar.style === "pill")) || gapRuled[display.name]) only.push(display.name)
     })
-    var lua = Windows.gapRules(windowValues, bars, only)
+    var lua = Windows.gapRules(windowValues, bars, only, pillGap)
     if (!lua) return
     only.forEach(function(name) { gapRuled[name] = true })
     evalLua(lua)

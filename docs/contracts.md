@@ -423,7 +423,7 @@ rounding and animation speed.
 | Control | Range | Notes |
 | --- | --- | --- |
 | Inner gap | 0 to 160 | The full visible gap. Hyprland's `gaps_in` is half of it. |
-| Outer gap | 0 to 160 | Never moves the bar. Solid and Blur bars keep it beside the bar. A Transparent bar, Omarchy default or Pill, gets no gap on its edge. |
+| Outer gap | 0 to 160 | Never moves the bar. Solid and Blur default bars keep it beside the bar. A Transparent default bar gets no gap on its edge. A Pill bar ignores it: windows sit `Style.space(8)` from the pill in every background, the same safe space the pill keeps from the monitor. |
 | Next-window split | 25 to 75% | Dwindle only |
 | Rounding | 0 to 20 | Follows `decoration:rounding`, which Omarchy also uses for shell corners |
 | Animation speed | 0, 0.25, 0.5, 0.75, 1, 1.24, 1.5, 1.75, 2 | 0 disables animations. Window duration is 400 ms divided by speed. |
@@ -440,7 +440,7 @@ Sliders preview while dragging and apply on release:
 The bar edge is handled by runtime `hl.workspace_rule` entries named `m[<connector>]`
 with a directional `gaps_out` table, written by `BarLayerSync.syncBarGaps` (policy in
 `Windows.gaps`). They are never saved. Station sends them after a reload, a bar
-background change, a display change and a read-back of the outer gap. A monitor that
+setting change, a display change and a read-back of the outer gap. A monitor that
 once had a rule keeps getting one, so leaving Transparent restores the full gap.
 
 Success causes **no full reload and no fixed sleep**. A failed apply conditionally

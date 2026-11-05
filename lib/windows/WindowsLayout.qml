@@ -185,10 +185,12 @@ Ui.BorderSurface {
     if (!display) return {x:0,y:0,width:0,height:0}
     var size = Model.logicalSize(display)
     var bar = service.monitorBar(display.name)
-    var gaps = Windows.gaps(values, bar)
+    var pillGap = Math.round(Style.space(8))
+    var gaps = Windows.gaps(values, bar, pillGap)
     var minimum = bar.position === "left" || bar.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
     var effective = Math.max(minimum, Math.min(service.monitorBarMaximumHeight(display.name), Number(bar.height) || minimum))
-    var thickness = bar.enabled ? Math.max(2, effective * zoom) + barEdgeGap * 2 : 0
+    var thickness = bar.enabled ? Math.max(2, effective * zoom) + barEdgeGap * 2
+      + (bar.style === "pill" ? pillGap * zoom : 0) : 0
     var x = originX + display.x * zoom - bounds.x * zoom + monitorGap / 2
     var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2 + labelHeight
     var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap - labelHeight

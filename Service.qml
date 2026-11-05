@@ -180,6 +180,7 @@ Item {
     displays: root.displayDraft
     monitorBar: function(name) { return barSettings.monitorBar(name) }
     windowValues: root.config.windows || ({})
+    barPreferences: root.config.bars || ({})
     configGeneration: root.configGeneration
     clearLegacyLease: function() {
       if (root.persisted.barBlurLease) { root.persisted.barBlurLease = null; store.saveState() }

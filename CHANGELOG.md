@@ -1,5 +1,7 @@
 # Unreleased
 
+- A Pill bar ignores the outer gap beside it and keeps its safe space from windows too, which
+  also centers a Pill bar's content between monitor edge and windows.
 - Windows tab preview windows follow Border roundness at preview scale, use the accent, and
   the tab gains its bottom line.
 - Keep a safe space between a Pill bar and the monitor edge and ends.
