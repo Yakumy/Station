@@ -1,5 +1,7 @@
 # Unreleased
 
+- Stop the panel reloading when a bar is turned on or off. That control alone wrote
+  `shell.json` while the panel was open, which rebuilt every widget, the panel included.
 - Keep the panel open when another monitor is turned off, mirrored or left out by Single.
   It still moves when its own monitor is the one leaving.
 - Make a bar's on/off switch move smoothly. The switch now finishes its throw before the

@@ -59,6 +59,7 @@ test('service refuses to hide the last bar on an enabled output', () => {
     panelTransferUntil: 0,
     saveConfig() {},
     syncBarBlur() {},
+    activeStationBar() { return true; },
     publishMonitorBar() { throw new Error('must not publish rejected change'); },
   };
   context.monitorBar = qmlFunction(service, 'monitorBar', context);
@@ -69,6 +70,31 @@ test('service refuses to hide the last bar on an enabled output', () => {
   context.publishMonitorBar = () => true;
   assert.equal(setEnabled('DP-1', false), 'ok');
   assert.equal(context.config.bars['DP-1'].enabled, false);
+});
+
+test('turning a bar on or off leaves shell.json alone while the panel is open', () => {
+  let published = 0, deferred = null;
+  const context = {
+    displayDraft: [{ name: 'DP-1', enabled: true }, { name: 'DP-2', enabled: true }],
+    config: { bars: { 'DP-1': { enabled: true, position: 'top' }, 'DP-2': { enabled: true, position: 'top' } } },
+    validConnector: value => /^DP-/.test(value),
+    panelWanted: true, panelTransferUntil: 0, rememberedTab: 0, shell: {},
+    saveConfig() {}, syncBarBlur() {},
+    activeStationBar() { return true; },
+    deferMonitorBarPublish(name, next) { deferred = [name, next.enabled]; },
+    publishMonitorBar() { published += 1; return true; },
+    publishHost() { return true; },
+  };
+  context.monitorBar = qmlFunction(service, 'monitorBar', context);
+  const setEnabled = qmlFunction(service, 'setMonitorBarEnabled', context);
+  assert.equal(setEnabled('DP-2', false), 'ok');
+  assert.equal(published, 0, 'a shell.json write rebuilds the widgets, the panel included');
+  assert.equal(deferred[0], 'DP-2');
+  assert.equal(deferred[1], false);
+  assert.equal(context.config.bars['DP-2'].enabled, false, 'Bar.qml follows the live preferences');
+  context.panelWanted = false;
+  assert.equal(setEnabled('DP-2', true), 'ok');
+  assert.equal(published, 1, 'with the panel closed it publishes at once');
 });
 
 test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {

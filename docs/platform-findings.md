@@ -1150,9 +1150,11 @@ user tests; the automated checks do not establish those results.
   switch's 120 ms animation. Omarchy's `MonitorBar` measures a surface rebuild at about 150 ms.
 - [INFERRED] That block outlasts the animation, so the knob jumped instead of sliding. The
   hitch itself was not timed.
-- [SRC] The other bar controls avoid this by deferring the host write while the panel is open.
-  The enabled state cannot, because the user expects the bar to appear, so the change is
-  delayed by one throw instead.
+- [SRC] The other bar controls defer the host write while the panel is open, and the enabled
+  state did not. `MonitorBar` says reassigning `layoutConfig` "rebuilds every widget on every
+  monitor", so each toggle also destroyed and reopened the panel and the switch itself. The
+  enabled state now defers too: `Bar.qml` reads live preferences every 100 ms, so the bar still
+  appears at once. The throw delay stays, because that surface still builds on the same thread.
 
 ## Panel closing for another monitor (2026-11-05)
 

@@ -499,7 +499,7 @@ packaged Omarchy files for per-monitor behavior.
 | Content size | From `Style.font.body` to the live maximum. Above the default, each module zooms uniformly. |
 | Height | From the theme's thickness to 5% of the mode's shorter native side. A live minimum can clamp it. |
 | Width | 1 to 100%. Requests below the measured non-overlap minimum stay visible and the bar clamps. |
-| Enabled | The switch moves at once, and `BarLayout` applies the change after the throw, because building a bar blocks the shell's thread. Closing the panel in that gap still applies it. A refused change moves the switch back. |
+| Enabled | The switch moves at once, and `BarLayout` applies the change after the throw, because building a bar blocks the shell's thread. While the panel is open the host write is deferred like every other bar control, because it would rebuild all widgets and the panel with them. Closing the panel in that gap still applies it. A refused change moves the switch back. |
 | Background | Solid, Transparent or Blur. See [below](#bar-background-blur). |
 | Style | Omarchy default, or Pill with separate left, center and right islands. |
 

@@ -325,6 +325,13 @@ Item {
     bars[name] = next
     persistPreferences(bars)
     requestLayerSync()
+    // A shell.json write rebuilds every widget on every monitor, the open panel and
+    // this switch included. Bar.qml already follows the live preferences.
+    if (activeStationBar() && panelWanted) {
+      if (typeof publishHost !== "function") return "unsupported"
+      deferMonitorBarPublish(name, next)
+      return "ok"
+    }
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
   }
 
