@@ -179,6 +179,8 @@ Item {
     active: root.started && root.configLoaded
     displays: root.displayDraft
     monitorBar: function(name) { return barSettings.monitorBar(name) }
+    windowValues: root.config.windows || ({})
+    configGeneration: root.configGeneration
     clearLegacyLease: function() {
       if (root.persisted.barBlurLease) { root.persisted.barBlurLease = null; store.saveState() }
     }
@@ -202,7 +204,7 @@ Item {
       if (tab) panel.setRememberedTab(Tabs.index(tab))
       panel.setPanelTransferUntil(Date.now() + 3000)
     }
-    requestLayerSync: function() { barLayers.syncBarBlur() }
+    requestLayerSync: function() { barLayers.syncBarBlur(); barLayers.syncBarGaps() }
   }
   WindowsUi.WindowSettingsController {
     id: windowSettings
@@ -438,6 +440,7 @@ Item {
     windowSettings.refreshWindowSettings()
     keybindings.applyBinds()
     barLayers.syncBarBlur()
+    barLayers.syncBarGaps()
   }
 
   function setDirectionValue(value) {

@@ -25,7 +25,7 @@ function ownerFunction(name, context) {
     if (tab) context.rememberedTab = require('../../lib/panel/Tabs.js').index(tab);
     context.panelTransferUntil = Date.now() + 3000;
   };
-  context.requestLayerSync ||= () => context.syncBarBlur();
+  context.requestLayerSync ||= () => { context.syncBarBlur(); if (context.syncBarGaps) context.syncBarGaps(); };
   const lineEnd = source.indexOf('\n', start);
   const end = source.slice(start, lineEnd).trimEnd().endsWith('}') ? lineEnd : source.indexOf('\n  }', start) + 4;
   return runInNewContext('(' + source.slice(start, end) + ')', context);

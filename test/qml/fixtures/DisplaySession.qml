@@ -91,6 +91,7 @@ Item {
   function armScreenHealthCheck() { healthChecks++ }
   function refreshWindowSettings() {}
   function syncBarBlur() {}
+  function syncBarGaps() {}
   function focusedClient() { return clients[2] || null }
   function stationFocusStatements(station,output) { return [] }
   function showStation(station) { effects.push("show:"+station) }

@@ -94,6 +94,7 @@ function harness({ capture = false } = {}) {
   // Blur uses a separate compositor probe, not the display transaction queue.
   // Its lease/probe behavior is covered by bar-per-monitor.test.cjs.
   c.syncBarBlur = () => {};
+  c.syncBarGaps = () => {};
   c.refresh = (_clients, done) => jobs.push(() => {
     c.monitors = copy(live); c.clients = copy(windows); if (done) done();
   });

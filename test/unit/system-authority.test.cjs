@@ -27,7 +27,7 @@ test('reload never emits monitor or shared appearance writes, even with a disabl
   for (const mode of ['single', 'mirror', 'extend']) {
     const c = { state: 'idle', config: { mode, singleTarget: 'A' },
       updateAssignments() {}, workspace: { reconcile() {} }, windowSettings: { refreshWindowSettings() {} },
-      keybindings: { applyBinds() {} }, barLayers: { syncBarBlur() {} },
+      keybindings: { applyBinds() {} }, barLayers: { syncBarBlur() {}, syncBarGaps() {} },
       evalLua() { throw Error('Observation attempted a compositor write'); } };
     fn('applyRuntime', c)();
   }
