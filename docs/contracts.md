@@ -240,6 +240,15 @@ Conflict sources, in order:
 
 Station ignores entries whose description starts with `Station:`.
 
+Omarchy 4.5.0 ships its own `SUPER + SHIFT + CTRL + arrow` binds ("Move window to
+left/right/up/down monitor"). Station treats them as stock defaults: they are replaced
+without a conflict, because Station's `shiftWindow` also crosses stations. Station keeps
+its binds so older Omarchy releases still work.
+
+> **Reminder for Station 5.0.0:** Omarchy's binding is then reliable. Remove the four
+> `shift-*` definitions in `lib/keybindings/Binds.js` and the `Move window to … monitor`
+> entry in `stockOwner`, and drop the Move across section if Omarchy's movement suffices.
+
 | Status | Meaning |
 | --- | --- |
 | Replacement | A known default or an approved combo. Applied. |

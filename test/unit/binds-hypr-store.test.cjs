@@ -37,10 +37,19 @@ test('menu parser and classification preserve unknown semantics', () => {
   assert.equal(B.classify('SUPER+Y', { ok: false, text: '' }, [{ combo: 'SUPER Y' }]).status, 'conflict');
 });
 
+test('Omarchy 4.5.0 move-to-monitor defaults are replaced, not reported as conflicts', () => {
+  const text = 'SUPER SHIFT CTRL + LEFT → Move window to left monitor\nSUPER SHIFT CTRL + UP → Move window to up monitor';
+  assert.equal(B.classify('SHIFT + CTRL + SUPER + LEFT', { ok: true, text }, []).status, 'replacement');
+  assert.equal(B.classify('SHIFT + CTRL + SUPER + UP', { ok: true, text }, []).status, 'replacement');
+  assert.equal(B.classify('SHIFT + CTRL + SUPER + LEFT', { ok: true, text: 'SUPER SHIFT CTRL + LEFT → Mine' }, []).status, 'conflict');
+  assert.equal(B.classify('SHIFT + CTRL + SUPER + LEFT', { ok: true, text }, [{ combo: 'SUPER+CTRL+SHIFT+LEFT', source: 'lua' }]).status, 'conflict');
+  assert.equal(B.classify('SHIFT + CTRL + SUPER + DOWN', { ok: true, text: 'SUPER + X → Y' }, []).status, 'replacement');
+});
+
 test('M1 bind table contains all actions and only approved defaults replace', () => {
   const definitions = B.definitions();
   assert.equal(definitions.length, 36);
-  assert.equal(definitions.filter(value => value.replacement).length, 32);
+  assert.equal(definitions.filter(value => value.replacement).length, 36);
   assert.ok(definitions.some(value => value.combo === 'SUPER + CTRL + LEFT' && value.replacement));
   const lua = B.applyLua(definitions.slice(0, 1), []);
   assert.match(lua, /hl\.unbind\("SUPER \+ code:10"\)/);

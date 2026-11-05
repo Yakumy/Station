@@ -1,5 +1,8 @@
 # Unreleased
 
+- Stop reporting a conflict for Omarchy 4.5.0's Super+Ctrl+Shift+arrow move-to-monitor
+  binds. Station replaces them and still works on older Omarchy. Reminder: remove
+  Station's own binds in 5.0.0.
 - Reorganize the code without changing behavior or persisted formats: Service is now a
   composition root, runtime code lives in feature folders, all checks live under `test/`
   with one runner, and all documentation lives in one `docs/` set.
