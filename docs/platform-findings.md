@@ -602,6 +602,14 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   Isolated Quickshell renders use installed UI tokens with dark and light
   palettes; they do not establish three-display hardware behavior or theme
   transition animation equivalence.
+- [QTTEST] Per-monitor framing in `WallpaperLayout` is tested with Qt pointer, wheel and
+  key events, and the desktop renderer by pixel. Real pointer feel through the bridge,
+  and a framed surface on a real output, have not been tested live.
+- [QTTEST] Qt 6.12 exports its own `QtQuick/Color`. In an isolated Quickshell root, bare
+  `Color` in a file importing `QtQuick` then `qs.Commons` resolves to `QQuickColor`, so
+  `Color.popups` is undefined and surfaces paint white. Logs from live sessions on the same
+  Qt show no such error, and the reason for the difference is not established.
+  `Commons.Color`, through `import qs.Commons as Commons`, resolves correctly in both.
 - [SRC] Qt's PNG handler calls `png_read_info()` and copies all PNG text entries
   into Qt strings before its raster allocation. Libpng's default limits are per
   ancillary chunk and by chunk count, not by aggregate decompressed text bytes;

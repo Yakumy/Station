@@ -60,6 +60,68 @@ test('malformed settings are bounded; remote and control-character paths are rej
   assert.deepEqual(W.framing({zoom: Infinity, x: -5, y: 50}), {zoom: 1, x: 0, y: 1});
   assert.equal(W.settings({mode: 'unknown', profiles: []}).mode, 'same');
 });
+test('per-monitor frames default to a centered fill, and resetting one removes it', () => {
+  const display = {identity: 'A', width: 1000, height: 1000, x: 0, y: 0};
+  assert.deepEqual(W.crop({mode: 'same'}, {}, display, 2000, 1000),
+    {unit: 1, x: 500, y: 0, width: 1000, height: 1000});
+  let scene = {mode: 'same', frames: {}};
+  scene = W.withFrame(scene, 'A', {zoom: 2, x: 0, y: 1});
+  assert.deepEqual(W.frameFor(scene, display), {zoom: 2, x: 0, y: 1});
+  assert.equal(W.hasFrame(scene, display), true);
+  assert.equal(W.hasFrame({...scene, mode: 'individual'}, display), false, 'each mode keeps its own frames');
+  assert.equal(W.hasFrame(W.withFrame(scene, 'A', {}), display), false);
+  assert.equal(W.withFrame({mode: 'span'}, 'A', {zoom: 2}).frames, undefined, 'Span keeps one group framing');
+  assert.equal(W.hasFrame(scene, null), false);
+});
+test('frames persist per profile, stay bounded, and an old profile loads with none', () => {
+  assert.deepEqual(W.profile({}).frames, {same: {}, individual: {}});
+  const frames = JSON.parse('{"same":{"A":{"zoom":99,"x":-1,"y":0.5},"__proto__":{"zoom":2},"B":5,"C":{"zoom":1}}}');
+  assert.deepEqual(W.profile({frames}).frames.same, {A: {zoom: 8, x: 0, y: 0.5}});
+  const s = {mode: 'same', profiles: {t: {frames: {same: {A: {zoom: 3}}}}}, pinned: {frames: {same: {A: {zoom: 4}}}, safe: true, source: '/p.png'}};
+  assert.equal(W.frameFor(W.resolve(s, 't', '/a.jpg'), {identity: 'A'}).zoom, 3);
+  assert.equal(W.frameFor(W.resolve(s, 'other', '/a.jpg'), {identity: 'A'}).zoom, 1);
+  assert.equal(W.frameFor(W.resolve({...s, followTheme: false}, 't', '/a.jpg'), {identity: 'A'}).zoom, 4);
+  assert.equal(W.hasFrame(W.resolve(s, 't', '/a.jpg'), {identity: 'constructor'}), false);
+});
+test('panning moves the image with the pointer and every frame stays inside the image', () => {
+  const display = {identity: 'A', width: 1000, height: 1000};
+  // The crop slides left when the image moves right.
+  const moved = W.panned(display, 2000, 1000, {}, 100, 0);
+  assert.equal(W.composition(display, 2000, 1000, moved).x, 400);
+  assert.equal(moved.y, 0.5, 'no slack: the short axis stays put');
+  assert.equal(W.panned(display, 2000, 1000, {}, 100000, 0).x, 0);
+  assert.equal(W.panned(display, 2000, 1000, {}, -100000, 0).x, 1);
+  assert.deepEqual(W.panned(display, 0, 0, {zoom: 2}, 10, 10), {zoom: 2, x: 0.5, y: 0.5}, 'image not loaded');
+  for (const [w, h] of [[2000, 1000], [600, 2000], [1000, 1000]])
+    for (const zoom of [1, 2, 8]) for (const x of [0, .3, 1]) {
+      const c = W.composition(display, w, h, {zoom, x, y: x});
+      assert.ok(c.x >= 0 && c.y >= 0 && c.x + c.width <= w + 1e-6 && c.y + c.height <= h + 1e-6);
+      assert.ok(Math.abs(c.width - c.height) < 1e-6, 'the crop keeps the monitor shape');
+    }
+});
+test('zooming keeps the image point under the pointer, and zooming back out returns to fill', () => {
+  const display = {identity: 'A', width: 1000, height: 1000};
+  const source = (frame, px, py) => { const c = W.composition(display, 4000, 2000, frame); return [c.x + px * c.unit, c.y + py * c.unit]; };
+  const start = {zoom: 2, x: 0.3, y: 0.6};
+  const next = W.zoomed(display, 4000, 2000, start, 1.5, 250, 700);
+  assert.equal(next.zoom, 3);
+  source(start, 250, 700).forEach((value, i) => assert.ok(Math.abs(value - source(next, 250, 700)[i]) < 1e-6));
+  assert.equal(W.zoomed(display, 4000, 2000, {zoom: 8}, 2, 0, 0).zoom, 8);
+  assert.equal(W.zoomed(display, 4000, 2000, {}, 0.5, 0, 0).zoom, 1);
+  let frame = {};
+  for (let i = 0; i < 7; i++) frame = W.zoomed(display, 2000, 1000, frame, 1.1, 500, 500);
+  for (let i = 0; i < 7; i++) frame = W.zoomed(display, 2000, 1000, frame, 1 / 1.1, 500, 500);
+  assert.equal(frame.zoom, 1, 'rounding does not leave a monitor framed');
+  assert.equal(W.hasFrame(W.withFrame({mode: 'same'}, 'A', frame), display), false);
+});
+test('a frame is dropped with the image it framed', () => {
+  const scene = {perDisplay: {own: '/own.png'}, frames: {same: {A: {zoom: 2}}, individual: {own: {zoom: 2}, shared: {zoom: 3}}}};
+  assert.deepEqual(Object.keys(W.framesWithoutImage(scene, 'own').individual), ['shared']);
+  assert.deepEqual(Object.keys(W.framesWithoutImage(scene, 'own').same), ['A']);
+  const all = W.framesWithoutImage(scene, '');
+  assert.deepEqual(all.same, {});
+  assert.deepEqual(Object.keys(all.individual), ['own']);
+});
 
 function controller() {
   const source = fs.readFileSync('lib/wallpaper/WallpaperController.qml', 'utf8');
@@ -103,6 +165,34 @@ test('Follow Omarchy blocks local selection and keeps the panel open with an err
   assert.equal(c.choose(c.layout.displays[0].identity), true);
   assert.equal(c.station.panelWanted, false);
   assert.equal(c.pickerDelay.restarts, 1);
+});
+test('framing a monitor marks the draft dirty, survives Apply and ignores an unknown monitor', () => {
+  const c = controller();
+  const id = c.layout.displays[0].identity;
+  c.draft.mode = 'individual'; c.dirty = false;
+  c.frameDisplay('someone-else', {zoom: 2});
+  assert.equal(c.dirty, false);
+  c.frameDisplay(id, {zoom: 2, x: 0.25, y: 0.5});
+  assert.equal(c.dirty, true);
+  c.apply(); c.checkImages(); c.station.done(0); c.preferenceSaved();
+  const saved = c.station.config.wallpaper.profiles.original.frames.individual[id];
+  assert.deepEqual({...saved}, {zoom: 2, x: 0.25, y: 0.5});
+  c.draft = {...c.draft, mode: 'span', frames: {}}; c.dirty = false;
+  c.frameDisplay(id, {zoom: 2});
+  assert.equal(c.dirty, false, 'Span frames the group instead');
+});
+test('choosing an image clears the frame made for the previous one', () => {
+  const c = controller(); const id = c.layout.displays[0].identity;
+  c.draft = {...c.draft, followTheme: false, mode: 'individual', frames: {same: {[id]: {zoom: 2}}, individual: {[id]: {zoom: 3}}}};
+  c.acceptSanitized('/tmp/station-test/wallpapers/a/one.png', id);
+  assert.equal(c.draft.frames.same[id].zoom, 2);
+  assert.equal(c.draft.frames.individual[id], undefined);
+  c.acceptSanitized('/tmp/station-test/wallpapers/a/two.png', '');
+  assert.deepEqual({...c.draft.frames.same}, {});
+});
+test('the desktop surface stays stock only for a monitor with no frame', () => {
+  const source = fs.readFileSync('lib/wallpaper/WallpaperController.qml', 'utf8');
+  assert.match(source, /readonly property bool stock:[^\n]*\n\s*&& !Wallpaper\.hasFrame\(root\.applied, display\)/);
 });
 test('a picker result is staged before it can change an Image source', () => {
   const c = controller(); c.change('followTheme', false);

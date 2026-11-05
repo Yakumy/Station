@@ -9,6 +9,7 @@ Item {
   required property var layout
   required property var display
   readonly property alias status: picture.status
+  readonly property size imageSize: picture.sourceSize
   function imageUrl(path) {
     if (!scene.safe) return ""
     var url = Util.fileUrl(path)
@@ -18,16 +19,16 @@ Item {
 
   Image {
     id: picture
-    readonly property bool spanning: root.scene.mode === "span"
-    readonly property var crop: Wallpaper.composition(root.layout, sourceSize.width, sourceSize.height, root.scene.framing)
-    readonly property real unit: root.width / Math.max(1, root.display.width * crop.unit)
+    readonly property var crop: Wallpaper.crop(root.scene, root.layout, root.display, sourceSize.width, sourceSize.height)
+    // The larger scale, so a surface a pixel off the logical size still leaves no edge.
+    readonly property real unit: Math.max(root.width / Math.max(1, crop.width),
+      root.height / Math.max(1, crop.height))
     source: root.imageUrl(Wallpaper.sourceFor(root.scene, root.display))
     asynchronous: true
     cache: true
-    x: spanning ? -(crop.x + root.display.x * crop.unit) * unit : 0
-    y: spanning ? -(crop.y + root.display.y * crop.unit) * unit : 0
-    width: spanning ? sourceSize.width * unit : root.width
-    height: spanning ? sourceSize.height * unit : root.height
-    fillMode: spanning ? Image.Stretch : Image.PreserveAspectCrop
+    x: -crop.x * unit
+    y: -crop.y * unit
+    width: sourceSize.width * unit
+    height: sourceSize.height * unit
   }
 }

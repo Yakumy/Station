@@ -1,5 +1,7 @@
 # Unreleased
 
+- Frame the wallpaper separately on each monitor in Same on all and Per monitor: drag inside
+  a monitor to move the image, scroll to zoom, and use Reset frame to go back to a centered fill.
 - Show the display preview's Keep/Revert countdown on every tab. On other tabs it ran out
   unseen, and reverting could turn a monitor off with no warning.
 - Stop the panel reloading when a bar is turned on or off. That control alone wrote

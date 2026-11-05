@@ -557,6 +557,18 @@ Its modes are Same on all (the default, following Omarchy), Per monitor, and Spa
   group moves over a fixed image, zoom runs from 1 to 8, and pan stays inside the
   image. The recommended resolution is logical bounds × maximum scale × zoom. It is a
   recommendation, never a limit.
+- Same on all and Per monitor frame each monitor separately. Dragging inside a monitor
+  moves the image with the pointer, the scroll wheel zooms around the pointer, and with
+  the canvas focused the arrow keys and `+`/`-` act on the selected monitor. Zoom runs
+  from 1, the largest crop that still fills the monitor, to 8, so a frame never shows an
+  empty edge. Frames are per monitor identity and per mode, are saved in the profile
+  under `frames`, and take effect on Apply. A profile without `frames` loads with every
+  monitor centered at zoom 1. A centered, unzoomed frame is not stored, so a monitor
+  with no frame under Follow in Same on all stays on the stock surface. Choosing an
+  image drops the frames made for the image it replaces.
+- A canvas gesture draws from a local frame and reaches the controller when it settles,
+  because the panel reads the draft through a polled bridge. The local frame ends when
+  the draft answers, or after 1 second if the controller ignored it.
 - Follow mode uses the live background and a profile keyed by theme and background
   path, keeping the newest 64. An `inotifywait` process watches Omarchy's
   `~/.local/state/omarchy/current` directory and the image's directory, and Station

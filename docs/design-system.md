@@ -135,7 +135,8 @@ whitespace may therefore be larger. Do not reserve hypothetical disconnected
 arrangements or cap the fit below the available canvas. Inset each painted
 monitor card by half of `Style.spacing.sm`, producing a compact named gap
 between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
-Span keeps exact edge-to-edge cards because its image crop is continuous.
+Span keeps exact edge-to-edge cards because its image crop is continuous. A non-Span
+Wallpaper card keeps its monitor's exact shape, so it previews the desktop's crop.
 
 **Bar edge geometry:** The Omarchy default bar is edge-aligned in every background.
 A Pill bar floats `Style.space(8)` from the monitor edge and from the ends of its span, so

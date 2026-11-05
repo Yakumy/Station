@@ -116,6 +116,10 @@ Item {
     draft = next; dirty = true; clearNotice()
   }
   function frame(value) { change("framing", Wallpaper.framing(value)) }
+  function frameDisplay(identity, value) {
+    if (draft.mode === "span" || !layout.displays.some(function(display) { return display.identity === identity })) return
+    change("frames", Wallpaper.withFrame(draft, identity, value).frames)
+  }
   function sanitizedPath(output) {
     var path = String(output || "").replace(/\n$/, "")
     var prefix = stateDir + "/wallpapers/"
@@ -149,6 +153,7 @@ Item {
       var map = Object.assign({}, draft.perDisplay); map[target] = path
       change("perDisplay", map)
     } else { change("source", path); frame({}) }
+    change("frames", Wallpaper.framesWithoutImage(draft, target))
     change("safe", true)
   }
   function prepareSelection(path) {
@@ -210,7 +215,7 @@ Item {
     return true
   }
   function useTheme() {
-    change("source", themePath); change("perDisplay", {}); change("safe", true); frame({})
+    change("source", themePath); change("perDisplay", {}); change("safe", true); frame({}); change("frames", {})
   }
   function apply() {
     if (busy || importBusy || !dirty || !layout.displays.length) return
@@ -356,6 +361,7 @@ Item {
       required property var modelData
       readonly property var display: root.layout.displays.find(function(d) { return d.name === modelData.name }) || null
       readonly property bool stock: root.applied.mode === "same" && root.applied.followTheme && root.applied.source === root.themePath
+        && !Wallpaper.hasFrame(root.applied, display)
       screen: modelData
       anchors { top: true; bottom: true; left: true; right: true }
       exclusionMode: ExclusionMode.Ignore

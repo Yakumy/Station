@@ -55,7 +55,16 @@ Item {
       {name: "A", width: 1000, height: 1000, x: 0, y: 0},
       {name: "B", width: 1000, height: 1000, x: 1000, y: 0}], ["A", "B"])
     property var draft: ({mode: "span", source: IMAGE_PATH, perDisplay: {}, framing: Wallpaper.framing({}), safe: true})
+    property int frameCommits: 0
+    property bool polled: false
+    property var polledDraft: null
     function frame(value) { draft = Object.assign({}, draft, {framing: Wallpaper.framing(value)}) }
+    function frameDisplay(identity, value) {
+      frameCommits++
+      var next = Wallpaper.withFrame(draft, identity, value)
+      if (polled) polledDraft = next
+      else draft = next
+    }
   }
   WallpaperUi.WallpaperLayout { id: canvas; anchors.fill: parent; controller: controller }
   WallpaperUi.WallpaperImage {
@@ -71,7 +80,10 @@ Item {
     when: windowShown
     function init() {
       controller.busy = false
-      controller.draft = Object.assign({}, controller.draft, {mode: "span", framing: Wallpaper.framing({zoom: 2})})
+      controller.polled = false
+      controller.frameCommits = 0
+      canvas.releaseFrame()
+      controller.draft = Object.assign({}, controller.draft, {mode: "span", frames: {}, framing: Wallpaper.framing({zoom: 2})})
       tryVerify(function() { return canvas.sourceSize.width === 2000 })
     }
     function test_drag_moves_group_without_changing_topology() {
@@ -118,10 +130,120 @@ Item {
     }
     function test_other_modes_do_not_drag_or_zoom_group() {
       controller.draft = Object.assign({}, controller.draft, {mode: "individual"})
-      var before = JSON.stringify(controller.draft)
+      var before = JSON.stringify(controller.draft.framing)
       mouseDrag(canvas, 300, 200, 50, 20, Qt.LeftButton, Qt.NoModifier, 10)
       canvas.zoom(2)
-      compare(JSON.stringify(controller.draft), before)
+      compare(JSON.stringify(controller.draft.framing), before)
+    }
+    function modeTile(mode, name) {
+      controller.draft = Object.assign({}, controller.draft, {mode: mode, frames: {}})
+      var tile = findChild(canvas, "wallpaperMonitor-" + name)
+      verify(tile !== null)
+      tryVerify(function() { return tile.children[0].imageSize.width === 2000 })
+      return tile
+    }
+    function test_tiles_keep_the_exact_monitor_shape() {
+      var tile = modeTile("individual", "A")
+      fuzzyCompare(tile.width, tile.height, 0.01)
+    }
+    function test_drag_frames_only_that_monitor_in_both_modes() {
+      for (var mode of ["same", "individual"]) {
+        var tile = modeTile(mode, "A")
+        var picked = ""
+        var pick = function(name) { picked = name }
+        canvas.selected.connect(pick)
+        mouseDrag(tile, tile.width / 2, tile.height / 2, 40, 0, Qt.LeftButton, Qt.NoModifier, 10)
+        canvas.selected.disconnect(pick)
+        compare(picked, "A")
+        var frames = controller.draft.frames[mode]
+        verify(frames.A.x < 0.5, mode + ": the image follows the pointer")
+        compare(frames.B, undefined)
+        compare(controller.draft.framing.zoom, 2)
+      }
+    }
+    function test_wheel_zooms_only_the_monitor_under_the_pointer() {
+      var tile = modeTile("same", "B")
+      mouseWheel(tile, tile.width / 2, tile.height / 2, 0, 120)
+      fuzzyCompare(canvas.frameOf({identity: "B"}).zoom, 1.1, 0.0001)
+      compare(canvas.frameOf({identity: "A"}).zoom, 1)
+      tryVerify(function() { return controller.frameCommits === 1 })
+      fuzzyCompare(controller.draft.frames.same.B.zoom, 1.1, 0.0001)
+    }
+    function test_a_gesture_is_drawn_locally_before_a_polled_bridge_answers() {
+      var tile = modeTile("same", "A")
+      controller.polled = true
+      var image = tile.children[0]
+      var center = image.mapToItem(canvas, image.width / 2, image.height / 2)
+      mousePress(canvas, center.x, center.y)
+      for (var i = 1; i <= 5; i++) mouseMove(canvas, center.x + i * 8, center.y)
+      verify(canvas.frameOf({identity: "A"}).x < 0.5, "the local frame moves at once")
+      compare(controller.frameCommits, 0, "nothing crosses the bridge per pointer move")
+      mouseRelease(canvas, center.x + 40, center.y)
+      compare(controller.frameCommits, 1)
+      compare(Wallpaper.hasFrame(controller.draft, {identity: "A"}), false)
+      var shown = canvas.frameOf({identity: "A"}).x
+      verify(shown < 0.5, "the frame holds until the answer arrives")
+      controller.draft = controller.polledDraft
+      compare(canvas.liveFrame, null)
+      compare(canvas.frameOf({identity: "A"}).x, shown)
+    }
+    function test_ignored_frame_returns_to_the_truth() {
+      var tile = modeTile("same", "A")
+      controller.polled = true
+      controller.polledDraft = null
+      canvas.setFrame({identity: "A"}, {zoom: 2})
+      canvas.commitFrame()
+      compare(canvas.frameOf({identity: "A"}).zoom, 2)
+      tryVerify(function() { return canvas.liveFrame === null }, 2000)
+      compare(canvas.frameOf({identity: "A"}).zoom, 1)
+    }
+    function test_keyboard_frames_the_selected_monitor_and_reset_clears_it() {
+      modeTile("individual", "A")
+      canvas.selectedName = "B"
+      canvas.forceActiveFocus()
+      keyClick(Qt.Key_Plus)
+      keyClick(Qt.Key_Plus)
+      keyClick(Qt.Key_Right)
+      canvas.commitFrame()
+      var frame = controller.draft.frames.individual.B
+      verify(frame.zoom > 1.2)
+      verify(frame.x < 0.5)
+      compare(controller.draft.frames.individual.A, undefined)
+      canvas.resetSelected()
+      compare(controller.draft.frames.individual.B, undefined)
+      canvas.selectedName = ""
+    }
+    function test_busy_blocks_framing() {
+      var tile = modeTile("same", "A")
+      controller.busy = true
+      mouseDrag(tile, tile.width / 2, tile.height / 2, 40, 0, Qt.LeftButton, Qt.NoModifier, 10)
+      mouseWheel(tile, tile.width / 2, tile.height / 2, 0, 120)
+      compare(canvas.liveFrame, null)
+      controller.busy = false
+    }
+    function test_desktop_renderer_shows_each_monitors_frame_and_preview_matches() {
+      var display = controller.layout.displays[0]
+      desktopCrop.visible = true
+      desktopCrop.display = display
+      var show = function(frame) {
+        controller.draft = Object.assign(Wallpaper.withFrame(Object.assign({}, controller.draft, {mode: "same", frames: {}}), "A", frame))
+        tryCompare(desktopCrop, "status", Image.Ready)
+        waitForRendering(desktopCrop)
+        return grabImage(desktopCrop)
+      }
+      var left = show({x: 0})
+      compare(left.pixel(10, 50), Qt.color("red"))
+      compare(left.pixel(90, 50), Qt.color("red"))
+      var right = show({x: 1})
+      compare(right.pixel(10, 50), Qt.color("blue"))
+      compare(right.pixel(90, 50), Qt.color("blue"))
+      var filled = show({})
+      compare(filled.pixel(10, 50), Qt.color("red"))
+      compare(filled.pixel(90, 50), Qt.color("blue"))
+      // Zoom 2 at the far left shows source x 0..500 of the red half.
+      var zoomed = show({zoom: 2, x: 0, y: 0})
+      compare(zoomed.pixel(90, 90), Qt.color("red"))
+      desktopCrop.visible = false
     }
     function test_desktop_renderer_samples_the_correct_monitor_rectangle() {
       controller.frame({})

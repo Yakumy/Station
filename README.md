@@ -161,9 +161,12 @@ changes Omarchy's shell corners, because both follow the same Hyprland setting.
 
 | Mode | Use it for |
 | --- | --- |
-| **Same on all** | Omarchy’s wallpaper or one local image on every display. |
-| **Per monitor** | A different local image for each active display. |
+| **Same on all** | Omarchy’s wallpaper or one local image on every display, framed separately on each. |
+| **Per monitor** | A different local image and its own frame for each active display. |
 | **Span** | One large image across the complete monitor layout. Drag the fixed monitor group to frame it and scroll to zoom. |
+
+In Same on all and Per monitor, drag the image inside a monitor to move it and scroll
+over it to zoom. **Reset frame** returns the selected monitor to a centered fill.
 
 Span respects monitor positions, gaps, rotation, logical sizes, and scale. A
 recommended source resolution helps you choose an image. Smaller images are
@@ -171,7 +174,7 @@ still allowed.
 
 **Follow Omarchy wallpaper** is on by default, so theme and background changes
 flow through automatically. Turn it off to keep your own images. Station
-remembers image choices and Span framing per Omarchy theme/background pair.
+remembers image choices and framing per Omarchy theme/background pair.
 
 Chosen images are prepared as private Station copies. Your originals and
 Omarchy’s wallpaper links, theme files, and background history stay intact.

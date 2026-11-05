@@ -81,7 +81,7 @@ Column {
         Caption {
           anchors.right: parent.right; anchors.rightMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
-          text: "DRAG TO ARRANGE"
+          text: root.scene.mode === "span" ? "DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"
         }
       }
       Loader {
@@ -205,7 +205,27 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
+            id: frameRow
             width: parent.width; height: controlFrame.height / 5
+            readonly property bool framing: root.scene.mode !== "span" && root.selectedDisplay !== null && canvasLoader.item !== null
+            readonly property var shownFrame: framing
+              ? Wallpaper.frameFor(canvasLoader.item.shownScene, root.selectedDisplay) : Wallpaper.framing({})
+            Caption {
+              visible: frameRow.framing
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              anchors.right: resetFrame.left; anchors.rightMargin: root.tokens.space2
+              anchors.verticalCenter: parent.verticalCenter
+              text: frameRow.framing ? root.selectedDisplay.name + " · " + Math.round(frameRow.shownFrame.zoom * 100) + "%" : ""
+            }
+            Ui.Button {
+              id: resetFrame
+              visible: frameRow.framing
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Reset frame"; bordered: true
+              enabled: frameRow.framing && Wallpaper.hasFrame(canvasLoader.item.shownScene, root.selectedDisplay)
+              onClicked: canvasLoader.item.resetSelected()
+            }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {

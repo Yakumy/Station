@@ -36,7 +36,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /setSetting\("hideDisplay", !checked\)/);
   assert.match(settings, /Installed version/);
   assert.match(wallpaper, /height: Style\.space\(370\)/);
-  assert.match(wallpaper, /text: "DRAG TO ARRANGE"/);
+  assert.match(wallpaper, /"DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"/);
   assert.match(wallpaper, /id: controlFrame[\s\S]*?height: Style\.space\(370\)/);
   assert.match(wallpaper, /component ModeSelector: Ui\.BorderSurface/);
   assert.match(wallpaper, /value: "span", label: "Span"[\s\S]*?value: "individual", label: "Per monitor"[\s\S]*?value: "same", label: "Same on all"/);
