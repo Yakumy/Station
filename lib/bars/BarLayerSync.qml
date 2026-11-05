@@ -19,7 +19,7 @@ Item {
   // Monitors that already carry one of Station's gap rules in this configuration.
   property var gapRuled: ({})
   onConfigGenerationChanged: gapRuled = ({})
-  onWindowSettingsChanged: syncBarGaps()
+  onWindowValuesChanged: syncBarGaps()
   onDisplaysChanged: syncBarGaps()
 
   // The outer gap beside a Transparent bar is zero. Runtime rules only: a reload
