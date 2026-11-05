@@ -9,7 +9,7 @@ import "WindowPreview.js" as Preview
 Ui.BorderSurface {
   id: canvas
   objectName: "windowsLayout"
-  required property var panelRoot
+  required property var tokens
   property var values: ({})
   property bool swapped: false
   property real progress: 0
@@ -45,7 +45,7 @@ Ui.BorderSurface {
       }
     }
   }
-  readonly property var service: panelRoot.service
+  required property var service
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
   readonly property real labelHeight: Style.font.caption + Style.spacing.sm
@@ -126,13 +126,13 @@ Ui.BorderSurface {
         : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: Style.cornerRadius
-      opacity: outputEnabled ? 1 : canvas.panelRoot.disabledOpacity
+      opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
       Rectangle {
         id: barPreview
         objectName: "barPreview-" + monitorCard.modelData.name
         visible: monitorCard.barSetting.enabled
-        color: monitorCard.barSetting.style === "pill" ? "transparent" : canvas.panelRoot.textDim
+        color: monitorCard.barSetting.style === "pill" ? "transparent" : canvas.tokens.textDim
         radius: Style.cornerRadius
         readonly property bool side: monitorCard.barSetting.position === "left"
           || monitorCard.barSetting.position === "right"
@@ -162,7 +162,7 @@ Ui.BorderSurface {
             y: barPreview.side ? segmentStart : 0
             width: barPreview.side ? barPreview.width : segmentLength * segmentShare
             height: barPreview.side ? segmentLength * segmentShare : barPreview.height
-            color: canvas.panelRoot.textDim
+            color: canvas.tokens.textDim
             radius: Math.min(width, height) / 2
           }
         }
@@ -173,7 +173,7 @@ Ui.BorderSurface {
         x: 0; y: -height - Style.spacing.sm
         width: parent.width
         text: monitorCard.modelData.name
-        color: canvas.panelRoot.textDim
+        color: canvas.tokens.textDim
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
@@ -210,7 +210,7 @@ Ui.BorderSurface {
       readonly property bool nextWindow: index % 2 === 0
       readonly property var rect: canvas.windowRect(index)
       x: rect.x; y: rect.y; width: rect.width; height: rect.height
-      opacity: canvas.service.displayEnabled(canvas.displays[Math.floor(index / 2)].name) ? 1 : canvas.panelRoot.disabledOpacity
+      opacity: canvas.service.displayEnabled(canvas.displays[Math.floor(index / 2)].name) ? 1 : canvas.tokens.disabledOpacity
       // Paint in monitor logical pixels, then scale the entire outline. A full
       // preview-pixel border otherwise swallows small scaled corner radii.
       Rectangle {
@@ -219,7 +219,7 @@ Ui.BorderSurface {
         scale: canvas.zoom
         transformOrigin: Item.TopLeft
         color: Commons.Color.popups.background
-        border.color: canvas.panelRoot.textDim
+        border.color: canvas.tokens.textDim
         border.width: Style.normalBorderWidth
         border.pixelAligned: false
         antialiasing: true
@@ -231,7 +231,7 @@ Ui.BorderSurface {
         horizontalAlignment: Text.AlignHCenter
         text: nextWindow ? "NEXT WINDOW" : "WINDOW"
         elide: Text.ElideRight
-        color: canvas.panelRoot.textDim
+        color: canvas.tokens.textDim
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
       }

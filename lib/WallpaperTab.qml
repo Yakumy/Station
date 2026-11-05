@@ -6,17 +6,18 @@ import "." as Station
 
 Column {
   id: root
-  required property var panelRoot
-  readonly property var controller: panelRoot.service ? panelRoot.service.wallpaper : null
+  required property var tokens
+  required property var dismiss
+  required property var controller
   readonly property var scene: controller ? controller.draft : Wallpaper.resolve({}, "", "")
   property string selectedName: ""
   readonly property var selectedDisplay: controller ? (controller.layout.displays.find(function(d) {
     return d.name === root.selectedName
   }) || controller.layout.displays[0] || null) : null
-  readonly property real pad: panelRoot.regionPadH
+  readonly property real pad: tokens.regionPadH
   spacing: 0
   component Caption: Text {
-    color: root.panelRoot.textDim
+    color: root.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
     wrapMode: Text.WordWrap
@@ -94,7 +95,7 @@ Column {
       }
       Caption {
         x: root.pad; width: parent.width - root.pad * 2
-        topPadding: root.panelRoot.space2
+        topPadding: root.tokens.space2
         text: {
           if (!root.controller) return ""
           if (root.scene.mode !== "span") return "Monitor positions follow Displays. Only active displays are shown."
@@ -135,14 +136,14 @@ Column {
             id: modeRow
             width: parent.width; height: controlFrame.height / 5
             Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space2
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              anchors.top: parent.top; anchors.topMargin: root.tokens.space2
               text: "MODE"
             }
             ModeSelector {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.panelRoot.space2
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
               height: Style.spacing.controlHeight
               value: root.scene.mode
               options: [{ value: "span", label: "Span" }, { value: "individual", label: "Per monitor" }, { value: "same", label: "Same on all" }]
@@ -154,8 +155,8 @@ Column {
             id: imageRow
             width: parent.width; height: controlFrame.height / 5
             Station.InlineDropdown {
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
-              anchors.top: parent.top; anchors.topMargin: root.panelRoot.space1
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.top: parent.top; anchors.topMargin: root.tokens.space1
               visible: root.scene.mode === "individual"
               prefix: "Monitor: "
               value: root.selectedDisplay ? root.selectedDisplay.name : ""
@@ -164,16 +165,16 @@ Column {
             }
             Row {
               id: imageActions
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
-              y: root.scene.mode === "individual" ? parent.height - height - root.panelRoot.space1 : (parent.height - height) / 2
-              spacing: root.panelRoot.space2
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              y: root.scene.mode === "individual" ? parent.height - height - root.tokens.space1 : (parent.height - height) / 2
+              spacing: root.tokens.space2
               Ui.Button {
                 text: "Choose image…"; bordered: true
                 enabled: root.selectedDisplay !== null && root.controller && !root.controller.pickerBusy
                 onClicked: {
                   var target = root.scene.mode === "individual" ? root.selectedDisplay.identity : ""
                   var owner = root.controller
-                  if (owner.choose(target)) root.panelRoot.close()
+                  if (owner.choose(target)) root.dismiss()
                 }
               }
               Ui.Button {
@@ -188,12 +189,12 @@ Column {
             id: followRow
             width: parent.width; height: controlFrame.height / 5
             Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               text: "Follow Omarchy wallpaper"
             }
             Ui.ToggleSwitch {
-              anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               checked: root.scene.followTheme
               trackHeight: Style.spacing.controlHeight
@@ -220,13 +221,13 @@ Column {
       x: root.pad; anchors.verticalCenter: parent.verticalCenter
       width: parent.width - actions.width - root.pad * 3
       text: root.controller ? root.controller.notice : ""
-      color: root.controller && root.controller.noticeError ? Color.urgent : root.panelRoot.textDim
+      color: root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
     }
     Row {
       id: actions
       anchors.right: parent.right; anchors.rightMargin: root.pad
       anchors.verticalCenter: parent.verticalCenter
-      spacing: root.panelRoot.space2
+      spacing: root.tokens.space2
       Ui.Button {
         text: "Cancel"; bordered: true
         enabled: root.controller && root.controller.dirty && !root.controller.busy && !root.controller.importBusy

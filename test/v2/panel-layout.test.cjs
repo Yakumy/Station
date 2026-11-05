@@ -46,8 +46,8 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.doesNotMatch(wallpaper, /prefix: "Mode: "/);
   assert.doesNotMatch(wallpaper, /Drag the monitor group|Updates with Omarchy theme|Keeps these images/);
   assert.doesNotMatch(wallpaper, /text: "(?:−|\+|Fit)"/);
-  assert.match(wallpaper, /noticeError \? Color\.urgent : root\.panelRoot\.textDim/);
-  assert.match(wallpaper, /if \(owner\.choose\(target\)\) root\.panelRoot\.close\(\)/);
+  assert.match(wallpaper, /noticeError \? Color\.urgent : root\.tokens\.textDim/);
+  assert.match(wallpaper, /if \(owner\.choose\(target\)\) root\.dismiss\(\)/);
 });
 
 test('display notices, labels, zoom buttons and settings switches share the intended alignment and size', () => {

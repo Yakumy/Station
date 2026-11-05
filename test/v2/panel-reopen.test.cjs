@@ -6,7 +6,8 @@ const { runInNewContext } = require('node:vm');
 
 const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
 const { source: displayOwner } = require('./helpers/display-owner.cjs');
-const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
+const panelView = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
+const panel = readFileSync('lib/PanelSession.qml', 'utf8');
 
 test('the open intent lives on the service, which outlives the widget', () => {
   assert.match(service, /property bool panelWanted: false/);
@@ -18,23 +19,24 @@ test('the open intent lives on the service, which outlives the widget', () => {
 });
 
 test('the keyboard panel retains its output through a bar-axis remap', () => {
-  const source = readFileSync('lib/StationPanel.qml', 'utf8');
+  const source = readFileSync('lib/PanelSession.qml', 'utf8');
   assert.match(source, /property var retainedPanelScreen: null/);
   assert.match(source, /function retainCurrentPanelScreen\(\)/);
-  assert.match(source, /screen: root\.currentPanelScreen\(\)/);
-  assert.ok(source.indexOf('retainCurrentPanelScreen()')
-    < source.indexOf('screen: root.currentPanelScreen()'));
+  assert.match(panelView, /screen: session\.currentPanelScreen\(\)/);
+  const openedHandler = source.slice(source.indexOf('  onOpenedChanged:'));
+  assert.ok(openedHandler.indexOf('retainCurrentPanelScreen()') < openedHandler.indexOf('flushIntent()'),
+    'retain the actual screen before publishing intent');
 });
 
 test('the keyboard panel does not consume a new axis with stale bar-window geometry', () => {
-  const source = readFileSync('lib/StationPanel.qml', 'utf8');
+  const source = readFileSync('lib/PanelSession.qml', 'utf8');
   assert.match(source, /property string stablePanelBarPosition: "top"/);
   assert.match(source, /PanelPosition\.stableBarPosition\(root\.stablePanelBarPosition,/);
-  assert.match(source, /bar: panelBarFacade/);
+  assert.match(panelView, /bar: session.barFacade/);
 });
 
 test('the selected connector survives a panel rebuild and a temporary draft gap', () => {
-  const binding = panel.match(/readonly property string selectedDisplayName: \{([\s\S]*?)\n  \}/);
+  const binding = panelView.match(/readonly property string selectedDisplayName: \{([\s\S]*?)\n  \}/);
   assert.ok(binding, 'selected connector is a service-backed binding');
   const state = { rememberedDisplayName: 'HDMI-A-2', displayDraft: [
     { name: 'eDP-1' }, { name: 'HDMI-A-2' },
@@ -47,8 +49,8 @@ test('the selected connector survives a panel rebuild and a temporary draft gap'
   assert.equal(state.rememberedDisplayName, 'HDMI-A-2', 'fallback must not discard the choice');
   state.displayDraft = [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }];
   assert.equal(selected(), 'HDMI-A-2');
-  assert.match(panel, /service\.setRememberedDisplayName\(name\)/);
-  assert.doesNotMatch(panel, /\n {4}selectedDisplayName = name/);
+  assert.match(panelView, /service\.setRememberedDisplayName\(name\)/);
+  assert.doesNotMatch(panelView, /\n {4}selectedDisplayName = name/);
 });
 
 test('the panel records its open state and a rebuilt widget claims it back on the same output', () => {
@@ -56,8 +58,8 @@ test('the panel records its open state and a rebuilt widget claims it back on th
   // The record can be made before the service binding resolves, so the
   // transition is held and replayed instead of dropped.
   assert.match(panel, /intentPending = true\n {6}flushIntent\(\)/);
-  assert.match(panel, /if \(!service \|\| !intentPending\) return/);
-  assert.match(panel, /if \(!service \|\| !service\.panelWanted\) return/);
+  assert.match(panel, /if \(!isAvailable\(\) \|\| !intentPending\) return/);
+  assert.match(panel, /if \(!isAvailable\(\) \|\| !service\.panelWanted\) return/);
   assert.match(panel, /if \(opened && currentScreenName\(\)\) service\.setPanelScreenName\(currentScreenName\(\)\)/);
   assert.match(panel, /Qt\.callLater\([\s\S]*?if \(root\.tryRestorePanel\(\)\) return/);
   assert.match(panel, /interval: 30/);
@@ -78,11 +80,11 @@ test('a rebuilt panel waits for its original output and falls back when that out
   let opened = 0;
   let peers = [];
   const context = {
-    service: serviceState,
+    isAvailable: () => true, service: serviceState,
     bar: { moduleWidgets: () => peers },
     Quickshell: { screens },
     currentScreenName: () => 'eDP-1',
-    root: { opened: false, open: () => { opened++; } },
+    root: { opened: false }, showSurface: () => { opened++; },
   };
   const restore = panelFunction('tryRestorePanel', context);
   assert.equal(restore(), false);
@@ -108,17 +110,17 @@ test('closing the panel cancels any pending reopen', () => {
   assert.ok(flusher, 'flushIntent is defined');
   assert.match(flusher[1], /service\.setPanelWanted\(opened\)/);
   assert.match(flusher[1], /if \(!opened\) service\.setRememberedTab\(0\)/);
-  assert.match(panel, /function close\(\) \{\n {4}if \(service\) \{\n {6}service\.setPanelTransferUntil\(0\)/);
+  assert.match(panel, /function close\(\) \{\n {4}if \(isAvailable\(\)\) \{\n {6}service\.setPanelTransferUntil\(0\)/);
 });
 
 test('the surviving widget accepts a transfer while the removed output still has an open copy', () => {
   let opened = 0;
   const context = {
-    service: { panelWanted: true, panelScreenName: 'eDP-1', panelTransferUntil: Date.now() + 3000 },
+    isAvailable: () => true, service: { panelWanted: true, panelScreenName: 'eDP-1', panelTransferUntil: Date.now() + 3000 },
     bar: { moduleWidgets: () => [{ opened: true, currentScreenName: () => 'HDMI-A-2' }] },
     Quickshell: { screens: [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }] },
     currentScreenName: () => 'eDP-1',
-    root: { opened: false, open() { opened++; } },
+    root: { opened: false }, showSurface() { opened++; },
   };
   assert.equal(panelFunction('tryRestorePanel', context)(), true);
   assert.equal(opened, 1);
@@ -134,7 +136,7 @@ test('a monitor removal closes and acknowledges the old output before reopening 
   assert.ok(displayOwner.indexOf('retainPanel(target)') > displayOwner.indexOf('root.evalLua(lua'),
     'the destination panel is not reopened until the monitor rule succeeds');
   assert.match(panel, /function closeForMonitorTransfer\(serial, screenName\)/);
-  assert.match(panel, /popoutSwitchClosing = true\n {4}controller\.hide\(\)/);
+  assert.match(panel, /popoutSwitchClosing = true\n {4}hideSurface\(\)/);
   assert.match(panel, /interval: 180/);
   assert.match(panel, /svc\.acknowledgePanelEvacuation\(serial, screenName\)/);
   const handler = panel.match(/onOpenedChanged: \{([\s\S]*?)\n {2}\}/);
@@ -143,7 +145,7 @@ test('a monitor removal closes and acknowledges the old output before reopening 
 });
 
 test('panel evacuation allows the bridged closed-panel poll and unmap acknowledgment', () => {
-  const bridgePoll = panel.match(/interval: root\.opened[^\n]*\? (\d+) : (\d+)/);
+  const bridgePoll = panelView.match(/interval: root\.opened[^\n]*\? (\d+) : (\d+)/);
   const unmapWait = panel.match(/id: monitorTransferAck[\s\S]*?interval: (\d+)/);
   const evacuation = service.match(/id: panelEvacuationTimeout[\s\S]*?interval: (\d+)/);
   assert.ok(bridgePoll && unmapWait && evacuation);
@@ -160,7 +162,8 @@ test('a mode action actively probes the bridge for its evacuation request', () =
   assert.ok(probe && evacuation);
   assert.match(panel, /root\.syncBridge\(\)\n {6}root\.handlePanelEvacuation\(\)/);
   assert.match(panel, /Number\(root\.service\.panelEvacuationSerial\) > startingSerial/);
-  assert.match(panel, /if \(result === "started"\) \{\n {6}evacuationProbe\.attempts = 0\n {6}evacuationProbe\.startingSerial = startingSerial\n {6}evacuationProbe\.restart\(\)/);
+  assert.match(panelView, /session\.probeEvacuation\(startingSerial\)/);
+  assert.match(panel, /evacuationProbe\.startingSerial = startingSerial/);
   assert.ok(Number(probe[1]) * Number(probe[2]) >= Number(evacuation[1]),
     'the operation-scoped probe spans the full service safety window');
 });
@@ -190,7 +193,7 @@ test('a popout switch hands the intent to the copy that took over', () => {
   assert.match(handler[1], /else if \(popoutSwitchClosing\)/);
   assert.match(handler[1], /Qt\.callLater\(function\(\) \{ settle\(svc, api, barRef, transferUntil\) \}\)/);
   // A real close still records immediately.
-  assert.match(handler[1], /else if \(!service \|\| Date\.now\(\) >= service\.panelTransferUntil\) \{\n {6}intentPending = true/);
+  assert.match(handler[1], /else if \(!isAvailable\(\) \|\| Date\.now\(\) >= service\.panelTransferUntil\) \{\n {6}intentPending = true/);
 });
 
 test('a real switch to another popup still dismisses Station during a transfer window', () => {

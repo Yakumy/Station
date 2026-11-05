@@ -7,21 +7,24 @@ import "." as Station
 
 Column {
   id: root
-  required property var panelRoot
-  property var values: Windows.displayValues(panelRoot.service ? panelRoot.service.config.windows : null)
-  readonly property var savedValues: panelRoot.service ? panelRoot.service.config.windows : null
+  required property var tokens
+  required property var selectedDisplay
+  required property var bar
+  required property var service
+  property var values: Windows.displayValues(service ? service.config.windows : null)
+  readonly property var savedValues: service ? service.config.windows : null
   property bool editing: false
-  readonly property bool saving: panelRoot.service ? panelRoot.service.windowSettingsBusy : false
+  readonly property bool saving: service ? service.windowSettingsBusy : false
   function syncValues() {
     if (!editing && !saving) values = Windows.displayValues(savedValues)
   }
   onSavedValuesChanged: syncValues()
   onSavingChanged: syncValues()
-  readonly property var barSettings: panelRoot.selectedDisplay && panelRoot.service ? panelRoot.service.monitorBar(panelRoot.selectedDisplay.name) : ({})
+  readonly property var barSettings: selectedDisplay && service ? service.monitorBar(selectedDisplay.name) : ({})
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
   component Caption: Text {
-    color: root.panelRoot.textPrimary
+    color: root.tokens.textPrimary
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -32,13 +35,13 @@ Column {
       width: parent.width * 0.576
       Item {
         width: parent.width; height: Style.space(28)
-        Ui.PanelSectionHeader { anchors.left: parent.left; anchors.leftMargin: root.panelRoot.regionPadH; anchors.verticalCenter: parent.verticalCenter; text: "LAYOUT"; foreground: root.panelRoot.textPrimary }
+        Ui.PanelSectionHeader { anchors.left: parent.left; anchors.leftMargin: root.tokens.regionPadH; anchors.verticalCenter: parent.verticalCenter; text: "LAYOUT"; foreground: root.tokens.textPrimary }
       }
       Station.WindowsLayout {
-        width: parent.width - root.panelRoot.regionPadH * 2
+        width: parent.width - root.tokens.regionPadH * 2
         height: Style.space(370)
         anchors.horizontalCenter: parent.horizontalCenter
-        panelRoot: root.panelRoot
+        tokens: root.tokens; service: root.service
         values: root.values
         id: layout
       }
@@ -62,16 +65,16 @@ Column {
               required property var modelData
               required property int index
               width: parent.width; height: Style.space(74)
-              Caption { anchors.left: parent.left; anchors.leftMargin: root.panelRoot.space3; anchors.top: parent.top; anchors.topMargin: root.panelRoot.space2; text: row.modelData.label }
-              Caption { anchors.right: parent.right; anchors.rightMargin: root.panelRoot.space3; anchors.top: parent.top; anchors.topMargin: root.panelRoot.space2; text: root.values[row.modelData.key] + (row.index === 2 ? "%" : row.index === 4 ? "×" : " px") }
+              Caption { anchors.left: parent.left; anchors.leftMargin: root.tokens.space3; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: row.modelData.label }
+              Caption { anchors.right: parent.right; anchors.rightMargin: root.tokens.space3; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: root.values[row.modelData.key] + (row.index === 2 ? "%" : row.index === 4 ? "×" : " px") }
               Ui.PanelSlider {
                 id: slider
-                width: parent.width - root.panelRoot.space3 * 2
+                width: parent.width - root.tokens.space3 * 2
                 anchors.centerIn: parent
-                bar: root.panelRoot.bar
+                bar: root.bar
                 minimum: row.index === 4 ? 0 : Windows.limits[row.modelData.key][0]
                 maximum: row.index === 4 ? Windows.speeds.length - 1 : Windows.limits[row.modelData.key][1]
-                enabled: root.panelRoot.service && !root.panelRoot.service.windowSettingsBusy
+                enabled: root.service && !root.service.windowSettingsBusy
                 integer: true
                 value: row.index === 4 ? Windows.speedIndex(root.values.speed) : root.values[row.modelData.key]
                 onMoved: function(value) {
@@ -81,7 +84,7 @@ Column {
                 onReleased: function(value) {
                   if (row.index === 4) value = Windows.speeds[value]
                   if (row.modelData.key === "speed" && value !== Windows.displayValues(root.savedValues).speed) layout.previewExchange(value)
-                  var result = root.panelRoot.service.setWindowSetting(row.modelData.key, value)
+                  var result = root.service.setWindowSetting(row.modelData.key, value)
                   root.editing = false
                   if (result !== "ok") root.syncValues()
                 }
@@ -91,21 +94,21 @@ Column {
                   anchors.verticalCenter: parent.verticalCenter
                   width: Math.max(1, Style.normalBorderWidth); height: slider.trackHeight + Style.space(6)
                   color: Commons.Color.accent
-                  MouseArea { anchors.fill: parent; anchors.margins: -Style.space(5); hoverEnabled: true; onEntered: { if (root.panelRoot.bar) root.panelRoot.bar.showTooltip(parent, "Bar thickness: " + root.thickness + " px") } onExited: { if (root.panelRoot.bar) root.panelRoot.bar.hideTooltip(parent) } }
+                  MouseArea { anchors.fill: parent; anchors.margins: -Style.space(5); hoverEnabled: true; onEntered: { if (root.bar) root.bar.showTooltip(parent, "Bar thickness: " + root.thickness + " px") } onExited: { if (root.bar) root.bar.hideTooltip(parent) } }
                 }
               }
               Text {
                 visible: row.index === 4
                 anchors.left: parent.left
-                anchors.leftMargin: root.panelRoot.space2
+                anchors.leftMargin: root.tokens.space2
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: root.panelRoot.space1
-                width: parent.width - root.panelRoot.space2 * 2
+                anchors.bottomMargin: root.tokens.space1
+                width: parent.width - root.tokens.space2 * 2
                 horizontalAlignment: Text.AlignLeft
                 wrapMode: Text.NoWrap
                 elide: Text.ElideRight
                 text: "Change animation speed to preview · 0 disables animations"
-                color: root.panelRoot.textDim
+                color: root.tokens.textDim
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
               }

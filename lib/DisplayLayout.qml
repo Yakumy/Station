@@ -8,7 +8,7 @@ import "." as Station
 Ui.BorderSurface {
   id: canvas
   property var service: null
-  property var panelRoot: null
+  property var tokens: null
   property string selectedDisplayName: ""
   signal displaySelected(string name)
   height: Style.space(370)
@@ -138,15 +138,15 @@ Ui.BorderSurface {
         : Border.controlSpec("normal", Color.popups.text, Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: Style.cornerRadius
-      opacity: outputEnabled || !canvas.panelRoot ? 1 : canvas.panelRoot.disabledOpacity
+      opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
       Row {
         anchors.centerIn: parent
         spacing: Style.spacing.sm
         z: 3
         Text {
           text: monitorCard.modelData.name
-          color: monitorCard.isSelected || !canvas.panelRoot
-            ? Color.popups.text : canvas.panelRoot.textDim
+          color: monitorCard.isSelected || !canvas.tokens
+            ? Color.popups.text : canvas.tokens.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.body
         }

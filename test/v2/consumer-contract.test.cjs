@@ -88,7 +88,7 @@ test('actual image-button handler opens the chooser and closes the panel on both
   state.choose = multiline(direct, 'choose', state);
   let closed = 0;
   const root = { scene: { mode: 'individual' }, selectedDisplay: { identity: 'display-identity' },
-    controller: state, panelRoot: { close() { closed++; } } };
+    controller: state, dismiss() { closed++; } };
   const click = runInNewContext('(function() {' + chooseHandler() + '\n})', { root });
   click();
   assert.equal(state.pickerTarget, 'display-identity');

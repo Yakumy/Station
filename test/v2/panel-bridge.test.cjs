@@ -6,10 +6,12 @@ const { runInNewContext } = require('node:vm');
 const read = name => readFileSync(join(__dirname, '../..', name), 'utf8');
 const service = read('Service.qml');
 const panel = read('lib/StationPanel.qml');
+const session = read('lib/PanelSession.qml');
 const proxy = read('lib/BarServiceProxy.qml');
 const wallpaper = read('lib/WallpaperProxy.qml');
 
 function qmlFunction(source, name, context = {}) {
+  if (source === panel && !source.includes('  function ' + name + '(')) source = session;
   context.Tabs = require('../../lib/Tabs.js');
   const start = source.indexOf('  function ' + name + '(');
   assert.notEqual(start, -1, name + ' exists');
@@ -40,7 +42,7 @@ test('fallback polls only without the trusted service and removes all direct wri
   assert.match(service, /BarBridge\.clear\(barBridge\)/);
   const context = { directService: null, bridgeApi: null, bridgeSnapshot: null, bridgeSnapshotText: '' };
   let current = null;
-  context.handlePanelEvacuation = () => {};
+  context.session = { handlePanelEvacuation() {} };
   context.bridgeCurrent = () => current;
   const sync = qmlFunction(panel, 'syncBridge', context);
   const state = { currentStation: 2 };
@@ -157,13 +159,13 @@ test('deferred popout settlement works after the proxy has been destroyed', () =
   bar.moduleWidgets = () => [];
   settle(deadProxy, api, bar, 0);
   assert.deepEqual(calls, [['setPanelWanted', [false]], ['setRememberedTab', [0]]]);
-  assert.match(panel, /var svc = directService, api = directService \? null : bridgeApi/);
-  assert.match(panel, /settle\(svc, api, barRef, transferUntil\)/);
+  assert.match(session, /var svc = directService, api = directService \? null : bridgeApi/);
+  assert.match(session, /settle\(svc, api, barRef, transferUntil\)/);
 });
 
 // Catch newly added UI members that would otherwise work only under the stock bar.
 test('the proxies cover every service and wallpaper member consumed by the panel', () => {
-  const consumers = ['StationPanel', 'DisplaysTab', 'DisplayLayout', 'BarTab', 'SettingsTab',
+  const consumers = ['StationPanel', 'PanelSession', 'DisplaysTab', 'DisplayLayout', 'BarTab', 'SettingsTab',
     'KeybindingsTab', 'WindowsTab', 'WindowsLayout', 'WallpaperTab'].map(name => read('lib/' + name + '.qml')).join('\n');
   const members = new Set([...consumers.matchAll(/\bservice\.(\w+)/g)].map(m => m[1]));
   const declared = new Set([...proxy.matchAll(/(?:property \w+|function) (\w+)/g)].map(m => m[1]));
@@ -184,15 +186,15 @@ test('explicit close clears intent even while the proxy still shows a transfer w
     setPanelTransferUntil(value) { live.panelTransferUntil = value; },
   };
   const context = {
-    service: stale, opened: true, intentPending: false,
+    isAvailable: () => true, service: stale, opened: true, intentPending: false,
     monitorTransferClosing: false, popoutSwitchClosing: false,
     currentScreenName: () => 'DP-1', reopenTimer: { stop() {} }, controller: {},
   };
-  context.flushIntent = qmlFunction(panel, 'flushIntent', context);
-  const block = panel.match(/onOpenedChanged: \{([\s\S]*?)\n  \}/);
+  context.flushIntent = qmlFunction(session, 'flushIntent', context);
+  const block = session.match(/onOpenedChanged: \{([\s\S]*?)\n  \}/);
   const onOpened = runInNewContext('(function() {' + block[1] + '})', context);
-  context.controller.hide = () => { context.opened = false; onOpened(); };
-  qmlFunction(panel, 'close', context)();
+  context.hideSurface = () => { context.opened = false; onOpened(); };
+  qmlFunction(session, 'close', context)();
   assert.equal(live.panelTransferUntil, 0);
   assert.equal(live.panelWanted, false, 'dismissal must not wait for another snapshot');
   assert.equal(live.rememberedTab, 0);

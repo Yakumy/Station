@@ -1288,6 +1288,13 @@ later with the old plain-copy mechanism retained once its own gate is approved.
 
 ### M7 — Separate panel lifecycle from editors
 
+Implemented after the user instructed continued work from `28c7eba`. The
+[checkpoint](ARCHITECTURE-REFACTOR-STATUS.md#m7-panel-session-and-local-editors)
+records ownership and evidence. `PanelSession` owns visual lifecycle and timers.
+`DisplayControls` owns panel-local commands and queues. KeybindingsTab owns its
+draft. Tabs receive tokens and finite feature ports. Service intent, the root
+barrier and the top-level bridge import remain unchanged.
+
 - **Priority / effort / risk:** P2; medium–large, 3–5 days; medium–high.
 - **Goal/files:** `PanelSession.qml`, `DisplayControls.qml`, StationPanel and tabs;
   key edit functions move near KeybindingsTab. Replace broad behavior accesses

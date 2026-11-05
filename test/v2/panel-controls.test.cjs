@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
-const source = readFileSync('lib/StationPanel.qml', 'utf8');
+const source = readFileSync('lib/DisplayControls.qml', 'utf8');
 
 function harness() {
   const c = {

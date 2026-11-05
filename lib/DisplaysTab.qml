@@ -6,11 +6,15 @@ import "." as Station
 
 Column {
   id: displayTab
-  required property var panelRoot
-  readonly property var service: panelRoot.service
-  readonly property var selectedDisplay: panelRoot.selectedDisplay
-  readonly property real pad: panelRoot.regionPadH
-  readonly property real gutter: panelRoot.space2
+  required property var tokens
+  required property string selectedDisplayName
+  required property var bar
+  required property var selectDisplay
+  required property var controls
+  required property var service
+  required property var selectedDisplay
+  readonly property real pad: tokens.regionPadH
+  readonly property real gutter: tokens.space2
   readonly property var resolutionOptions: {
     var modes = selectedDisplay ? Model.resolutionChoices(selectedDisplay.availableModes) : []
     return modes.slice().sort(function(a, b) {
@@ -39,13 +43,13 @@ Column {
     anchors.left: parent.left
     anchors.leftMargin: displayTab.gutter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: displayTab.panelRoot.space1
+    anchors.bottomMargin: displayTab.tokens.space1
     width: parent.width - displayTab.gutter * 2
     visible: text !== ""
     horizontalAlignment: Text.AlignLeft
     wrapMode: Text.NoWrap
     elide: Text.ElideRight
-    color: displayTab.panelRoot.textDim
+    color: displayTab.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -55,7 +59,7 @@ Column {
     anchors.leftMargin: displayTab.gutter
     anchors.top: parent.top
     anchors.topMargin: displayTab.gutter
-    color: displayTab.panelRoot.textDim
+    color: displayTab.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -92,14 +96,14 @@ Column {
           anchors.leftMargin: displayTab.pad
           anchors.verticalCenter: parent.verticalCenter
           text: "LAYOUT"
-          foreground: displayTab.panelRoot.textPrimary
+          foreground: displayTab.tokens.textPrimary
         }
         Text {
           anchors.right: parent.right
           anchors.rightMargin: displayTab.pad
           anchors.verticalCenter: parent.verticalCenter
           text: "DRAG TO ARRANGE"
-          color: displayTab.panelRoot.textDim
+          color: displayTab.tokens.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
@@ -111,9 +115,9 @@ Column {
         height: Style.space(370)
         anchors.horizontalCenter: parent.horizontalCenter
         service: displayTab.service
-        panelRoot: displayTab.panelRoot
-        selectedDisplayName: displayTab.panelRoot.selectedDisplayName
-        onDisplaySelected: function(name) { displayTab.panelRoot.selectDisplay(name) }
+        tokens: displayTab.tokens
+        selectedDisplayName: displayTab.selectedDisplayName
+        onDisplaySelected: function(name) { displayTab.selectDisplay(name) }
       }
 
       Text {
@@ -150,7 +154,7 @@ Column {
           anchors.leftMargin: rightColumn.sideInset
           anchors.verticalCenter: parent.verticalCenter
           text: displayTab.selectedDisplay ? "Selected: " + displayTab.selectedDisplay.name : "No display selected"
-          color: displayTab.panelRoot.textPrimary
+          color: displayTab.tokens.textPrimary
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
           elide: Text.ElideRight
@@ -181,8 +185,8 @@ Column {
               anchors.rightMargin: displayTab.gutter
               anchors.top: parent.top
               anchors.topMargin: displayTab.gutter
-              text: displayTab.panelRoot.brightnessAvailable ? displayTab.panelRoot.brightness + "%" : "—"
-              color: displayTab.panelRoot.textDim
+              text: displayTab.controls.brightnessAvailable ? displayTab.controls.brightness + "%" : "—"
+              color: displayTab.tokens.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -190,22 +194,22 @@ Column {
               width: parent.width - displayTab.pad * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: displayTab.panelRoot.bar
+              bar: displayTab.bar
               minimum: 1
               maximum: 100
               integer: true
-              value: displayTab.panelRoot.brightness
-              enabled: displayTab.panelRoot.brightnessAvailable
+              value: displayTab.controls.brightness
+              enabled: displayTab.controls.brightnessAvailable
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
-              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
-              onMoved: function(value) { displayTab.panelRoot.brightness = Math.round(value) }
-              onReleased: function(value) { displayTab.panelRoot.queueBrightness(value) }
+              opacity: enabled ? 1 : displayTab.tokens.disabledOpacity
+              onMoved: function(value) { displayTab.controls.brightness = Math.round(value) }
+              onReleased: function(value) { displayTab.controls.queueBrightness(value) }
             }
             ControlMessage {
-              text: displayTab.panelRoot.brightnessLoading ? ""
-                : displayTab.unavailableMessage(displayTab.panelRoot.brightnessAvailable)
+              text: displayTab.controls.brightnessLoading ? ""
+                : displayTab.unavailableMessage(displayTab.controls.brightnessAvailable)
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.tokens.textPrimary }
           }
 
           Item {
@@ -219,8 +223,8 @@ Column {
               anchors.rightMargin: displayTab.gutter
               anchors.top: parent.top
               anchors.topMargin: displayTab.gutter
-              text: displayTab.panelRoot.displayedTextSize() + "px"
-              color: displayTab.panelRoot.textDim
+              text: displayTab.controls.displayedTextSize() + "px"
+              color: displayTab.tokens.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -228,21 +232,21 @@ Column {
               width: parent.width - displayTab.pad * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: displayTab.panelRoot.bar
+              bar: displayTab.bar
               minimum: 0
-              maximum: displayTab.panelRoot.textSizeStops.length - 1
+              maximum: displayTab.controls.textSizeStops.length - 1
               step: 1
               integer: true
-              tickCount: displayTab.panelRoot.textSizeStops.length
-              value: displayTab.panelRoot.currentTextIndex()
-              enabled: displayTab.panelRoot.textSizeStops.length > 1
-              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
-              onReleased: function(value) { displayTab.panelRoot.setTextSizeIndex(Math.round(value)) }
+              tickCount: displayTab.controls.textSizeStops.length
+              value: displayTab.controls.currentTextIndex()
+              enabled: displayTab.controls.textSizeStops.length > 1
+              opacity: enabled ? 1 : displayTab.tokens.disabledOpacity
+              onReleased: function(value) { displayTab.controls.setTextSizeIndex(Math.round(value)) }
             }
             ControlMessage {
-              text: displayTab.panelRoot.textSizeStops.length > 1 ? "" : "Not available."
+              text: displayTab.controls.textSizeStops.length > 1 ? "" : "Not available."
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.tokens.textPrimary }
           }
 
           Item {
@@ -257,7 +261,7 @@ Column {
               anchors.top: parent.top
               anchors.topMargin: displayTab.gutter
               text: displayTab.selectedDisplay ? displayTab.selectedDisplay.scale + "x" : "—"
-              color: displayTab.panelRoot.textDim
+              color: displayTab.tokens.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -265,7 +269,7 @@ Column {
               width: parent.width - displayTab.pad * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: displayTab.panelRoot.bar
+              bar: displayTab.bar
               minimum: 0
               maximum: displayTab.scaleOptions.length - 1
               step: 1
@@ -276,7 +280,7 @@ Column {
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
                 && displayTab.scaleOptions.length > 1
-              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : displayTab.tokens.disabledOpacity
               onReleased: function(value) {
                 displayTab.applyDisplayValue("scale", displayTab.scaleOptions[Math.round(value)])
               }
@@ -284,7 +288,7 @@ Column {
             ControlMessage {
               text: displayTab.unavailableMessage(displayTab.scaleOptions.length > 1)
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.tokens.textPrimary }
           }
 
           Item {
@@ -302,7 +306,7 @@ Column {
                 var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
                 return mode ? mode.width + "x" + mode.height : "—"
               }
-              color: displayTab.panelRoot.textDim
+              color: displayTab.tokens.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -310,7 +314,7 @@ Column {
               width: parent.width - displayTab.pad * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: displayTab.panelRoot.bar
+              bar: displayTab.bar
               minimum: 0
               maximum: Math.max(0, displayTab.resolutionOptions.length - 1)
               step: 1
@@ -323,7 +327,7 @@ Column {
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
                 && displayTab.resolutionOptions.length > 1
-              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : displayTab.tokens.disabledOpacity
               onReleased: function(value) {
                 var choice = displayTab.resolutionOptions[Math.round(value)]
                 if (!choice || !displayTab.selectedDisplay) return
@@ -335,7 +339,7 @@ Column {
             ControlMessage {
               text: displayTab.unavailableMessage(displayTab.resolutionOptions.length > 1)
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: displayTab.tokens.textPrimary }
           }
 
           Item {
@@ -353,7 +357,7 @@ Column {
                 var mode = displayTab.selectedDisplay ? Model.parseMode(displayTab.selectedDisplay.mode) : null
                 return mode ? mode.refresh + " Hz" : "—"
               }
-              color: displayTab.panelRoot.textDim
+              color: displayTab.tokens.textDim
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -361,7 +365,7 @@ Column {
               width: parent.width - displayTab.pad * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: displayTab.panelRoot.bar
+              bar: displayTab.bar
               minimum: 0
               maximum: Math.max(0, displayTab.refreshOptions.length - 1)
               step: 1
@@ -372,7 +376,7 @@ Column {
               enabled: displayTab.service && displayTab.service.state === "idle"
                 && displayTab.selectedDisplay && displayTab.selectedDisplay.enabled
                 && displayTab.refreshOptions.length > 1
-              opacity: enabled ? 1 : displayTab.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : displayTab.tokens.disabledOpacity
               onReleased: function(value) {
                 var choice = displayTab.refreshOptions[Math.round(value)]
                 if (choice) displayTab.applyDisplayValue("mode", choice.value)
@@ -391,7 +395,7 @@ Column {
     width: parent.width
     height: Style.space(66)
     readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
-    Ui.PanelSeparator { width: parent.width; foreground: displayTab.panelRoot.textPrimary }
+    Ui.PanelSeparator { width: parent.width; foreground: displayTab.tokens.textPrimary }
     Text {
       visible: parent.previewing
       anchors.left: parent.left
@@ -401,7 +405,7 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       text: displayTab.service && displayTab.service.previewBusy ? "Applying layout and moving windows…" : "Keep these settings? Reverting in "
         + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
-      color: displayTab.panelRoot.textPrimary
+      color: displayTab.tokens.textPrimary
       font.family: Style.font.family
       font.pixelSize: Style.font.body
     }
@@ -411,7 +415,7 @@ Column {
       anchors.right: parent.right
       anchors.rightMargin: displayTab.pad
       anchors.verticalCenter: parent.verticalCenter
-      height: displayTab.panelRoot.controlHeight
+      height: displayTab.tokens.controlHeight
       radius: Style.cornerRadius
       text: "Keep"
       enabled: displayTab.service && !displayTab.service.previewBusy
@@ -426,7 +430,7 @@ Column {
       anchors.right: keepButton.left
       anchors.rightMargin: displayTab.gutter
       anchors.verticalCenter: parent.verticalCenter
-      height: displayTab.panelRoot.controlHeight
+      height: displayTab.tokens.controlHeight
       radius: Style.cornerRadius
       text: "Revert"
       enabled: displayTab.service && !displayTab.service.previewBusy

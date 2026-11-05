@@ -126,7 +126,7 @@ Item {
   Station.BarLayout {
     id: barLayout
     width: 567; height: 370
-    panelRoot: barPanelRoot
+    tokens: barPanelRoot; service: service
     visible: false
   }
   TestCase {

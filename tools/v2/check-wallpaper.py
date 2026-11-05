@@ -80,7 +80,7 @@ ShellRoot {
     Rectangle {
       id: capture
       width: parent.width; height: tab.implicitHeight; color: Color.popups.background
-      Station.WallpaperTab { id: tab; width: parent.width; panelRoot: panel }
+      Station.WallpaperTab { id: tab; width: parent.width; tokens: panel; controller: panel.service.wallpaper; dismiss: function() { panel.close() } }
     }
   }
   Timer {

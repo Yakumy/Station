@@ -11,6 +11,7 @@ const { source: owner, ownerFunction } = require('./helpers/display-owner.cjs');
 const layout = read('lib', 'DisplayLayout.qml');
 const tab = read('lib', 'DisplaysTab.qml');
 const panel = read('lib', 'StationPanel.qml');
+const panelSession = read('lib', 'PanelSession.qml');
 
 test('the draft stays editable while a preview is pending', () => {
   assert.match(owner, /readonly property bool draftEditable: \(operationState === "idle" \|\| operationState === "previewing"\) && !previewBusy/);
@@ -146,8 +147,8 @@ test('layout edits stay previewable while side controls require idle', () => {
 
 test('the panel remembers its tab across a bar rebuild but not across a close', () => {
   assert.match(service, /property int rememberedTab: 0/);
-  assert.match(panel, /onSelectedTabChanged: \{\s*if \(service && sessionTabRestored\) service\.setRememberedTab\(selectedTab\)/);
-  assert.match(panel, /selectedTab !== remembered\) selectedTab = remembered\n    sessionTabRestored = true/);
-  assert.match(panel, /if \(!opened\) service\.setRememberedTab\(0\)/);
-  assert.match(panel, /service\.rememberedTab/);
+  assert.match(panelSession, /onSelectedTabChanged: \{\s*if \(isAvailable\(\) && sessionTabRestored\) service\.setRememberedTab\(selectedTab\)/);
+  assert.match(panelSession, /selectedTab !== remembered\) selectedTab = remembered\n    sessionTabRestored = true/);
+  assert.match(panelSession, /if \(!opened\) service\.setRememberedTab\(0\)/);
+  assert.match(panelSession, /service\.rememberedTab/);
 });

@@ -76,3 +76,24 @@ source edit tests watching. Candidate failures and identical retries test real
 signal behavior. Final disk checks preserve personal source and M2 artifacts.
 These checks do not prove physical panel unmapping, hardware changes or recovery
 after a shell crash. They do not instantiate production Service.
+
+Panel/editor separation has these local checks:
+
+```sh
+python3 tools/v2/check-panel-session.py
+python3 tools/v2/check-panel-composition.py
+python3 tools/v2/check-panel-size.py
+```
+
+The first uses offscreen Qt, production session/control/key components and the
+composition facades. Timers and notifications are real. All external effects are
+fake. It checks reopen, screen/axis retention, evacuation acknowledgment, connector
+capture, text queues and draft teardown. It expects only the pinned algorithms'
+geometry self-invalidation and implicit `exitCode` warnings.
+
+The composition check uses installed host components and an isolated Wayland
+preview. Both service paths use fake observations and inert Process transports.
+It instantiates populated tabs and checks intent, tab writes, key actions and
+dismissal. The size check opens a separate preview with no service. It checks
+fixed dimensions, overflow and scroll reset. These checks do not instantiate
+production Service, change live configuration or prove physical unmapping.

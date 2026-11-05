@@ -1,11 +1,9 @@
 import QtQuick
 import QtQuick.Controls
-import Quickshell.Io
 import Quickshell
 import qs.Ui as Ui
 import qs.Commons
 import "Model.js" as Model
-import "Binds.js" as Binds
 import "Tabs.js" as Tabs
 import "PanelPosition.js" as PanelPosition
 import "." as Station
@@ -24,20 +22,8 @@ Ui.Panel {
   property var bridgeSnapshot: null
   property string bridgeSnapshotText: ""
   readonly property var service: directService || (bridgeSnapshot ? bridgeProxy : null)
-  property int selectedTab: 0
-  property bool sessionTabRestored: false
-  // A cross-axis bar move reconfigures the bar's layer surface. During that
-  // Wayland transition QsWindow can briefly stop reporting the anchor screen,
-  // which made KeyboardPanel follow the transient null and remap even though
-  // this StationPanel instance survived. Retain the real screen object while
-  // the panel is open; the card geometry can continue following the same live
-  // anchor item without moving the panel surface between outputs.
-  property var retainedPanelScreen: null
-  // KeyboardPanel normally reads bar.position immediately, but a cross-axis
-  // layer-shell change publishes that value before the bar window has swapped
-  // from full-height/thin to full-width/thin (or vice versa). Keep the last
-  // geometrically valid edge until the anchor window reports the new axis.
-  property string stablePanelBarPosition: "top"
+  property alias selectedTab: session.selectedTab
+  popoutSwitchClosing: session.popoutSwitchClosing
   property int stationNumber: service ? service.currentStation : 1
   readonly property string selectedDisplayName: {
     if (!service) return ""
@@ -47,20 +33,6 @@ Ui.Panel {
       if (displays[i].name === remembered) return remembered
     return displays.length ? displays[0].name : ""
   }
-  property int brightness: 0
-  property bool brightnessAvailable: false
-  readonly property bool brightnessLoading: brightnessRead.running
-  property var pendingBrightnessRequest: null
-  readonly property var textSizeStops: [9, 10, 11, 12, 14, 16, 20]
-  property int textSizePreviewIndex: -1
-  property int queuedTextSize: -1
-  property bool monitorTransferClosing: false
-  property int monitorTransferSerial: 0
-  property string monitorTransferScreen: ""
-  property int handledEvacuationSerial: 0
-  property string editingBindingId: ""
-  property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
-  property string editingKey: ""
   readonly property string pluginVersion: service && service.manifest && service.manifest.version ? String(service.manifest.version) : ""
   readonly property real desiredPanelWidth: Style.space(996)
   readonly property real desiredPanelHeight: Style.space(620)
@@ -69,24 +41,27 @@ Ui.Panel {
   // these; nothing below this block hardcodes a colour, radius or step.
   //
   // 4px grid. Only these steps exist; pick the smallest that reads clearly.
-  readonly property real space1: Style.space(4)
-  readonly property real space2: Style.space(8)
-  readonly property real space3: Style.space(12)
-  readonly property real space4: Style.space(16)
-  readonly property real space5: Style.space(20)
-  readonly property real space6: Style.space(24)
+  QtObject {
+    id: panelTokens
+    readonly property real space1: Style.space(4)
+    readonly property real space2: Style.space(8)
+    readonly property real space3: Style.space(12)
+    readonly property real space4: Style.space(16)
+    readonly property real space5: Style.space(20)
+    readonly property real space6: Style.space(24)
 
-  // Regions share one outer rhythm: 24px horizontal, 20px vertical.
-  readonly property real regionPadH: space6
-  readonly property real regionPadV: space5
+    // Regions share one outer rhythm: 24px horizontal, 20px vertical.
+    readonly property real regionPadH: space6
+    readonly property real regionPadV: space5
 
-  readonly property color textPrimary: Color.popups.text
-  readonly property color textDim: Qt.darker(Color.popups.text, 1.4)
+    readonly property color textPrimary: Color.popups.text
+    readonly property color textDim: Qt.darker(Color.popups.text, 1.4)
 
-  readonly property real disabledOpacity: 0.6
-  readonly property real tabUnderline: Style.space(2)
-  readonly property real controlHeight: Style.spacing.controlHeight
+    readonly property real disabledOpacity: 0.6
+    readonly property real tabUnderline: Style.space(2)
+    readonly property real controlHeight: Style.spacing.controlHeight
 
+  }
   readonly property int conflictCount: service
     ? service.bindStatuses.filter(function(item) { return item.status === "conflict" }).length : 0
   readonly property var selectedDisplay: {
@@ -106,15 +81,113 @@ Ui.Panel {
     })
     return options
   }
-  readonly property var bindingGroups: [
-    { label: "Switch to station", combo: "SUPER + 1 … 0", ids: root.bindingIds("switch-", 10) },
-    { label: "Move window to station", combo: "SUPER + SHIFT + 1 … 0", ids: root.bindingIds("send-", 10) },
-    { label: "Move silently (no follow)", combo: "SUPER + SHIFT + ALT + 1 … 0", ids: root.bindingIds("silent-", 10) },
-    { label: "Station to the left", combo: "SUPER + CTRL + ←", ids: ["go-left"] },
-    { label: "Station to the right", combo: "SUPER + CTRL + →", ids: ["go-right"] },
-    { label: "Move across monitors and stations", combo: "SHIFT + CTRL + SUPER + ← → ↑ ↓",
-      ids: ["shift-left", "shift-right", "shift-up", "shift-down"] }
-  ]
+
+  QtObject {
+    id: panelIntent
+    function acknowledgePanelEvacuation(serial, screenName) { return root.service ? root.service.acknowledgePanelEvacuation(serial, screenName) : undefined }
+    readonly property var panelEvacuationFrom: root.service ? root.service.panelEvacuationFrom : ""
+    readonly property var panelEvacuationSerial: root.service ? root.service.panelEvacuationSerial : 0
+    readonly property var panelEvacuationWaiting: root.service ? root.service.panelEvacuationWaiting : null
+    readonly property var panelScreenName: root.service ? root.service.panelScreenName : ""
+    readonly property var panelTransferUntil: root.service ? root.service.panelTransferUntil : 0
+    readonly property var panelWanted: root.service ? root.service.panelWanted : null
+    readonly property var previewBusy: root.service ? root.service.previewBusy : null
+    readonly property var rememberedTab: root.service ? root.service.rememberedTab : 0
+    function setPanelScreenName(value) { return root.service ? root.service.setPanelScreenName(value) : undefined }
+    function setPanelTransferUntil(value) { return root.service ? root.service.setPanelTransferUntil(value) : undefined }
+    function setPanelWanted(value) { return root.service ? root.service.setPanelWanted(value) : undefined }
+    function setRememberedTab(value) { return root.service ? root.service.setRememberedTab(value) : undefined }
+  }
+
+  QtObject {
+    id: displaysTabPort
+    function applyDisplaySetting(name, key, value) { return root.service ? root.service.applyDisplaySetting(name, key, value) : undefined }
+    readonly property var displayDraft: root.service ? root.service.displayDraft : []
+    function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
+    readonly property var draftEditable: root.service ? root.service.draftEditable : null
+    function keepPreview() { return root.service ? root.service.keepPreview() : undefined }
+    readonly property var layoutError: root.service ? root.service.layoutError : null
+    readonly property var previewBusy: root.service ? root.service.previewBusy : null
+    function previewLayout() { return root.service ? root.service.previewLayout() : undefined }
+    readonly property var previewSeconds: root.service ? root.service.previewSeconds : null
+    function revertPreview(reason) { return root.service ? root.service.revertPreview(reason) : undefined }
+    function roleOf(name) { return root.service ? root.service.roleOf(name) : undefined }
+    function setDisplayEnabled(name, enabled) { return root.service ? root.service.setDisplayEnabled(name, enabled) : undefined }
+    function setDisplayPosition(name, x, y) { return root.service ? root.service.setDisplayPosition(name, x, y) : undefined }
+    function setDisplayTransform(name, value) { return root.service ? root.service.setDisplayTransform(name, value) : undefined }
+    readonly property var state: root.service ? root.service.state : null
+    function swapRole(name, roleIndex) { return root.service ? root.service.swapRole(name, roleIndex) : undefined }
+  }
+
+  QtObject {
+    id: barTabPort
+    readonly property var displayDraft: root.service ? root.service.displayDraft : []
+    function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
+    function monitorBar(name) { return root.service ? root.service.monitorBar(name) : undefined }
+    function monitorBarMaximumContent(name) { return root.service ? root.service.monitorBarMaximumContent(name) : undefined }
+    function monitorBarMaximumHeight(name) { return root.service ? root.service.monitorBarMaximumHeight(name) : undefined }
+    function monitorBarMinimum(name) { return root.service ? root.service.monitorBarMinimum(name) : undefined }
+    function setMonitorBarBackground(name, background) { return root.service ? root.service.setMonitorBarBackground(name, background) : undefined }
+    function setMonitorBarContentSize(name, contentSize) { return root.service ? root.service.setMonitorBarContentSize(name, contentSize) : undefined }
+    function setMonitorBarEnabled(name, enabled) { return root.service ? root.service.setMonitorBarEnabled(name, enabled) : undefined }
+    function setMonitorBarHeight(name, height) { return root.service ? root.service.setMonitorBarHeight(name, height) : undefined }
+    function setMonitorBarPosition(name, position) { return root.service ? root.service.setMonitorBarPosition(name, position) : undefined }
+    function setMonitorBarStyle(name, style) { return root.service ? root.service.setMonitorBarStyle(name, style) : undefined }
+    function setMonitorBarWidth(name, width) { return root.service ? root.service.setMonitorBarWidth(name, width) : undefined }
+  }
+
+  QtObject {
+    id: windowsTabPort
+    readonly property var config: root.service ? root.service.config : ({})
+    readonly property var displayDraft: root.service ? root.service.displayDraft : []
+    function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
+    function monitorBar(name) { return root.service ? root.service.monitorBar(name) : undefined }
+    function monitorBarMaximumHeight(name) { return root.service ? root.service.monitorBarMaximumHeight(name) : undefined }
+    function monitorBarMinimum(name) { return root.service ? root.service.monitorBarMinimum(name) : undefined }
+    function setWindowSetting(key, value) { return root.service ? root.service.setWindowSetting(key, value) : undefined }
+    readonly property var windowSettingsBusy: root.service ? root.service.windowSettingsBusy : null
+  }
+
+  QtObject {
+    id: keybindingsTabPort
+    function approveBinding(combo) { return root.service ? root.service.approveBinding(combo) : undefined }
+    readonly property var bindStatuses: root.service ? root.service.bindStatuses : []
+    function setBinding(id, combo) { return root.service ? root.service.setBinding(id, combo) : undefined }
+  }
+
+  QtObject {
+    id: settingsTabPort
+    function acquireStockLeases() { return root.service ? root.service.acquireStockLeases() : undefined }
+    readonly property var config: root.service ? root.service.config : ({})
+    readonly property var displayWidgetEnabled: root.service ? root.service.displayWidgetEnabled : null
+    function setSetting(name, value) { return root.service ? root.service.setSetting(name, value) : undefined }
+    readonly property var workspaceWidgetEnabled: root.service ? root.service.workspaceWidgetEnabled : null
+  }
+
+  Station.DisplayControls {
+    id: displayControls
+    selectedDisplayName: root.selectedDisplayName
+  }
+  Station.PanelSession {
+    id: session
+    service: panelIntent
+    isAvailable: function() { return !!root.service }
+    directService: root.directService
+    bridgeApi: root.bridgeApi
+    bar: root.bar
+    anchorWindow: panel.anchorWindow
+    opened: root.opened
+    hideSurface: function() { root.controller.hide() }
+    showSurface: function() { root.open() }
+    syncBridge: function() { root.syncBridge() }
+    refreshControls: function() { displayControls.refreshBrightness() }
+    resetScroll: function() { if (tabScroll.contentItem) tabScroll.contentItem.contentY = 0 }
+  }
+  function currentScreenName() { return session.currentScreenName() }
+  function close() { session.close() }
+  function closeForPopoutSwitch() { session.closeForPopoutSwitch() }
+  onServiceChanged: if (session) session.serviceResolved()
+  Component.onCompleted: { syncBridge(); session.flushIntent(); session.restoreSession(); session.handlePanelEvacuation(); session.requestPanelBack() }
 
   Station.BarServiceProxy {
     id: bridgeProxy
@@ -129,28 +202,6 @@ Ui.Panel {
     repeat: true
     triggeredOnStart: true
     onTriggered: root.syncBridge()
-  }
-
-  Timer {
-    id: evacuationProbe
-    interval: 30
-    property int attempts: 0
-    property int startingSerial: 0
-    onTriggered: {
-      // setModeValue starts the service transaction synchronously, but a
-      // replacement bar only learns about its later evacuation request from
-      // a bridge snapshot. Probe that operation directly so the panel can
-      // unmap before the safety timeout even when the ordinary poll stalls.
-      root.syncBridge()
-      root.handlePanelEvacuation()
-      if (root.service
-          && Number(root.service.panelEvacuationSerial) > startingSerial
-          && root.handledEvacuationSerial >= Number(root.service.panelEvacuationSerial)) {
-        attempts = 0
-        return
-      }
-      if (attempts < 100) { attempts += 1; restart() } else attempts = 0
-    }
   }
 
   function syncBridge() {
@@ -172,44 +223,7 @@ Ui.Panel {
     }
     // Snapshot-derived property notifications may arrive in any order.
     // Check the complete request after every snapshot, not only its serial.
-    handlePanelEvacuation()
-  }
-
-  function bindingIds(prefix, count) {
-    var ids = []
-    for (var i = 1; i <= count; i++) ids.push(prefix + i)
-    return ids
-  }
-
-  function bindingForId(id) {
-    if (!service) return null
-    for (var i = 0; i < service.bindStatuses.length; i++)
-      if (service.bindStatuses[i].id === id) return service.bindStatuses[i]
-    return null
-  }
-
-  function conflictsFor(ids) {
-    var conflicts = []
-    for (var i = 0; i < ids.length; i++) {
-      var binding = bindingForId(ids[i])
-      if (binding && binding.status === "conflict") conflicts.push(binding)
-    }
-    return conflicts
-  }
-
-  function groupStatus(ids) {
-    var priority = { conflict: 4, unverified: 3, replacement: 2, free: 1 }
-    var result = "free", score = 0
-    for (var i = 0; i < ids.length; i++) {
-      var binding = bindingForId(ids[i])
-      var status = binding ? binding.status : "unverified"
-      if ((priority[status] || 0) > score) { result = status; score = priority[status] || 0 }
-    }
-    return result
-  }
-
-  function statusLabel(status) {
-    return status === "replacement" ? "REPLACES DEFAULT" : String(status || "unverified").toUpperCase()
+    session.handlePanelEvacuation()
   }
 
   function roleName(display) {
@@ -223,11 +237,6 @@ Ui.Panel {
     service.setRememberedDisplayName(name)
   }
 
-  onSelectedDisplayNameChanged: {
-    brightnessAvailable = false
-    refreshBrightness()
-  }
-
   function changeMode(value) {
     if (!service || !service.draftEditable) return
     var startingSerial = Number(service.panelEvacuationSerial) || 0
@@ -235,387 +244,9 @@ Ui.Panel {
       ? service.setModeValue("single", value.substring(7))
       : service.setModeValue(value, "")
     if (result === "started") {
-      evacuationProbe.attempts = 0
-      evacuationProbe.startingSerial = startingSerial
-      evacuationProbe.restart()
+      session.probeEvacuation(startingSerial)
     }
     return result
-  }
-
-  function beginBindingEdit(binding) {
-    var normalized = Binds.normalize(binding.combo).split("+")
-    editingModifiers = {
-      SUPER: normalized.indexOf("SUPER") !== -1,
-      CTRL: normalized.indexOf("CTRL") !== -1,
-      ALT: normalized.indexOf("ALT") !== -1,
-      SHIFT: normalized.indexOf("SHIFT") !== -1
-    }
-    editingKey = normalized[normalized.length - 1] || ""
-    editingBindingId = binding.id
-  }
-
-  function toggleEditingModifier(name) {
-    var next = Object.assign({}, editingModifiers)
-    next[name] = !next[name]
-    editingModifiers = next
-  }
-
-  function applyBindingEdit() {
-    if (!service || !editingBindingId || !editingKey.trim()) return
-    var parts = []
-    ;["SUPER", "CTRL", "ALT", "SHIFT"].forEach(function(mod) {
-      if (editingModifiers[mod]) parts.push(mod)
-    })
-    parts.push(editingKey.trim())
-    if (service.setBinding(editingBindingId, parts.join(" + ")) === "ok") editingBindingId = ""
-  }
-
-  function refreshBrightness(name) {
-    var target = name || selectedDisplayName
-    if (!target || brightnessRead.running) return
-    brightnessRead.monitorName = target
-    brightnessRead.command = ["omarchy-brightness-display", "--monitor", target]
-    brightnessRead.running = true
-  }
-
-  function queueBrightness(value) {
-    if (!brightnessAvailable || !selectedDisplayName) return
-    brightnessDebounce.pending = Math.round(value)
-    brightnessDebounce.monitorName = selectedDisplayName
-    brightnessDebounce.restart()
-  }
-
-  function nearestTextIndex(px) {
-    var best = 0, distance = Infinity
-    for (var i = 0; i < textSizeStops.length; i++) {
-      var next = Math.abs(textSizeStops[i] - px)
-      if (next < distance) { best = i; distance = next }
-    }
-    return best
-  }
-
-  function currentTextIndex() {
-    return textSizePreviewIndex >= 0 ? textSizePreviewIndex : nearestTextIndex(Style.font.baseSize)
-  }
-
-  function displayedTextSize() {
-    return textSizePreviewIndex >= 0 ? textSizeStops[textSizePreviewIndex] : Style.font.baseSize
-  }
-
-  function setTextSizeIndex(index) {
-    if (index < 0 || index >= textSizeStops.length) return
-    if (index === currentTextIndex()) return
-    textSizePreviewIndex = index
-    if (textSizeWrite.running) { queuedTextSize = textSizeStops[index]; return }
-    textSizeWrite.command = ["omarchy-display-text-size", String(textSizeStops[index])]
-    textSizeWrite.running = true
-  }
-
-  function setBrightness(value, monitorName) {
-    if (!monitorName) return
-    var level = Math.max(1, Math.min(100, Math.round(value)))
-    if (monitorName === selectedDisplayName) brightness = level
-    if (brightnessWrite.running) {
-      pendingBrightnessRequest = { value: level, monitorName: monitorName }
-      return
-    }
-    brightnessWrite.command = ["omarchy", "brightness", "display", "--no-osd", "--monitor",
-      monitorName, level + "%"]
-    brightnessWrite.running = true
-  }
-
-  // The service binding can still be empty when the panel changes state (the
-  // bar configures this widget after it is created), so a transition that
-  // happens before it resolves is replayed the moment it does. An open
-  // recorded nowhere would leave a rebuilt widget thinking the panel was
-  // closed; a close recorded nowhere would reopen a dismissed panel.
-  property bool intentPending: false
-
-  function currentScreenName() {
-    var screen = currentPanelScreen()
-    return screen ? String(screen.name || "") : ""
-  }
-
-  function screenByName(name) {
-    var wanted = String(name || "")
-    if (!wanted) return null
-    for (var i = 0; i < Quickshell.screens.length; i++)
-      if (String(Quickshell.screens[i].name || "") === wanted) return Quickshell.screens[i]
-    return null
-  }
-
-  function currentPanelScreen() {
-    if (retainedPanelScreen) return retainedPanelScreen
-    var window = panel.anchorWindow
-    if (window && window.screen) return window.screen
-    return service ? screenByName(service.panelScreenName) : null
-  }
-
-  function retainCurrentPanelScreen() {
-    var window = panel.anchorWindow
-    var screen = window && window.screen ? window.screen : null
-    if (!screen && service) screen = screenByName(service.panelScreenName)
-    if (screen) retainedPanelScreen = screen
-  }
-
-  // An explicit dismissal wins even if a bar rebuild is in progress.
-  function close() {
-    if (service) {
-      service.setPanelTransferUntil(0)
-      // The proxy may still show the old transfer deadline until its next poll.
-      // Record explicit dismissal now instead of relying on onOpenedChanged.
-      service.setPanelWanted(false)
-      service.setRememberedTab(0)
-    }
-    controller.hide()
-  }
-
-  function closeForPopoutSwitch() {
-    popoutSwitchClosing = true
-    controller.hide()
-    Qt.callLater(function() { popoutSwitchClosing = false })
-  }
-
-  function closeForMonitorTransfer(serial, screenName) {
-    monitorTransferClosing = true
-    monitorTransferSerial = serial
-    monitorTransferScreen = screenName
-    // Skip the 140 ms fade so the focus grab and layer surface are gone well
-    // before Hyprland receives the monitor-disable rule.
-    popoutSwitchClosing = true
-    controller.hide()
-    monitorTransferAck.restart()
-  }
-
-  function handlePanelEvacuation() {
-    if (!service || !service.panelEvacuationWaiting) return
-    var serial = Number(service.panelEvacuationSerial)
-    if (!serial || serial <= handledEvacuationSerial) return
-    var mine = currentScreenName()
-    if (!mine || mine !== service.panelEvacuationFrom) return
-    handledEvacuationSerial = serial
-    closeForMonitorTransfer(serial, mine)
-  }
-
-  function flushIntent() {
-    if (!service || !intentPending) return
-    intentPending = false
-    service.setPanelWanted(opened)
-    if (opened && currentScreenName()) service.setPanelScreenName(currentScreenName())
-    if (!opened) service.setRememberedTab(0)
-  }
-
-  // A popout switch is not a dismissal. The bar hands the popout to the
-  // newer copy of this widget it just built, and closes us through
-  // closeForPopoutSwitch while our destruction is still deferred — so the
-  // panel is up on that copy a moment after we are told we closed. The
-  // switch has not published its new owner yet from inside the close, so
-  // decide afterwards whether any copy is still showing. Takes what it
-  // reads as arguments: this instance may be gone by the time it runs.
-  function settlePopoutSwitch(svc, api, barRef, transferUntil) {
-    if ((!svc && !api) || !barRef) return
-    var widgets = typeof barRef.moduleWidgets === "function"
-      ? barRef.moduleWidgets("yakumy.station") : []
-    var up = false
-    for (var i = 0; i < widgets.length; i++) {
-      if (widgets[i] && widgets[i].opened === true) { up = true; break }
-    }
-    function setWanted(value) {
-      if (api) api.call("setPanelWanted", [value])
-      else if (svc) svc.setPanelWanted(value)
-    }
-    function setTab(value) {
-      if (api) api.call("setRememberedTab", [value])
-      else if (svc) svc.setRememberedTab(value)
-    }
-    if (up) {
-      setWanted(true)
-    } else if ((barRef.activePopout && barRef.activePopout.foreign === true)
-        || Date.now() >= transferUntil) {
-      setWanted(false)
-      setTab(0)
-    }
-  }
-
-  onOpenedChanged: {
-    if (opened) {
-      retainCurrentPanelScreen()
-      refreshBrightness()
-      intentPending = true
-      flushIntent()
-    } else if (monitorTransferClosing) {
-      // The explicit acknowledgment timer owns this close. Do not publish a
-      // dismissal or let another widget reopen until the monitor rule lands.
-    } else if (popoutSwitchClosing) {
-      // Capture the persistent API, never the widget-owned proxy QObject.
-      var svc = directService, api = directService ? null : bridgeApi
-      var barRef = bar, settle = settlePopoutSwitch
-      var transferUntil = service ? Number(service.panelTransferUntil) : 0
-      if (svc || api) Qt.callLater(function() { settle(svc, api, barRef, transferUntil) })
-    } else if (!service || Date.now() >= service.panelTransferUntil) {
-      intentPending = true
-      flushIntent()
-    }
-    if (!opened) { reopenTimer.attempts = 0; reopenTimer.stop() }
-  }
-
-  onSelectedTabChanged: {
-    if (service && sessionTabRestored) service.setRememberedTab(selectedTab)
-    if (tabScroll.contentItem) tabScroll.contentItem.contentY = 0
-  }
-
-  // The bar rebuilds this widget wholesale, so the tab it was showing has to
-  // come back from the service instead of from this instance.
-  function restoreSession() {
-    if (!service) return
-    var remembered = Number(service.rememberedTab)
-    if (Tabs.validIndex(remembered) && selectedTab !== remembered) selectedTab = remembered
-    sessionTabRestored = true
-  }
-
-  // Open this output's copy directly: shell.summon routes to the focused
-  // output, which can differ from the one the user opened before a move.
-  function tryRestorePanel() {
-    if (!service || !service.panelWanted) return true
-    if (service.previewBusy || service.panelEvacuationWaiting) return false
-    var mine = currentScreenName()
-    if (!mine) return false
-    var wanted = service.panelScreenName
-    if (wanted && wanted !== mine) {
-      var stillConnected = false
-      for (var j = 0; j < Quickshell.screens.length; j++)
-        if (Quickshell.screens[j].name === wanted) { stillConnected = true; break }
-      if (stillConnected) return false
-    }
-    if (root.opened) return true
-    var widgets = bar && typeof bar.moduleWidgets === "function" ? bar.moduleWidgets("yakumy.station") : []
-    for (var i = 0; i < widgets.length; i++) {
-      if (widgets[i] && widgets[i].opened === true
-          && (!wanted || typeof widgets[i].currentScreenName !== "function"
-            || widgets[i].currentScreenName() === wanted)) {
-        // An old copy may still be marked open while its bar slot is being
-        // replaced. Keep polling until that copy goes away.
-        return Date.now() >= service.panelTransferUntil
-      }
-    }
-    root.open()
-    return true
-  }
-
-  // A rebuilt widget inherits the panel it was carrying. The bar window and
-  // its screen can resolve after this component, so retry briefly.
-  function requestPanelBack() {
-    if (!service || !service.panelWanted) return
-    Qt.callLater(function() {
-      if (!root.service || !root.service.panelWanted) return
-      if (root.tryRestorePanel()) return
-      reopenTimer.attempts = 0
-      reopenTimer.start()
-    })
-  }
-
-  onServiceChanged: {
-    sessionTabRestored = false
-    flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack()
-  }
-  Component.onCompleted: { syncBridge(); flushIntent(); restoreSession(); handlePanelEvacuation(); requestPanelBack() }
-
-  // Disabling a different output does not rebuild this surviving widget.
-  // It still has to receive the hand-off and reopen the confirmation panel.
-  Connections {
-    target: root.service
-    function onPanelScreenNameChanged() { root.restoreSession(); root.requestPanelBack() }
-    function onPanelTransferUntilChanged() { root.requestPanelBack() }
-    function onPanelWantedChanged() { root.requestPanelBack() }
-    function onPanelEvacuationSerialChanged() { root.handlePanelEvacuation() }
-  }
-  Connections {
-    target: Quickshell
-    function onScreensChanged() { root.requestPanelBack() }
-  }
-
-  Timer {
-    id: reopenTimer
-    interval: 30
-    property int attempts: 0
-    onTriggered: {
-      if (!root.service || !root.service.panelWanted) { attempts = 0; return }
-      if (root.tryRestorePanel()) { attempts = 0; return }
-      if (attempts < 100) { attempts += 1; restart() } else attempts = 0
-    }
-  }
-
-  Timer {
-    id: monitorTransferAck
-    // The host popup normally fades for 140 ms. We suppress that animation,
-    // then still allow several Wayland commit cycles before acknowledging.
-    interval: 180
-    onTriggered: {
-      var svc = root.service
-      var serial = root.monitorTransferSerial
-      var screenName = root.monitorTransferScreen
-      root.monitorTransferClosing = false
-      root.popoutSwitchClosing = false
-      if (svc) svc.acknowledgePanelEvacuation(serial, screenName)
-    }
-  }
-
-  Process {
-    id: brightnessRead
-    property string monitorName: ""
-    property string captured: ""
-    stdout: StdioCollector { waitForEnd: true; onStreamFinished: brightnessRead.captured = text }
-    onRunningChanged: if (running) captured = ""
-    onExited: {
-      if (monitorName !== root.selectedDisplayName) {
-        root.refreshBrightness()
-        return
-      }
-      var first = captured.split("\n")[0].trim()
-      root.brightnessAvailable = exitCode === 0 && first !== "" && first !== "unavailable" && isFinite(Number(first))
-      root.brightness = root.brightnessAvailable ? Number(first) : 0
-    }
-  }
-
-  Timer {
-    id: brightnessDebounce
-    property int pending: 0
-    property string monitorName: ""
-    interval: 180
-    onTriggered: root.setBrightness(pending, monitorName)
-  }
-
-  Process {
-    id: brightnessWrite
-    stdout: StdioCollector { waitForEnd: true }
-    onExited: {
-      var pending = root.pendingBrightnessRequest
-      root.pendingBrightnessRequest = null
-      if (pending) root.setBrightness(pending.value, pending.monitorName)
-    }
-  }
-
-  Process {
-    id: textSizeWrite
-    stdout: StdioCollector { waitForEnd: true }
-    onExited: {
-      if (exitCode !== 0) root.textSizePreviewIndex = -1
-      if (root.queuedTextSize >= 0) {
-        var next = root.queuedTextSize
-        root.queuedTextSize = -1
-        command = ["omarchy-display-text-size", String(next)]
-        running = true
-      }
-    }
-  }
-
-  Connections {
-    target: Style
-    function onFontBaseSizeChanged() {
-      if (root.textSizePreviewIndex >= 0
-          && root.nearestTextIndex(Style.font.baseSize) === root.textSizePreviewIndex)
-        root.textSizePreviewIndex = -1
-    }
   }
 
   implicitWidth: barControls.implicitWidth
@@ -642,35 +273,6 @@ Ui.Panel {
   // Delay only KeyboardPanel's view of the bar edge. The real bar and its
   // modules reflow immediately, while the popout keeps using one internally
   // consistent position/window-geometry pair throughout the surface remap.
-  QtObject {
-    id: panelBarFacade
-    readonly property var source: root.bar
-    readonly property string desiredPosition: source ? String(source.position || "top") : "top"
-    readonly property string position: {
-      var window = panel.anchorWindow
-      return PanelPosition.stableBarPosition(root.stablePanelBarPosition,
-        desiredPosition, window ? window.width : 0, window ? window.height : 0,
-        source ? source.barSize + Style.gapsOut : 0)
-    }
-    readonly property real barSize: PanelPosition.verticalBarPosition(position)
-      ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-    readonly property var activePopout: source ? source.activePopout : null
-    readonly property var clickTargets: source ? source.clickTargets : []
-
-    onPositionChanged: root.stablePanelBarPosition = position
-
-    function requestPopout(owner) {
-      if (source && typeof source.requestPopout === "function") source.requestPopout(owner)
-    }
-    function releasePopout(owner) {
-      if (source && typeof source.releasePopout === "function") source.releasePopout(owner)
-    }
-    function targetBelongsToWindow(target, window) {
-      return source && typeof source.targetBelongsToWindow === "function"
-        ? source.targetBelongsToWindow(target, window) : false
-    }
-  }
-
   Station.StationBar {
     id: barControls
     bar: root.bar
@@ -689,11 +291,11 @@ Ui.Panel {
     objectName: "stationPanelWindow"
     anchorItem: barControls.anchorItem
     owner: popoutOwner
-    bar: panelBarFacade
+    bar: session.barFacade
     // Override KeyboardPanel's default `anchorWindow.screen` binding. That
     // screen is stable for same-axis moves but can be transient during the
     // layer-shell anchor/size change required by a horizontal↔vertical move.
-    screen: root.currentPanelScreen()
+    screen: session.currentPanelScreen()
     centerOnBar: root.service && root.service.config.panelPosition === "center"
     gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barW, barH,
       root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
@@ -715,7 +317,7 @@ Ui.Panel {
         if (dy && tabScroll.contentItem) {
           var limit = Math.max(0, tabScroll.contentHeight - tabScroll.height)
           tabScroll.contentItem.contentY = Math.max(0,
-            Math.min(limit, tabScroll.contentItem.contentY + dy * root.controlHeight))
+            Math.min(limit, tabScroll.contentItem.contentY + dy * panelTokens.controlHeight))
         }
       }
       onTabRequested: function(direction) {
@@ -738,15 +340,15 @@ Ui.Panel {
             height: Style.space(34)
             tint: root.bar ? root.bar.foreground : Color.bar.text
             anchors.left: parent.left
-            anchors.leftMargin: root.regionPadH
+            anchors.leftMargin: panelTokens.regionPadH
             anchors.verticalCenter: parent.verticalCenter
           }
           Text {
             anchors.left: logo.right
-            anchors.leftMargin: root.space3
+            anchors.leftMargin: panelTokens.space3
             anchors.verticalCenter: logo.verticalCenter
             text: "Station"
-            color: root.textPrimary
+            color: panelTokens.textPrimary
             font.family: Style.font.family
             font.pixelSize: Style.font.title
             font.weight: Font.DemiBold
@@ -755,11 +357,11 @@ Ui.Panel {
 
         Item {
           width: parent.width
-          height: root.controlHeight + root.space1
+          height: panelTokens.controlHeight + panelTokens.space1
           Row {
             id: tabs
             anchors.left: parent.left
-            anchors.leftMargin: root.regionPadH
+            anchors.leftMargin: panelTokens.regionPadH
             anchors.bottom: parent.bottom
             height: parent.height
             Repeater {
@@ -772,18 +374,18 @@ Ui.Panel {
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
-                width: tabLabel.implicitWidth + root.space4 + root.space3
-                  + (conflicted ? badge.width + root.space1 : 0)
+                width: tabLabel.implicitWidth + panelTokens.space4 + panelTokens.space3
+                  + (conflicted ? badge.width + panelTokens.space1 : 0)
                 Text {
                   id: tabLabel
                   anchors.centerIn: parent
                   anchors.horizontalCenterOffset: tab.conflicted
-                    ? -(badge.width + root.space1) / 2 : 0
+                    ? -(badge.width + panelTokens.space1) / 2 : 0
                   text: tab.modelData
                   // Selection is carried by the accent rule underneath, so the
-                  // label only steps between the dim and full text tokens.
+                  // label only steps between the dim and full text panelTokens.
                   color: tab.conflicted ? Color.urgent
-                    : (root.selectedTab === tab.index ? root.textPrimary : root.textDim)
+                    : (root.selectedTab === tab.index ? panelTokens.textPrimary : panelTokens.textDim)
                   font.family: Style.font.family
                   font.pixelSize: Style.font.body
                 }
@@ -791,10 +393,10 @@ Ui.Panel {
                   id: badge
                   visible: tab.conflicted
                   anchors.left: tabLabel.right
-                  anchors.leftMargin: root.space1
+                  anchors.leftMargin: panelTokens.space1
                   anchors.verticalCenter: tabLabel.verticalCenter
-                  width: Math.max(root.space4, badgeText.implicitWidth + root.space2)
-                  height: root.space4
+                  width: Math.max(panelTokens.space4, badgeText.implicitWidth + panelTokens.space2)
+                  height: panelTokens.space4
                   color: Color.urgent
                   radius: Style.cornerRadius
                   Text {
@@ -811,7 +413,7 @@ Ui.Panel {
                   anchors.left: parent.left
                   anchors.right: parent.right
                   anchors.bottom: parent.bottom
-                  height: root.tabUnderline
+                  height: panelTokens.tabUnderline
                   color: tab.conflicted ? Color.urgent : Color.accent
                   visible: root.selectedTab === tab.index
                 }
@@ -826,24 +428,24 @@ Ui.Panel {
           Row {
             visible: root.selectedTab === Tabs.index("displays")
             anchors.right: parent.right
-            anchors.rightMargin: root.regionPadH
+            anchors.rightMargin: panelTokens.regionPadH
             anchors.verticalCenter: parent.verticalCenter
-            spacing: root.space3
+            spacing: panelTokens.space3
             Station.InlineDropdown {
               prefix: "Direction: "
               value: root.service ? root.service.config.direction : "ltr"
               options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" },
                 { value: "ttb", label: "TTB" }, { value: "btt", label: "BTT" }]
-              foreground: root.textDim
+              foreground: panelTokens.textDim
               onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
             }
             Station.InlineDropdown {
               prefix: "Mode: "
               value: root.modeValue
               options: root.modeOptions
-              popupMinWidth: root.space6 * 7
+              popupMinWidth: panelTokens.space6 * 7
               popupAlignRight: true
-              foreground: root.textDim
+              foreground: panelTokens.textDim
               onChanged: function(value) { root.changeMode(value) }
             }
           }
@@ -869,12 +471,12 @@ Ui.Panel {
             id: tabContent
             objectName: "stationTabContent"
             width: tabScroll.availableWidth
-            Station.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; panelRoot: root }
-            Station.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; panelRoot: root }
-            Station.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; panelRoot: root }
-            Station.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; panelRoot: root }
-            Station.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; panelRoot: root }
-            Station.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; panelRoot: root }
+            Station.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls }
+            Station.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
+            Station.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }
+            Station.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; tokens: panelTokens; dismiss: function() { root.close() }; controller: root.service ? root.service.wallpaper : null }
+            Station.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; tokens: panelTokens; service: root.service ? keybindingsTabPort : null }
+            Station.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; tokens: panelTokens; service: root.service ? settingsTabPort : null; pluginVersion: root.pluginVersion }
           }
         }
       }

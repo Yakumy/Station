@@ -6,9 +6,11 @@ import "." as Station
 
 Column {
   id: root
-  required property var panelRoot
-  readonly property var service: panelRoot.service
-  readonly property var selectedDisplay: panelRoot.selectedDisplay
+  required property var tokens
+  required property var bar
+  required property var selectDisplay
+  required property var service
+  required property var selectedDisplay
   readonly property var selectedBar: selectedDisplay && service
     ? service.monitorBar(selectedDisplay.name)
     : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
@@ -29,11 +31,11 @@ Column {
     : selectedMinimumContentSize
   readonly property int selectedContentSize: Math.max(selectedMinimumContentSize,
     Math.min(selectedMaximumContentSize, selectedRequestedContentSize))
-  readonly property real pad: panelRoot.regionPadH
+  readonly property real pad: tokens.regionPadH
   spacing: 0
 
   component Caption: Text {
-    color: root.panelRoot.textDim
+    color: root.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -55,14 +57,14 @@ Column {
           anchors.leftMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
           text: "LAYOUT"
-          foreground: root.panelRoot.textPrimary
+          foreground: root.tokens.textPrimary
         }
         Text {
           anchors.right: parent.right
           anchors.rightMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
           text: "SELECT A SIDE"
-          color: root.panelRoot.textDim
+          color: root.tokens.textDim
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
         }
@@ -72,9 +74,9 @@ Column {
         width: parent.width - root.pad * 2
         height: Style.space(370)
         anchors.horizontalCenter: parent.horizontalCenter
-        panelRoot: root.panelRoot
+        tokens: root.tokens; service: root.service
         selectedDisplayName: root.selectedDisplay ? root.selectedDisplay.name : ""
-        onDisplaySelected: function(name) { root.panelRoot.selectDisplay(name) }
+        onDisplaySelected: function(name) { root.selectDisplay(name) }
       }
     }
 
@@ -97,7 +99,7 @@ Column {
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width - Style.space(56)
           text: root.selectedDisplay ? "Selected: " + root.selectedDisplay.name : "No monitor selected"
-          color: root.panelRoot.textPrimary
+          color: root.tokens.textPrimary
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
           elide: Text.ElideRight
@@ -122,29 +124,29 @@ Column {
             height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: "CONTENT SIZE"
             }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
+              anchors.rightMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: root.selectedContentSize + " px"
             }
             Ui.PanelSlider {
-              width: parent.width - root.panelRoot.space3 * 2
+              width: parent.width - root.tokens.space3 * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: root.panelRoot.bar
+              bar: root.bar
               minimum: root.selectedMinimumContentSize
               maximum: root.selectedMaximumContentSize
               integer: true
               value: root.selectedContentSize
               enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               onReleased: function(value) {
                 if (root.service && root.selectedDisplay)
                   root.service.setMonitorBarContentSize(root.selectedDisplay.name, Math.round(value))
@@ -153,10 +155,10 @@ Column {
             Caption {
               visible: root.selectedRequestedContentSize > root.selectedMaximumContentSize
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.bottom: parent.bottom
-              anchors.bottomMargin: root.panelRoot.space1
-              width: parent.width - root.panelRoot.space3 * 2
+              anchors.bottomMargin: root.tokens.space1
+              width: parent.width - root.tokens.space3 * 2
               text: "Maximum " + root.selectedMaximumContentSize + " px — content needs more bar space."
               color: Commons.Color.urgent
               elide: Text.ElideRight
@@ -174,29 +176,29 @@ Column {
             height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: "HEIGHT"
             }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
+              anchors.rightMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: root.selectedHeight + " px"
             }
             Ui.PanelSlider {
-              width: parent.width - root.panelRoot.space3 * 2
+              width: parent.width - root.tokens.space3 * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: root.panelRoot.bar
+              bar: root.bar
               minimum: root.selectedMinimumHeight
               maximum: root.selectedMaximumHeight
               integer: true
               value: root.selectedHeight
               enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               onReleased: function(value) {
                 if (root.service && root.selectedDisplay)
                   root.service.setMonitorBarHeight(root.selectedDisplay.name, Math.round(value))
@@ -215,29 +217,29 @@ Column {
             height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: "WIDTH"
             }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
+              anchors.rightMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: root.selectedBar.width + "%"
             }
             Ui.PanelSlider {
-              width: parent.width - root.panelRoot.space3 * 2
+              width: parent.width - root.tokens.space3 * 2
               height: implicitHeight
               anchors.centerIn: parent
-              bar: root.panelRoot.bar
+              bar: root.bar
               minimum: 1
               maximum: 100
               integer: true
               value: root.selectedBar.width
               enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               onReleased: function(value) {
                 if (root.service && root.selectedDisplay)
                   root.service.setMonitorBarWidth(root.selectedDisplay.name, Math.round(value))
@@ -246,10 +248,10 @@ Column {
             Caption {
               visible: Number(root.selectedBar.width) < root.selectedMinimumWidth
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.bottom: parent.bottom
-              anchors.bottomMargin: root.panelRoot.space1
-              width: parent.width - root.panelRoot.space3 * 2
+              anchors.bottomMargin: root.tokens.space1
+              width: parent.width - root.tokens.space3 * 2
               text: "Minimum " + root.selectedMinimumWidth + "% — bar items overlap."
               color: Commons.Color.urgent
               elide: Text.ElideRight
@@ -267,18 +269,18 @@ Column {
             height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: "BACKGROUND"
             }
             Ui.Dropdown {
               id: backgroundDropdown
               objectName: "barBackgroundDropdown"
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
+              anchors.rightMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false
@@ -288,7 +290,7 @@ Column {
                 { value: "blur", label: "Blur" }
               ]
               enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               onChanged: function(value) {
                 if (root.service && root.selectedDisplay)
                   root.service.setMonitorBarBackground(root.selectedDisplay.name, value)
@@ -312,18 +314,18 @@ Column {
             height: controlFrame.height / 5
             Caption {
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top
-              anchors.topMargin: root.panelRoot.space2
+              anchors.topMargin: root.tokens.space2
               text: "STYLE"
             }
             Ui.Dropdown {
               id: styleDropdown
               objectName: "barStyleDropdown"
               anchors.left: parent.left
-              anchors.leftMargin: root.panelRoot.space3
+              anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right
-              anchors.rightMargin: root.panelRoot.space3
+              anchors.rightMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false
@@ -332,7 +334,7 @@ Column {
                 { value: "pill", label: "Pill" }
               ]
               enabled: root.selectedDisplay !== null
-              opacity: enabled ? 1 : root.panelRoot.disabledOpacity
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               onChanged: function(value) {
                 if (root.service && root.selectedDisplay)
                   root.service.setMonitorBarStyle(root.selectedDisplay.name, value)

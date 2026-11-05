@@ -87,7 +87,7 @@ ShellRoot {
       id: capture
       anchors.fill: parent
       color: Commons.Color.popups.background
-      Station.WindowsTab { id: tab; width: parent.width; panelRoot: panel }
+      Station.WindowsTab { id: tab; width: parent.width; tokens: panel; service: panel.service; selectedDisplay: panel.selectedDisplay; bar: panel.bar }
     }
   }
   function findObject(node, name) {

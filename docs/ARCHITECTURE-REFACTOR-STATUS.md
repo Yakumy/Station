@@ -12,7 +12,8 @@ the decision and instructed continued work. The accepted scope and source SHA
 are recorded in the [M5 review packet](ARCHITECTURE-M5-REVIEW.md).
 M5 is committed as `8395b1a`. The user separately approved the
 [M6 review packet](ARCHITECTURE-M6-REVIEW.md), then instructed continued work.
-M6 is completed in this checkpoint revision. Next is M7. M2 deletion requires
+M6 is committed as `28c7eba`. M7 is completed in this checkpoint revision.
+M0–M7 implementation is complete, with the M2 deletion deferred. M2 deletion requires
 its cross-version and detached-recovery proof. M8 and M9 remain optional.
 
 ## Completed work
@@ -193,7 +194,69 @@ Initial broad checks identified source-extraction fixtures that still referenced
 moved root bodies. They now exercise owner bodies or guards without losing assertions.
 The new precedence trace also needed its fake monitor path. These fixture failures
 were corrected before acceptance. No dependencies, installation, restart, live
-configuration/topology change or push occurred. M7 has not started.
+configuration/topology change or push occurred. M7 evidence follows below.
+
+## M7: panel session and local editors
+
+`PanelSession.qml` owns widget-local screen retention, stable bar edge, tab
+restoration, reopen retries, evacuation probing and the acknowledgment timer.
+Service still owns persistent panel intent and the serial/output safety barrier.
+StationPanel keeps the top-level bridge reader, service selection and polling.
+It forwards host close methods and composes the same KeyboardPanel and viewport.
+The bridge import remains in `Panel.qml` beside Service.
+
+The session receives a finite intent facade, host capabilities and callbacks.
+Its availability callback reads service presence synchronously. This avoids a
+second property's notification order during service resolution. Root service
+changes invoke session restoration at the original event boundary. Deferred
+settlement still captures the persistent direct service or bridge API, host bar
+and scalar deadline. It never captures the widget-owned facade or proxy.
+
+`DisplayControls.qml` owns brightness reads, captured connectors, the 180 ms
+debounce, pending write and text-size queue. Its Process objects retain the
+original argv, callbacks and panel lifetime. KeybindingsTab owns its modifier/key
+draft and edit functions. All six tabs receive common read-only tokens and
+explicit feature inputs/actions. Their finite service facades forward synchronous
+results on both paths. Wallpaper receives its existing controller/proxy surface
+and a dismiss callback. No tab receives StationPanel through `panelRoot`.
+
+All 315 earlier Node cases retain their behavior assertions. Sixteen added cases
+check ownership, 13 old/new effect comparisons, unchanged geometry/I/O algorithms
+and forwarding arguments/results. The reference is the exact panel from `28c7eba`.
+Its SHA-256 is
+`1b12e5a192e1e97c77ed4f4ca9647f9bb4f62b5078c4df28b0f928cae259072c`.
+The service intent format and bridge allowlist remain compatible with rollback.
+
+The offscreen session harness passed 13 behavior cases plus setup/cleanup.
+It runs production helpers, key picker/tab and composition facades with fake I/O.
+Real timers and notifications exercise late service resolution, tab/output restore,
+cross-axis geometry, peer popouts, serial acknowledgment, connector races, text
+queuing and teardown. The existing geometry self-invalidation and implicit
+`exitCode` warnings are specifically expected. Source equality checks pin those
+unchanged algorithms. All other warnings fail this harness.
+
+The populated-panel integration check passed with installed host components,
+fake observations and inert Process transports. It instantiates all six tabs
+through both direct and bridge paths, then checks intent, tab writes, key edits
+and explicit dismissal. The separate panel-size check passed fixed dimensions,
+overflow, scroll reset and the short viewport. Neither proves physical unmapping
+or real hardware behavior. The integration fixture uses a service-shaped QObject,
+not production Service. It primes the bridge before changing service paths.
+Late and absent service behavior is covered separately by the offscreen harness.
+
+The full portable suite passed 331 cases. All 31 runtime QML components compiled.
+Theme scanning covered 51 files with no violations. Pointer/layout checks passed 23 Qt results. Window sliders passed
+four results, and the key picker passed 14. Clean-export plugin validation and
+whitespace checks passed. Prose lint retained the same 236 pre-existing hard
+findings across the four affected documents. New prose added no hard findings.
+The compile and isolated previews retain the host-portal warning.
+M2 persistence, Service, fixed transaction scripts and live state remain unchanged.
+No dependency installation, plugin update, desktop restart or push occurred.
+
+M8/M9 remain optional and have not started. File moves alone do not demonstrate
+a maintenance benefit. No recurring navigation problem or verified stock-bar
+extraction benefit was established by this milestone. Do not extend this work
+into those optional changes without that evidence.
 
 ## M2: retain plain-copy persistence
 
@@ -219,7 +282,7 @@ M3 and M4 do not depend on that deletion.
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Read the completed M5/M6 evidence before starting M7 panel/editor separation.
+4. Read the completed M5–M7 evidence before any optional follow-up work.
 5. Keep M2 persistence intact. M8/M9 remain optional and require demonstrated benefits.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.

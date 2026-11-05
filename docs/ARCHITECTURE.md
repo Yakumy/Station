@@ -23,6 +23,20 @@ do not emit property changes. Panel intent
 writes use service setters on both paths. Deferred popout settlement captures
 the persistent API and scalar transfer deadline rather than a proxy destroyed
 by a bar rebuild.
+
+`PanelSession.qml` is a widget-owned child of StationPanel. It owns retained
+screen/edge, selected tab restoration, reopen retries, evacuation probing and the
+180 ms acknowledgment timer. It receives finite panel-intent methods and host
+callbacks. The persistent service still owns intent and serial/output validation.
+Session availability uses a synchronous callback to avoid notification-order
+coupling. StationPanel keeps bridge selection/polling and the fixed visual frame.
+`DisplayControls.qml` owns connector-specific brightness reads/writes, debounce
+and text-size queues. These requests retain their original panel lifetime.
+KeybindingsTab owns its local edit draft and capture activation. Every tab receives
+common read-only tokens plus explicit feature inputs/actions. Feature service
+facades expose only consumed data and methods. No tab receives the panel root.
+Wallpaper receives its existing controller/proxy interface and a dismiss callback.
+
 `OpenAppsController.qml` owns a separate, event-coalesced read-only compositor
 feed. `OpenApps.js` groups all normal-workspace windows using the saved compact
 map, preferring matching migration journal identities while IDs are in transit.

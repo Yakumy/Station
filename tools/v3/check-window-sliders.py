@@ -51,7 +51,7 @@ QtObject {
     (ui / 'PanelSlider.qml').write_text(Path('/usr/share/omarchy/shell/Ui/PanelSlider.qml').read_text())
     (ui / 'PanelSectionHeader.qml').write_text('import QtQuick\nText { property color foreground }\n')
     (ui / 'PanelSeparator.qml').write_text('import QtQuick\nItem { property color foreground }\n')
-    (probe / 'WindowsLayout.qml').write_text('import QtQuick\nItem { property var panelRoot; property var values; function previewExchange(speed) {} }\n')
+    (probe / 'WindowsLayout.qml').write_text('import QtQuick\nItem { property var tokens; property var service; property var values; function previewExchange(speed) {} }\n')
     (root / 'tst_windows.qml').write_text('''import QtQuick
 import QtTest
 import "Probe" as Station
@@ -77,7 +77,7 @@ Item {
     property int space2: 8
     property int space3: 12
   }
-  Station.WindowsTab { id: tab; width: 900; panelRoot: panel }
+  Station.WindowsTab { id: tab; width: 900; tokens: panel; service: panel.service; selectedDisplay: panel.selectedDisplay; bar: panel.bar }
   TestCase {
     name: "WindowSlider"; when: windowShown
     function sliders(item, found) {

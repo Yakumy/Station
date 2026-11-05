@@ -258,7 +258,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(layout, /barSetting\.enabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);
-  assert.match(panel, /sessionTabRestored/);
+  assert.match(read('lib/PanelSession.qml'), /sessionTabRestored/);
   assert.doesNotMatch(layout, /setDisplayPosition|previewLayout|drag/i);
   assert.match(host, /Variants\s*\{[\s\S]*?model: Quickshell\.screens/);
   assert.match(host, /configuredEnabledCount\(\) > 0/);

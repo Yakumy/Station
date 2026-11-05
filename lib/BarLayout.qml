@@ -6,10 +6,10 @@ import "Model.js" as Model
 
 Ui.BorderSurface {
   id: canvas
-  required property var panelRoot
+  required property var tokens
   property string selectedDisplayName: ""
   signal displaySelected(string name)
-  readonly property var service: panelRoot.service
+  required property var service
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: height * 0.1
@@ -91,7 +91,7 @@ Ui.BorderSurface {
         : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: Style.cornerRadius
-      opacity: outputEnabled ? 1 : canvas.panelRoot.disabledOpacity
+      opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
       Rectangle {
         id: barPreview
@@ -145,7 +145,7 @@ Ui.BorderSurface {
         x: monitorCard.nameInset
         y: Math.max(monitorCard.nameInset, parent.height * 0.36 - height / 2)
         text: monitorCard.modelData.name
-        color: canvas.panelRoot.textDim
+        color: canvas.tokens.textDim
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
