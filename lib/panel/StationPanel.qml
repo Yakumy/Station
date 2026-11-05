@@ -480,7 +480,7 @@ Ui.Panel {
           id: tabScroll
           objectName: "stationTabScroll"
           width: parent.width
-          height: Math.max(0, content.height - y)
+          height: Math.max(0, content.height - y - (previewStrip.visible ? previewStrip.height : 0))
           contentWidth: availableWidth
           contentHeight: tabContent.implicitHeight
           clip: true
@@ -502,6 +502,15 @@ Ui.Panel {
             Keys.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; tokens: panelTokens; service: root.service ? keybindingsTabPort : null }
             PanelUi.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; tokens: panelTokens; service: root.service ? settingsTabPort : null; pluginVersion: root.pluginVersion }
           }
+        }
+        PanelUi.PreviewStrip {
+          id: previewStrip
+          objectName: "stationPreviewStrip"
+          width: parent.width
+          visible: !!root.service && root.service.state === "previewing"
+            && root.selectedTab !== Tabs.index("displays")
+          tokens: panelTokens
+          service: displaysTabPort
         }
       }
     }

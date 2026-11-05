@@ -1,5 +1,7 @@
 # Unreleased
 
+- Show the display preview's Keep/Revert countdown on every tab. On other tabs it ran out
+  unseen, and reverting could turn a monitor off with no warning.
 - Stop the panel reloading when a bar is turned on or off. That control alone wrote
   `shell.json` while the panel was open, which rebuilt every widget, the panel included.
 - Keep the panel open when another monitor is turned off, mirrored or left out by Single.

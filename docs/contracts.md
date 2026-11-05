@@ -324,7 +324,8 @@ rules.
 ### Preview
 
 Topology edits use a preview, a **detached 20-second watchdog** and a **12-second**
-Keep/Revert countdown.
+Keep/Revert countdown. The countdown is visible on every tab, because running out can
+turn a monitor off.
 
 1. Write `preview.token` and start the watchdog from a fixed template. The arm step
    touches the token before every apply. A watchdog stands down if the token is newer

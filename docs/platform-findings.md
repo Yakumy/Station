@@ -1168,3 +1168,14 @@ user tests; the automated checks do not establish those results.
   `visible = false` sticks.
 - [SRC] Node transaction tests cover the order of release before the monitor rule.
   The real output removal with a kept panel has not been run: it is a topology change.
+
+## Monitor turning off during a bar toggle (2026-11-05)
+
+- [LIVE] `monitors.lua` was saved at 17:43:19 with Single on HDMI-A-2 and eDP-1 disabled, and it
+  was the only `monitors.lua` write in that window. A bar surface was created at 17:43:58, the
+  panel changed at 17:44:15, and the map was committed to HDMI-A-2 alone at 17:44:18. Status
+  reported `Preview timed out.`, saved mode `single`, and eDP-1 disabled.
+- [INFERRED] eDP-1 was on only as an unsaved preview. The 12-second countdown ran out while the
+  Bar tab was showing, and Revert restored the saved Single. The bar toggle did not cause it:
+  `setMonitorBarEnabled` issues no monitor rule. This was reconstructed from timestamps.
+- [SRC] The countdown was drawn only by `DisplaysTab`, so nothing warned on other tabs.

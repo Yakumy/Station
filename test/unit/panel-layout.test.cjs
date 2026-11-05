@@ -15,7 +15,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /contentHeight: panel\.fittedContentHeight\(root\.desiredPanelHeight\)/);
   assert.doesNotMatch(panel, /content\.implicitHeight/);
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
-  assert.match(panel, /height: Math\.max\(0, content\.height - y\)/);
+  assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
   assert.match(panel, /prefix: "Mode: "/);
   assert.match(panel, /prefix: "Direction: "/);
@@ -125,4 +125,14 @@ test('popout owner closes through root, never through the KeyboardPanel id', () 
   // Escape and Tab must stay wired to the panel lifecycle.
   assert.match(panel, /onCloseRequested:\s*root\.close\(\)/);
   assert.match(panel, /focusTarget:\s*keyCatcher/);
+});
+
+test('the preview countdown shows on every tab that has none of its own', () => {
+  const panel = read('lib/panel/StationPanel.qml');
+  assert.match(panel, /PanelUi\.PreviewStrip \{[\s\S]*?service\.state === "previewing"\s*&& root\.selectedTab !== Tabs\.index\("displays"\)/);
+  assert.match(panel, /service: displaysTabPort/);
+  const strip = read('lib/panel/PreviewStrip.qml');
+  assert.match(strip, /root\.service\.previewSeconds/);
+  assert.match(strip, /root\.service\.keepPreview\(\)/);
+  assert.match(strip, /root\.service\.revertPreview\(""\)/);
 });
