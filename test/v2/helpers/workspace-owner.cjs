@@ -42,6 +42,10 @@ function adapt(context) {
   context.workspace = {
     markTopologyDirty: () => { context.topologyDirty = true; },
     clearTopologyDirty: () => { context.topologyDirty = false; },
+    reconcile: () => context.reconcile(),
+    migrationFailed: message => context.migrationFailed(message),
+    get mappingLoaded() { return context.mappingLoaded; },
+    get migrationPhase() { return context.migrationPhase; },
   };
 }
 function ownerFunction(name, context) {

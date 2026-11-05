@@ -1,10 +1,11 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 
-const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
+const service = runtimeSource();
 const { source: displayOwner } = require('./helpers/display-owner.cjs');
 const panelView = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
 const panel = readFileSync('lib/PanelSession.qml', 'utf8');
@@ -171,7 +172,8 @@ test('a mode action actively probes the bridge for its evacuation request', () =
 test('Revert uses the same safe close when the saved Single target differs', () => {
   assert.match(displayOwner, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(preferences\) : ""/);
   assert.match(displayOwner, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);
-  assert.match(service, /if \(purpose === "revert"\) continueRevertPreview\(\)/);
+  assert.match(service, /if \(purpose === "revert"\) continueRevert\(\)/);
+  assert.match(service, /continueRevert: function\(\) \{ displayController\.continueRevertPreview\(\) \}/);
 });
 
 test('a popout switch hands the intent to the copy that took over', () => {

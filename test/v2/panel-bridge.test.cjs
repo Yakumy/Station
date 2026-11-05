@@ -1,10 +1,12 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
+const ServiceContract = require('../../lib/ServiceContract.js');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const read = name => readFileSync(join(__dirname, '../..', name), 'utf8');
-const service = read('Service.qml');
+const service = runtimeSource();
 const panel = read('lib/StationPanel.qml');
 const session = read('lib/PanelSession.qml');
 const proxy = read('lib/BarServiceProxy.qml');
@@ -20,11 +22,8 @@ function qmlFunction(source, name, context = {}) {
 }
 
 function publisher(root) {
-  const block = service.match(/barBridge = BarBridge\.publish\(([\s\S]*?)\n    \}\)/);
-  assert.ok(block);
-  return runInNewContext('BarBridge.publish(' + block[1] + '\n})', {
-    root, BarBridge: { publish: (snapshot, actions) => ({ snapshot, actions }) },
-  });
+  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\)\)/);
+  return { snapshot: () => ServiceContract.snapshot(root), actions: ServiceContract.actions(root) };
 }
 
 test('fallback polls only without the trusted service and removes all direct writes', () => {
@@ -76,7 +75,7 @@ test('station app display mode is a validated three-option dropdown', () => {
   assert.ok(settings.indexOf('objectName: "stationAppsModeDropdown"')
     < settings.indexOf('text: "Panel opening position"'));
 
-  const context = { config: { stationAppsMode: 'hover' }, saveConfig() {} };
+  const context = { config: { stationAppsMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);
   assert.equal(setSetting('stationAppsMode', 'invalid'), 'invalid');
   assert.equal(context.config.stationAppsMode, 'hover');
@@ -92,8 +91,8 @@ test('snapshot is detached, including wallpaper, with no controller back-referen
   context.displayDraft = [{ name: 'DP-1' }];
   context.bindStatuses = [{ id: 'switch-1', status: 'conflict' }];
   context.wallpaper = { draft: { framing: { zoom: 1 } }, layout: { displays: [{ name: 'DP-1' }] }, station: context };
-  const snapshot = qmlFunction(service, 'barSnapshot', context);
-  const data = snapshot();
+  context.state = 'idle';
+  const data = ServiceContract.snapshot(context);
   data.openApps['DP-1'][0].focused = false;
   assert.equal(context.openApps['DP-1'][0].focused, true);
   data.config.displays['DP-1'].lane = 3;

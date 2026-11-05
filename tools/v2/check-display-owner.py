@@ -12,21 +12,28 @@ import tempfile
 repo = Path(__file__).resolve().parents[2]
 service = (repo / "Service.qml").read_text()
 owner = (repo / "lib/DisplayController.qml").read_text()
+others = "\n".join((repo / "lib" / f"{name}.qml").read_text()
+    for name in ("PanelIntent", "StationController", "CompositorLane"))
+# The session is flat: route owner ids back to its own functions and stubs.
+flatten = lambda text: re.sub(r"\b(stations|compositor|store|keybindings|barLayers|leases|screenRecovery|windowSettings|panel)\.", "root.", text)
 functions = {m[1]: m[0] for m in re.finditer(
-    r"^  function (\w+)\([^\n]*\{\n[\s\S]*?^  \}", service, re.M)}
-moved = [m[1] for m in re.finditer(r"^  function (\w+)\(", owner, re.M)
-         if m[1] in functions and m[1] != "validConnector"]
-selected = list(dict.fromkeys(moved + ["begin", "targetMapping", "monitorSignature", "eventExpected",
+    r"^  function (\w+)\([^\n]*\{\n[\s\S]*?^  \}", others + "\n" + service, re.M)}
+forwarders = re.findall(r"^  function \w+\([^\n]*\{ return displayController\.[^\n]*\}$", service, re.M)
+selected = ["begin", "handleSnapshotFailure", "targetMapping", "monitorSignature", "eventExpected",
     "handleEvent", "completeSnapshot", "applyRuntime", "updateAssignments", "clearPanelEvacuation",
-    "requestPanelEvacuation", "acknowledgePanelEvacuation", "panelEvacuationTimedOut",
-    "swapRole", "readyForWindows", "reconcile", "migrationSaved", "migrationFailed", "executeMigration",
-    "observeDesktop"]))
+    "requestPanelEvacuation", "acknowledgePanelEvacuation", "swapRole", "readyForWindows", "observeDesktop"]
 composition = "\n".join(re.search(r"^  Station\." + name + r" \{\n[\s\S]*?^  \}",
     service, re.M)[0] for name in ("WorkspaceController", "DisplayController"))
 projections = "\n".join(line for line in service.splitlines()
     if line.startswith("  readonly property ") and (": displayController." in line
-        or re.search(r"property \w+ (workspaceData|workspaceMap|mappingLoaded|migrationPhase|topologyDirty):", line)))
-barrier_timer = re.search(r"^  Timer \{\n    id: panelEvacuationTimeout\n[\s\S]*?^  \}", service, re.M)[0]
+        or re.search(r"property \w+ (workspaceData|workspaceMap):", line)))
+projections += "\n" + "\n".join(f"  readonly property var {name}: {source}.{name}" for source, names in {
+    "workspace": ("mappingLoaded", "migrationPhase", "topologyDirty", "migrationAttempts"),
+    "displayController": ("previewFound", "previewLoaded", "monitorsLoaded", "monitorsSource", "keepDisableToggle",
+        "layoutWriteKind", "keepOptions", "pendingDisplayConfig", "draftMirrorSource", "previewBefore"),
+    }.items() for name in names)
+barrier_timer = re.search(r"^  Timer \{\n    id: panelEvacuationTimeout\n[\s\S]*?^  \}", others, re.M)[0]
+barrier_timer = barrier_timer.replace("root.timedOut(root.panelEvacuationPurpose, root.panelEvacuationFrom)", "root.panelEvacuationTimedOut()")
 
 with tempfile.TemporaryDirectory(prefix="station-display-owner-") as folder:
     root = Path(folder)
@@ -43,6 +50,7 @@ import QtQuick
 QtObject {
   property var launches: []
   function execDetached(args) { launches.push(args) }
+  function env(name) { return "/isolated" }
 }
 ''')
     (io / "qmldir").write_text("module Quickshell.Io\nFileView 1.0 FileView.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\n")
@@ -89,8 +97,8 @@ QtObject {
 }
 ''')
     session = (repo / "tools/v2/fixtures/DisplaySession.qml").read_text()
-    session = session.replace("// INSERT_COMPOSITION", composition).replace("// INSERT_PROJECTIONS", projections)
-    session = session.replace("// INSERT_ROOT_FUNCTIONS", "\n\n".join(functions[n] for n in selected))
+    session = session.replace("// INSERT_COMPOSITION", flatten(composition)).replace("// INSERT_PROJECTIONS", projections)
+    session = session.replace("// INSERT_ROOT_FUNCTIONS", flatten("\n\n".join([functions[n] for n in selected] + forwarders)))
     session = session.replace("// INSERT_BARRIER_TIMER", barrier_timer)
     (root / "DisplaySession.qml").write_text(session)
     (root / "tst_display.qml").write_text((repo / "tools/v2/fixtures/tst-display-owner.qml").read_text())

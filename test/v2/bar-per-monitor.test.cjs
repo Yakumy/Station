@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
@@ -6,7 +7,8 @@ const { runInNewContext } = require('node:vm');
 const read = name => readFileSync(name, 'utf8');
 const { ownerFunction } = require('./helpers/bar-settings.cjs');
 const Store = require('../../lib/Store.js');
-const service = read('Service.qml');
+const service = runtimeSource();
+const contract = read('lib/ServiceContract.js');
 
 function qmlFunction(source, name, context = {}) {
   context.Tabs = require('../../lib/Tabs.js');
@@ -294,9 +296,9 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /maximumContentSize: measuredMaximumContentSize/);
   assert.match(monitorBar, /onMaximumContentSizeChanged: root\.measuredMaximumContentSize = maximumContentSize/);
   assert.match(host, /reportMonitorBarMaximumContent/);
-  assert.match(service, /monitorBarMaximumContents: monitorBarMaximumContents/);
-  assert.match(service, /reportMonitorBarMaximumContent: function/);
-  assert.match(service, /monitorBarMaximumContent: function/);
+  assert.match(contract, /monitorBarMaximumContents: service\.monitorBarMaximumContents/);
+  assert.match(contract, /reportMonitorBarMaximumContent: function/);
+  assert.match(contract, /monitorBarMaximumContent: function/);
   assert.match(proxy, /monitorBarMaximumContents/);
   assert.match(proxy, /function reportMonitorBarMaximumContent/);
   assert.match(proxy, /function monitorBarMaximumContent/);
@@ -490,19 +492,21 @@ test('bar blur respects global compositor settings', () => {
   const scripts = [];
   let saves = 0;
   const context = {
-    displayDraft: [{ name: 'DP-1' }],
+    displays: [{ name: 'DP-1' }],
     config: { bars: { 'DP-1': {
       enabled: true, position: 'top', width: 100, height: 0, background: 'blur',
     } } },
     persisted: { barBlurLease: null },
     shell: null,
     barBlurSyncQueued: false,
+    clearLegacyLease() { if (context.persisted.barBlurLease) { context.persisted.barBlurLease = null; context.saveState(); } },
     parseJson(raw, fallback) { try { return JSON.parse(raw); } catch { return fallback; } },
     saveState() { saves++; },
     evalLua(script) { scripts.push(script); },
     Hypr: require('../../lib/Hypr.js'),
     Qt: { callLater(fn) { fn(); } },
   };
+  context.barSettings = { monitorBar: name => context.config.bars[name] };
   context.monitorBar = qmlFunction(service, 'monitorBar', context);
   context.barBlurWanted = qmlFunction(service, 'barBlurWanted', context);
   const finishProbe = qmlFunction(service, 'finishBarBlurProbe', context);

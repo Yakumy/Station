@@ -26,7 +26,8 @@ function ownerFunction(name, context) {
     context.panelTransferUntil = Date.now() + 3000;
   };
   context.requestLayerSync ||= () => context.syncBarBlur();
-  const end = source.indexOf('\n  }', start) + 4;
+  const lineEnd = source.indexOf('\n', start);
+  const end = source.slice(start, lineEnd).trimEnd().endsWith('}') ? lineEnd : source.indexOf('\n  }', start) + 4;
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
 module.exports = { ownerFunction, source };

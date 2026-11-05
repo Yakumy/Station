@@ -1,8 +1,9 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { ownerFunction, source } = require('./helpers/bar-settings.cjs');
-const service = readFileSync('Service.qml', 'utf8');
+const service = runtimeSource();
 const copy = value => JSON.parse(JSON.stringify(value));
 function owner() {
   const calls = [];
@@ -18,7 +19,7 @@ function owner() {
     retainPanel(tab) { calls.push('retain:' + tab); }, requestLayerSync() { calls.push('layer'); },
     publishHost(change) { const config = { bar: copy(c.hostConfig) }; change(config); c.hostConfig = config.bar; calls.push('host'); return true; },
   };
-  for (const name of ['parseJson', 'validConnector', ...[...service.matchAll(/function (\w+)\([^\n]*return barSettings\./g)].map(m => m[1])])
+  for (const name of [...source.matchAll(/^  function (\w+)\(/gm)].map(m => m[1]))
     c[name] = ownerFunction(name, c);
   return { c, calls };
 }
@@ -34,7 +35,7 @@ test('bar reconciliation state has one persistent owner and the service retains 
   assert.match(service, /readonly property var monitorBarMinimums: barSettings\.monitorBarMinimums/);
   assert.match(source, /interval: 250/);
   const wrappers = [...service.matchAll(/function (\w+)\(([^)]*)\) \{ return barSettings\.(\w+)\(([^)]*)\) \}/g)];
-  assert.equal(wrappers.length, 24);
+  assert.equal(wrappers.length, 13);
   for (const [, name, args, forwarded, values] of wrappers) {
     assert.equal(name, forwarded); assert.equal(args, values);
     assert.ok(source.includes('  function ' + name + '('), name);

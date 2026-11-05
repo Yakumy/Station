@@ -17,8 +17,7 @@ test('display owner has finite ports, one writable preview state and compatible 
     assert.doesNotMatch(current,new RegExp('id: '+id+'\\b'));
     assert.match(source,new RegExp('id: '+id+'\\b'));
   }
-  for(const field of ['previewBusy','previewBaseline','previewApplied','displayDraft','draftMode',
-    'draftMirrorSource','keepOptions','pendingDisplayConfig','previewLoaded','monitorsLoaded']) {
+  for(const field of ['previewBusy','previewBaseline','previewApplied','displayDraft','draftMode']) {
     assert.match(current,new RegExp('readonly property \\w+ '+field+': displayController\\.'));
     assert.doesNotMatch(current,new RegExp('(?:root\\.)?'+field+' = '));
   }
@@ -26,11 +25,16 @@ test('display owner has finite ports, one writable preview state and compatible 
     const calls=[];
     const c={panelEvacuationPurpose:'revert',panelEvacuationFrom:'A',
       displayController:{[name](...args){calls.push(args);return 'forwarded';}}};
+    if(!new RegExp('^  function '+name+'\\(.*return displayController\\.'+name+'\\(','m').test(current)) continue;
     const fn=functionFrom(current,name,c);
     const args=fn.length ? Array.from({length:fn.length},(_,i)=>'value'+i) : [];
     assert.equal(fn(...args),'forwarded');
-    assert.deepEqual(calls,[name==='panelEvacuationTimedOut'?['revert','A']:args]);
+    assert.deepEqual(calls,[args]);
   }
+  // Barrier continuation is wired once, with explicit purpose and origin.
+  assert.match(current,/continueApply: function\(\) \{ displayController\.continuePreviewApply\(\) \}/);
+  assert.match(current,/continueRevert: function\(\) \{ displayController\.continueRevertPreview\(\) \}/);
+  assert.match(current,/timedOut: function\(purpose, from\) \{ displayController\.panelEvacuationTimedOut\(purpose, from\) \}/);
 });
 
 function preview(h,mode='single',target='A') {
@@ -105,7 +109,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
       applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){}};
-    c.root=c;
+    c.root=c;c.store=c;c.compositor=c;c.leases=c;c.stations=c;c.displayController=c;c.workspace=c;
     const start=functionFrom(current,'maybeStart',c);
     start();assert.equal(c.started,false);assert.deepEqual(calls,[]);
     c.previewLoaded=true;start();start();

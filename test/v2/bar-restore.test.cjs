@@ -1,11 +1,12 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const R = require('../../lib/Recovery.js');
 
-const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
+const service = runtimeSource();
 
 function restoreBody() {
   const match = service.match(/function restoreStockLease\(forceShow\) \{([\s\S]*?)\n {2}\}/);

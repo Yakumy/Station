@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource, adaptOwners, qmlFunction } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
@@ -34,7 +35,7 @@ test('recovery requires another active output that the shell still sees', () => 
 });
 
 test('screen recovery is armed only after Keep or Revert has settled', () => {
-  const service = readFileSync('Service.qml', 'utf8');
+  const service = runtimeSource();
   const owner = readFileSync('lib/DisplayController.qml','utf8');
   const body = name => owner.match(new RegExp('^  function '+name+'\\([^]*?^  }','m'))[0];
   const restore=body('restoreAppliedLayout'),keep=body('finishKeep'),preview=body('finishPreviewApply');
@@ -47,12 +48,8 @@ test('screen recovery is armed only after Keep or Revert has settled', () => {
 });
 
 test('service cycles the stale output and restores its exact validated rule', () => {
-  const service = readFileSync('Service.qml', 'utf8');
-  function serviceFunction(name, context) {
-    const start = service.indexOf('  function ' + name + '(');
-    const end = service.indexOf('\n  function ', start + 1);
-    return runInNewContext('(' + service.slice(start, end).trim() + ')', context);
-  }
+  const service = runtimeSource();
+  const serviceFunction = (name, context) => qmlFunction(service, name, context);
   const calls = [];
   let enableTimer = 0;
   const c = {
@@ -68,6 +65,7 @@ test('service cycles the stale output and restores its exact validated rule', ()
     reconcile() { c.reconciled = true; },
   };
   c.root = c;
+  adaptOwners(c);
   c.verifyScreenHealth = serviceFunction('verifyScreenHealth', c);
   c.finishScreenRecovery = serviceFunction('finishScreenRecovery', c);
 

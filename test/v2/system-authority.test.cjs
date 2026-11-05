@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync, mkdtempSync, writeFileSync, mkdirSync, chmodSync } = require('node:fs');
 const { tmpdir } = require('node:os');
@@ -12,7 +13,7 @@ const L = require('../../lib/MonitorsLua.js');
 const W = require('../../lib/Windows.js');
 const S = require('../../lib/SharedConfig.js');
 const T = require('../../lib/Transactions.js');
-const service = readFileSync('Service.qml', 'utf8');
+const service = runtimeSource();
 function fn(name, context) {
   const moved = require('./helpers/bar-settings.cjs').ownerFunction(name, context);
   if (moved) return moved;
@@ -25,7 +26,8 @@ function fn(name, context) {
 test('reload never emits monitor or shared appearance writes, even with a disabled saved survivor', () => {
   for (const mode of ['single', 'mirror', 'extend']) {
     const c = { state: 'idle', config: { mode, singleTarget: 'A' },
-      updateAssignments() {}, reconcile() {}, refreshWindowSettings() {}, applyBinds() {}, syncBarBlur() {},
+      updateAssignments() {}, workspace: { reconcile() {} }, windowSettings: { refreshWindowSettings() {} },
+      keybindings: { applyBinds() {} }, barLayers: { syncBarBlur() {} },
       evalLua() { throw Error('Observation attempted a compositor write'); } };
     fn('applyRuntime', c)();
   }

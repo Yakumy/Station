@@ -1,9 +1,10 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { ownerFunction, source } = require('./helpers/window-settings.cjs');
-const service = readFileSync('Service.qml', 'utf8');
+const service = runtimeSource();
 const W = require('../../lib/Windows.js');
 function fixture() {
   const queue = [];
@@ -22,16 +23,16 @@ const observed = [{css:'5 5 5 5'},{css:'10 10 10 10'},{float:0.7},{int:0},{bool:
   [[{name:'windows',enabled:true,speed:4}],[]]].map(JSON.stringify).join('\n\n');
 
 test('one window owner keeps root forwarding and synchronous busy projection', () => {
-  assert.match(service,/readonly property bool windowSettingsBusy: windowSettings.windowSettingsBusy/);
+  assert.match(service,/readonly property alias windowSettingsBusy: windowSettings.windowSettingsBusy/);
   assert.doesNotMatch(service,/property .*appearance(Source|Loaded|Path)|id: appearanceFile/);
   assert.doesNotMatch(source,/property var (station|service|shell)\b|root\.config\b|saveConfig|hl\.monitor|previewBaseline/);
   assert.match(source,/id: appearanceFile[\s\S]*onFileChanged: reload\(\)/);
   assert.match(service,/publishObserved: function\(observed\) \{\s*root.config = Object.assign\(\{\}, root.config, \{ windows: observed \}\)/);
-  for (const name of ['setWindowSetting','refreshWindowSettings']) {
+  for (const name of ['setWindowSetting']) {
     const line = service.split('\n').find(line => line.startsWith('  function '+name+'('));
     const calls = [];
     const fn = runInNewContext('('+line+')', {windowSettings:{[name](...args) { calls.push(args); return 'sentinel'; }}});
-    const args = name === 'setWindowSetting' ? ['split',65] : [()=>{},true];
+    const args = ['split',65];
     assert.equal(fn(...args),'sentinel'); assert.deepEqual(calls,[args]);
   }
 });

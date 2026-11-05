@@ -39,11 +39,13 @@ function adapt(c) {
   c.detached ||= functionFrom(source,'detached',c);
   if (!c.displayController) {
     c.displayController={};
-    for (const name of privateHelpers.filter(n => n !== 'validConnector'))
+    for (const name of privateHelpers)
       c.displayController[name]=functionFrom(source,name,c);
     for (const name of methods.filter(n => !privateHelpers.includes(n)))
       c.displayController[name]=(...args) => c[name](...args);
     c.displayController.previewMirrorSource=functionFrom(source,'previewMirrorSource',c);
+    for (const key of ['previewFound','previewLoaded','monitorsLoaded','previewObservedSignature'])
+      Object.defineProperty(c.displayController,key,{get:()=>c[key],configurable:true});
   }
 }
 function ownerFunction(name,c) {

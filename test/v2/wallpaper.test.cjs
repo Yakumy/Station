@@ -74,9 +74,17 @@ function controller() {
     station: {stateDir: '/tmp/station-test', pluginDir: process.cwd(), configLoaded: true,
       config: {}, saveConfig() {this.saved = true},
       enqueue(argv, done) {this.argv = argv; this.done = done}},
+    enqueue(argv, done) {c.station.enqueue(argv, done)},
+    publishPreferences(value) {c.station.config = Object.assign({}, c.station.config, {wallpaper: value})},
+    savePreferences() {c.station.saveConfig()},
+    releasePanel() {c.station.panelWanted = false},
     picker: {running: false}, pickerDelay: {restarts: 0, restart() {this.restarts++}},
     applied: {source: '/tmp/image.png'}};
   c.root = c;
+  // The controller's data inputs, backed by the fake composition root.
+  for (const [key, read] of Object.entries({stateDir: () => c.station.stateDir, pluginDir: () => c.station.pluginDir,
+    configLoaded: () => c.station.configLoaded, savedPreferences: () => c.station.config.wallpaper}))
+    Object.defineProperty(c, key, {get: read, configurable: true});
   vm.createContext(c); vm.runInContext(methods, c);
   return c;
 }

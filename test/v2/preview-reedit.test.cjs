@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -6,7 +7,7 @@ const Model = require('../../lib/Model.js');
 const MonitorsLua = require('../../lib/MonitorsLua.js');
 
 const read = (...parts) => readFileSync(join(__dirname, '..', '..', ...parts), 'utf8');
-const service = read('Service.qml');
+const service = runtimeSource();
 const { source: owner, ownerFunction } = require('./helpers/display-owner.cjs');
 const layout = read('lib', 'DisplayLayout.qml');
 const tab = read('lib', 'DisplaysTab.qml');

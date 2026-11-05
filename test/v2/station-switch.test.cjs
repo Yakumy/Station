@@ -1,11 +1,12 @@
 const test = require('node:test');
+const { runtimeSource, adaptOwners, qmlFunction } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const Hypr = require('../../lib/Hypr.js');
 const Grid = require('../../lib/Grid.js');
 const Model = require('../../lib/Model.js');
-const source = readFileSync('Service.qml', 'utf8');
+const source = runtimeSource();
 function harness() {
   const batches = [];
   const c = { Hypr, Grid, Model, state: 'idle', gen: 0, queuedStation: 0,
@@ -15,11 +16,10 @@ function harness() {
     workspaceFor: (s, o) => Grid.workspace(s, o, c.workspaceMap),
     evalLua(lua, done) { batches.push({ lua, done }); },
   };
-  for (const name of ['begin', 'finish', 'showStation', 'stationFocusStatements']) {
-    const start = source.indexOf('  function ' + name + '(');
-    const end = source.indexOf('\n  function ', start + 1);
-    c[name] = runInNewContext('(' + source.slice(start, end).trim() + ')', c);
-  }
+  c.root = c;
+  adaptOwners(c);
+  for (const name of ['begin', 'finish', 'clearQueued', 'showStation', 'stationFocusStatements'])
+    c[name] = qmlFunction(source, name, c);
   return { c, batches };
 }
 test('rapid numbered switches retain the last request and return to the occupied station', () => {

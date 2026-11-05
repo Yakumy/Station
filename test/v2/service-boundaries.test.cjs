@@ -2,10 +2,11 @@
 // These tests never instantiate Station, call hyprctl or write desktop state.
 // They do not establish QML signal ordering or actual Wayland unmapping.
 const test = require('node:test');
+const { runtimeSource, adaptOwners, qmlFunction } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
-const source = readFileSync('Service.qml', 'utf8');
+const source = runtimeSource();
 const copy = value => JSON.parse(JSON.stringify(value));
 function functions(names, state) {
   state.root = state;
@@ -94,9 +95,10 @@ test('snapshot requests retain FIFO callback ownership and per-request client-re
 
 test('a failed snapshot does not dispatch its success callback or replace the next queued request', () => {
   const calls = [];
-  const c = functions(['refresh', 'completeSnapshot'], {
+  const c = functions(['refresh', 'completeSnapshot', 'handleSnapshotFailure'], {
     state: 'migrating', snapshotBusy: false, snapshotQueue: [], refreshDone: null,
-    monitorSnapshot: { running: false }, migrationFailed(message) { calls.push(message); },
+    monitorSnapshot: { running: false }, workspace: { migrationFailed(message) { calls.push(message); } },
+    snapshotFailed() { c.handleSnapshotFailure(); },
   });
   c.refresh(true, () => assert.fail('failed snapshot cannot commit a migration'));
   c.refresh(false, () => calls.push('next observed'));

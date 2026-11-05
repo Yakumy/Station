@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -6,7 +7,7 @@ const { runInNewContext } = require('node:vm');
 
 const Position = require('../../lib/PanelPosition.js');
 const Store = require('../../lib/Store.js');
-const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
+const service = runtimeSource();
 const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
 const settings = readFileSync(join(__dirname, '..', '..', 'lib', 'SettingsTab.qml'), 'utf8');
 
@@ -20,7 +21,7 @@ test('Bar remains the default; saved position accepts only Bar or Center', () =>
   const end = service.indexOf('\n  }', start) + '\n  }'.length;
   const config = Store.configDefaults();
   let saves = 0;
-  const context = { config, saveConfig() { saves++; }, root: null };
+  const context = { config, store: { saveConfig() { saves++; } }, root: null };
   const setSetting = runInNewContext('(' + service.slice(start, end).trim() + '\n)', context);
   assert.equal(setSetting('panelPosition', 'center'), 'ok');
   assert.equal(context.config.panelPosition, 'center');

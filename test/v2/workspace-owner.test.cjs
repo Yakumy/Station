@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync, writeFileSync, mkdtempSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
@@ -8,7 +9,7 @@ const { source, baseline, names, functionFrom, adapt } = require('./helpers/work
 const Grid = require('../../lib/Grid.js');
 const Hypr = require('../../lib/Hypr.js');
 const OpenApps = require('../../lib/OpenApps.js');
-const service = readFileSync('Service.qml', 'utf8');
+const service = runtimeSource();
 const copy = value => JSON.parse(JSON.stringify(value));
 
 // Both implementations use the same fake external boundaries. Journal text and
@@ -66,7 +67,7 @@ function harness(implementation, journal = null) {
   return {c,trace,writes,jobs,checkpoint,drain,ack};
 }
 
-test('workspace owner is the sole journal writer with finite ports and compatible root forwarding', () => {
+test('workspace owner is the sole journal writer with finite ports', () => {
   assert.doesNotMatch(service,/id: workspaceFile|id: migrationRetry/);
   assert.doesNotMatch(service,/(?:root\.)?topologyDirty\s*=/);
   assert.doesNotMatch(source,/property var (station|service|shell)\b|root\.persisted\b|IpcHandler|execDetached/);
@@ -75,12 +76,8 @@ test('workspace owner is the sole journal writer with finite ports and compatibl
   assert.match(service,/pending: root.workspaceData.pending/);
   assert.match(service,/workspace.clearTopologyDirty\(\)/);
   assert.equal((service.match(/workspace.markTopologyDirty\(\)/g)||[]).length,3);
-  for (const name of names) {
-    const calls = [];
-    const fn = functionFrom(service,name,{workspace:{[name](...args) { calls.push(args); return 'forwarded'; }}});
-    const args = name === 'migrationFailed' ? ['disk full'] : [];
-    assert.equal(fn(...args),'forwarded'); assert.deepEqual(calls,[args]);
-  }
+  // Reconciliation has no root forwarders: callers hold the owner or a port.
+  for (const name of names) assert.equal(service.includes('function '+name+'() { return workspace.'),false);
 });
 
 const scenarios = {

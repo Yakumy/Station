@@ -16,6 +16,7 @@ Item {
   property var config: Store.configDefaults()
   property var persisted: Store.stateDefaults()
   property var monitors: []
+  property var removalGraceRunning: removalGrace.running
   property var clients: []
   property var lanes: ({A:1,B:2})
   property var unmanaged: []
@@ -72,7 +73,14 @@ Item {
   Timer { id: followFocus; interval: 100 }
   QtObject { id: monitorSnapshot; property bool running: false }
   function copy(value) { return JSON.parse(JSON.stringify(value)) }
-  function validConnector(name) { try { MonitorsLua.connector(name); return true } catch(e) { return false } }
+  readonly property string operationState: root.state
+  function snapshotFailed() { handleSnapshotFailure() }
+  function clearQueued() { queuedStation = 0 }
+  function followFocusChanged() { followFocus.restart() }
+  function invalidate() { appliedGeneration = -1 }
+  function continueApply() { displayController.continuePreviewApply() }
+  function continueRevert() { displayController.continueRevertPreview() }
+  function panelEvacuationTimedOut() { displayController.panelEvacuationTimedOut(panelEvacuationPurpose, panelEvacuationFrom) }
   function saveConfig() { saves++ }
   function saveState() { stateSaves++ }
   function maybeStart() { readiness++ }
@@ -117,7 +125,7 @@ Item {
     file(displayController,"monitors.lua").readText="-- personal Lua\n"
     file(displayController,"monitors.lua").loaded()
     file(displayController,"preview.token").loadFailed()
-    syncDisplayDraft()
+    displayController.syncDisplayDraft()
   }
   function apply(lua) {
     var next=copy(live),wins=copy(windows),match

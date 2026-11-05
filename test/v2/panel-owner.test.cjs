@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { createHash } = require('node:crypto');
@@ -72,7 +73,7 @@ function state(c) {
 test('M7 reference is the exact pre-extraction panel and all owners stay widget-local', () => {
   assert.equal(createHash('sha256').update(before).digest('hex'), '1b12e5a192e1e97c77ed4f4ca9647f9bb4f62b5078c4df28b0f928cae259072c');
   assert.match(panel, /Station\.PanelSession/); assert.match(panel, /Station\.DisplayControls/);
-  assert.doesNotMatch(read('Service.qml'), /PanelSession|DisplayControls/);
+  assert.doesNotMatch(runtimeSource(), /PanelSession|DisplayControls/);
   assert.doesNotMatch(panel, /function (?:tryRestorePanel|setBrightness|beginBindingEdit)\(/);
   for (const name of ['DisplaysTab','BarTab','WindowsTab','WallpaperTab','KeybindingsTab','SettingsTab',
     'DisplayLayout','BarLayout','WindowsLayout']) assert.doesNotMatch(read('lib/'+name+'.qml'), /panelRoot/);

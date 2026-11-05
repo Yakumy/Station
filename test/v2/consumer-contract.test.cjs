@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
@@ -7,8 +8,9 @@ const panel = read('lib/StationPanel.qml');
 const direct = read('lib/WallpaperController.qml');
 const proxySource = read('lib/WallpaperProxy.qml');
 const consumers = read('lib/WallpaperTab.qml') + '\n' + read('lib/WallpaperLayout.qml');
-const service = read('Service.qml');
+const service = runtimeSource();
 const Tabs = require('../../lib/Tabs.js');
+const ServiceContract = require('../../lib/ServiceContract.js');
 const copy = value => JSON.parse(JSON.stringify(value));
 const methods = source => new Set([...source.matchAll(/^  function (\w+)\(/gm)].map(m => m[1]));
 function multiline(source, name, context) {
@@ -21,9 +23,8 @@ function multiline(source, name, context) {
 function bridge(root) {
   const context = {};
   runInNewContext(read('lib/BarBridge.js').replace(/^\.pragma library\s*/, ''), context);
-  const match = service.match(/barBridge = BarBridge\.publish\(([\s\S]*?)\n    \}\)/);
-  assert.ok(match);
-  return runInNewContext('BarBridge.publish(' + match[1] + '\n})', { BarBridge: context, root });
+  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\)\)/);
+  return context.publish(() => ServiceContract.snapshot(root), ServiceContract.actions(root));
 }
 function proxy(api) {
   const context = { api };
@@ -57,7 +58,7 @@ test('consumer-required wallpaper methods are present on both direct and proxy p
   for (const name of calls) assert.ok(methods(direct).has(name), 'direct consumer contract: ' + name);
   const missing = [...calls].filter(name => !methods(proxySource).has(name));
   assert.deepEqual(missing, [], 'consumer aliases must not hide missing proxy methods');
-  const published = new Set([...service.matchAll(/\b(wallpaper\w+): function/g)].map(m => m[1]));
+  const published = new Set(Object.keys(ServiceContract.actions({})).filter(name => name.startsWith('wallpaper')));
   assert.equal(published.has('wallpaperChoose'), true);
 });
 
@@ -84,7 +85,7 @@ test('all existing common wallpaper commands preserve direct/proxy arguments and
 
 test('actual image-button handler opens the chooser and closes the panel on both paths', () => {
   const state = { layout: { displays: [{ identity: 'display-identity' }] }, pickerBusy: false, busy: false, draft: { followTheme: false },
-    station: { panelWanted: true }, pickerDelay: { restart() { state.started = true; } } };
+    station: { panelWanted: true }, releasePanel() { state.station.panelWanted = false; }, pickerDelay: { restart() { state.started = true; } } };
   state.choose = multiline(direct, 'choose', state);
   let closed = 0;
   const root = { scene: { mode: 'individual' }, selectedDisplay: { identity: 'display-identity' },
@@ -102,7 +103,7 @@ test('actual image-button handler opens the chooser and closes the panel on both
 
 test('direct chooser refuses Follow mode and busy state without opening a picker', () => {
   const state = { layout: { displays: [{ identity: 'display-identity' }] }, pickerBusy: false, busy: false, draft: { followTheme: true },
-    station: { panelWanted: true }, pickerDelay: { restart() { assert.fail('must not open picker'); } },
+    station: { panelWanted: true }, releasePanel() { state.station.panelWanted = false; }, pickerDelay: { restart() { assert.fail('must not open picker'); } },
     showNotice(message, urgent) { state.notice = { message, urgent }; } };
   const choose = multiline(direct, 'choose', state);
   assert.equal(choose(''), false);
@@ -149,12 +150,14 @@ test('picker success, cancellation and error all restore the named Wallpaper tab
   assert.ok(match);
   for (const code of [0, 1, 2]) {
     const calls = [];
-    const root = { station: { panelWanted: false, rememberedTab: tabOrder().indexOf('Wallpaper') },
+    const panel = { panelWanted: false, rememberedTab: tabOrder().indexOf('Wallpaper') };
+    const returnPanel = service.match(/returnPanel: (function\(\) \{[^]*?\n    \})/)[1];
+    const root = { returnPanel: runInNewContext('(' + returnPanel + ')', { panel, Tabs }),
       prepareSelection(value) { calls.push(value); }, showNotice() { calls.push('error'); } };
     const exit = runInNewContext('(function(code) {' + match[1] + '\n})', { root, Tabs, result: '/selected/image.png' });
     exit(code);
-    assert.equal(root.station.panelWanted, true);
-    assert.equal(root.station.rememberedTab, Tabs.index('wallpaper'), 'return tab for code ' + code);
+    assert.equal(panel.panelWanted, true);
+    assert.equal(panel.rememberedTab, Tabs.index('wallpaper'), 'return tab for code ' + code);
     assert.deepEqual(calls, code === 0 ? ['/selected/image.png'] : code === 1 ? [] : ['error']);
   }
 });
@@ -162,7 +165,7 @@ test('picker success, cancellation and error all restore the named Wallpaper tab
 test('both chooser paths reject malformed and unknown identities before releasing panel focus', () => {
   const state = { layout: { displays: [{ identity: 'display-identity' }] },
     pickerBusy: false, busy: false, draft: { followTheme: false },
-    station: { panelWanted: true }, pickerDelay: { restart() { state.starts++; } }, starts: 0 };
+    station: { panelWanted: true }, releasePanel() { state.station.panelWanted = false; }, pickerDelay: { restart() { state.starts++; } }, starts: 0 };
   state.choose = multiline(direct, 'choose', state);
   const detached = proxy(bridge({ wallpaper: state }));
   for (const choose of [state.choose, detached.choose]) {

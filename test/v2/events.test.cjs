@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource, adaptOwners, qmlFunction } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
@@ -20,9 +21,7 @@ test('monitor v1 and v2 events require both the expected kind and output', () =>
 test('fake service stream ignores Station disable but handles another output added a second later', () => {
   // Execute the actual service handler so passing the event payload, rather
   // than just its name, is covered by the regression.
-  const source = readFileSync('Service.qml', 'utf8');
-  const start = source.indexOf('  function handleEvent(event) {');
-  const end = source.indexOf('\n  Component.onCompleted:', start);
+  const source = runtimeSource();
   let now = 1000;
   const expectation = { kinds: ['monitor', 'workspace'], outputs: ['eDP-1'], until: 3000 };
   const calls = [];
@@ -33,9 +32,9 @@ test('fake service stream ignores Station disable but handles another output add
     updateAssignments: () => calls.push('assign'), applyRuntime: () => calls.push('apply'),
     openPanel: () => calls.push('open'), removalGrace: { stop: () => {}, restart: () => calls.push('remove') },
   };
-  const expectedStart = source.indexOf('  function eventExpected(event) {');
-  context.eventExpected = runInNewContext('(' + source.slice(expectedStart, start).trim() + ')', context);
-  const handler = runInNewContext('(' + source.slice(start, end).trim() + ')', context);
+  adaptOwners(context);
+  context.eventExpected = qmlFunction(source, 'eventExpected', context);
+  const handler = qmlFunction(source, 'handleEvent', context);
   handler({ name: 'monitorremoved', data: 'eDP-1' });
   assert.deepEqual(calls, []);
   now += 1000;

@@ -1,12 +1,13 @@
 // Reusable production display/Service scenario driver with fake external effects.
 const assert = require('node:assert/strict');
+const { runtimeSource, adaptOwners, owners, ownerSource } = require('./runtime-source.cjs');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { join } = require('node:path');
 const { monitorRules } = require('./monitor-lua.cjs');
 const { ownerFunction } = require('./workspace-owner.cjs');
-const { ownerFunction: displayFunction } = require('./display-owner.cjs');
-const current = readFileSync(join(__dirname, '../../../Service.qml'), 'utf8');
+const { ownerFunction: displayFunction, methods: displayMethods } = require('./display-owner.cjs');
+const current = runtimeSource();
 // Exact Service.qml at 8395b1abbc65320a214e83e25269dc5c550d1e36.
 // This pinned test oracle is never discovered or loaded as a QML component.
 const before = readFileSync(join(__dirname, '../fixtures/pre-m6-service.qml.txt'), 'utf8');
@@ -70,8 +71,14 @@ function harness({ baseline = false, capture = false } = {}) {
   function record(kind, value) { if (capture) trace.push([kind, copy(value)]); }
   Object.defineProperty(c, 'workspaceMap', { get: () => c.workspaceData.mapping });
   Object.defineProperty(c, 'draftEditable', { get: () => ['idle', 'previewing'].includes(c.state) && !c.previewBusy });
+  if (!baseline) adaptOwners(c);
   for (const match of source.matchAll(/^  function (\w+)\([^\n]*\{\n[^]*?^  \}/gm))
     c[match[1]] = (!baseline && displayFunction(match[1], c)) || ownerFunction(match[1], c) || runInNewContext('(' + match[0].trim() + ')', c);
+  // Service's one-line members forward to owners; only owners define real one-liners.
+  if (!baseline) for (const match of owners.map(ownerSource).join('\n').matchAll(/^  function (\w+)\([^\n]*\{[^\n]*\}$/gm))
+    if (!c[match[1]]) c[match[1]] = runInNewContext('(' + match[0].trim() + ')', c);
+  if (!baseline) for (const name of [...displayMethods, 'reconcile', 'migrationFailed', 'migrationSaved', 'executeMigration'])
+    c[name] = displayFunction(name, c) || ownerFunction(name, c) || c[name];
   let evacuationSerial = 0;
   Object.defineProperty(c, 'panelEvacuationSerial', {
     configurable: true,

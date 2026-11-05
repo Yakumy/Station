@@ -1,4 +1,5 @@
 const test = require('node:test');
+const { runtimeSource, adaptOwners, qmlFunction } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
@@ -9,12 +10,8 @@ const vertical = [
   { id: 0, name: 'A', x: 0, y: 1200, width: 1920, height: 1080, scale: 1 },
   { id: 1, name: 'B', x: 0, y: 0, width: 1920, height: 1200, scale: 1 },
 ];
-const source = readFileSync('Service.qml', 'utf8');
-function action(context, name) {
-  const start = source.indexOf('  function ' + name + '(');
-  const end = source.indexOf('\n  function ', start + 1);
-  return runInNewContext('(' + source.slice(start, end).trim() + ')', context);
-}
+const source = runtimeSource();
+function action(context, name) { return qmlFunction(source, name, context); }
 function harness({ monitors = vertical, monitor = 0, workspace = 1, workspaceName = String(workspace), native = () => {}, pinned = false } = {}) {
   const calls = [], requests = [];
   let live = { address: '0xabc', pid: 7, initialClass: 'test', monitor, workspace: { id: workspace, name: workspaceName },
@@ -47,6 +44,7 @@ function harness({ monitors = vertical, monitor = 0, workspace = 1, workspaceNam
     nativeMoveSettle: { restart() {} },
   };
   context.root = context;
+  adaptOwners(context);
   context.workspaceFor = (s, o) => Grid.workspace(s, o, context.workspaceMap);
   for (const name of ['finishWindowAction', 'windowActionCurrent', 'readActiveWindow', 'stationFocusStatements',
     'syncWindowStation', 'moveActionWindow', 'sendWindow', 'shiftWindow', 'afterNativeMove']) context[name] = action(context, name);

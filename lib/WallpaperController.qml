@@ -7,14 +7,23 @@ import qs.Ui as Ui
 import qs.Commons
 import "Wallpaper.js" as Wallpaper
 import "Model.js" as Model
-import "Tabs.js" as Tabs
 import "." as Station
 
 Item {
   id: root
-  required property var station
-  readonly property var layout: Wallpaper.topology(station.monitors, Model.identities(station.monitors))
-  readonly property var preferences: Wallpaper.settings(station.config.wallpaper)
+  // Data and finite effects only: this owner never sees the Service object.
+  property var monitors: []
+  property var savedPreferences: ({})
+  property bool configLoaded: false
+  property string stateDir: ""
+  property string pluginDir: ""
+  property var enqueue: null
+  property var publishPreferences: null
+  property var savePreferences: null
+  property var releasePanel: null
+  property var returnPanel: null
+  readonly property var layout: Wallpaper.topology(monitors, Model.identities(monitors))
+  readonly property var preferences: Wallpaper.settings(savedPreferences)
   property string themePath: ""
   property string themeName: ""
   property string themeRevision: ""
@@ -61,7 +70,7 @@ Item {
   function secureStoredScene(scene) {
     var next = JSON.parse(JSON.stringify(scene))
     if (next.followTheme) return next
-    var prefix = station.stateDir + "/wallpapers/"
+    var prefix = stateDir + "/wallpapers/"
     var paths = [next.source]
     Object.keys(next.perDisplay).forEach(function(key) { paths.push(next.perDisplay[key]) })
     next.safe = next.safe && paths.every(function(path) { return path.indexOf(prefix) === 0 })
@@ -84,14 +93,14 @@ Item {
     if (repairPending) {
       repairPending = false; importBusy = false
       failedLegacyKey = repairLegacyKey; repairLegacyKey = ""
-      station.config = Object.assign({}, station.config, {wallpaper: repairPrevious})
+      publishPreferences(repairPrevious)
       repairPrevious = null
       showNotice("Could not safely prepare the saved wallpaper. Choose it again.", true)
       return
     }
     if (!pendingSave) return
     pendingSave = false; pending = null; busy = false
-    station.config = Object.assign({}, station.config, {wallpaper: previousPreferences})
+    publishPreferences(previousPreferences)
     showNotice("Could not save preferences. Your previous wallpaper has been restored.", true)
   }
   function change(key, value) {
@@ -103,13 +112,13 @@ Item {
   function frame(value) { change("framing", Wallpaper.framing(value)) }
   function sanitizedPath(output) {
     var path = String(output || "").replace(/\n$/, "")
-    var prefix = station.stateDir + "/wallpapers/"
+    var prefix = stateDir + "/wallpapers/"
     return Wallpaper.path(path) && path.indexOf(prefix) === 0 ? path : ""
   }
   function stagePath(path, generation, index, done) {
-    if (!Wallpaper.path(path) || !station.pluginDir) { done(1, ""); return }
-    var folder = station.stateDir + "/wallpapers/import-" + Date.now() + "-" + generation + "-" + index
-    station.enqueue(["perl", station.pluginDir + "/lib/SanitizeWallpaper.pl", path, folder], function(code, output) {
+    if (!Wallpaper.path(path) || !pluginDir) { done(1, ""); return }
+    var folder = stateDir + "/wallpapers/import-" + Date.now() + "-" + generation + "-" + index
+    enqueue(["perl", pluginDir + "/lib/SanitizeWallpaper.pl", path, folder], function(code, output) {
       var prepared = code === 0 ? sanitizedPath(output) : ""
       done(prepared ? 0 : 1, prepared)
     })
@@ -149,7 +158,7 @@ Item {
     })
   }
   function prepareLegacyWallpaper() {
-    if (!station.configLoaded || !station.pluginDir || dirty || busy || importBusy
+    if (!configLoaded || !pluginDir || dirty || busy || importBusy
         || applied.followTheme || applied.safe || !applied.source) return
     var paths = [applied.source]
     Object.keys(applied.perDisplay).forEach(function(key) {
@@ -174,11 +183,11 @@ Item {
       scene.safe = true
       var settings = Wallpaper.settings(root.preferences)
       settings.pinned = Wallpaper.profile(scene)
-      root.repairPrevious = root.station.config.wallpaper
+      root.repairPrevious = root.savedPreferences
       root.repairLegacyKey = key
       root.repairPending = true
-      root.station.config = Object.assign({}, root.station.config, {wallpaper: Wallpaper.settings(settings)})
-      root.station.saveConfig()
+      root.publishPreferences(Wallpaper.settings(settings))
+      root.savePreferences()
     })
   }
   function choose(identity) {
@@ -190,7 +199,7 @@ Item {
     }
     pickerTarget = identity || ""
     // The picker is a separate native window: release the panel's focus grab.
-    station.panelWanted = false
+    releasePanel()
     pickerDelay.restart()
     return true
   }
@@ -222,7 +231,7 @@ Item {
     }
     if (pending.copying) return
     pending.copying = true
-    var job = pending, folder = station.stateDir + "/wallpapers/" + Date.now() + "-" + job.serial
+    var job = pending, folder = stateDir + "/wallpapers/" + Date.now() + "-" + job.serial
     var destinations = job.paths.map(function(p, i) { return folder + "/" + i + "." + p.split(".").pop().replace(/[^a-zA-Z0-9]/g, "").slice(0, 10) })
     // Fixed script; every path is a quoted positional argument. Originals and
     // Omarchy's current/background link are never changed. Snapshots survive
@@ -230,7 +239,7 @@ Item {
     var script = 'set -eu; umask 077; folder=$1; shift; mkdir -p -- "${folder%/*}"; mkdir -- "$folder"; while [ "$#" -gt 0 ]; do cp --reflink=auto -- "$1" "$2"; shift 2; done'
     var args = ["bash", "-c", script, "station-wallpaper", folder]
     job.paths.forEach(function(p, i) { args.push(p, destinations[i]) })
-    station.enqueue(args, function(code) {
+    enqueue(args, function(code) {
       if (!root.pending || job.serial !== root.serial) return
       if (code !== 0) { root.busy = false; root.showNotice("Could not save the wallpaper. Your previous wallpaper is unchanged.", true); root.pending = null; return }
       var p = Wallpaper.profile(job.scene)
@@ -243,10 +252,10 @@ Item {
       settings.mode = job.scene.mode; settings.followTheme = job.scene.followTheme
       settings.pinned = p
       if (settings.followTheme) { delete settings.profiles[job.key]; settings.profiles[job.key] = p }
-      root.previousPreferences = root.station.config.wallpaper
+      root.previousPreferences = root.savedPreferences
       root.pendingSave = true
-      root.station.config = Object.assign({}, root.station.config, { wallpaper: Wallpaper.settings(settings) })
-      root.station.saveConfig()
+      root.publishPreferences(Wallpaper.settings(settings))
+      root.savePreferences()
     })
   }
 
@@ -274,7 +283,7 @@ Item {
       }
     }
   }
-  Timer { interval: 250; repeat: true; running: root.station.configLoaded; triggeredOnStart: true; onTriggered: if (!themeRead.running) themeRead.running = true }
+  Timer { interval: 250; repeat: true; running: root.configLoaded; triggeredOnStart: true; onTriggered: if (!themeRead.running) themeRead.running = true }
   Process {
     id: picker
     command: ["omarchy", "file", "select", "--title", "Choose wallpaper", "--extensions", "png jpg jpeg webp bmp gif"]
@@ -284,8 +293,7 @@ Item {
     onExited: function(code) {
       if (code === 0) root.prepareSelection(result)
       else if (code !== 1) root.showNotice("The desktop file picker could not open.", true)
-      root.station.rememberedTab = Tabs.index("wallpaper")
-      root.station.panelWanted = true
+      root.returnPanel()
     }
   }
   Timer { id: pickerDelay; interval: 200; onTriggered: picker.running = true }
@@ -305,7 +313,7 @@ Item {
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       mask: Region {}
       color: "transparent"
-      visible: root.station.configLoaded && display !== null && !stock && wallpaper.status === Image.Ready && !remap.remapping
+      visible: root.configLoaded && display !== null && !stock && wallpaper.status === Image.Ready && !remap.remapping
       Ui.ScreenMoveRemap { id: remap; window: surface }
       Station.WallpaperImage {
         id: wallpaper

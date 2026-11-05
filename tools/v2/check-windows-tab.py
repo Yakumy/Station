@@ -124,8 +124,9 @@ ShellRoot {
         if (Math.abs(solidArea.x - blurArea.x) > 0.001) {
           fail("blur default bar gap"); return
         }
-        if (Math.abs(solidArea.x - transparentArea.x - tab.values.outerGap * layout.zoom) > 0.001) {
-          fail("solid default bar gap"); return
+        // Gaps are observed compositor values: a bar background never changes them.
+        if (Math.abs(solidArea.x - transparentArea.x) > 0.001) {
+          fail("bar background changed the gap"); return
         }
         var name = findObject(layout, "monitorName-eDP-1")
         if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }

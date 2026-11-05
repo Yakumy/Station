@@ -1,10 +1,11 @@
 const test = require('node:test');
+const { runtimeSource } = require('./helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
 const MonitorsLua = require('../../lib/MonitorsLua.js');
-const source = readFileSync('Service.qml', 'utf8');
+const source = runtimeSource();
 const { ownerFunction } = require('./helpers/display-owner.cjs');
 
 for (const reason of ['', 'Preview timed out.']) {
