@@ -354,7 +354,33 @@ Item {
   }
   Timer { id: pickerDelay; interval: 200; onTriggered: picker.running = true }
 
+  Image {
+    id: introImage
+    source: root.configLoaded && root.applied.followTheme ? Util.fileUrl(root.themePath) + "?station=" + encodeURIComponent(root.themeRevision) : ""
+    asynchronous: true
+    visible: false
+  }
+  WallpaperUi.IntroPlayback {
+    id: introPlayback
+    enabled: root.configLoaded && root.applied.followTheme && (root.applied.mode !== "same"
+      || root.layout.displays.some(function(display) { return Wallpaper.hasFrame(root.applied, display) }))
+    scene: root.applied
+    layout: root.layout
+    themeToken: root.themeToken
+    returnReady: {
+      var count = 0
+      for (var surface of wallpaperSurfaces.instances) {
+        if (!surface.display || surface.stock) continue
+        count++
+        if (!surface.visible || surface.returnFrames < 2) return false
+      }
+      return count > 0
+    }
+    imageWidth: introImage.status === Image.Ready ? introImage.sourceSize.width : 0
+    imageHeight: introImage.status === Image.Ready ? introImage.sourceSize.height : 0
+  }
   Variants {
+    id: wallpaperSurfaces
     model: Quickshell.screens
     PanelWindow {
       id: surface
@@ -362,6 +388,16 @@ Item {
       readonly property var display: root.layout.displays.find(function(d) { return d.name === modelData.name }) || null
       readonly property bool stock: root.applied.mode === "same" && root.applied.followTheme && root.applied.source === root.themePath
         && !Wallpaper.hasFrame(root.applied, display)
+      property int returnFrames: 0
+      onVisibleChanged: if (!visible) returnFrames = 0
+      Connections {
+        target: introPlayback
+        function onReturningChanged() { surface.returnFrames = 0 }
+      }
+      FrameAnimation {
+        running: introPlayback.returning && surface.visible && surface.returnFrames < 2
+        onTriggered: surface.returnFrames++
+      }
       screen: modelData
       anchors { top: true; bottom: true; left: true; right: true }
       exclusionMode: ExclusionMode.Ignore
@@ -374,6 +410,9 @@ Item {
       Ui.ScreenMoveRemap { id: remap; window: surface }
       WallpaperUi.WallpaperImage {
         id: wallpaper
+        // Keep the layer mapped: remapping invokes Hyprland's layer fade and
+        // exposes the stock wallpaper beneath it during the return handoff.
+        visible: !introPlayback.exposed
         anchors.fill: parent
         scene: root.applied
         layout: root.layout

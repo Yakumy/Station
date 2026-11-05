@@ -1,5 +1,8 @@
 # Unreleased
 
+- Play matching theme intros with the saved Span and per-monitor wallpaper framing
+  when OWE supports source rectangles, preserving the crop through the final still.
+
 - Frame the wallpaper separately on each monitor in Same on all and Per monitor: drag inside
   a monitor to move the image, scroll to zoom, and use Reset frame to go back to a centered fill.
 - Show the display preview's Keep/Revert countdown on every tab. On other tabs it ran out
