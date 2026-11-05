@@ -4,7 +4,6 @@ const fs = require('node:fs');
 const { join } = require('node:path');
 const { tmpdir } = require('node:os');
 const { spawnSync } = require('node:child_process');
-const { runInNewContext } = require('node:vm');
 const T = require('../../lib/Transactions.js');
 const L = require('../../lib/MonitorsLua.js');
 const flag = 'hl.monitor({ output = "eDP-1", disabled = true })\n';
@@ -47,11 +46,10 @@ test('only the exact Omarchy internal Off flag is cleared when its output is exp
   assert.equal(L.disableToggleToClear(flag,[displays[1]],options),'');
 });
 test('service requests toggle handoff only at Keep, never a side-control save',()=>{
-  const source=fs.readFileSync('Service.qml','utf8');
-  const start=source.indexOf('  function startKeepFiles('),end=source.indexOf('\n  }',start)+4;
+  const {source,ownerFunction}=require('./helpers/display-owner.cjs');
   const c={monitorsSource:'before',internalDisableSource:flag,pendingDisplayConfig:{displays},keepOptions:options,
     MonitorsLua:L,candidateFile:{text:()=> 'candidate'},plainCandidateFile:{text:()=> 'plain'},maybeStartKeep(){}};
-  const save=runInNewContext('('+source.slice(start,end)+')',c);
+  const save=ownerFunction('startKeepFiles',c);
   save('candidate','plain','preview'); assert.equal(c.keepDisableToggle,flag);
   save('candidate','plain','control'); assert.equal(c.keepDisableToggle,'');
   const preview=source.slice(source.indexOf('  function previewLayout('),source.indexOf('  function keepPreview('));

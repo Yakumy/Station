@@ -98,12 +98,78 @@ Item {
       root.persisted.lastStation = station
       root.saveState()
     }
-    restorePreviewBaseline: function(value) { root.previewBaseline = value }
+    restorePreviewBaseline: function(value) { displayController.restorePreviewBaseline(value) }
     finishPreviewApply: function() { root.finishPreviewApply() }
-    failPreview: function(message) { root.previewBusy = false; root.revertPreview(message) }
+    failPreview: function(message) { displayController.failPreview(message) }
     focusStatements: function(station, output) { return root.stationFocusStatements(station, output) }
     showStation: function(station) { root.showStation(station) }
     ready: function() { root.maybeStart() }
+  }
+  Station.DisplayController {
+    id: displayController
+    stateDir: root.stateDir
+    monitorsPath: root.monitorsPath
+    internalDisablePath: root.internalDisablePath
+    candidatePath: root.candidatePath
+    plainCandidatePath: root.plainCandidatePath
+    plainPath: root.plainPath
+    operationState: root.state
+    operationGeneration: root.gen
+    configGeneration: root.configGeneration
+    started: root.started
+    preferences: ({ enabled: root.config.enabled, mode: root.config.mode,
+      singleTarget: root.config.singleTarget, mirrorSource: root.config.mirrorSource })
+    monitors: root.monitors
+    clients: root.clients
+    lanes: root.lanes
+    currentStation: root.currentStation
+    workspaceMap: root.workspaceMap
+    migrationPending: !!root.workspaceData.pending
+    migrationPhase: root.migrationPhase
+    topologyDirty: root.topologyDirty
+    panelWanted: root.panelWanted
+    panelScreenName: root.panelScreenName
+    layoutError: root.layoutError
+    beginPreview: function() { return root.begin("previewing") }
+    setOperationState: function(value) { root.state = value }
+    beginRevert: function() { root.gen += 1 }
+    invalidatePreviewOperation: function() { root.gen += 1; root.configGeneration += 1 }
+    refresh: function(includeClients, done) { root.refresh(includeClients, done) }
+    evalLua: function(lua, done) { root.evalLua(lua, done) }
+    enqueue: function(command, done) { root.enqueue(command, done) }
+    recordExpectedEvents: function(value) { root.expect = value }
+    monitorSignature: function() { return root.monitorSignature() }
+    reconcileWorkspace: function() { root.reconcile() }
+    targetMapping: function() { return root.targetMapping() }
+    clearWorkspaceTopologyDirty: function() { workspace.clearTopologyDirty() }
+    requestPanelEvacuation: function(from, to, purpose) { root.requestPanelEvacuation(from, to, purpose) }
+    clearPanelEvacuation: function() { root.clearPanelEvacuation() }
+    // Optional scalars preserve screen-only and deadline-only writes as well as
+    // their existing order. Do not capture a visual panel or widget proxy here.
+    retainPanel: function(screen, until) {
+      if (screen !== undefined) root.panelScreenName = screen
+      if (until !== undefined) root.panelTransferUntil = until
+    }
+    stopTopologyTimers: function() { removalGrace.stop(); reloadDebounce.stop() }
+    publishDisplayOptions: function(options) {
+      root.config.enabled = options.enabled.slice()
+      root.config.mode = options.mode
+      root.config.singleTarget = options.singleTarget || ""
+      root.config.mirrorSource = options.mirrorSource || ""
+      root.config = Object.assign({}, root.config)
+    }
+    saveDisplayPreferences: function() { root.saveConfig() }
+    invalidateAppliedBinds: function() { root.appliedGeneration = -1 }
+    updateAssignments: function() { root.updateAssignments() }
+    applyBinds: function() { root.applyBinds() }
+    applyRuntime: function() { root.applyRuntime() }
+    armScreenHealthCheck: function() { root.armScreenHealthCheck() }
+    launchWatchdog: function() {
+      Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", root.stateDir + "/preview.token"])
+    }
+    reportError: function(message) { root.layoutError = message }
+    ready: function() { root.maybeStart() }
+    finishAuthorityMigration: function(done, reloadRequired) { root.finishAuthorityMigration(done, reloadRequired) }
   }
   readonly property alias wallpaper: wallpaperController
   Station.WallpaperController { id: wallpaperController; station: root }
@@ -127,8 +193,8 @@ Item {
   property bool configLoaded: false
   property bool stateLoaded: false
   property bool dirsReady: false
-  property bool previewLoaded: false
-  property bool previewFound: false
+  readonly property bool previewLoaded: displayController.previewLoaded
+  readonly property bool previewFound: displayController.previewFound
   property bool started: false
   property int configGeneration: 0
   property int appliedGeneration: -1
@@ -176,44 +242,44 @@ Item {
   // A preview is an editing session, not a lock: the draft stays editable
   // until Keep or Revert, so the user can rearrange again without having to
   // settle the previous attempt first.
-  readonly property bool draftEditable: (state === "idle" || state === "previewing") && !previewBusy
-  property bool previewBusy: false
-  property string previewAbortReason: ""
-  property var previewBaseline: null
-  property var keepOptions: null
-  property string layoutWriteKind: ""
-  property bool keepFilesPending: false
-  property string keepSourceBaseline: ""
-  property string keepDisableToggle: ""
-  property string internalDisableSource: ""
+  readonly property bool draftEditable: displayController.draftEditable
+  readonly property bool previewBusy: displayController.previewBusy
+  readonly property string previewAbortReason: displayController.previewAbortReason
+  readonly property var previewBaseline: displayController.detached(displayController.previewBaseline)
+  readonly property var keepOptions: displayController.detached(displayController.keepOptions)
+  readonly property string layoutWriteKind: displayController.layoutWriteKind
+  readonly property bool keepFilesPending: displayController.keepFilesPending
+  readonly property string keepSourceBaseline: displayController.keepSourceBaseline
+  readonly property string keepDisableToggle: displayController.keepDisableToggle
+  readonly property string internalDisableSource: displayController.internalDisableSource
   readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
-  property bool candidateReady: false
-  property bool plainCandidateReady: false
-  property var displayDraft: []
-  property string draftMode: "extend"
-  property string draftSingleTarget: ""
-  property string draftMirrorSource: ""
-  property var previewBefore: []
-  property var previewApplied: null
-  property string previewObservedSignature: ""
-  property var pendingDisplayConfig: null
-  property string previewApplyLua: ""
-  property bool previewApplyStaged: false
-  property var previewApplyExpectedOutputs: []
-  property string previewApplyFocusTarget: ""
-  property string previewApplyActivateLua: ""
-  property bool previewApplyMigrateFirst: false
-  property string previewApplyPanelOrigin: ""
-  property string previewApplyPanelTarget: ""
-  property string pendingRevertReason: ""
-  property string pendingRevertPanelTarget: ""
-  property string pendingRevertPanelOrigin: ""
-  property string pendingRevertFocusTarget: ""
-  property string pendingRevertActivateLua: ""
+  readonly property bool candidateReady: displayController.candidateReady
+  readonly property bool plainCandidateReady: displayController.plainCandidateReady
+  readonly property var displayDraft: displayController.detached(displayController.displayDraft)
+  readonly property string draftMode: displayController.draftMode
+  readonly property string draftSingleTarget: displayController.draftSingleTarget
+  readonly property string draftMirrorSource: displayController.draftMirrorSource
+  readonly property var previewBefore: displayController.detached(displayController.previewBefore)
+  readonly property var previewApplied: displayController.detached(displayController.previewApplied)
+  readonly property string previewObservedSignature: displayController.previewObservedSignature
+  readonly property var pendingDisplayConfig: displayController.detached(displayController.pendingDisplayConfig)
+  readonly property string previewApplyLua: displayController.previewApplyLua
+  readonly property bool previewApplyStaged: displayController.previewApplyStaged
+  readonly property var previewApplyExpectedOutputs: displayController.detached(displayController.previewApplyExpectedOutputs)
+  readonly property string previewApplyFocusTarget: displayController.previewApplyFocusTarget
+  readonly property string previewApplyActivateLua: displayController.previewApplyActivateLua
+  readonly property bool previewApplyMigrateFirst: displayController.previewApplyMigrateFirst
+  readonly property string previewApplyPanelOrigin: displayController.previewApplyPanelOrigin
+  readonly property string previewApplyPanelTarget: displayController.previewApplyPanelTarget
+  readonly property string pendingRevertReason: displayController.pendingRevertReason
+  readonly property string pendingRevertPanelTarget: displayController.pendingRevertPanelTarget
+  readonly property string pendingRevertPanelOrigin: displayController.pendingRevertPanelOrigin
+  readonly property string pendingRevertFocusTarget: displayController.pendingRevertFocusTarget
+  readonly property string pendingRevertActivateLua: displayController.pendingRevertActivateLua
   property string layoutError: ""
-  property int previewSeconds: 0
-  property string monitorsSource: ""
-  property bool monitorsLoaded: false
+  readonly property int previewSeconds: displayController.previewSeconds
+  readonly property string monitorsSource: displayController.monitorsSource
+  readonly property bool monitorsLoaded: displayController.monitorsLoaded
   property var expect: ({ kinds: [], outputs: [], until: 0 })
   property double lastTopologyMs: 0
   property var actionQueue: []
@@ -508,8 +574,7 @@ Item {
     if (code !== 0) {
       if (state === "migrating") migrationFailed("could not read compositor state")
       else if (state === "previewing") {
-        previewBusy = false
-        revertPreview("Could not read the display state; reverting the preview.")
+        displayController.failPreview("Could not read the display state; reverting the preview.")
       } else if (state === "applyingLayout") {
         layoutError = "Could not read the restored display state."
         state = "idle"
@@ -537,22 +602,7 @@ Item {
   }
 
   function syncDisplayDraft() {
-    var enabled = monitors.filter(function(m) { return !m.disabled }).map(function(m) { return m.name })
-    var saved = MonitorsLua.managedGeometry(monitorsSource)
-    displayDraft = monitors.filter(function(m) { return root.validConnector(m.name) && lanes[m.name] }).map(function(m) {
-      var geometry = m.disabled || Model.isMirror(m) ? saved[m.name] : null
-      if (!geometry || (m.availableModes || []).indexOf(geometry.mode) < 0) geometry = null
-      return { name: m.name, description: m.description || m.model || "", width: Number(m.width),
-        height: Number(m.height), refreshRate: Number(m.refreshRate), availableModes: m.availableModes || [],
-        mode: geometry ? geometry.mode : Model.currentMode(m),
-        x: geometry ? geometry.x : Number(m.x) || 0, y: geometry ? geometry.y : Number(m.y) || 0,
-        scale: geometry ? geometry.scale : Number(m.scale) || 1,
-        transform: geometry ? geometry.transform : Number(m.transform) || 0,
-        enabled: enabled.indexOf(m.name) !== -1, lane: lanes[m.name] }
-    })
-    draftMode = config.mode
-    draftSingleTarget = config.singleTarget
-    draftMirrorSource = config.mirrorSource || ""
+    return displayController.syncDisplayDraft()
   }
 
   function focusedMonitor() {
@@ -912,19 +962,7 @@ Item {
   }
 
   function migrateMonitorPrecedence(done) {
-    // Existing v2 blocks moved to the front once. Personal Lua bytes survive.
-    var info = MonitorsLua.markerInfo(monitorsSource)
-    if (!info.starts.length && !info.ends.length) { finishAuthorityMigration(done, true); return }
-    try {
-      var next = MonitorsLua.migrateBlock(monitorsSource)
-      if (next === monitorsSource) { finishAuthorityMigration(done, true); return }
-      enqueue(["sh", "-c", Transactions.settings, "sh", monitorsPath, monitorsSource, next], function(code) {
-        if (code !== 0) root.layoutError = "Could not migrate monitor rule precedence; personal configuration was preserved."
-        monitorsFile.reload()
-        if (code === 0) root.finishAuthorityMigration(done, false)
-        else done()
-      })
-    } catch (error) { layoutError = String(error); done() }
+    return displayController.migrateMonitorPrecedence(done)
   }
 
   function applyRuntime() {
@@ -938,122 +976,35 @@ Item {
   }
 
   function setDisplayValue(name, key, value) {
-    if (!draftEditable) return "busy"
-    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
-    if (!displayDraft.some(function(d) { return d.name === name })) return "invalid"
-    if (["mode", "x", "y", "scale", "transform", "enabled"].indexOf(key) === -1) return "invalid"
-    var next = displayDraft.map(function(display) {
-      if (display.name !== name) return display
-      var copy = Object.assign({}, display)
-      copy[key] = value
-      return copy
-    })
-    displayDraft = next
-    return "ok"
+    return displayController.setDisplayValue(name, key, value)
   }
 
   function setResizedDisplayValue(name, key, value) {
-    if (!draftEditable || ["mode", "scale", "transform"].indexOf(key) === -1) return "invalid"
-    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
-    var before = displayDraft.find(function(display) { return display.name === name })
-    if (!before) return "invalid"
-    var changed = Object.assign({}, before)
-    changed[key] = value
-    var peers = draftMode === "extend" && before.enabled
-      ? displayDraft.filter(function(display) { return display.enabled }) : [before]
-    var position = Model.resizedPosition(before, changed, peers)
-    changed.x = Math.round(position.x)
-    changed.y = Math.round(position.y)
-    displayDraft = displayDraft.map(function(display) {
-      return display.name === name ? changed : display
-    })
-    return "ok"
+    return displayController.setResizedDisplayValue(name, key, value)
   }
 
   function setDisplayTransform(name, value) {
-    if (!Number.isInteger(value) || value < 0 || value > 7) return "invalid"
-    return setResizedDisplayValue(name, "transform", value)
+    return displayController.setDisplayTransform(name, value)
   }
 
   function applyDisplaySetting(name, key, value) {
-    // Side controls are deliberate, discrete choices and do not need the
-    // safety countdown used for topology edits. Persist first and let
-    // Hyprland's watched config apply the new value once; previewing it first
-    // would reconfigure the output, then the old file could win on a reload,
-    // and Keep would reconfigure it a third time.
-    if (state !== "idle" || workspaceData.pending || migrationPhase) return "busy"
-    if (["scale", "mode"].indexOf(key) === -1) return "invalid"
-    var display = displayDraft.find(function(item) { return item.name === name })
-    if (display && display[key] === value) return "ok"
-    var before = displayDraft
-    if (setResizedDisplayValue(name, key, value) !== "ok") return "invalid"
-    try {
-      var options = { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
-        enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
-      var generated = MonitorsLua.generate(displayDraft, options)
-      var source = MonitorsLua.replaceManagedBlock(monitorsSource || "", generated.block)
-      pendingDisplayConfig = generated
-      keepOptions = JSON.parse(JSON.stringify(options))
-      layoutError = ""
-      if (panelWanted) panelTransferUntil = Date.now() + 3000
-      removalGrace.stop()
-      reloadDebounce.stop()
-      startKeepFiles(source, generated.plain, "control")
-      return "started"
-    } catch (error) {
-      displayDraft = before
-      pendingDisplayConfig = null
-      keepOptions = null
-      layoutError = String(error.message || error)
-      return "invalid"
-    }
+    return displayController.applyDisplaySetting(name, key, value)
   }
 
   function setDisplayEnabled(name, enabled) {
-    if (!draftEditable) return "busy"
-    if (!enabled && displayDraft.filter(function(d) { return d.enabled && d.name !== name }).length === 0) {
-      layoutError = "At least one display must remain enabled."
-      return "invalid"
-    }
-    if (setDisplayValue(name, "enabled", enabled) !== "ok") return "invalid"
-    if (enabled && draftMode === "single" && draftSingleTarget !== name) {
-      draftMode = "extend"
-      draftSingleTarget = ""
-    }
-    // Turning off the Single target must select a surviving target.
-    if (draftMode === "single" && (!enabled && draftSingleTarget === name))
-      draftSingleTarget = displayDraft.find(function(d) { return d.enabled }).name
-    return previewLayout()
+    return displayController.setDisplayEnabled(name, enabled)
   }
 
   function displayEnabled(name) {
-    var states = MonitorsLua.runtimeModeStates(displayDraft, { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
-      enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) })
-    return states.some(function(d) { return d.name === name && !d.disabled })
+    return displayController.displayEnabled(name)
   }
 
   function setDisplayPosition(name, x, y) {
-    if (!draftEditable || !isFinite(x) || !isFinite(y)) return "invalid"
-    try { MonitorsLua.connector(name) } catch (error) { return "invalid" }
-    if (!displayDraft.some(function(display) { return display.name === name })) return "invalid"
-    displayDraft = displayDraft.map(function(display) {
-      return display.name === name ? Object.assign({}, display, { x: Math.round(x), y: Math.round(y) }) : display
-    })
-    return "ok"
+    return displayController.setDisplayPosition(name, x, y)
   }
 
   function setModeValue(mode, target) {
-    if (!draftEditable) return "busy"
-    if (["extend", "mirror", "single"].indexOf(mode) === -1) return "invalid"
-    if (mode === "single") {
-      try { MonitorsLua.connector(target) } catch (error) { return "invalid" }
-      if (!displayDraft.some(function(display) { return display.name === target })) return "invalid"
-      setDisplayValue(target, "enabled", true)
-    }
-    draftMode = mode
-    draftSingleTarget = mode === "single" ? target : ""
-    draftMirrorSource = mode === config.mode ? (config.mirrorSource || "") : ""
-    return previewLayout()
+    return displayController.setModeValue(mode, target)
   }
 
   function setDirectionValue(value) {
@@ -1083,7 +1034,7 @@ Item {
     saveConfig()
     syncDisplayDraft()
     // A source change is an explicit topology edit and uses the same guarded preview.
-    if (draftMode === "mirror") { draftMirrorSource = name; return previewLayout() }
+    if (draftMode === "mirror") return displayController.previewMirrorSource(name)
     reconcile()
     return "started"
   }
@@ -1095,67 +1046,23 @@ Item {
   }
 
   function previewLayout() {
-    if (!draftEditable) return "busy"
-    if (workspaceData.pending || migrationPhase) return "busy"
-    try {
-      if (draftMode === "extend" && Model.layoutOverlaps(displayDraft.filter(function(d) { return d.enabled })).length)
-        throw new Error("Displays overlap")
-      var generated = MonitorsLua.generate(displayDraft, {
-        mode: draftMode, enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }),
-        singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource
-      })
-      // A re-edit joins the session already in progress: keep the baseline
-      // the first preview captured, so Revert still means "back to the layout
-      // as it was before this session", and Revert never lands mid-session.
-      if (state !== "previewing") { previewBefore = monitors.slice(); previewApplied = null }
-      pendingDisplayConfig = generated
-      layoutError = ""
-      if (panelWanted) panelTransferUntil = Date.now() + 3000
-      removalGrace.stop()
-      reloadDebounce.stop()
-      begin("previewing")
-      previewBusy = true
-      previewCountdown.stop()
-      previewArm.running = true
-      return "started"
-    } catch (error) {
-      layoutError = String(error.message || error)
-      return "invalid"
-    }
+    return displayController.previewLayout()
   }
 
   function applyPreview() {
-    if (state !== "previewing" || !pendingDisplayConfig) return
-    refresh(true, function() { root.applyPreviewSnapshot() })
+    return displayController.applyPreview()
   }
 
   function panelTransferTarget(options) {
-    var states = MonitorsLua.runtimeModeStates(displayDraft, options)
-    var usable = states.filter(function(d) { return !d.disabled && !d.mirror })
-    if (!usable.length) return ""
-    return usable.some(function(d) { return d.name === panelScreenName }) ? panelScreenName : usable[0].name
+    return displayController.panelTransferTarget(options)
   }
 
   function previewFocusTarget(options) {
-    var states = MonitorsLua.runtimeModeStates(displayDraft, options)
-    var usable = states.filter(function(d) { return !d.disabled && !d.mirror })
-    if (!usable.length) return ""
-    var focused = monitors.find(function(monitor) { return monitor.focused })
-    if (!focused) return ""
-    var next = states.find(function(state) { return state.name === focused.name })
-    return next && (next.disabled || next.mirror) ? usable[0].name : ""
+    return displayController.previewFocusTarget(options)
   }
 
   function activationRule(name) {
-    if (!name) return ""
-    var monitor = monitors.find(function(item) { return item.name === name })
-    var mirror = monitor ? String(monitor.mirrorOf || "") : ""
-    if (monitor && monitor.disabled !== true && (!mirror || mirror === "none")) return ""
-    var display = displayDraft.find(function(item) { return item.name === name })
-    // A state-only rule can lose to the persisted full rule when a disabled
-    // output is re-added. Reassert its exact geometry so it stays available
-    // long enough to receive focus and the migrating windows.
-    return display ? MonitorsLua.monitorRule(display, { disabled: false, mirror: "" }) : ""
+    return displayController.activationRule(name)
   }
 
   function clearPanelEvacuation() {
@@ -1167,45 +1074,15 @@ Item {
   }
 
   function clearPreviewApplyStage() {
-    clearPanelEvacuation()
-    previewApplyLua = ""
-    previewApplyStaged = false
-    previewApplyExpectedOutputs = []
-    previewApplyFocusTarget = ""
-    previewApplyActivateLua = ""
-    previewApplyMigrateFirst = false
-    previewApplyPanelOrigin = ""
-    previewApplyPanelTarget = ""
+    return displayController.clearPreviewApplyStage()
   }
 
   function failPreviewApply(message) {
-    var origin = previewApplyPanelOrigin
-    clearPreviewApplyStage()
-    if (panelWanted && origin) {
-      panelScreenName = origin
-      panelTransferUntil = Date.now() + 3000
-    }
-    previewBusy = false
-    revertPreview(message)
+    return displayController.failPreviewApply(message)
   }
 
   function stagePreviewApply(lua, expectedOutputs, options) {
-    previewApplyLua = lua
-    previewApplyStaged = true
-    previewApplyExpectedOutputs = expectedOutputs
-    previewApplyFocusTarget = previewFocusTarget(options)
-    previewApplyActivateLua = activationRule(previewApplyFocusTarget)
-    previewApplyMigrateFirst = previewApplyActivateLua !== ""
-    previewApplyPanelOrigin = panelScreenName
-    previewApplyPanelTarget = panelWanted ? panelTransferTarget(options) : ""
-    // KeyboardPanel owns dismiss surfaces on every output, including peers.
-    // Close it even when its own monitor survives the topology change.
-    if (panelWanted && previewApplyPanelOrigin && previewApplyPanelTarget
-        && expectedOutputs.length > 0) {
-      requestPanelEvacuation(previewApplyPanelOrigin, previewApplyPanelTarget, "preview")
-      return
-    }
-    continuePreviewApply()
+    return displayController.stagePreviewApply(lua, expectedOutputs, options)
   }
 
   function requestPanelEvacuation(from, to, purpose) {
@@ -1230,385 +1107,55 @@ Item {
   }
 
   function panelEvacuationTimedOut() {
-    if (panelEvacuationPurpose !== "revert") {
-      failPreviewApply("Could not safely move Station before disabling its display.")
-      return
-    }
-    var origin = panelEvacuationFrom
-    clearPanelEvacuation()
-    pendingRevertReason = ""
-    pendingRevertPanelTarget = ""
-    pendingRevertPanelOrigin = ""
-    pendingRevertFocusTarget = ""
-    pendingRevertActivateLua = ""
-    previewBusy = false
-    layoutError = "Could not safely close Station before restoring the saved display layout."
-    if (panelWanted && origin) {
-      panelScreenName = origin
-      panelTransferUntil = Date.now() + 3000
-    }
+    return displayController.panelEvacuationTimedOut(panelEvacuationPurpose, panelEvacuationFrom)
   }
 
   function continuePreviewApply() {
-    if (state !== "previewing" || !previewApplyStaged) return
-    var lua = previewApplyLua
-    var expectedOutputs = previewApplyExpectedOutputs.slice()
-    var focusTarget = previewApplyFocusTarget
-    var activateLua = previewApplyActivateLua
-    function applyMonitors() {
-      if (root.state !== "previewing") return
-      root.expect = { kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 }
-      root.evalLua(lua, function(code, output) {
-        if (root.state !== "previewing") return
-        if (code !== 0 || (output && output.trim() !== "ok")) {
-          root.failPreviewApply("Could not apply the display preview.")
-          return
-        }
-        var target = root.previewApplyPanelTarget
-        root.clearPreviewApplyStage()
-        if (root.panelWanted && target) {
-          root.panelScreenName = target
-          root.panelTransferUntil = Date.now() + 3000
-        }
-        root.reconcile()
-      })
-    }
-    function focusSurvivor() {
-      function afterFocus() {
-        // When the destination started disabled, move clients while both
-        // outputs still exist. Removing their current output first exposes
-        // GTK clients to a stale Wayland-output callback and can crash them.
-        if (root.previewApplyMigrateFirst) root.reconcile()
-        else applyMonitors()
-      }
-      if (!focusTarget) { afterFocus(); return }
-      root.evalLua(Hypr.focusMonitor(focusTarget), function(code, output) {
-        if (root.state !== "previewing") return
-        if (code !== 0 || (output && output.trim() !== "ok")) {
-          root.failPreviewApply("Could not focus the surviving display; preview was not applied.")
-          return
-        }
-        afterFocus()
-      })
-    }
-    // A Single-to-Single switch can target an output that is currently off.
-    // Bring it up on its own, then focus it, and only then remove the old one.
-    root.expect = { kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 }
-    if (!activateLua) { focusSurvivor(); return }
-    evalLua(activateLua, function(code, output) {
-      if (root.state !== "previewing") return
-      if (code !== 0 || (output && output.trim() !== "ok")) {
-        root.failPreviewApply("Could not enable the surviving display; preview was not applied.")
-        return
-      }
-      focusSurvivor()
-    })
+    return displayController.continuePreviewApply()
   }
 
   function finishPreviewApply() {
-    if (state !== "previewing") return
-    if (previewApplyStaged && previewApplyMigrateFirst) {
-      var lua = previewApplyLua
-      var expectedOutputs = previewApplyExpectedOutputs.slice()
-      var target = previewApplyPanelTarget
-      // Mark this phase consumed before dispatch. Monitor events are expected
-      // while the old output is removed and must not start it a second time.
-      previewApplyMigrateFirst = false
-      expect = { kinds: ["monitor", "workspace"], outputs: expectedOutputs, until: Date.now() + 2000 }
-      evalLua(lua, function(code, output) {
-        if (root.state !== "previewing") return
-        if (code !== 0 || (output && output.trim() !== "ok")) {
-          root.failPreviewApply("Could not finish the display preview.")
-          return
-        }
-        root.clearPreviewApplyStage()
-        if (root.panelWanted && target) {
-          root.panelScreenName = target
-          root.panelTransferUntil = Date.now() + 3000
-        }
-        root.refresh(true, function() {
-          // The fresh snapshot has absorbed the expected removal.
-          workspace.clearTopologyDirty()
-          root.finishPreviewApply()
-        })
-      })
-      return
-    }
-    if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
-    if (previewAbortReason) {
-      var reason = previewAbortReason
-      previewAbortReason = ""
-      previewBusy = false
-      revertPreview(reason)
-      return
-    }
-    // Give the user the full confirmation interval after migration, even if
-    // the compositor was slow. The original watchdog still protects the apply.
-    enqueue(["touch", stateDir + "/preview.token"], function(code) {
-      if (root.state !== "previewing") return
-      root.previewBusy = false
-      if (code !== 0) { root.revertPreview("Could not renew preview recovery."); return }
-      Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", stateDir + "/preview.token"])
-      root.previewSeconds = 12
-      root.previewObservedSignature = root.monitorSignature()
-      previewCountdown.restart()
-      if (root.panelWanted) root.panelTransferUntil = Date.now() + 3000
-    })
+    return displayController.finishPreviewApply()
   }
 
   function applyPreviewSnapshot() {
-    if (state !== "previewing" || !pendingDisplayConfig) return
-    if (!previewBaseline && Grid.valid(workspaceMap)) {
-      previewBaseline = Grid.plan(workspaceMap, workspaceMap, clients, currentStation)
-      previewBaseline.panelScreenName = panelScreenName
-    }
-    Quickshell.execDetached(["sh", "-c", Transactions.watchdog, "sh", "20", stateDir + "/preview.token"])
-    var lua = pendingDisplayConfig.block.split("\n").filter(function(line) {
-      return line !== MonitorsLua.START && line !== MonitorsLua.END
-    }).join("\n")
-    var previous = previewApplied ? previewApplied.displays : previewBefore.map(function(monitor) {
-      return Object.assign({}, monitor, { mode: Model.currentMode(monitor),
-        enabled: Model.enabledNames(previewBefore, config.enabled).indexOf(monitor.name) !== -1 })
-    })
-    var previousOptions = previewApplied ? previewApplied.options : {
-      mode: config.mode, singleTarget: config.singleTarget, mirrorSource: config.mirrorSource, enabled: config.enabled
-    }
-    var nextOptions = { mode: draftMode, singleTarget: draftSingleTarget, mirrorSource: draftMirrorSource,
-      enabled: displayDraft.filter(function(d) { return d.enabled }).map(function(d) { return d.name }) }
-    var positionRules = MonitorsLua.positionOnlyRules(previous, pendingDisplayConfig.displays,
-      previewApplied ? previewApplied.mode : config.mode, draftMode)
-    if (positionRules !== null) lua = positionRules.join("; ")
-    else {
-      var modeRules = MonitorsLua.modeOnlyRules(previous, pendingDisplayConfig.displays,
-        previousOptions, nextOptions)
-      if (modeRules !== null) lua = modeRules.join("; ")
-    }
-    var expectedOutputs = positionRules !== null ? positionRules.map(function(rule) {
-      return pendingDisplayConfig.displays.find(function(display) {
-        return rule.indexOf("output = " + MonitorsLua.luaString(display.name) + ",") !== -1
-      }).name
-    }) : modeRules !== null ? MonitorsLua.changedModeNames(pendingDisplayConfig.displays,
-      previousOptions, nextOptions) : MonitorsLua.changedOutputs(
-        pendingDisplayConfig.displays, nextOptions, previewBefore, true)
-    previewApplied = { displays: pendingDisplayConfig.displays, mode: draftMode, options: nextOptions }
-    stagePreviewApply(lua, expectedOutputs, nextOptions)
+    return displayController.applyPreviewSnapshot()
   }
 
   function abandonPreview(reason) {
-    previewCountdown.stop()
-    gen += 1
-    configGeneration += 1
-    clearPanelEvacuation()
-    clearPreviewApplyStage()
-    pendingDisplayConfig = null
-    previewApplied = null
-    previewAbortReason = ""
-    previewBusy = false
-    state = migrationPhase ? "migrating" : "idle"
-    layoutError = reason || "External display change accepted; preview cancelled."
-    enqueue(["rm", "-f", stateDir + "/preview.token"], function() {
-      root.refresh(true, function() { root.applyRuntime() })
-    })
+    return displayController.abandonPreview(reason)
   }
 
   function revertPreview(reason) {
-    if (state !== "previewing") return "idle"
-    if (previewBusy) return "busy"
-    previewBusy = true
-    pendingRevertReason = reason || ""
-    pendingRevertPanelTarget = panelWanted ? panelTransferTarget(config) : ""
-    var origin = panelScreenName
-    pendingRevertPanelOrigin = origin
-    pendingRevertFocusTarget = previewFocusTarget(config)
-    pendingRevertActivateLua = activationRule(pendingRevertFocusTarget)
-    clearPreviewApplyStage()
-    if (panelWanted && origin && pendingRevertPanelTarget) {
-      requestPanelEvacuation(origin, pendingRevertPanelTarget, "revert")
-      return "started"
-    }
-    continueRevertPreview()
-    return "started"
+    return displayController.revertPreview(reason)
   }
 
   function continueRevertPreview() {
-    if (state !== "previewing") return
-    var reason = pendingRevertReason
-    var target = pendingRevertPanelTarget
-    var origin = pendingRevertPanelOrigin
-    var focusTarget = pendingRevertFocusTarget
-    var activateLua = pendingRevertActivateLua
-    pendingRevertReason = ""
-    pendingRevertPanelTarget = ""
-    pendingRevertPanelOrigin = ""
-    pendingRevertFocusTarget = ""
-    pendingRevertActivateLua = ""
-    clearPreviewApplyStage()
-    previewCountdown.stop()
-    function failPreparation(message) {
-      if (root.state !== "previewing") return
-      root.previewBusy = false
-      root.layoutError = message
-      if (root.panelWanted && origin) {
-        root.panelScreenName = origin
-        root.panelTransferUntil = Date.now() + 3000
-      }
-      root.previewSeconds = 12
-      root.previewObservedSignature = root.monitorSignature()
-      previewCountdown.restart()
-    }
-    function reloadSavedLayout() {
-      if (root.state !== "previewing") return
-      if (root.panelWanted) {
-        if (target) root.panelScreenName = target
-        root.panelTransferUntil = Date.now() + 3000
-      }
-      root.gen += 1
-      root.state = "applyingLayout"
-      root.pendingDisplayConfig = null
-      if (root.previewBaseline && root.previewBaseline.panelScreenName)
-        root.panelScreenName = root.previewBaseline.panelScreenName
-      root.enqueue(["rm", "-f", root.stateDir + "/preview.token"], function() {
-        root.enqueue(["hyprctl", "reload"], function(code) {
-          if (code !== 0) root.layoutError = "Could not reload the saved monitor layout."
-          root.restoreAppliedLayout()
-        })
-      })
-      if (reason) root.layoutError = reason
-    }
-    function focusSurvivor() {
-      if (!focusTarget) { reloadSavedLayout(); return }
-      root.evalLua(Hypr.focusMonitor(focusTarget), function(code, output) {
-        if (code !== 0 || (output && output.trim() !== "ok")) {
-          failPreparation("Could not focus the saved display; layout was not restored.")
-          return
-        }
-        reloadSavedLayout()
-      })
-    }
-    if (!activateLua) { focusSurvivor(); return }
-    expect = { kinds: ["monitor", "workspace"], outputs: [focusTarget], until: Date.now() + 2000 }
-    evalLua(activateLua, function(code, output) {
-      if (code !== 0 || (output && output.trim() !== "ok")) {
-        failPreparation("Could not enable the saved display; layout was not restored.")
-        return
-      }
-      focusSurvivor()
-    })
+    return displayController.continueRevertPreview()
   }
 
   function keepPreview() {
-    if (state !== "previewing" || !pendingDisplayConfig) return "idle"
-    if (previewBusy || workspaceData.pending) return "busy"
-    try {
-      if (panelWanted) panelTransferUntil = Date.now() + 3000
-      var source = monitorsSource || ""
-      var merged = MonitorsLua.replaceManagedBlock(source, pendingDisplayConfig.block)
-      // Personal rules follow the Station block and retain final precedence.
-      keepOptions = JSON.parse(JSON.stringify(previewApplied.options))
-      previewCountdown.stop()
-      startKeepFiles(merged, pendingDisplayConfig.plain, "preview")
-      return "started"
-    } catch (error) {
-      layoutError = String(error.message || error)
-      return "invalid"
-    }
+    return displayController.keepPreview()
   }
 
   function startKeepFiles(source, plain, kind) {
-    keepSourceBaseline = monitorsSource
-    keepDisableToggle = kind === "preview" && pendingDisplayConfig && keepOptions
-      ? MonitorsLua.disableToggleToClear(internalDisableSource, pendingDisplayConfig.displays, keepOptions) : ""
-    state = "applyingLayout"
-    layoutWriteKind = kind || "direct"
-    keepFilesPending = true
-    // Unchanged FileView text produces no saved signal. Everything else must
-    // be acknowledged before the transaction can read its candidate files.
-    candidateReady = candidateFile.text() === source
-    plainCandidateReady = plainCandidateFile.text() === plain
-    if (!candidateReady) candidateFile.setText(source)
-    if (!plainCandidateReady) plainCandidateFile.setText(plain)
-    maybeStartKeep()
+    return displayController.startKeepFiles(source, plain, kind)
   }
 
   function maybeStartKeep() {
-    if (!keepFilesPending || !candidateReady || !plainCandidateReady) return
-    keepFilesPending = false
-    keepTransaction.running = true
+    return displayController.maybeStartKeep()
   }
 
   function keepFileFailed() {
-    if (!keepFilesPending) return
-    keepFilesPending = false
-    finishKeep(2, "")
+    return displayController.keepFileFailed()
   }
 
   function restoreAppliedLayout() {
-    // Our configreloaded event is suppressed while applyingLayout. Explicitly
-    // rebuild the draft from the fresh compositor snapshot and restore binds.
-    appliedGeneration = -1
-    previewApplied = null
-    clearPreviewApplyStage()
-    previewBusy = false
-    previewAbortReason = ""
-    pendingRevertReason = ""
-    pendingRevertPanelTarget = ""
-    pendingRevertPanelOrigin = ""
-    pendingRevertFocusTarget = ""
-    pendingRevertActivateLua = ""
-    keepOptions = null
-    layoutWriteKind = ""
-    refresh(true, function() {
-      root.state = "idle"
-      root.syncDisplayDraft()
-      root.applyRuntime()
-      root.armScreenHealthCheck()
-    })
+    return displayController.restoreAppliedLayout()
   }
 
   function finishKeep(code, errorText) {
-    if (code !== 0) {
-      var failedKind = layoutWriteKind
-      layoutWriteKind = ""
-      layoutError = code === 4 ? "Configuration changed while saving; newer edits were preserved." : code === 3 ? "Hyprland rejected the layout; the backup was restored. " + errorText.trim()
-        : "Could not save the monitor layout."
-      pendingDisplayConfig = null
-      if (code === 3 || code === 4) restoreAppliedLayout()
-      else if (failedKind !== "preview") {
-        keepOptions = null
-        state = "idle"
-        syncDisplayDraft()
-      }
-      else enqueue(["hyprctl", "reload"], function() { root.restoreAppliedLayout() })
-      return
-    }
-    var requestedDisplays = pendingDisplayConfig ? pendingDisplayConfig.displays : []
-    var requestedOptions = keepOptions
-    config.enabled = keepOptions.enabled.slice()
-    config.mode = keepOptions.mode
-    config.singleTarget = keepOptions.singleTarget || ""
-    config.mirrorSource = keepOptions.mirrorSource || ""
-    config = Object.assign({}, config)
-    pendingDisplayConfig = null
-    previewApplied = null
-    previewBaseline = null
-    keepOptions = null
-    layoutWriteKind = ""
-    layoutError = ""
-    monitorsFile.reload()
-    saveConfig()
-    refresh(true, function() {
-      root.state = "idle"
-      // The config-file watcher has applied the persisted rules. Replaying
-      // monitor state here creates another topology operation for no benefit;
-      // only rebuild bookkeeping, commit any preview journal, and restore
-      // runtime binds erased by a config reload.
-      if (requestedDisplays.length && MonitorsLua.changedOutputs(requestedDisplays, requestedOptions, root.monitors, true).length)
-        root.layoutError = "Personal Hyprland rules override part of this layout. Station shows the applied values."
-      root.updateAssignments()
-      root.applyBinds()
-      root.reconcile()
-      root.armScreenHealthCheck()
-    })
+    return displayController.finishKeep(code, errorText)
   }
 
   function maybeStart() {
@@ -1772,16 +1319,7 @@ Item {
   }
 
   function removeStationBlock() {
-    if (state !== "idle") return "busy"
-    try {
-      var source = MonitorsLua.removeManagedBlock(monitorsSource)
-      if (source === monitorsSource) return "absent"
-      var generated = MonitorsLua.generate(displayDraft, { mode: "extend",
-        enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" })
-      keepOptions = { mode: "extend", enabled: displayDraft.map(function(display) { return display.name }), singleTarget: "" }
-      startKeepFiles(source, generated.plain, "direct")
-      return "started"
-    } catch (error) { layoutError = String(error.message || error); return "invalid" }
+    return displayController.removeStationBlock()
   }
 
   function handleStockPlugins(raw) {
@@ -1987,42 +1525,6 @@ Item {
   }
 
   FileView {
-    id: monitorsFile
-    path: root.monitorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: {
-      root.monitorsSource = text()
-      root.monitorsLoaded = true
-      root.maybeStart()
-      if (root.started && root.state === "idle") root.syncDisplayDraft()
-    }
-    onLoadFailed: { root.monitorsSource = ""; root.monitorsLoaded = true; root.maybeStart() }
-    onFileChanged: reload()
-  }
-
-  FileView {
-    id: internalDisableFile
-    path: root.internalDisablePath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.internalDisableSource = text()
-    onLoadFailed: root.internalDisableSource = ""
-    onFileChanged: reload()
-  }
-
-  FileView {
-    id: candidateFile; path: root.candidatePath; atomicWrites: true; printErrors: false
-    onSaved: { root.candidateReady = true; root.maybeStartKeep() }
-    onSaveFailed: root.keepFileFailed()
-  }
-  FileView {
-    id: plainCandidateFile; path: root.plainCandidatePath; atomicWrites: true; printErrors: false
-    onSaved: { root.plainCandidateReady = true; root.maybeStartKeep() }
-    onSaveFailed: root.keepFileFailed()
-  }
-
-  FileView {
     id: personalBindings
     path: Quickshell.env("HOME") + "/.config/hypr/bindings.lua"
     watchChanges: true
@@ -2041,14 +1543,6 @@ Item {
     onLoadFailed: { if (!root.stateLoaded) { root.persisted = Store.stateDefaults(); root.stateLoaded = true; root.maybeStart() } }
   }
 
-  FileView {
-    id: previewToken
-    path: root.stateDir + "/preview.token"
-    printErrors: false
-    onLoaded: { root.previewFound = true; root.previewLoaded = true; root.maybeStart() }
-    onLoadFailed: { root.previewFound = false; root.previewLoaded = true; root.maybeStart() }
-  }
-
   Process {
     id: ensureDirs
     command: ["mkdir", "-p", root.configDir, root.stateDir]
@@ -2057,28 +1551,9 @@ Item {
       configFile.reload()
       stateFile.reload()
       workspace.reload()
-      previewToken.reload()
+      displayController.reloadPreviewToken()
       root.maybeStart()
     }
-  }
-
-  Process {
-    id: previewArm
-    command: ["touch", root.stateDir + "/preview.token"]
-    onExited: function(code) {
-      if (code === 0) root.applyPreview()
-      else { root.layoutError = "Could not arm preview recovery."; root.previewBusy = false; root.state = "idle" }
-    }
-  }
-
-  Process {
-    id: keepTransaction
-    command: ["sh", "-c", Transactions.keep, "sh", root.candidatePath, root.monitorsPath,
-      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", root.keepSourceBaseline, root.internalDisablePath, root.keepDisableToggle]
-    property string errors: ""
-    stderr: StdioCollector { waitForEnd: true; onStreamFinished: keepTransaction.errors = text }
-    onRunningChanged: if (running) errors = ""
-    onExited: function(code) { root.finishKeep(code, errors) }
   }
 
   Process {
@@ -2202,15 +1677,7 @@ Item {
     interval: 2500
     onTriggered: if (root.panelEvacuationWaiting) root.panelEvacuationTimedOut()
   }
-  Timer {
-    id: previewCountdown
-    interval: 1000
-    repeat: true
-    onTriggered: {
-      root.previewSeconds -= 1
-      if (root.previewSeconds <= 0) root.revertPreview("Preview timed out.")
-    }
-  }
+
   Timer {
     id: followFocus
     interval: 100

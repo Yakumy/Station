@@ -54,3 +54,25 @@ instantiates Service or uses the installed journal. Neither proves hardware
 behavior or recovery after a shell crash. The portable Node suite also compares
 pre-M5 and owner effect traces and journal bytes, including rollback in both
 directions after partial movement.
+
+Display ownership has two local checks:
+
+```sh
+python3 tools/v2/check-display-owner.py
+python3 tools/v2/check-display-fileview.py
+```
+
+The owner check uses production DisplayController, WorkspaceController, Service
+composition/projections and the retained root panel barrier. It doubles file
+signals, processes and compositor effects. It exercises survivor ordering,
+acknowledgment failures, re-edits, partial restart, candidate completion and stale
+callbacks through Qt bindings. The pointer/layout check now extracts the same
+production display-owner setters instead of their root forwarding methods.
+
+The FileView check uses temporary paths and real file watching/save signals.
+Only Process and StdioCollector transports are doubled in its temporary owner
+copy. No native transaction or compositor process executes. An external temporary
+source edit tests watching. Candidate failures and identical retries test real
+signal behavior. Final disk checks preserve personal source and M2 artifacts.
+These checks do not prove physical panel unmapping, hardware changes or recovery
+after a shell crash. They do not instantiate production Service.

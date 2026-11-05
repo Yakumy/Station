@@ -10,8 +10,9 @@ Do not push. Do not install an update or change the running desktop under this
 scope. M4 is committed as `ddceb48`. After the M5 packet review, the user delegated
 the decision and instructed continued work. The accepted scope and source SHA
 are recorded in the [M5 review packet](ARCHITECTURE-M5-REVIEW.md).
-M5 is completed in this checkpoint revision. Stop before M6 implementation.
-Prepare its separate review packet and obtain approval first. M2 deletion requires
+M5 is committed as `8395b1a`. The user separately approved the
+[M6 review packet](ARCHITECTURE-M6-REVIEW.md), then instructed continued work.
+M6 is completed in this checkpoint revision. Next is M7. M2 deletion requires
 its cross-version and detached-recovery proof. M8 and M9 remain optional.
 
 ## Completed work
@@ -40,7 +41,7 @@ experiment was run. Portable checks need unrestricted subprocess execution on
 this machine because the sandbox rejects some Node/Lua fixtures.
 
 M2 compatibility evaluation is committed as `8e4f7cf`. M3 is committed as
-`40f0d8b`. M4 is committed as `ddceb48`. M5 is completed in this checkpoint revision.
+`40f0d8b`. M4 is committed as `ddceb48`. M5 is committed as `8395b1a`.
 
 ## M3: bar settings owner
 
@@ -97,7 +98,8 @@ No root handler independently writes migration state.
 
 The owner receives data and finite effect ports, not the Service QObject.
 Root operation arbitration, queues, configuration generation, expected events,
-preview baseline and watchdog remain with Service. Preview reconciliation retains
+preview baseline and watchdog remained with Service at M5. M6 transfers their
+ownership as recorded below. Preview reconciliation retains
 the enclosing generation. Journal preview data and consumer snapshots are detached.
 The extraction preserves the existing late-callback policy without adding a token.
 
@@ -136,8 +138,62 @@ Sandboxed Node execution again failed/stalled at subprocess fixtures. The
 unrestricted focused and full runs passed. No dependencies were installed.
 No installed plugin, live configuration or topology changed. Nothing was pushed.
 
-M2 plain copies remain. M6 implementation has not started and needs its own
-review packet and approval.
+M2 plain copies remain. M6 ownership and evidence follow below.
+
+## M6: display transaction owner
+
+The user explicitly approved packet revision 1 against
+`8395b1abbc65320a214e83e25269dc5c550d1e36`. The approval and scope remain in the
+[M6 packet](ARCHITECTURE-M6-REVIEW.md). Its initial documentation changes were
+preserved and are included with this milestone.
+
+`DisplayController.qml` now owns draft/preview state, original baseline, staging,
+source/candidate/token FileViews, preview-arm and Keep processes, and countdown.
+Service retains 32 forwarding methods, read-only/detached projections, root
+operation/configuration generations, both queues and the serial panel barrier.
+Workspace recovery, snapshot failure, Mirror role changes and source migration
+use explicit methods. No other root handler writes display-private state.
+Config publication and saving remain separate effects with owner cleanup and
+source reload between them. M2, fixed scripts, eight Keep arguments and native
+entry/bridge identities remain unchanged. No new cancellation policy was added.
+
+All 292 earlier Node cases retain their assertions. The existing display harness
+is reusable across old/new implementations and still passes its 19 original scenarios.
+Twenty-three additional Node cases cover ownership, 18 matching effect/state/byte
+traces, startup gates, and rollback in both directions. The exact pre-M6 Service
+fixture has SHA-256
+`1945107f0eeabb852fd6541591787cd663f832c179c98b6062a2cea21fbf6086`.
+Rollback cases use temporary pending journals, tokens and interrupted candidates.
+They preserve personal source bytes and the retained plain copy.
+
+`python3 tools/v2/check-display-owner.py` passed 19 behavior rows plus setup/cleanup.
+It uses the production Display/Workspace owners and Service composition, read-only
+projections and panel-barrier functions. I/O signals, processes and compositor
+execution are doubled. It covers both Mirror directions, migrate-first ordering,
+re-edits/new clients, partial restart, candidate order/identical text, failures,
+stale generations, running callbacks, observation cancellation and source readiness.
+
+`python3 tools/v2/check-display-fileview.py` passed with real FileViews and watching.
+All paths and runtime logs are temporary. Process/StdioCollector are doubled by
+qualified imports in the temporary owner copy. No transaction command executes.
+It checks source edits, actual candidate save/failure signals, identical retries
+and final disk bytes. Source bytes survive and no plain-copy commit occurs.
+This is not crash durability, detached watchdog survival or hardware evidence.
+
+The full portable suite passed 315 cases. All 29 runtime QML components compiled.
+Theme scan: 49 files, no violations. Layout passed 23 Qt results after adapting
+its source extraction to the production owner. The unchanged workspace Qt harness
+passed eight cases plus setup/cleanup. Clean-export package validation passed.
+Document links, anchors and fences resolve. Prose checks added no hard findings
+in changed lines. Final whitespace checks passed. The compiler retains its
+host-portal warning. Existing layout paint doubles log their usual warnings. The real-file
+fixture logs its deliberately failed candidate write and graphical-child warnings.
+
+Initial broad checks identified source-extraction fixtures that still referenced
+moved root bodies. They now exercise owner bodies or guards without losing assertions.
+The new precedence trace also needed its fake monitor path. These fixture failures
+were corrected before acceptance. No dependencies, installation, restart, live
+configuration/topology change or push occurred. M7 has not started.
 
 ## M2: retain plain-copy persistence
 
@@ -163,8 +219,8 @@ M3 and M4 do not depend on that deletion.
 1. Read `AGENTS.md`, the proposal and this checkpoint.
 2. Check `git status --short --branch` and `git log -5 --oneline`.
 3. Preserve any work outside the next milestone.
-4. Review the completed M5 evidence and prepare the separate M6 review packet.
-5. Keep M2 persistence intact. Obtain explicit M6 approval before implementation.
+4. Read the completed M5/M6 evidence before starting M7 panel/editor separation.
+5. Keep M2 persistence intact. M8/M9 remain optional and require demonstrated benefits.
 6. Update this checkpoint and affected architecture/contracts with each step.
 7. Inspect the complete and staged diff. Commit that step on `dev`. Do not push.
 

@@ -1,7 +1,7 @@
 """Exercise the production layout component with Qt pointer events offscreen.
 
 Only the Omarchy paint tokens/surface and preview compositor call are doubled.
-The real QML drag handler, JS geometry, and Service position setter run unchanged.
+The real QML drag handler, JS geometry, and display-owner setters run unchanged.
 No live compositor input, monitor changes, or desktop configuration writes.
 """
 from pathlib import Path
@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
-service = (repo / 'Service.qml').read_text()
+service = (repo / 'lib/DisplayController.qml').read_text()
 start = service.index('  function setDisplayPosition(')
 end = service.index('\n  function ', start + 1)
 setter = service[start:end]
@@ -18,7 +18,7 @@ for name in ('setDisplayValue', 'setResizedDisplayValue', 'setDisplayTransform',
     start = service.index('  function ' + name + '(')
     end = service.index('\n  function ', start + 1)
     setter += service[start:end]
-# The setter gates on the same editable flag the service declares, so the
+# The setter gates on the same editable flag the display owner declares, so the
 # probe has to declare it too or the real function throws.
 editable = next(line for line in service.splitlines() if 'property bool draftEditable' in line).strip()
 with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
@@ -80,11 +80,13 @@ Item {
   QtObject {
     id: service
     property string state: "idle"
+    readonly property string operationState: state
     property bool previewBusy: false
     property string draftMode: "extend"
     property string draftSingleTarget: ""
     property string draftMirrorSource: ""
     property string layoutError: ""
+    function reportError(message) { layoutError = message }
     ''' + editable + '''
     property var displayDraft: []
     property var bars: ({})

@@ -5,6 +5,7 @@ const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
 const MonitorsLua = require('../../lib/MonitorsLua.js');
 const source = readFileSync('Service.qml', 'utf8');
+const { ownerFunction } = require('./helpers/display-owner.cjs');
 
 for (const reason of ['', 'Preview timed out.']) {
   test(`preview restores applied geometry after fresh snapshot: ${reason || 'manual Revert'}`, () => {
@@ -40,7 +41,7 @@ for (const reason of ['', 'Preview timed out.']) {
       'continueRevertPreview', 'restoreAppliedLayout', 'syncDisplayDraft']) {
       const start = source.indexOf('  function ' + name + '(');
       const end = source.indexOf('\n  function ', start + 1);
-      c[name] = runInNewContext('(' + source.slice(start, end).trim() + ')', c);
+      c[name] = ownerFunction(name,c) || runInNewContext('(' + source.slice(start, end).trim() + ')', c);
     }
     c.panelTransferTarget = () => '';
     c.previewFocusTarget = () => '';

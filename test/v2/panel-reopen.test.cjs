@@ -5,6 +5,7 @@ const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 
 const service = readFileSync(join(__dirname, '..', '..', 'Service.qml'), 'utf8');
+const { source: displayOwner } = require('./helpers/display-owner.cjs');
 const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'StationPanel.qml'), 'utf8');
 
 test('the open intent lives on the service, which outlives the widget', () => {
@@ -129,8 +130,8 @@ test('a monitor removal closes and acknowledges the old output before reopening 
   assert.match(service, /function requestPanelEvacuation\(from, to, purpose\)/);
   assert.match(service, /panelEvacuationWaiting = panelEvacuationSerial \+ 1/);
   assert.match(service, /panelEvacuationSerial = panelEvacuationWaiting/);
-  assert.match(service, /evalLua\(Hypr\.focusMonitor\(focusTarget\)/);
-  assert.ok(service.indexOf('root.panelScreenName = target') > service.indexOf('root.evalLua(lua'),
+  assert.match(displayOwner, /evalLua\(Hypr\.focusMonitor\(focusTarget\)/);
+  assert.ok(displayOwner.indexOf('retainPanel(target)') > displayOwner.indexOf('root.evalLua(lua'),
     'the destination panel is not reopened until the monitor rule succeeds');
   assert.match(panel, /function closeForMonitorTransfer\(serial, screenName\)/);
   assert.match(panel, /popoutSwitchClosing = true\n {4}controller\.hide\(\)/);
@@ -165,8 +166,8 @@ test('a mode action actively probes the bridge for its evacuation request', () =
 });
 
 test('Revert uses the same safe close when the saved Single target differs', () => {
-  assert.match(service, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(config\) : ""/);
-  assert.match(service, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);
+  assert.match(displayOwner, /pendingRevertPanelTarget = panelWanted \? panelTransferTarget\(preferences\) : ""/);
+  assert.match(displayOwner, /requestPanelEvacuation\(origin, pendingRevertPanelTarget, "revert"\)/);
   assert.match(service, /if \(purpose === "revert"\) continueRevertPreview\(\)/);
 });
 

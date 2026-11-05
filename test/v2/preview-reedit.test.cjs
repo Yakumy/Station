@@ -2,30 +2,30 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/Model.js');
 const MonitorsLua = require('../../lib/MonitorsLua.js');
 
 const read = (...parts) => readFileSync(join(__dirname, '..', '..', ...parts), 'utf8');
 const service = read('Service.qml');
+const { source: owner, ownerFunction } = require('./helpers/display-owner.cjs');
 const layout = read('lib', 'DisplayLayout.qml');
 const tab = read('lib', 'DisplaysTab.qml');
 const panel = read('lib', 'StationPanel.qml');
 
 test('the draft stays editable while a preview is pending', () => {
-  assert.match(service, /readonly property bool draftEditable: \(state === "idle" \|\| state === "previewing"\) && !previewBusy/);
-  assert.match(service, /function setDisplayPosition\(name, x, y\) \{\n {4}if \(!draftEditable/);
-  assert.match(service, /function previewLayout\(\) \{\n {4}if \(!draftEditable\) return "busy"/);
+  assert.match(owner, /readonly property bool draftEditable: \(operationState === "idle" \|\| operationState === "previewing"\) && !previewBusy/);
+  assert.match(owner, /function setDisplayPosition\(name, x, y\) \{\n {4}if \(!draftEditable/);
+  assert.match(owner, /function previewLayout\(\) \{\n {4}if \(!draftEditable\) return "busy"/);
 });
 
 test('a re-edit joins the running session instead of restarting its baseline', () => {
-  const body = service.match(/function previewLayout\(\) \{([\s\S]*?)\n {2}\}/);
+  const body = owner.match(/function previewLayout\(\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(body, 'previewLayout is defined');
   // Revert has to mean "back to the layout this session started from", so a
   // second preview must not recapture monitors that already moved.
-  assert.match(body[1], /if \(state !== "previewing"\) \{ previewBefore = monitors\.slice\(\); previewApplied = null \}/);
+  assert.match(body[1], /if \(operationState !== "previewing"\) \{ previewBefore = monitors\.slice\(\); previewApplied = null \}/);
   assert.doesNotMatch(body[1], /\n {6}previewBefore = monitors\.slice\(\)/);
-  assert.match(body[1], /begin\("previewing"\)/);
+  assert.match(body[1], /beginPreview\(\)/);
   assert.match(body[1], /previewArm\.running = true/);
 });
 
@@ -45,9 +45,7 @@ test('Mirror runtime coordinates do not collapse the saved editable layout', () 
     lanes: { 'eDP-1': 2, 'HDMI-A-2': 1 }, displayDraft: [], draftMode: '', draftSingleTarget: '',
     root: { validConnector: () => true },
   };
-  const start = service.indexOf('  function syncDisplayDraft() {');
-  const end = service.indexOf('\n  function ', start + 1);
-  const sync = runInNewContext('(' + service.slice(start, end).trim() + ')', context);
+  const sync = ownerFunction('syncDisplayDraft',context);
   sync();
   assert.deepEqual(context.displayDraft.map(display => [display.name, display.x, display.y]),
     [['eDP-1', 1920, 0], ['HDMI-A-2', 0, 300]]);
@@ -71,9 +69,9 @@ test('successive position previews reconfigure only the output being moved', () 
     evalLua(lua) { calls.push(lua); },
   };
   context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
-  const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
+  const body = owner.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
   assert.ok(body);
-  const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
+  const apply = ownerFunction('applyPreviewSnapshot',context);
   draft[1].x = 2400;
   context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'extend', enabled: context.config.enabled });
   apply();
@@ -108,8 +106,8 @@ test('a mode-only preview enables the new single output first without geometry r
     evalLua(lua) { calls.push(lua); },
   };
   context.stagePreviewApply = (lua, outputs) => { context.expect = { outputs }; calls.push(lua); };
-  const body = service.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
-  const apply = runInNewContext('(function applyPreview() {' + body[1] + '\n})', context);
+  const body = owner.match(/  function applyPreviewSnapshot\(\) \{([\s\S]*?)\n  \}/);
+  const apply = ownerFunction('applyPreviewSnapshot',context);
   context.pendingDisplayConfig = MonitorsLua.generate(draft, { mode: 'single', singleTarget: 'HDMI-A-2', enabled: context.config.enabled });
   apply();
   assert.equal(calls.length, 1);
@@ -127,9 +125,9 @@ test('a mode-only preview enables the new single output first without geometry r
 });
 
 test('settling a preview still requires one, and unrelated work stays gated on idle', () => {
-  assert.match(service, /function revertPreview\(reason\) \{\n {4}if \(state !== "previewing"\)/);
-  assert.match(service, /function keepPreview\(\) \{\n {4}if \(state !== "previewing"/);
-  assert.match(service, /function removeStationBlock\(\) \{\n {4}if \(state !== "idle"\) return "busy"/);
+  assert.match(owner, /function revertPreview\(reason\) \{\n {4}if \(operationState !== "previewing"\)/);
+  assert.match(owner, /function keepPreview\(\) \{\n {4}if \(operationState !== "previewing"/);
+  assert.match(owner, /function removeStationBlock\(\) \{\n {4}if \(operationState !== "idle"\) return "busy"/);
 });
 
 test('layout edits stay previewable while side controls require idle', () => {

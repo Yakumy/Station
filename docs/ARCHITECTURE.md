@@ -215,7 +215,8 @@ bindings, stock-widget lease, and lifecycle flags live in `state.json`.
 `WorkspaceController.qml` is a persistent child of the single Service. It owns
 `workspace-map.json`, its load gate, migration phases, revisions, commit staging,
 focus identity, topology flag and 500 ms retry timer. Service keeps operation
-arbitration, effect/snapshot queues, preview baseline and watchdog. Four root
+arbitration and effect/snapshot queues. DisplayController owns the preview baseline
+and controls the normal watchdog lifecycle through a fixed root launcher. Four root
 methods forward to the owner. Event handlers mark topology through its method.
 Preview completion clears that flag only after its existing fresh snapshot.
 Root and OpenApps read detached journal projections. No controller QObject or
@@ -225,7 +226,34 @@ The owner receives explicit data bindings and finite callbacks, never the whole
 Service object. Ordinary reconciliation begins a root migration operation.
 Preview reconciliation reuses its enclosing operation and generation. It persists
 a detached preview baseline and restores recovered baseline data through a root
-callback. Only an ordinary committed migration clears that baseline here.
+callback to DisplayController. Only an ordinary committed migration clears that
+baseline here.
+
+`DisplayController.qml` owns display drafts, the original preview baseline,
+apply/Revert staging, source and candidate FileViews, token load state, preview-arm
+and Keep processes, and the countdown. It receives data and finite callbacks.
+Service exposes read-only scalar and detached data projections with compatible
+forwarding methods. The owner never receives Service, shell, panel or proxy QObjects.
+
+Service retains both generation domains and the serial panel-evacuation barrier.
+It validates the serial/output acknowledgment and keeps the 2500 ms timeout.
+DisplayController continues only after that barrier. Disabled destinations still
+receive activation and focus before migration, with old outputs removed afterward.
+The owner publishes expected events through Service before each relevant dispatch.
+WorkspaceController still owns journal phases and committed map visibility.
+
+Candidate acknowledgments and the retained plain copy move with display ownership.
+Unchanged candidate text remains ready without another saved signal. Keep publishes
+accepted config options before preview cleanup. It reloads the source FileView
+before saving config and requesting fresh compositor observations. Successful
+ordinary writes retain one watched apply. Explicit On + Keep retains the checked
+two-file toggle path and its single reload. Fixed scripts and argv are unchanged.
+
+Snapshot failure and workspace recovery use explicit display-owner methods.
+External changes cancel the preview and adopt the effective topology.
+Bootstrap still detects stale tokens and reloads current configuration through
+Service. Detached removal cleanup also remains on Service. These paths do not
+create another preview owner or reset the workspace journal.
 
 `workspace-map.json` contains the committed mapping and any pending migration.
 The owner waits for the FileView saved signal before executing a migration.

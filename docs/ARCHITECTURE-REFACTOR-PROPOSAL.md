@@ -1086,8 +1086,10 @@ evidence of a maintainability benefit. Installed updates, live tests and
 publishing remain outside this authorization. M4 is committed as `ddceb48`.
 After the M5 packet review, the user delegated the decision and instructed
 continued work. The [packet](ARCHITECTURE-M5-REVIEW.md) records the accepted M5
-scope and source SHA. M5 is implemented in this revision. M6 requires a separate
-packet and approval before implementation.
+scope and source SHA. M5 is committed as `8395b1a`.
+The user explicitly approved the [M6 packet](ARCHITECTURE-M6-REVIEW.md).
+M6 is implemented in this checkpoint revision. Its evidence and remaining limits
+are recorded in the implementation checkpoint.
 
 ### Mandatory human-review checkpoints before M5 and M6
 
@@ -1257,7 +1259,7 @@ later with the old plain-copy mechanism retained once its own gate is approved.
   remain root-owned. The journal schema, bytes, revisions, retry interval and
   callback policy remain compatible. See the checkpoint for actual verification.
 
-### M6 — Extract display edit/preview transaction ownership
+### M6 — Extract display edit/preview transaction ownership (implemented)
 
 - **Priority / effort / risk:** P2; large, 4–8 days; high.
 - **Human checkpoint:** mandatory pre-M6 packet and explicit approval after M5
@@ -1277,6 +1279,12 @@ later with the old plain-copy mechanism retained once its own gate is approved.
 - **Rollback:** revert extraction with unchanged files/journal/token contracts;
   keep detached recovery operational. No intermediate commit may have two preview
   owners or weaken watchdog coverage.
+- **Implementation:** one persistent DisplayController owns the preview baseline,
+  draft, source/candidate/token FileViews, both display processes and countdown.
+  Service retains generations, queues, panel serial/ack/timeout and startup/cleanup.
+  Workspace recovery and snapshot failures use explicit display-owner methods.
+  Config publication and saving remain separate ports with the existing order.
+  All M2 paths and fixed transaction arguments remain. See the checkpoint for evidence.
 
 ### M7 — Separate panel lifecycle from editors
 

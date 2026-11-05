@@ -35,15 +35,11 @@ test('recovery requires another active output that the shell still sees', () => 
 
 test('screen recovery is armed only after Keep or Revert has settled', () => {
   const service = readFileSync('Service.qml', 'utf8');
-  const restore = service.slice(service.indexOf('  function restoreAppliedLayout() {'),
-    service.indexOf('\n  function finishKeep(', service.indexOf('  function restoreAppliedLayout() {')));
-  const keep = service.slice(service.indexOf('  function finishKeep('),
-    service.indexOf('\n  function maybeStart()', service.indexOf('  function finishKeep(')));
-  const preview = service.slice(service.indexOf('  function finishPreviewApply() {'),
-    service.indexOf('\n  function applyPreviewSnapshot()', service.indexOf('  function finishPreviewApply() {')));
-
-  assert.match(restore, /state = "idle"[\s\S]*armScreenHealthCheck\(\)/);
-  assert.match(keep, /state = "idle"[\s\S]*armScreenHealthCheck\(\)/);
+  const owner = readFileSync('lib/DisplayController.qml','utf8');
+  const body = name => owner.match(new RegExp('^  function '+name+'\\([^]*?^  }','m'))[0];
+  const restore=body('restoreAppliedLayout'),keep=body('finishKeep'),preview=body('finishPreviewApply');
+  assert.match(restore, /setOperationState\("idle"\)[\s\S]*armScreenHealthCheck\(\)/);
+  assert.match(keep, /setOperationState\("idle"\)[\s\S]*armScreenHealthCheck\(\)/);
   assert.doesNotMatch(preview, /armScreenHealthCheck/);
   assert.match(service, /monitorRule\(display, \{ geometry: false, disabled: true, mirror: "" \}\)/);
   assert.match(service, /monitorRule\(display, \{ disabled: false, mirror: "" \}\)/);
