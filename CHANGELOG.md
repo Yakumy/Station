@@ -14,6 +14,8 @@
   undoes them. Changing the mode or the workspaces moves windows with the same journaled
   migration as a display change. Open apps move here from Settings. With one monitor the
   mode selector is disabled.
+- Stop window and display edits from piling up `looknfeel.lua` and `monitors.lua`
+  backups. Station keeps the newest five of each file's backups and removes older ones.
 - Keep the workspace assignment you already had. On a fresh install Station reads your
   Hyprland workspace rules first: rules that split the numbers between monitors start
   Non-repetitive with your numbers on each monitor, and rules that give each monitor its

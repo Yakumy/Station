@@ -1,7 +1,7 @@
 const test = require('node:test');
 const { runtimeSource } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync, mkdtempSync, writeFileSync, mkdirSync, chmodSync } = require('node:fs');
+const { readFileSync, mkdtempSync, writeFileSync, mkdirSync, chmodSync, readdirSync, utimesSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { spawnSync } = require('node:child_process');
@@ -83,6 +83,29 @@ test('settings transaction preserves intervening edits and rolls back only its o
   assert.equal(run('external\n','valid\n').status,0);
   assert.equal(run('valid\n','invalid\n',{TEST_ERRORS:'error'}).status,3);
   assert.equal(readFileSync(file,'utf8'),'valid\n');
+});
+test('settings writes keep only the newest five Station backups of the file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'station-backups-test-'));
+  const bin = join(dir, 'bin'); mkdirSync(bin);
+  writeFileSync(join(bin, 'hyprctl'), '#!/bin/sh\nexit 0\n'); chmodSync(join(bin, 'hyprctl'), 0o755);
+  const file = join(dir, 'looknfeel.lua');
+  writeFileSync(file, 'one\n');
+  for (let i = 0; i < 8; i++) {
+    const old = join(dir, 'looknfeel.lua.bak.station.old' + i);
+    writeFileSync(old, 'x'); utimesSync(old, 1000 + i, 1000 + i);
+  }
+  writeFileSync(join(dir, 'monitors.lua.bak.station.1'), 'other file');
+  const result = spawnSync('sh', ['-c', T.settings, 'sh', file, 'one\n', 'two\n'],
+    { env: { ...process.env, PATH: bin + ':' + process.env.PATH }, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const left = readdirSync(dir).filter(name => name.startsWith('looknfeel.lua.bak.station.')).sort();
+  assert.equal(left.length, 5);
+  assert.ok(left.includes('looknfeel.lua.bak.station.old7'));
+  assert.ok(!left.includes('looknfeel.lua.bak.station.old3'));
+  assert.ok(readdirSync(dir).includes('monitors.lua.bak.station.1'));
+  // The window slider write prunes the same way once it has committed.
+  assert.ok(T.windowSetting.endsWith(T.pruneBackups));
+  assert.ok(T.windowSetting.indexOf('committed=1') < T.windowSetting.indexOf(T.pruneBackups));
 });
 test('cold configuration applies saved Single only with a physically connected survivor', () => {
   const {monitorRules} = require('../helpers/monitor-lua.cjs');

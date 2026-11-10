@@ -23,7 +23,8 @@ logic, or management of more than three independent outputs.
    no network access.
 2. Station works when enabled. It has no setup step.
 3. Station writes only its own files and its marked sections in `monitors.lua` and
-   `looknfeel.lua`, always with a backup. It never edits `hyprland.lua`,
+   `looknfeel.lua`, always with a backup. Each file keeps its newest five Station
+   backups (`<file>.bak.station.*`); a write removes older ones. It never edits `hyprland.lua`,
    `bindings.lua` or anything under `/usr/share/omarchy`.
 4. Every value that reaches Lua or argv is validated.
 5. Every asynchronous operation is checked against a generation.
