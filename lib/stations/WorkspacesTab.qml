@@ -158,6 +158,10 @@ Column {
           height: parent.height
           Ui.Button {
             anchors.fill: parent
+            topLeftRadius: index === 0 ? Style.cornerRadius : 0
+            bottomLeftRadius: index === 0 ? Style.cornerRadius : 0
+            topRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
+            bottomRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
             objectName: "workspaceMode-" + modelData.value
             text: modelData.label
             selected: selector.enabled && selector.value === modelData.value

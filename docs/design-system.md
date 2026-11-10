@@ -26,7 +26,12 @@ A Choice (either kind) must never use the Action look, and vice versa. The 4 mod
 
 ## 2. Corners
 
-**[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`, except the monitor rectangles in the layout panels, which are always sharp (`radius: 0`).** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.
+Joined button groups use square inner corners. Only the first button's left corners
+and the last button's right corners use `Style.cornerRadius`; their shared corners
+are explicitly zero. This applies to the Workspaces and Wallpaper mode selectors,
+including selected, hovered and focused states.
+
+**[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`, except joined buttons’ shared corners and the monitor rectangles in the layout panels, which are always sharp.** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.
 
 **Known trap [V]:** a ternary like `selected ? Station.radiusSm : Style.cornerRadius` *looks* compliant because the token appears in the source, but if the first branch is always taken, the token branch is dead code and never executes. The fix must remove the private branch entirely, not just add the token as an unreached fallback next to it.
 

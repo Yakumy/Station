@@ -1,5 +1,7 @@
 # Unreleased
 
+- Keep the shared edges of joined buttons square throughout the panel. Workspaces
+  and Wallpaper mode selectors round only the group's outer corners with the theme.
 - Register `CTRL + SUPER + Up/Down` for TTB/BTT station navigation and show them in
   Keybindings. BTT Up reaches the next existing station; Down reaches the previous one.
 - Fix BTT and TTB window moves at the edge of side-by-side monitors with different
