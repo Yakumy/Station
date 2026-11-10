@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import "../platform/Store.js" as Store
 import "../displays/MonitorsLua.js" as MonitorsLua
+import "omarchy/BarModel.js" as BarModel
 
 // One persistent feature owner. Inputs are data and finite effect ports, never
 // the Service QObject. Preferences remain a projection of the root config file.
@@ -145,7 +146,7 @@ Item {
     if (!shellBar || String(shellBar.id || "") !== "yakumy.station"
         || !shellBar.layout || typeof shellBar.layout !== "object"
         || typeof publishHost !== "function") return false
-    var found = ["left", "center", "right"].some(function(section) {
+    var found = BarModel.sections.some(function(section) {
       return Array.isArray(shellBar.layout[section]) && shellBar.layout[section].some(function(entry) {
         return entry && String(entry.id || "") === "yakumy.station"
       })
@@ -154,7 +155,7 @@ Item {
     publishHost(function(scoped) {
       if (!scoped.bar || typeof scoped.bar !== "object"
           || !scoped.bar.layout || typeof scoped.bar.layout !== "object") return
-      ;["left", "center", "right"].forEach(function(section) {
+      ;BarModel.sections.forEach(function(section) {
         if (!Array.isArray(scoped.bar.layout[section])) return
         scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
           return !entry || String(entry.id || "") !== "yakumy.station"
@@ -186,7 +187,7 @@ Item {
         }
       })
       if (scoped.bar.layout && typeof scoped.bar.layout === "object") {
-        ;["left", "center", "right"].forEach(function(section) {
+        ;BarModel.sections.forEach(function(section) {
           if (!Array.isArray(scoped.bar.layout[section])) return
           scoped.bar.layout[section] = scoped.bar.layout[section].filter(function(entry) {
             return !entry || String(entry.id || "") !== "yakumy.station"

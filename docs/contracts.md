@@ -563,6 +563,19 @@ Station's persisted widget row atomically and injects a virtual Station slot. Pl
 disable therefore removes the last enable reference and unloads the service. Never edit
 packaged Omarchy files for per-monitor behavior.
 
+Station preserves the host's six layout sections: `left`, `centerBegin`, `center`,
+`centerEnd`, `right`, and `tray`. The flanking center sections grow away from the
+center box without moving its anchor, horizontally or vertically. Their extents
+count toward Pill backgrounds, minimum width, and maximum content size. Older
+three-section layouts continue to work. Widgets in `tray` render inside a tray
+widget that provides a `sectionHost`; older tray widgets without that port keep
+their previous behavior.
+
+Inline settings updates and widget placement lookup cover every section. Dragging
+to the outer edges of the center box inserts into the corresponding flanking
+section. The tray drawer accepts widgets and cannot contain its own hosting tray.
+One full-bar IPC handler refreshes the hidden-state probe on every monitor.
+
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |
@@ -765,6 +778,8 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
   back to its recorded place. `bar put` leaves a present widget where it is, so use
   `bar move`.
 - Bar writes rebuild the bar, so Station runs them one at a time.
+- Leases retain section and index in all six host sections. Removal validates and
+  restores these placements with the same fixed-script argument checks.
 
 ## Removal and restart
 

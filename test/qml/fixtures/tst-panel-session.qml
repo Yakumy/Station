@@ -239,7 +239,6 @@ Item {
       verify(!persistent.panelWanted); compare(persistent.rememberedTab, 0)
     }
     function test_brightnessReadRaceAndUnavailable() {
-      ignoreWarning(/.*Parameter "exitCode" is not declared[\s\S]*/)
       root.controls.selectedDisplayName = "A"
       var read = process(root.controls, "omarchy-brightness-display")
       verify(read); verify(root.controls.brightnessLoading)
@@ -266,7 +265,6 @@ Item {
       compare(root.controls.brightness, 50)
     }
     function test_textQueueFailureAndObservation() {
-      ignoreWarning(/.*Parameter "exitCode" is not declared[\s\S]*/)
       root.controls.setTextSizeIndex(3)
       verify(!process(root.controls, "omarchy-display-text-size"))
       root.controls.setTextSizeIndex(4)

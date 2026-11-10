@@ -35,7 +35,15 @@ test('M0: shell call targets a loaded panel, not an own service', { skip: !insta
 });
 
 test('M0: explicit bar indexes are zero-based and clamped', { skip: !installed }, () => {
-  const target = runInNewContext(`(${extract(registryPath, 'barTarget')})`, {});
+  // Execute the host's helpers too: barTarget now delegates section and tray
+  // validation rather than containing all of it itself.
+  const utilPath = '/usr/share/omarchy/shell/Commons/Util.qml';
+  const sectionMatch = readFileSync(utilPath, 'utf8').match(/property var barSections: (\[[^\n]+\])/);
+  const hasTrayHelper = readFileSync(registryPath, 'utf8').includes('  function isTray(');
+  const target = runInNewContext(`(${extract(registryPath, 'barTarget')})`, {
+    Util: { barSections: sectionMatch ? JSON.parse(sectionMatch[1]) : ['left', 'center', 'right'] },
+    ...(hasTrayHelper ? { isTray: runInNewContext(`(${extract(registryPath, 'isTray')})`, { installedPlugins: {} }) } : {}),
+  });
   const config = { bar: { layout: { left: [{ id: 'omarchy.menu' }, { id: 'omarchy.workspaces' }] } } };
   assert.equal(target(config, { section: 'left', index: 1 }, 'center').index, 1);
   assert.equal(target(config, { section: 'left', index: -4 }, 'center').index, 0);

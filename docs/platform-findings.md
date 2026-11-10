@@ -1224,3 +1224,18 @@ user tests; the automated checks do not establish those results.
 - [SRC] The indicator dims a workspace that is neither occupied nor shown to opacity 0.5,
   and draws the shown one as a `WidgetButton` icon glyph (U+F14FB while tiling) at
   `Style.bar.iconSize`.
+
+
+## Newer Omarchy bar sections (2026-11-10)
+
+- [SRC] The installed host normalizes `left`, `centerBegin`, `center`, `centerEnd`,
+  `right` and `tray`. Station previously returned only the original three sections,
+  discarding the flanking widgets. Its settings delta, lease lookup, activation and
+  detached cleanup validation also assumed three sections.
+- [QTTEST] `bar-sections` exercises the production center layout, Pill bounds and
+  drawer loader with widget doubles. Both orientations, two content sizes, light
+  and dark surface values, an empty center, delegate removal and empty-drawer drop
+  space pass. This does not prove physical pointer routing or a live tray popup.
+- [SRC] `ShellIpc` remains available on the installed host. Station registers its
+  bar target once in the full-bar entry and forwards hidden-state refreshes to
+  every monitor copy, rather than registering one handler per output.

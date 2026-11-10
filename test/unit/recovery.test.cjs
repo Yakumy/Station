@@ -121,3 +121,15 @@ test('cleanup argv restores only leases Station took and rejects malformed ones'
     assert.deepEqual(fallback.slice(6), ['left', '0', '0', 'right', '0', '0']);
   }
 });
+
+test('cleanup preserves leases in flanking center sections and the tray', () => {
+  for (const section of ['centerBegin', 'centerEnd', 'tray']) {
+    const lease = { section, index: 2, wasEnabled: true, disabledByStation: true };
+    const argv = R.cleanupCommand('/state', '/monitors.lua', lease, lease);
+    assert.deepEqual(argv.slice(6), [section, '2', '1', section, '2', '1']);
+    // Run only the fixed argument-validation preamble; no desktop effects.
+    const preamble = R.cleanup.slice(0, R.cleanup.indexOf('sleep 3'));
+    assert.equal(spawnSync('sh', ['-c', preamble, 'sh', '/state', '/monitors.lua',
+      section, '2', '1', section, '2', '1']).status, 0);
+  }
+});

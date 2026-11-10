@@ -200,6 +200,14 @@ Item {
     return false
   }
 
+  // One handler for the full bar, independent of output count and lifetime.
+  ShellIpc {
+    target: "omarchy.bar"
+    function syncHidden(): void {
+      for (var i = 0; i < root.instances.length; i++) root.instances[i].syncHidden()
+    }
+  }
+
   Variants {
     model: Quickshell.screens
 

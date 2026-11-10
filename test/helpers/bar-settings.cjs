@@ -7,6 +7,7 @@ const source = readFileSync(join(__dirname, '../../lib/bars/BarSettingsControlle
 // scenarios keep their config/host doubles; production functions now execute in
 // the owner's explicit data/port surface. No whole Service is passed to it.
 function ownerFunction(name, context) {
+  context.BarModel ||= require('../../lib/bars/omarchy/BarModel.js');
   const start = source.indexOf('  function ' + name + '(');
   if (start < 0) return null;
   const getter = (key, read) => {

@@ -56,7 +56,7 @@ Item {
     position: "top",
     transparent: false,
     centerAnchor: "omarchy.clock",
-    layout: { left: [], center: [], right: [] }
+    layout: { left: [], centerBegin: [], center: [], centerEnd: [], right: [], tray: [] }
   })
   property var layoutConfig: fallbackBarConfig.layout
   property string centerAnchor: ""
@@ -110,9 +110,15 @@ Item {
   property int tooltipRequest: 0
   property var activePopout: null
   property var barDragSource: null
+  readonly property bool traySectionDragActive: !!barDragSource && !barDragSource.hostsTraySection
+  readonly property bool traySectionPopoutOpen: moduleSlots.some(function(slot) {
+    return slot && slot.region === "tray" && slot.activeItem === root.activePopout
+      && root.activePopout !== null
+  })
   property var barDragTarget: null
   property var barDragTargetGeometry: null
   property bool barDragAfter: false
+  property string barDragRegion: ""
   property var barDragWindow: null
   property var barDragScreen: null
   property url barDragImageUrl: ""
@@ -180,6 +186,10 @@ Item {
     api.foregroundAnimationEnabled = Qt.binding(function() { return root.foregroundAnimationEnabled })
     api.centerSectionRevealHeld = Qt.binding(function() { return root.centerSectionRevealHeld })
     api._centerHoverRevealSuppressed = Qt.binding(function() { return root.centerHoverRevealSuppressed })
+    if ("traySectionDragActive" in api)
+      api.traySectionDragActive = Qt.binding(function() { return root.traySectionDragActive })
+    if ("traySectionPopoutOpen" in api)
+      api.traySectionPopoutOpen = Qt.binding(function() { return root.traySectionPopoutOpen })
     root.syncPluginBarApiObjects(api)
   }
 
@@ -464,6 +474,7 @@ Item {
   }
 
   function clearBarDrag() {
+    barDragRegion = ""
     barDragSource = null
     barDragWindow = null
     barDragScreen = null
@@ -501,22 +512,25 @@ Item {
 
     try {
       var slotPoint = slot.mapToItem(null, 0, 0)
+      var endPoint = slot.mapToItem(null, slot.width, slot.height)
+      var width = Math.abs(endPoint.x - slotPoint.x)
+      var height = Math.abs(endPoint.y - slotPoint.y)
       var screenPoint = barDragScreenPoint(slotPoint)
       var thickness = Style.spacing.xs
       if (vertical) {
         return {
           x: screenPoint.x,
-          y: screenPoint.y + (after ? slot.height : 0) - thickness / 2,
-          width: slot.width,
+          y: screenPoint.y + (after ? height : 0) - thickness / 2,
+          width: width,
           height: thickness
         }
       }
 
       return {
-        x: screenPoint.x + (after ? slot.width : 0) - thickness / 2,
+        x: screenPoint.x + (after ? width : 0) - thickness / 2,
         y: screenPoint.y,
         width: thickness,
-        height: slot.height
+        height: height
       }
     } catch (e) {
       return null
@@ -680,7 +694,11 @@ Item {
   function normalizeLayout(layout) {
     var normalized = Util.normalizeLayout(Util.isPlainObject(layout) ? layout : fallbackBarConfig.layout)
     var found = false
-    ;["left", "center", "right"].forEach(function(section) {
+    ;BarModel.sections.forEach(function(section) {
+      // Older hosts normalize only three sections. Preserve newer sections
+      // without requiring a particular host normalization version.
+      if (!Array.isArray(normalized[section]))
+        normalized[section] = Util.normalizeLayoutSection(layout && layout[section])
       normalized[section].forEach(function(entry) {
         if (BarModel.entryId(entry) === "yakumy.station") found = true
       })
@@ -694,11 +712,10 @@ Item {
       })
       normalized.left.splice(menu < 0 ? 0 : menu + 1, 0, { id: "yakumy.station" })
     }
-    return {
-      left:   pinTrayToInner(normalized.left,   "left"),
-      center: pinTrayToInner(normalized.center, "center"),
-      right:  pinTrayToInner(normalized.right,  "right")
-    }
+    BarModel.sections.forEach(function(section) {
+      normalized[section] = pinTrayToInner(normalized[section], section)
+    })
+    return normalized
   }
 
   // The tray drawer reveals inward (away from the bar edge). Place it at the
@@ -1009,6 +1026,8 @@ Item {
   }
 
   function moveModuleInConfig(config, fromRegion, fromName, toRegion, beforeName) {
+    if (BarModel.sections.indexOf(fromRegion) === -1 || BarModel.sections.indexOf(toRegion) === -1
+        || (fromName === "omarchy.tray" && toRegion === "tray")) return false
     var fromEntries = rawLayoutSection(config, fromRegion)
     var toEntries = rawLayoutSection(config, toRegion)
     var fromIndex = rawEntryIndex(fromEntries, fromName)
@@ -1035,6 +1054,7 @@ Item {
   }
 
   function dropBarModule(source, toRegion, beforeName) {
+    if (source && source.hostsTraySection && toRegion === "tray") return false
     if (!source || !source.region || !source.moduleName || !toRegion) return false
     if (source.region === toRegion && source.moduleName === beforeName) return false
     if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return false
@@ -1056,14 +1076,30 @@ Item {
     }
 
     var candidates = []
+    var drawerDrop = null
     for (var i = 0; i < moduleSlots.length; i++) {
       var slot = moduleSlots[i]
+      // The drawer opens during a drag, including an empty section. Its host
+      // takes drops before the tray slot's own before/after insertion edges.
+      if (slot && slot.hostsTraySection && sourceSlot && !sourceSlot.hostsTraySection
+          && (!sourceWindow || root.sameWindow(root.slotWindow(slot), sourceWindow))) {
+        var host = slot.activeItem.sectionHost
+        if (host && host.width > 0 && host.height > 0) {
+          var point = host.mapFromItem(null, scenePoint.x, scenePoint.y)
+          if (point.x >= 0 && point.y >= 0 && point.x <= host.width && point.y <= host.height)
+            drawerDrop = { slot: slot, after: false, region: "tray" }
+        }
+      }
       if (!slot || slot === sourceSlot || !slot.visible || slot.width <= 0 || slot.height <= 0) continue
+      if (slot.region === "tray" && sourceSlot && sourceSlot.hostsTraySection) continue
       if (sourceWindow && !root.sameWindow(root.slotWindow(slot), sourceWindow)) continue
 
       var slotPoint = { x: slot.x, y: slot.y }
+      var slotSize = { width: slot.width, height: slot.height }
       try {
         slotPoint = slot.mapToItem(null, 0, 0)
+        var end = slot.mapToItem(null, slot.width, slot.height)
+        slotSize = { width: Math.abs(end.x - slotPoint.x), height: Math.abs(end.y - slotPoint.y) }
       } catch (e) {
       }
 
@@ -1071,12 +1107,18 @@ Item {
         slot: slot,
         x: slotPoint.x,
         y: slotPoint.y,
-        width: slot.width,
-        height: slot.height
+        width: slotSize.width,
+        height: slotSize.height
       })
     }
 
-    return BarModel.nearestDropTarget(candidates, scenePoint, root.vertical)
+    if (drawerDrop) {
+      var inside = candidates.filter(function(row) { return row.slot.region === "tray" })
+      return BarModel.nearestDropTarget(inside, scenePoint, root.vertical) || drawerDrop
+    }
+    return BarModel.nearestDropTarget(candidates.filter(function(row) {
+      return row.slot.region !== "tray"
+    }), scenePoint, root.vertical)
   }
 
   function visibleModuleSlot(region, name, sourceSlot) {
@@ -1112,6 +1154,17 @@ Item {
     if (!sourceSlot || !targetSlot) return false
 
     var beforeName = afterTarget ? nextVisibleModuleName(targetSlot.region, targetSlot.moduleName, sourceSlot) : targetSlot.moduleName
+    if (targetSlot.region === "center") {
+      var entries = layoutEntries("center")
+      // Keep the centered box stable: its outer insertion edges belong to
+      // the flanking sections, even when those sections are empty.
+      if (!afterTarget && entryIndex(entries, targetSlot.moduleName) === 0)
+        return dropBarModule(sourceSlot, "centerBegin", "")
+      if (afterTarget && !beforeName) {
+        var end = layoutEntries("centerEnd")
+        return dropBarModule(sourceSlot, "centerEnd", end.length ? entryId(end[0]) : "")
+      }
+    }
     return dropBarModule(sourceSlot, targetSlot.region, beforeName)
   }
 
@@ -1324,15 +1377,9 @@ Item {
   // changes land in quick succession, stranding the bar off screen until the
   // shell restarts. `omarchy-toggle-bar` nudges this after flipping the flag
   // so the probe re-reads it even when the watch has gone quiet.
-  IpcHandler {
-    target: "omarchy.bar"
-
-    // Start rather than restart: a probe already in flight was launched by the
-    // directory watch after the flag flipped, so its answer is current, and
-    // killing it here can swallow the result entirely.
-    function syncHidden(): void {
-      barHiddenProbe.running = true
-    }
+  function syncHidden() {
+    // Start rather than restart: an in-flight read already sees the new flag.
+    barHiddenProbe.running = true
   }
 
   Variants {
@@ -1761,25 +1808,27 @@ Item {
       ? beforeCenterModules.height : beforeCenterModules.width
     readonly property real afterLength: root.vertical
       ? afterCenterModules.height : afterCenterModules.width
-    readonly property real leadingExtent: hasAnchor
-      ? beforeLength + anchorLength / 2 : centeredLength / 2
-    readonly property real trailingExtent: hasAnchor
-      ? afterLength + anchorLength / 2 : centeredLength / 2
+    readonly property real beginLength: root.vertical ? beginModules.height : beginModules.width
+    readonly property real endLength: root.vertical ? endModules.height : endModules.width
+    readonly property real leadingExtent: beginLength + (hasAnchor
+      ? beforeLength + anchorLength / 2 : centeredLength / 2)
+    readonly property real trailingExtent: endLength + (hasAnchor
+      ? afterLength + anchorLength / 2 : centeredLength / 2)
     readonly property real visibleLength: leadingExtent + trailingExtent
     readonly property real baseAnchorLength: centerAnchorModule.baseFlowLength
-    readonly property real baseLeadingExtent: hasAnchor
+    readonly property real baseLeadingExtent: beginModules.baseFlowLength + (hasAnchor
       ? beforeCenterModules.baseFlowLength + baseAnchorLength / 2
-      : centeredModules.baseFlowLength / 2
-    readonly property real baseTrailingExtent: hasAnchor
+      : centeredModules.baseFlowLength / 2)
+    readonly property real baseTrailingExtent: endModules.baseFlowLength + (hasAnchor
       ? afterCenterModules.baseFlowLength + baseAnchorLength / 2
-      : centeredModules.baseFlowLength / 2
+      : centeredModules.baseFlowLength / 2)
     readonly property real maximumBaseAnchorLength: centerAnchorModule.maximumBaseFlowLength
-    readonly property real maximumBaseLeadingExtent: hasAnchor
+    readonly property real maximumBaseLeadingExtent: beginModules.maximumBaseFlowLength + (hasAnchor
       ? beforeCenterModules.maximumBaseFlowLength + maximumBaseAnchorLength / 2
-      : centeredModules.maximumBaseFlowLength / 2
-    readonly property real maximumBaseTrailingExtent: hasAnchor
+      : centeredModules.maximumBaseFlowLength / 2)
+    readonly property real maximumBaseTrailingExtent: endModules.maximumBaseFlowLength + (hasAnchor
       ? afterCenterModules.maximumBaseFlowLength + maximumBaseAnchorLength / 2
-      : centeredModules.maximumBaseFlowLength / 2
+      : centeredModules.maximumBaseFlowLength / 2)
 
     // One arrangement for both orientations: the unanchored list centers in
     // the section, the anchor module centers, and the before/after lists sit
@@ -1793,6 +1842,26 @@ Item {
 
     HoverHandler {
       onHoveredChanged: root.setCenterSectionHovered(hovered)
+    }
+
+    ModuleList {
+      id: beginModules
+      entries: root.layoutEntries("centerBegin")
+      region: "centerBegin"
+      x: root.vertical ? (parent.width - width) / 2
+        : parent.width / 2 - centerRoot.leadingExtent
+      y: root.vertical ? parent.height / 2 - centerRoot.leadingExtent
+        : (parent.height - height) / 2
+    }
+
+    ModuleList {
+      id: endModules
+      entries: root.layoutEntries("centerEnd")
+      region: "centerEnd"
+      x: root.vertical ? (parent.width - width) / 2
+        : parent.width / 2 + centerRoot.trailingExtent - width
+      y: root.vertical ? parent.height / 2 + centerRoot.trailingExtent - height
+        : (parent.height - height) / 2
     }
 
     ModuleSlot {
@@ -1925,11 +1994,21 @@ Item {
   // same ModuleSlot instances through both orientations and re-lays them out
   // synchronously on flips, model changes and size changes, so a flip only
   // reflays the bar. Children keep insertion (model) order like Row/Column.
+  Component {
+    id: traySectionComponent
+    ModuleList {
+      entries: root.layoutEntries("tray")
+      region: "tray"
+      inheritedScale: root.contentScale
+    }
+  }
+
   component ModuleList: Item {
     id: moduleListRoot
 
     property var entries: []
     property string region: ""
+    property real inheritedScale: 1
     readonly property bool vertical: root.vertical
     readonly property real visibleLength: root.vertical ? height : width
     readonly property real baseFlowLength: {
@@ -1982,12 +2061,15 @@ Item {
     Repeater {
       model: moduleListRoot.entries
       onItemAdded: moduleListRoot.applyLayout()
-      onItemRemoved: moduleListRoot.applyLayout()
+      // itemRemoved fires while the retiring delegate is still in children.
+      // Measure again after Qt has detached it from the positioner.
+      onItemRemoved: Qt.callLater(moduleListRoot.applyLayout)
 
       ModuleSlot {
         required property var modelData
         entry: modelData
         region: moduleListRoot.region
+        inheritedScale: moduleListRoot.inheritedScale
 
         onWidthChanged: moduleListRoot.applyLayout()
         onHeightChanged: moduleListRoot.applyLayout()
@@ -2001,6 +2083,8 @@ Item {
 
     required property var entry
     property string region: ""
+    // A tray section lives inside an already zoomed widget subtree.
+    property real inheritedScale: 1
     property var popoutAnchor: null
     readonly property string moduleName: root.entryId(entry)
     readonly property var moduleSettings: root.entrySettings(entry)
@@ -2034,7 +2118,8 @@ Item {
     property var imageContentRoot: null
     readonly property bool widgetSizedContent: activeItem
       && "nativeContentSized" in activeItem && activeItem.nativeContentSized === true
-    readonly property real contentZoom: widgetSizedContent ? 1 : root.contentScale
+    readonly property real contentZoom: (widgetSizedContent ? 1 : root.contentScale) / inheritedScale
+    readonly property bool hostsTraySection: region !== "tray" && !!activeItem && "sectionHost" in activeItem
     readonly property real baseContentWidth: activeItem && activeItem.visible
       ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
     readonly property real baseContentHeight: activeItem && activeItem.visible
@@ -2066,9 +2151,9 @@ Item {
       return Math.max(Style.space(10), Math.round((root.vertical ? slot.height : slot.width) * 0.55))
     }
     implicitWidth: activeItem && activeItem.visible
-      ? (root.vertical ? root.barSize : Math.ceil(visibleBaseContentWidth * contentZoom)) : 0
+      ? (root.vertical ? root.barSize / inheritedScale : Math.ceil(visibleBaseContentWidth * contentZoom)) : 0
     implicitHeight: activeItem && activeItem.visible
-      ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize) : 0
+      ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize / inheritedScale) : 0
     width: implicitWidth
     height: implicitHeight
     clip: true
@@ -2082,6 +2167,24 @@ Item {
     }
 
     HoverHandler { id: moduleHover }
+
+    // Keep the list outside ModuleSlot's type declaration to avoid a recursive
+    // inline type. Older tray widgets without sectionHost remain supported.
+    Loader {
+      id: traySectionLoader
+      readonly property Item host: slot.hostsTraySection ? slot.activeItem.sectionHost : null
+      parent: host || slot
+      active: !!host
+      sourceComponent: traySectionComponent
+      width: item ? Math.max(item.implicitWidth,
+        root.traySectionDragActive ? (root.vertical ? root.barSize / root.contentScale
+          : Style.bar.iconSlot) : 0) : 0
+      height: item ? Math.max(item.implicitHeight,
+        root.traySectionDragActive ? (root.vertical ? Style.bar.iconSlot
+          : root.barSize / root.contentScale) : 0) : 0
+      x: host && slot.activeItem.sectionEdge === "end" && !root.vertical ? host.width - width : 0
+      y: host && slot.activeItem.sectionEdge === "end" && root.vertical ? host.height - height : 0
+    }
 
     BorderSurface {
       visible: slot.dragSource
@@ -2216,6 +2319,14 @@ Item {
       // drag. The next layout pass would reset them, but never mid-gesture.
 
       onPressed: function(mouse) {
+        if (slot.hostsTraySection && slot.activeItem.sectionHost) {
+          var host = slot.activeItem.sectionHost
+          var point = slot.mapToItem(host, mouse.x, mouse.y)
+          if (point.x >= 0 && point.y >= 0 && point.x < host.width && point.y < host.height) {
+            mouse.accepted = false
+            return
+          }
+        }
         dragging = false
         suppressClick = false
         pressedX = mouse.x
@@ -2250,8 +2361,10 @@ Item {
 
           var drop = root.moduleDropAtScene(scenePoint, slot)
           root.barDragTarget = drop ? drop.slot : null
+          root.barDragRegion = drop && drop.region ? drop.region : ""
           root.barDragAfter = drop ? drop.after : false
-          root.barDragTargetGeometry = drop ? root.dropMarkerRect(drop.slot, drop.after) : null
+          root.barDragTargetGeometry = drop ? root.dropMarkerRect(
+            drop.region === "tray" ? drop.slot.activeItem.sectionHost : drop.slot, drop.after) : null
         }
       }
 
@@ -2259,6 +2372,7 @@ Item {
         var wasDragging = dragging
         var targetSlot = root.barDragTarget
         var afterTarget = root.barDragAfter
+        var region = root.barDragRegion
 
         if (wasDragging) suppressClick = true
 
@@ -2266,7 +2380,8 @@ Item {
         root.clearBarDrag()
 
         if (wasDragging && targetSlot) {
-          root.dropBarModuleAtTarget(slot, targetSlot, afterTarget)
+          if (region) root.dropBarModule(slot, region, "")
+          else root.dropBarModuleAtTarget(slot, targetSlot, afterTarget)
           mouse.accepted = true
         } else if (!wasDragging) {
           mouse.accepted = false

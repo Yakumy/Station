@@ -37,6 +37,7 @@ QML harnesses cover that part.
 | --- | --- |
 | `bar-icons`, `bar-rendering`, `open-apps` | Bar glyphs, content zoom, and the app drawer in each compact mode with apps on and off |
 | `bar-settings`, `bar-tab` | Bar owner and tab, with fake effects |
+| `bar-sections` | Production center geometry and tray hosting with widget doubles: horizontal and vertical, content zoom, empty center and delegate removal |
 | `binding-picker` | Key capture |
 | `display-owner`, `display-fileview` | Preview and Keep with fake effects, then real `FileView` objects on temporary files |
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |

@@ -29,6 +29,7 @@ QtObject {
   property int normalBorderWidth: 1
   property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
   function selectedFillFor(a, b) { return a }
+  function duration(ms) { return ms }
   function space(n) { return n * 5 / 6 }
 }
 ''')
@@ -92,13 +93,16 @@ Item {
       var slider = sliders(tab, [])[2]
       verify(slider !== undefined)
       wait(50)
-      mousePress(slider, slider.width * 0.8, slider.height / 2)
+      // Hit a value on the track, excluding its end insets. The test is about
+      // retaining 65 through observation and save, not the host's track width.
+      var x = slider.trackX((65 - slider.minimum) / (slider.maximum - slider.minimum))
+      mousePress(slider, x, slider.height / 2)
       compare(slider.liveValue, 65)
       snapshot(50) // A detached bridge poll during the drag.
       wait(20)
       compare(tab.values.split, 65)
       compare(slider.liveValue, 65)
-      mouseRelease(slider, slider.width * 0.8, slider.height / 2)
+      mouseRelease(slider, x, slider.height / 2)
       compare(fakeService.requested, 65)
       snapshot(50) // Old observed setting while the transaction runs.
       wait(30)
@@ -117,7 +121,8 @@ Item {
       var slider = sliders(tab, [])[2]
       for (var i = 0; i < 2; i++) {
         snapshot(50)
-        mouseClick(slider, slider.width * 0.8, slider.height / 2)
+        var x = slider.trackX((65 - slider.minimum) / (slider.maximum - slider.minimum))
+        mouseClick(slider, x, slider.height / 2)
         wait(10)
         compare(slider.liveValue, 65)
         if (i === 0) snapshot(45) // Personal override.

@@ -1,5 +1,11 @@
 # Unreleased
 
+- Keep widgets in Omarchy's `centerBegin` and `centerEnd` sections visible beside
+  the centered clock, including vertical and Pill bars. Preserve tray-section
+  widgets in the tray drawer, settings updates, drag moves and leased placements.
+- Register one bar IPC handler for all outputs and use explicit process-exit
+  parameters in display controls. Update host-dependent test fixtures.
+
 - Add a Workspaces tab after Displays. Its locked layout shows each monitor's role and the
   workspaces it gets, and it updates as you change the controls. Choose Sync (every
   monitor switches together), Repetitive (every monitor numbers its own workspaces from 1,

@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import "omarchy/BarModel.js" as BarModel
 
 // Station may hide Omarchy's stock workspace and monitor widgets. A lease records
 // whether Station did the hiding and where the widget sat, so startup and removal
@@ -29,10 +30,10 @@ Item {
   function barPlacement(widgetId) {
     var layout = shell && shell.barConfig && shell.barConfig.bar ? shell.barConfig.bar.layout : null
     if (!layout) return null
-    var sections = ["left", "center", "right"]
+    var sections = BarModel.sections
     for (var s = 0; s < sections.length; s++) {
       var rows = layout[sections[s]] || []
-      for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].id === widgetId)
+      for (var i = 0; i < rows.length; i++) if (BarModel.entryId(rows[i]) === widgetId)
         return { section: sections[s], index: i }
     }
     return null

@@ -75,7 +75,7 @@ Item {
     property string captured: ""
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: brightnessRead.captured = text }
     onRunningChanged: if (running) captured = ""
-    onExited: {
+    onExited: function(exitCode) {
       if (monitorName !== root.selectedDisplayName) {
         root.refreshBrightness()
         return
@@ -97,7 +97,7 @@ Item {
   Process {
     id: brightnessWrite
     stdout: StdioCollector { waitForEnd: true }
-    onExited: {
+    onExited: function(exitCode) {
       var pending = root.pendingBrightnessRequest
       root.pendingBrightnessRequest = null
       if (pending) root.setBrightness(pending.value, pending.monitorName)
@@ -107,7 +107,7 @@ Item {
   Process {
     id: textSizeWrite
     stdout: StdioCollector { waitForEnd: true }
-    onExited: {
+    onExited: function(exitCode) {
       if (exitCode !== 0) root.textSizePreviewIndex = -1
       if (root.queuedTextSize >= 0) {
         var next = root.queuedTextSize

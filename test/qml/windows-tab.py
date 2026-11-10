@@ -101,6 +101,7 @@ ShellRoot {
     return null
   }
   Timer {
+    id: checkTimer
     property int phase: 0
     property var first: null
     property var second: null
@@ -136,6 +137,15 @@ ShellRoot {
         }
         first = {x:a.x,y:a.y,width:a.width,height:a.height,remaining:remaining.width}
         second = {x:b.x,y:b.y,width:b.width,height:b.height}
+        // Observe the actual midpoint signal. A delayed polling tick can miss
+        // the pause entirely when another rendering harness is running.
+        layout.progressChanged.connect(function() {
+          if (layout.progress !== 1) return
+          checkTimer.sawMiddle = true
+          if (remaining.width <= checkTimer.first.remaining
+              || findObject(layout, "windowPreview-2").height >= checkTimer.second.height)
+            checkTimer.fail("reflow")
+        })
         layout.previewExchange(0.5)
         if (a.x !== first.x || a.y !== first.y || b.x !== second.x || b.y !== second.y) {
           fail("startup jump"); return

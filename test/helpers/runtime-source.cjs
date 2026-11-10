@@ -13,6 +13,7 @@ module.exports = { owners, ownerSource, runtimeSource };
 // Scenario tests share one flat namespace. Route owner ids and finite ports back
 // into it, so each scenario still exercises the same bodies and observable state.
 function adaptOwners(c) {
+  c.BarModel ||= require('../../lib/bars/omarchy/BarModel.js');
   for (const id of ['compositor', 'store', 'stations', 'panel', 'keybindings', 'barLayers', 'leases',
     'screenRecovery', 'windowSettings']) if (!Object.hasOwn(c, id)) c[id] = c;
   for (const [key, read] of Object.entries({

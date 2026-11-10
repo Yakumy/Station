@@ -308,7 +308,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);
   assert.match(monitorBar, /parent\.height - height - barContent\.edgeMargin/);
   assert.match(monitorBar, /effectiveContentSize \/ defaultContentSize/);
-  assert.match(monitorBar, /contentZoom: widgetSizedContent \? 1 : root\.contentScale/);
+  assert.match(monitorBar, /contentZoom: \(widgetSizedContent \? 1 : root\.contentScale\) \/ inheritedScale/);
   assert.equal((monitorBar.match(/scale: slot\.contentZoom/g) || []).length, 3);
   assert.doesNotMatch(monitorBar, /layer\.enabled: slot\.contentZoom/);
   assert.match(monitorBar, /item\.renderType = Text\.QtRendering/);
