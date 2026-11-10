@@ -576,9 +576,17 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - [SRC] `omarchy file select --title ... --extensions ...` uses the desktop portal
   and prints a local filename; exit 1 means no selection, exit 2 chooser failure.
   There is no need for Zenity or a private chooser dependency.
-- [SRC] The host's `Ui.ScreenMoveRemap` remaps layer surfaces after output origin
-  changes. Wallpaper surfaces reuse it and have an empty input region and no
-  keyboard focus. Their lifetime follows the persistent service.
+- [SRC] Omarchy removed the host's `Ui.ScreenMoveRemap` on 2026-11-01
+  (basecamp/omarchy#17229) because Hyprland 0.57 moves a mapped layer surface with
+  its monitor. A plugin that still names the host type fails to load: the bar falls
+  back to `omarchy.bar` and the service reports `Ui.ScreenMoveRemap is not a type`.
+  Station keeps its own copy in `lib/platform/ScreenMoveRemap.qml`, which remaps
+  layer surfaces after output origin changes on any host and Hyprland version. The
+  bar and the wallpaper surfaces use it. Wallpaper surfaces have an empty input
+  region and no keyboard focus. Their lifetime follows the persistent service.
+- [LIVE] On 2026-11-10, with omarchy-dev 4.0.0.r7647 and Hyprland 0.57.1, the bar,
+  the wallpaper surfaces and the service loaded with the local copy on two outputs
+  (`HDMI-A-1`, `DP-5`). No monitor move was exercised.
 - [LIVE][SRC] On 2026-10-27, repeated Station Mirror/Single/Extend changes left
   Hyprland reporting both `eDP-1` and `HDMI-A-2` enabled and unmirrored, while
   `hyprctl layers -j` showed no layer at all on `eDP-1` (neither

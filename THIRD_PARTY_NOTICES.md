@@ -5,6 +5,10 @@ stock bar, distributed by the Omarchy project under the MIT License. Station
 keeps these files local so it can create one independently positioned bar per
 monitor without modifying `/usr/share/omarchy`.
 
+`lib/platform/ScreenMoveRemap.qml` is adapted from the `shell/Ui/ScreenMoveRemap.qml`
+that Omarchy shipped until 2026-11-01, under the same license. Station keeps it
+local because the host no longer provides it.
+
 Source: <https://github.com/basecamp/omarchy>
 
 Copyright © Omarchy contributors. Permission is hereby granted, free of charge,

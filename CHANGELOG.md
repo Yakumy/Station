@@ -1,5 +1,9 @@
 # Unreleased
 
+- Fix Station failing to load on newer Omarchy builds, where the bar fell back to the stock
+  bar and the wallpaper and panel stopped working. Omarchy removed `ScreenMoveRemap`, so
+  Station now carries its own copy.
+
 - Play matching theme intros with the saved Span and per-monitor wallpaper framing
   when OWE supports source rectangles, preserving the crop through the final still.
 
