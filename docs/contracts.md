@@ -238,12 +238,21 @@ For `SUPER + SHIFT + CTRL + arrow`:
 1. Read the actual active window from `hyprctl activewindow -j`, never a cached focus
    entry.
 2. Try native directional movement. Wait 20 ms. Read that window again by identity.
-3. If its position, size, workspace or monitor changed, native movement won. Issue no
-   other move.
-4. Otherwise try the neighboring managed output in that physical direction.
+3. If its position, size, workspace or monitor changed, native movement won. In
+   Station mode, accept a monitor crossing only to the directional neighbor below;
+   correct any other crossing using the source window's station and output.
+4. Otherwise try the neighboring managed output in that physical direction. A
+   neighbor must share a positive logical span perpendicular to the arrow, accounting
+   for scale and rotation. Side-by-side outputs with different heights are not
+   up/down neighbors, and corner contact alone is not enough.
 5. At an outer edge, step one station. Keep the output when crossing perpendicular to
    the arrangement. Enter the opposite-edge output when crossing along it.
 6. Synchronize every output in the destination station and focus the moved window.
+
+For example, with side-by-side outputs and BTT, Up at the top tile of Station 3
+reaches Station 4 on the same output. Down reaches Station 2 there. TTB reverses
+these station steps. At Station 1 or 10, an invalid native crossing returns to the
+source station and output.
 
 A reconnected output can retain an unrelated active workspace. If a native move crosses
 an output boundary, the window must keep its source station.

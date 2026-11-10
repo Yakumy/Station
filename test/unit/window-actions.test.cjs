@@ -10,6 +10,11 @@ const vertical = [
   { id: 0, name: 'A', x: 0, y: 1200, width: 1920, height: 1080, scale: 1 },
   { id: 1, name: 'B', x: 0, y: 0, width: 1920, height: 1200, scale: 1 },
 ];
+// Landscape external output beside a taller, rotated laptop panel, as reported.
+const sideBySide = [
+  { id: 0, name: 'HDMI-A-1', x: 1920, y: -50, width: 1920, height: 1200, scale: 1 },
+  { id: 1, name: 'eDP-1', x: 3840, y: -370, width: 1920, height: 1080, scale: 1, transform: 3 },
+];
 const source = runtimeSource();
 function action(context, name) { return qmlFunction(source, name, context); }
 function harness({ monitors = vertical, monitor = 0, workspace = 1, workspaceName = String(workspace), native = () => {}, pinned = false } = {}) {
@@ -101,6 +106,48 @@ test('native monitor crossing preserves its station after a display reconnect', 
   assert.match(h.calls[1], /workspace = 2, follow = true/);
   assert.doesNotMatch(h.calls.at(-1), /workspace = "11"/);
   assert.doesNotMatch(h.calls.at(-1), /workspace = "12"/);
+});
+
+test('BTT and TTB cross vertical station edges on the source output beside a rotated panel', () => {
+  for (const direction of ['btt', 'ttb']) {
+    for (const arrow of ['up', 'down']) {
+      for (const monitor of [0, 1]) {
+        for (const crosses of [false, true]) {
+          const h = harness({ monitors: sideBySide, monitor, workspace: 5 + monitor, native: c => {
+            if (!crosses) return;
+            c.monitor = 1 - monitor;
+            c.workspace = { id: 6 - monitor, name: String(6 - monitor) };
+          } });
+          h.c.config.direction = direction;
+          h.c.shiftWindow(arrow); h.settle();
+          const station = 3 + Model.step(arrow, direction);
+          assert.equal(h.live.monitor, monitor);
+          assert.equal(h.live.workspace.id, (station - 1) * 2 + monitor + 1);
+          assert.equal(h.c.currentStation, station);
+          assert.equal(h.c.lastWindowAction.result, 'moved');
+          assert.ok(h.calls.at(-1).endsWith(Hypr.focusWindow('0xabc')));
+        }
+      }
+    }
+  }
+});
+
+test('BTT keeps native tile movement and restores a diagonal crossing at station limits', () => {
+  const tile = harness({ monitors: sideBySide, workspace: 5, native: c => { c.at = [10, -100]; } });
+  tile.c.config.direction = 'btt';
+  tile.c.shiftWindow('up'); tile.settle();
+  assert.equal(tile.calls.length, 1);
+  assert.equal(tile.c.lastWindowAction.result, 'native');
+  for (const [workspace, arrow] of [[19, 'up'], [1, 'down']]) {
+    const h = harness({ monitors: sideBySide, workspace, native: c => {
+      c.monitor = 1;
+      c.workspace = { id: workspace + 1, name: String(workspace + 1) };
+    } });
+    h.c.config.direction = 'btt';
+    h.c.shiftWindow(arrow); h.settle();
+    assert.equal(h.live.workspace.id, workspace);
+    assert.equal(h.live.monitor, 0);
+  }
 });
 
 test('vertical station crossing preserves the current display and updates both workspaces', () => {

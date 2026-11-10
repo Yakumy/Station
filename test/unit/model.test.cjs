@@ -107,8 +107,21 @@ test('geometry picks directional neighbours and opposite edges', () => {
   ];
   assert.equal(M.neighborMonitor('A', 'right', monitors, ['A', 'B', 'C']), 'B');
   assert.equal(M.neighborMonitor('A', 'left', monitors, ['A', 'B', 'C']), null);
+  assert.equal(M.neighborMonitor('A', 'down', monitors, ['A', 'B', 'C']), null);
+  assert.equal(M.neighborMonitor('B', 'down', monitors, ['A', 'B', 'C']), null, 'corner contact is not a shared span');
   assert.equal(M.edgeMonitor('left', monitors, ['A', 'B', 'C']), 'A');
   assert.equal(M.edgeMonitor('right', monitors, ['A', 'B', 'C']), 'C');
+});
+
+test('directional neighbors use logical spans with rotation and fractional scale', () => {
+  const monitors = [
+    { name: 'A', x: 0, y: 0, width: 1920, height: 1200, scale: 1 },
+    { name: 'B', x: 1920, y: -300, width: 1920, height: 1080, scale: 1.5, transform: 3 },
+  ];
+  assert.equal(M.neighborMonitor('A', 'right', monitors), 'B');
+  assert.equal(M.neighborMonitor('B', 'left', monitors), 'A');
+  for (const name of ['A', 'B']) for (const arrow of ['up', 'down'])
+    assert.equal(M.neighborMonitor(name, arrow, monitors), null);
 });
 
 test('mode choices deduplicate labels while retaining exact accepted strings', () => {

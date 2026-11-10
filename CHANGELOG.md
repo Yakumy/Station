@@ -1,5 +1,9 @@
 # Unreleased
 
+- Fix BTT and TTB window moves at the edge of side-by-side monitors with different
+  heights. Up and Down step to the adjacent station on the same monitor instead of
+  treating the other monitor as a vertical neighbor. Correct native moves that cross
+  to the wrong monitor, while keeping native tile movement.
 - Keep widgets in Omarchy's `centerBegin` and `centerEnd` sections visible beside
   the centered clock, including vertical and Pill bars. Preserve tray-section
   widgets in the tray drawer, settings updates, drag moves and leased placements.

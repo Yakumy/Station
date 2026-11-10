@@ -288,7 +288,12 @@ Item {
       if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
       var client = clients.find(function(c) { return Grid.sameClient(Grid.identity(before), c) })
       if (!client) { finishWindowAction(generation, "closed"); return }
-      if (Model.windowChanged(before, client)) {
+      var targetMonitor = Model.neighborMonitor(before.monitor, direction, monitors, workspaceMap.outputs)
+      // Hyprland may choose a diagonal output at a tile edge. Such a crossing
+      // must use the source position's station fallback, not that output's slot.
+      var wrongCrossing = Grid.mode(workspaceMap) === "station" && before.monitor !== client.monitor
+        && client.monitor !== targetMonitor
+      if (Model.windowChanged(before, client) && !wrongCrossing) {
         lastWindowAction = Object.assign({}, lastWindowAction, { afterWorkspace: Number(client.workspace.id), afterMonitor: client.monitor })
         if (before.monitor !== client.monitor && Grid.mode(workspaceMap) === "station") {
           // A reconnected output can retain an unrelated active workspace.
@@ -307,16 +312,16 @@ Item {
         else finishWindowAction(generation, "native")
         return
       }
-      var targetMonitor = Model.neighborMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
-      var station = Grid.station(Number(client.workspace.id), workspaceMap)
+      var station = Grid.station(Number(before.workspace.id), workspaceMap)
       if (Grid.mode(workspaceMap) !== "station") { moveAcross(client, station, targetMonitor, direction, generation); return }
       if (!targetMonitor) {
         var delta = Model.step(direction, config.direction)
         if (delta === null || station + delta < 1 || station + delta > Grid.ceiling(workspaceMap)) {
+          if (wrongCrossing) { moveActionWindow(client, station, before.monitor, true, generation); return }
           finishWindowAction(generation, "edge"); return
         }
         station += delta
-        targetMonitor = Model.boundaryMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
+        targetMonitor = Model.boundaryMonitor(before.monitor, direction, monitors, workspaceMap.outputs)
       }
       moveActionWindow(client, station, targetMonitor, true, generation)
     })
