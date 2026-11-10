@@ -31,7 +31,16 @@ test('each mode assigns the requested workspaces to outputs as the Workspaces ta
   // Limits keep one workspace per output and no output above ten.
   assert.deepEqual(G.split('repetitive', 3, 29), [9, 10, 10]);
   assert.deepEqual(G.split('nonrepetitive', 3, 1), [1, 1, 1]);
-  assert.equal(G.total('nonrepetitive', 2, 99), 10);
+  // Station allows 1 to 5, Repetitive ten per output, Non-repetitive twenty in all.
+  assert.deepEqual(G.limits('station', 2), { min: 1, max: 5, fallback: 3 });
+  assert.deepEqual(G.limits('repetitive', 3), { min: 3, max: 30, fallback: 15 });
+  assert.deepEqual(G.limits('nonrepetitive', 1), { min: 1, max: 10, fallback: 10 });
+  assert.deepEqual(G.limits('nonrepetitive', 3), { min: 3, max: 20, fallback: 10 });
+  assert.equal(G.total('station', 2, 9), 5);
+  assert.equal(G.total('nonrepetitive', 2, 99), 20);
+  assert.deepEqual(G.split('nonrepetitive', 2, 20), [10, 10]);
+  assert.deepEqual(G.split('nonrepetitive', 3, 20), [6, 6, 8]);
+  assert.deepEqual(G.split('repetitive', 2, 99), [10, 10]);
   assert.equal(G.total('repetitive', 2, null), 10);
   assert.equal(G.total('station', 2, 0), 1);
 });
@@ -42,6 +51,8 @@ test('mode maps validate, compare by numbering, and Station maps keep the old sh
   assert.deepEqual(rep, { outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 4] });
   for (const value of [rep, map(['A', 'B'], 'nonrepetitive', 9)]) assert.equal(G.valid(value), true);
   assert.equal(G.valid({ outputs: ['A'], mode: 'nonrepetitive', counts: [11] }), false);
+  assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'nonrepetitive', counts: [10, 10] }), true);
+  assert.equal(G.valid({ outputs: ['A', 'B', 'C'], mode: 'nonrepetitive', counts: [7, 7, 7] }), false);
   assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'repetitive', counts: [3] }), false);
   assert.equal(G.valid({ outputs: ['A'], mode: 'other' }), false);
   assert.equal(G.equal({ outputs: ['A', 'B'] }, map(['A', 'B'], 'station', 9)), true);
@@ -58,9 +69,19 @@ test('repetitive keeps Station IDs, and non-repetitive owns consecutive global n
   assert.equal(G.workspace(5, 'B', non), 5);
   assert.equal(G.workspace(5, 'A', non), null);
   assert.equal(G.home(5, 'A', non), 'B');
-  assert.equal(G.contains(11, non), false);
+  assert.equal(G.contains(20, non), true);
+  assert.equal(G.contains(21, non), false);
   assert.deepEqual(G.numbers(non, 1), [5, 6, 7, 8, 9]);
-  assert.deepEqual(G.assignments(non).map(([id, output]) => id + output).join(' '), '1A 2A 3A 4A 5B 6B 7B 8B 9B 10B');
+  assert.deepEqual(G.assignments(non).map(([id, output]) => id + output).join(' '),
+    '1A 2A 3A 4A 5B 6B 7B 8B 9B 10B 11B 12B 13B 14B 15B 16B 17B 18B 19B 20B');
+  // Twenty non-repetitive workspaces: B owns 11 to 20, and the keys' ceiling follows.
+  const wide = map(['A', 'B'], 'nonrepetitive', 20);
+  assert.deepEqual(G.numbers(wide, 1), [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+  assert.equal(G.workspace(20, 'B', wide), 20);
+  assert.equal(G.home(17, 'A', wide), 'B');
+  assert.equal(G.ceiling(wide), 20);
+  assert.equal(G.ceiling(rep), 10);
+  assert.deepEqual(G.existing([win('0x9', 18, 'B')], [], 3, wide, 'A').slice(-3), [18, 19, 20]);
   assert.deepEqual(H.workspaceRules(G.assignments({ outputs: ['A', 'B'] })), H.compactRules(['A', 'B']));
 });
 
@@ -133,6 +154,7 @@ test('per-output app rows group by the bar output and its number', () => {
   assert.deepEqual(rows.B[2].map(x => [x.address, x.focused]), [['0x2', true]]);
   const non = map(['A', 'B'], 'nonrepetitive', 9);
   assert.deepEqual(Object.keys(outputRows(non, [win('0x1', 7, 'B')], null, null).B), ['7']);
+  assert.deepEqual(Object.keys(outputRows(map(['A', 'B'], 'nonrepetitive', 20), [win('0x1', 18, 'B')], null, null).B), ['18']);
   assert.deepEqual(outputRows({ outputs: ['A'] }, [win('0x1', 1, 'A')], null, null), {});
 });
 
@@ -175,7 +197,7 @@ test('switching shows every output in Station mode, one output in Repetitive and
 test('settling after a non-repetitive migration returns each output to its own block', () => {
   const { c } = switcher(map(['A', 'B'], 'nonrepetitive', 9));
   const statements = c.settleStatements(1, 'A');
-  assert.deepEqual([...statements], [H.homeWorkspace('A', 1, 4), H.homeWorkspace('B', 5, 10), H.focusMonitor('A')]);
+  assert.deepEqual([...statements], [H.homeWorkspace('A', 1, 4), H.homeWorkspace('B', 5, 20), H.focusMonitor('A')]);
   assert.deepEqual([...switcher(map(['A', 'B'], 'repetitive', 6)).c.settleStatements(1, 'A')], [H.focusMonitor('A')]);
 });
 
@@ -197,7 +219,7 @@ test('workspace mode and count changes are idle-only, clamped, and start the jou
     { mode: c.config.workspaceMode, counts: c.config.workspaceCounts });
   c.setWorkspaceSetting = qmlFunction(source, 'setWorkspaceSetting', c);
   assert.equal(c.setWorkspaceSetting('workspaceCount', 40), 'ok');
-  assert.equal(c.config.minStations, 10);
+  assert.equal(c.config.minStations, 5);
   assert.equal(reconciled, 0, 'a station count does not renumber');
   assert.equal(c.setWorkspaceSetting('workspaceMode', 'grid'), 'invalid');
   assert.equal(c.setWorkspaceSetting('workspaceMode', 'nonrepetitive'), 'ok');

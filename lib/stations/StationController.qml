@@ -58,7 +58,7 @@ Item {
   // does. Otherwise the focused output.
   function showStation(stationValue, outputName) {
     var stationNumber = Number(stationValue)
-    if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
+    if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Grid.ceiling(workspaceMap)) return "invalid"
     // Keep the latest numbered-key intent while the compositor batch runs.
     // Dropping a quick return to S1 leaves the user looking at an empty S2/S3.
     if (operationState === "switching") {
@@ -159,7 +159,7 @@ Item {
     var statements = []
     if (mode === "nonrepetitive") workspaceMap.outputs.forEach(function(output, index) {
       var first = Grid.start(index, workspaceMap)
-      var last = index === workspaceMap.outputs.length - 1 ? Grid.MAX_STATIONS : first + workspaceMap.counts[index] - 1
+      var last = index === workspaceMap.outputs.length - 1 ? Grid.MAX_GLOBAL : first + workspaceMap.counts[index] - 1
       statements.push(Hypr.homeWorkspace(output, first, last))
     })
     if (workspaceMap.outputs.indexOf(finalOutput) !== -1) statements.push(Hypr.focusMonitor(finalOutput))
@@ -221,7 +221,7 @@ Item {
 
   function sendWindow(stationValue, follow) {
     var station = Number(stationValue)
-    if (!Number.isInteger(station) || station < 1 || station > Model.MAX_STATION) return "invalid"
+    if (!Number.isInteger(station) || station < 1 || station > Grid.ceiling(workspaceMap)) return "invalid"
     if (!readyForWindows()) return "busy"
     var generation = begin("moving")
     lastWindowAction = { action: follow ? "send" : "silent", station: station, result: "reading", receivedAt: Date.now() }
@@ -305,7 +305,7 @@ Item {
       if (Grid.mode(workspaceMap) !== "station") { moveAcross(client, station, targetMonitor, direction, generation); return }
       if (!targetMonitor) {
         var delta = Model.step(direction, config.direction)
-        if (delta === null || station + delta < 1 || station + delta > Model.MAX_STATION) {
+        if (delta === null || station + delta < 1 || station + delta > Grid.ceiling(workspaceMap)) {
           finishWindowAction(generation, "edge"); return
         }
         station += delta
@@ -327,7 +327,7 @@ Item {
       return
     }
     var delta = Model.step(direction, config.direction)
-    if (delta === null || number === null || number + delta < 1 || number + delta > Model.MAX_STATION) {
+    if (delta === null || number === null || number + delta < 1 || number + delta > Grid.ceiling(workspaceMap)) {
       finishWindowAction(generation, "edge"); return
     }
     var next = number + delta

@@ -42,7 +42,8 @@ QML harnesses cover that part.
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |
 | `layout` | Pointer events on the display layout |
 | `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all seven tabs on both paths, fixed frame |
-| `workspaces-tab` | Workspaces tab badges, roles and count limits in all three modes, rendered |
+| `workspaces-tab` | Workspaces tab badges, roles and count limits in all three modes, and the disabled selector on one monitor, rendered |
+| `workspace-ids` | Station bar's workspace number row against live Hyprland data: configured and active IDs, active mark, click, rendered. Read-only |
 | `wallpaper-layout` | Crop gestures |
 | `window-settings`, `window-sliders`, `windows-tab` | Window owner, slider pointer events, preview exchange |
 

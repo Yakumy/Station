@@ -56,11 +56,11 @@ Column {
   Item { width: 1; height: settingsTab.inset }
 
   PlainToggleRow {
-    label: "Hide Omarchy's workspace indicator"
-    checked: settingsTab.service && (settingsTab.service.config.hideNative
-      || settingsTab.service.workspaceWidgetEnabled === false)
+    objectName: "workspaceNumbersToggle"
+    label: "Show workspace numbers"
+    checked: !!settingsTab.service && settingsTab.service.config.hideNative === false
     onClicked: if (settingsTab.service)
-      settingsTab.service.setSetting("hideNative", !checked)
+      settingsTab.service.setSetting("hideNative", checked)
   }
   Item { width: 1; height: settingsTab.tokens.space2 }
   Ui.PanelSeparator {

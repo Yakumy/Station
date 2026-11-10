@@ -124,9 +124,9 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 
 | Mode | Map | Numbered key `n` | Count |
 | --- | --- | --- | --- |
-| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `minStations`, 1 to 10 |
+| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `minStations`, 1 to 5, default 3 |
 | `repetitive` | `{ outputs, mode, counts }`, the same IDs as Station | Shows the output's own workspace `n` on the focused output only | `workspaceCounts.repetitive`, N to 10·N, default 5·N |
-| `nonrepetitive` | `{ outputs, mode, counts }`, IDs 1 to 10 | Shows workspace `n` on the output that owns it | `workspaceCounts.nonrepetitive`, N to 10, default 10 |
+| `nonrepetitive` | `{ outputs, mode, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceCounts.nonrepetitive`, N to 20 (10 on one output), default 10 |
 
 N is the number of station-bearing outputs. The Repetitive and Non-repetitive counts are
 totals: each output gets `floor(total / N)` and the last output also gets the remainder.
@@ -135,6 +135,12 @@ outputs own consecutive blocks in role order, and numbers past the total belong 
 last output. With two stations on two outputs the first output shows 1 and 3; with ten
 Repetitive workspaces on three outputs they show 1–3, 1–3 and 1–4; with nine
 Non-repetitive workspaces on two outputs they own 1–4 and 5–9.
+
+The numbered keys reach 1 to 10. Non-repetitive workspaces 11 to 20 are reached with
+arrow navigation and the bar.
+
+With one output the modes number the same workspaces, so the tab disables the mode
+selector and says it works only on multiple monitors. The saved mode stays in effect.
 
 A Station map has no `mode` field, so maps saved before the modes existed stay valid.
 Changing the mode, or a count that changes a Repetitive or Non-repetitive map, runs the
@@ -153,7 +159,7 @@ number at an outer edge.
 ### Which stations exist
 
 `existing = {1..minStations} ∪ {stations with a grid client} ∪ {stations displayed}`.
-`minStations` defaults to 3 and accepts 1 to 10. Repetitive steps through the focused
+`minStations` defaults to 3 and accepts 1 to 5. Keys still reach stations 6 to 10. Repetitive steps through the focused
 output's own count, its occupied numbers and the one it shows. Non-repetitive steps
 through 1 to the total, every occupied number and every shown number.
 
@@ -574,7 +580,12 @@ In Station mode every bar shows the station. In Repetitive and Non-repetitive ea
 shows its own output: its own numbers, the one it shows and the apps on them, and a
 click shows that number on that output. It reads the shown workspace from Quickshell's
 monitor and refreshes it on workspace events, because Omarchy's indicator, which would
-otherwise refresh it, is usually hidden.
+otherwise refresh it, is hidden.
+
+Show workspace numbers in Settings (`hideNative: false`) adds a row after the widget with
+the real Hyprland workspace IDs on that bar's output: the configured ones and any other
+workspace the output holds. The shown one has an accent mark, empty ones are dimmed, and
+a click goes through Station like a label click. IDs outside the map accept no click.
 
 - Hover shows the current station and a chevron, and reveals all occupied and minimum
   stations with one icon per mapped window. It uses the stock tray's 600 ms OutCubic
@@ -699,14 +710,17 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
 `state.stockLease` and `state.displayLease` have the shape
 `{ wasEnabled, section, index, disabledByStation }`.
 
-- With Hide on (the default for the workspace widget, off for the Display widget),
-  Station records placement and disables an enabled widget. It records a disabled widget
-  as such, and startup and removal never enable that one.
+- Station always leases Omarchy's workspace widget. It numbers each monitor in a block
+  of ten and its clicks focus those blocks, so it cannot show Station's numbering.
+  `hideNative` only controls Station's own workspace numbers (see Open apps).
+- With Hide on (off by default for the Display widget), Station records placement and
+  disables an enabled widget. It records a disabled widget as such, and startup and
+  removal never enable that one.
 - Restoring happens only for `disabledByStation && wasEnabled`.
-- An explicit Show also enables a widget hidden before Station acquired it.
-- The workspace widget returns behind Station with `omarchy bar move --after`, falling
-  back to its recorded place. `bar put` leaves a present widget where it is, so use
-  `bar move`.
+- An explicit Show of the Display widget also enables it when it was hidden before
+  Station acquired it.
+- Removal returns the workspace widget to its recorded place. `bar put` leaves a present
+  widget where it is, so use `bar move`.
 - Bar writes rebuild the bar, so Station runs them one at a time.
 
 ## Removal and restart

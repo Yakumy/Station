@@ -130,6 +130,14 @@ ShellRoot {
         var card = findObject(layout, "workspaceMonitor-HDMI-A-2")
         if (!role || role.text !== "| 2" || findObject(layout, "workspaceMonitorRole-DP-3").text !== "| Off") { fail("roles"); return }
         if (!inside(name, card) || !inside(findObject(layout, "workspaceBadge-HDMI-A-2-2"), card)) { fail("labels inside the card"); return }
+        fakeService.setSetting("workspaceCount", 9)
+        if (findObject(tab, "workspaceCountValue").text !== "5" || findObject(tab, "workspaceCountIncrease").enabled) {
+          fail("station maximum"); return
+        }
+        fakeService.setSetting("workspaceCount", 3)
+        if (!findObject(tab, "workspaceModeSelector").enabled || findObject(tab, "workspaceModeNote").visible) {
+          fail("selector on two monitors"); return
+        }
         var minus = findObject(tab, "workspaceCountDecrease")
         minus.clicked()
         if (badges("eDP-1") !== "1,3" || badges("HDMI-A-2") !== "2,4") { fail("two stations"); return }
@@ -143,7 +151,10 @@ ShellRoot {
         if (badges("eDP-1") !== "1,2,3,4" || badges("HDMI-A-2") !== "5,6,7,8,9") { fail("non-repetitive badges"); return }
         if (findObject(tab, "workspaceCountValue").text !== "9") { fail("count value"); return }
         findObject(tab, "workspaceCountIncrease").clicked()
-        if (badges("eDP-1") !== "1,2,3,4,5" || findObject(tab, "workspaceCountIncrease").enabled) { fail("non-repetitive maximum"); return }
+        if (badges("eDP-1") !== "1,2,3,4,5" || !findObject(tab, "workspaceCountIncrease").enabled) { fail("non-repetitive ten"); return }
+        fakeService.setSetting("workspaceCount", 25)
+        if (badges("eDP-1") !== "1,2,3,4,5,6,7,8,9,10" || badges("HDMI-A-2") !== "11,12,13,14,15,16,17,18,19,20"
+            || findObject(tab, "workspaceCountIncrease").enabled) { fail("non-repetitive maximum"); return }
         phase = -1
         save("nonrepetitive", function() { phase = 2 })
         return
@@ -151,6 +162,9 @@ ShellRoot {
       if (phase === 2) {
         findObject(tab, "workspaceMode-repetitive").clicked()
         if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "1,2,3,4,5") { fail("repetitive default"); return }
+        fakeService.setSetting("workspaceCount", 99)
+        if (badges("eDP-1") !== "1,2,3,4,5,6,7,8,9,10" || badges("HDMI-A-2") !== "1,2,3,4,5,6,7,8,9,10"
+            || findObject(tab, "workspaceCountIncrease").enabled) { fail("repetitive maximum"); return }
         fakeService.setSetting("workspaceCount", 7)
         if (badges("eDP-1") !== "1,2,3" || badges("HDMI-A-2") !== "1,2,3,4") { fail("repetitive remainder"); return }
         layout.zoomAt(1.5, layout.width / 2, layout.height / 2)
@@ -158,7 +172,23 @@ ShellRoot {
         if (findObject(tab, "workspaceCountIncrease").enabled) { fail("busy controls"); return }
         fakeService.state = "idle"
         phase = -1
-        save("repetitive", function() {
+        save("repetitive", function() { phase = 3 })
+        return
+      }
+      if (phase === 3) {
+        fakeService.workspaceTarget = ({outputs: ["eDP-1"]})
+        var selector = findObject(tab, "workspaceModeSelector")
+        var note = findObject(tab, "workspaceModeNote")
+        if (selector.enabled || !note.visible || note.text !== "Works only on multiple monitors") { fail("single monitor"); return }
+        if (selector.opacity !== tokens.disabledOpacity || findObject(tab, "workspaceMode-repetitive").selected) {
+          fail("single monitor style"); return
+        }
+        var frame = findObject(tab, "workspaceModeSelector").parent
+        if (!inside(note, frame) || note.mapToItem(frame, 0, 0).y < selector.mapToItem(frame, 0, selector.height).y) {
+          fail("note under the buttons"); return
+        }
+        phase = -1
+        save("single", function() {
           console.log("WORKSPACES_RENDER_OK")
           Qt.quit()
         })

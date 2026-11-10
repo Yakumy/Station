@@ -159,11 +159,14 @@ Item {
     saveState: function() { store.saveState() }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
+  // Omarchy's workspace widget numbers each monitor in a block of ten, and its
+  // clicks focus those blocks, so it cannot show Station's numbering. Station keeps
+  // it hidden; hideNative only controls Station's own workspace numbers.
   Bars.StockWidgetLeases {
     id: leases
     shell: root.shell
     started: root.started
-    config: root.config
+    config: Object.assign({}, root.config, { hideNative: true })
     persisted: root.persisted
     saveState: function() { store.saveState() }
     enqueue: function(command, done) { compositor.enqueue(command, done) }
@@ -522,11 +525,9 @@ Item {
   function setSetting(name, value) {
     if (name === "workspaceMode" || name === "workspaceCount") return setWorkspaceSetting(name, value)
     if (name === "hideNative") {
-      if (panelWanted) panel.panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
       config = Object.assign({}, config)
       store.saveConfig()
-      leases.workspaceVisibilityChanged(config.hideNative)
       return "ok"
     }
     if (name === "hideDisplay") {
@@ -554,7 +555,7 @@ Item {
       var grace = Number(value)
       config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 5000
     }
-    else if (name === "minStations") config.minStations = Math.max(1, Math.min(10, Number(value) || 3))
+    else if (name === "minStations") config.minStations = Math.max(1, Math.min(5, Number(value) || 3))
     else return "invalid"
     config = Object.assign({}, config)
     store.saveConfig()
@@ -574,7 +575,6 @@ Item {
     }
     displayController.migrateMonitorPrecedence(function() { compositor.refresh(true, function() {
       applyRuntime()
-      if (!config.hideNative && persisted.stockLease) leases.restoreStockLease()
       if (!config.hideDisplay && persisted.displayLease) leases.restoreDisplayLease()
       leases.acquireStockLeases()
       if (!persisted.activeNoticeShown) {

@@ -21,6 +21,9 @@ Column {
     mode === "station" ? config.minStations : (config.workspaceCounts ? config.workspaceCounts[mode] : null))
   readonly property var assigned: Grid.assigned(mode, outputCount, count)
   readonly property bool editable: !!service && service.state === "idle"
+  // The modes differ only across monitors, so one monitor locks the selector.
+  readonly property bool singleOutput: outputs.length <= 1
+  readonly property real modeNoteHeight: singleOutput ? Style.space(22) : 0
   spacing: 0
 
   function changeCount(delta) {
@@ -44,6 +47,7 @@ Column {
     property string value: ""
     property var options: []
     signal changed(string value)
+    opacity: enabled ? 1 : root.tokens.disabledOpacity
     color: Commons.Color.popups.background
     borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
     radius: Style.cornerRadius
@@ -64,7 +68,7 @@ Column {
             anchors.fill: parent
             objectName: "workspaceMode-" + modelData.value
             text: modelData.label
-            selected: selector.value === modelData.value
+            selected: selector.enabled && selector.value === modelData.value
             focusable: true
             foreground: Commons.Color.popups.text
             background: Commons.Color.popups.background
@@ -143,8 +147,7 @@ Column {
           anchors.fill: parent
           spacing: 0
           Item {
-            width: parent.width; height: controlFrame.height / 5
-            enabled: root.editable
+            width: parent.width; height: controlFrame.height / 5 + root.modeNoteHeight
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top; anchors.topMargin: root.tokens.space2
@@ -152,14 +155,24 @@ Column {
             }
             ModeSelector {
               objectName: "workspaceModeSelector"
+              enabled: root.editable && !root.singleOutput
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
+              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2 + root.modeNoteHeight
               height: Style.spacing.controlHeight
               value: root.mode
               options: [{ value: "station", label: "Station" }, { value: "repetitive", label: "Repetitive" },
                 { value: "nonrepetitive", label: "Non-repetitive" }]
               onChanged: function(value) { if (root.service) root.service.setSetting("workspaceMode", value) }
+            }
+            Caption {
+              objectName: "workspaceModeNote"
+              visible: root.singleOutput
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
+              elide: Text.ElideRight
+              text: "Works only on multiple monitors"
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
@@ -192,6 +205,7 @@ Column {
                 text: "-"; bordered: true
                 width: Style.spacing.controlHeight; height: Style.spacing.controlHeight
                 enabled: root.editable && root.count > root.limits.min
+                opacity: enabled ? 1 : root.tokens.disabledOpacity
                 onClicked: root.changeCount(-1)
               }
               Text {
@@ -209,6 +223,7 @@ Column {
                 text: "+"; bordered: true
                 width: Style.spacing.controlHeight; height: Style.spacing.controlHeight
                 enabled: root.editable && root.count < root.limits.max
+                opacity: enabled ? 1 : root.tokens.disabledOpacity
                 onClicked: root.changeCount(1)
               }
             }
@@ -268,7 +283,7 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 5
+            width: parent.width; height: controlFrame.height / 5 - root.modeNoteHeight
           }
         }
       }
