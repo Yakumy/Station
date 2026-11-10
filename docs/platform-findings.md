@@ -1187,3 +1187,25 @@ user tests; the automated checks do not establish those results.
   Bar tab was showing, and Revert restored the saved Single. The bar toggle did not cause it:
   `setMonitorBarEnabled` issues no monitor rule. This was reconstructed from timestamps.
 - [SRC] The countdown was drawn only by `DisplaysTab`, so nothing warned on other tabs.
+
+## Omarchy's workspace indicator with Station's numbering (2026-11-10)
+
+- [SRC] Omarchy 4.5 gives each monitor a block of ten workspace IDs, keyed by make, model
+  and serial, and records it in `~/.local/state/omarchy/monitor-workspaces` as
+  `block<TAB>connector<TAB>identity`. The internal panel takes block 0 (1–10), the next
+  monitor block 1 (11–20). An unplugged monitor keeps its line with an empty connector.
+  `SUPER + n` runs `o.workspaces.focus(n, monitor)`, which shows block·10 + n.
+- [SRC] Omarchy's indicator (`shell/plugins/bar/widgets/Workspaces.qml`) reads that file and
+  knows nothing of Station. Each bar lists the first five IDs of its monitor's own block,
+  and any other existing ID in the block, labelled `(id − 1) % 10 + 1`. After a gap it lists
+  "visiting" workspaces: any other ID that sits on this monitor. The shown workspace is drawn
+  as its layout glyph, not a number. A click on its own block calls `o.workspaces.focus`;
+  a click on a visitor focuses that ID directly.
+- [LIVE] Sync on eDP-1 (block 0) and HDMI-A-2 (block 1), station 1, with HDMI first in role order: HDMI
+  shows 1 and eDP-1 shows 2. HDMI-A-2's indicator read `1 2 3 4 5`, a gap, the tiling glyph,
+  `3`. The first five were empty workspaces 11–15. The glyph was workspace 1, which was shown, and
+  `3` was workspace 3, station 2's HDMI side. Both were visitors, because 1–10 is eDP-1's
+  block. eDP-1's indicator looked right only because Station's 2, 4 and 6 fall in its block.
+- [INFERRED] The indicator matches Station only in Repetitive, which uses Omarchy's blocks.
+  In Sync and Non-repetitive its numbered buttons lead to IDs outside Station's map, such
+  as 11–15 above.
