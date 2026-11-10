@@ -9,6 +9,9 @@ QtObject {
 
   readonly property bool windowSettingsBusy: snapshot ? snapshot.windowSettingsBusy === true : false
   readonly property var openApps: snapshot ? snapshot.openApps || ({}) : ({})
+  readonly property var workspaceApps: snapshot ? snapshot.workspaceApps || ({}) : ({})
+  readonly property var workspaceMap: snapshot ? snapshot.workspaceMap || null : null
+  readonly property var workspaceTarget: snapshot ? snapshot.workspaceTarget || ({ outputs: [] }) : ({ outputs: [] })
   readonly property var config: snapshot ? snapshot.config : ({})
   readonly property var monitorBarMinimums: snapshot ? snapshot.monitorBarMinimums : ({})
   readonly property var monitorBarMaximumContents: snapshot ? snapshot.monitorBarMaximumContents : ({})
@@ -49,6 +52,7 @@ QtObject {
     return result
   }
   function switchStation(value) { return call("switchStation", [value]) }
+  function showWorkspace(value, output) { return call("showWorkspace", [value, output]) }
   function setSetting(name, value) { return call("setSetting", [name, value]) }
   function setModeValue(mode, target) { return call("setModeValue", [mode, target]) }
   function setDirectionValue(value) { return call("setDirectionValue", [value]) }

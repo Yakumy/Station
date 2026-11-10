@@ -35,6 +35,7 @@ Item {
   property var failPreview: null
   property var focusStatements: null
   property var showStation: null
+  property var settle: null
   property var ready: null
 
   property var workspaceData: ({ mapping: null, pending: null })
@@ -121,6 +122,8 @@ Item {
       restorePreviewBaseline(null)
       setOperationState("idle")
       if (topologyDirty || !Grid.equal(workspaceMap, targetMapping())) { reconcile(); return }
+      // Repetitive and Non-repetitive outputs keep what they show.
+      if (Grid.mode(workspaceMap) !== "station") { settle(migrationFocus); return }
       showStation(currentStation)
       if (migrationFocus) {
         var focused = clients.find(function(c) { return Grid.sameClient(migrationFocus, c) })
@@ -132,7 +135,7 @@ Item {
 
   function executeMigration() {
     var plan = workspaceData.pending
-    var rules = Hypr.compactRules(plan.to.outputs)
+    var rules = Hypr.workspaceRules(Grid.assignments(plan.to))
     var statements = []
     var destinations = {}
     var affected = {}

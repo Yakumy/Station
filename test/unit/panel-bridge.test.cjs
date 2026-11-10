@@ -64,16 +64,16 @@ test('fallback polls only without the trusted service and removes all direct wri
   sync();
 });
 
-test('station app display mode is a validated three-option dropdown', () => {
+test('station app display mode is a validated three-option dropdown on the Workspaces tab', () => {
+  const tab = read('lib/stations/WorkspacesTab.qml');
   const settings = read('lib/panel/SettingsTab.qml');
-  assert.match(settings, /objectName: "stationAppsModeDropdown"/);
+  assert.match(tab, /objectName: "stationAppsModeDropdown"/);
   for (const value of ['hover', 'always', 'hide'])
-    assert.match(settings, new RegExp('value: "' + value + '"'));
-  assert.doesNotMatch(settings, /setSetting\("showOpenApps"/);
-  assert.ok(settings.indexOf('objectName: "stationAppsModeDropdown"')
-    > settings.indexOf('label: "Follow focus'));
-  assert.ok(settings.indexOf('objectName: "stationAppsModeDropdown"')
-    < settings.indexOf('text: "Panel opening position"'));
+    assert.match(tab, new RegExp('value: "' + value + '"'));
+  assert.doesNotMatch(tab + settings, /setSetting\("showOpenApps"/);
+  assert.doesNotMatch(settings, /stationAppsMode|minStations/, 'Settings no longer duplicates Workspaces rows');
+  assert.ok(tab.indexOf('objectName: "stationAppsModeDropdown"')
+    > tab.indexOf('objectName: "indicatorStyleDropdown"'));
 
   const context = { config: { stationAppsMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);
@@ -137,7 +137,7 @@ test('new intent setters reject malformed values at the service boundary', () =>
     ['setPanelWanted', 'panelWanted', true, [1, 'true', null]],
     ['setPanelScreenName', 'panelScreenName', 'DP-1', [{}, '../bad', 4]],
     ['setPanelTransferUntil', 'panelTransferUntil', 1234, [NaN, Infinity, -1, '1234']],
-    ['setRememberedTab', 'rememberedTab', 5, [-1, 6, 1.5, '2']],
+    ['setRememberedTab', 'rememberedTab', 6, [-1, 7, 1.5, '2']],
     ['setRememberedDisplayName', 'rememberedDisplayName', 'HDMI-A-1', [{}, 'x;bad', null]],
   ]) {
     const fn = qmlFunction(service, method, context);

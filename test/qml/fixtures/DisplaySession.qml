@@ -95,6 +95,8 @@ Item {
   function syncBarGaps() {}
   function focusedClient() { return clients[2] || null }
   function stationFocusStatements(station,output) { return [] }
+  function settleStatements(station,output) { return [] }
+  function settleAfterMigration(identity) {}
   function showStation(station) { effects.push("show:"+station) }
   function refresh(include,done) { jobs.push({kind:"snapshot",done:done}) }
   function enqueue(args,done,generation) { jobs.push({kind:"command",args:args,done:done,generation:generation}) }

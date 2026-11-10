@@ -69,6 +69,10 @@ Item {
   readonly property alias windowSettingsBusy: windowSettings.windowSettingsBusy
   readonly property alias wallpaper: wallpaperController
   readonly property var openApps: openAppsController.rows
+  readonly property var workspaceApps: openAppsController.outputRows
+  // The map the preferences ask for. The Workspaces tab draws it before a
+  // migration commits it.
+  readonly property var workspaceTarget: targetMapping()
 
   readonly property alias panelWanted: panel.panelWanted
   readonly property alias panelScreenName: panel.panelScreenName
@@ -259,8 +263,9 @@ Item {
     restorePreviewBaseline: function(value) { displayController.restorePreviewBaseline(value) }
     finishPreviewApply: function() { displayController.finishPreviewApply() }
     failPreview: function(message) { displayController.failPreview(message) }
-    focusStatements: function(station, output) { return stations.stationFocusStatements(station, output) }
+    focusStatements: function(station, output) { return stations.settleStatements(station, output) }
     showStation: function(station) { stations.showStation(station) }
+    settle: function(identity) { stations.settleAfterMigration(identity) }
     ready: function() { root.maybeStart() }
   }
   Displays.DisplayController {
@@ -400,7 +405,7 @@ Item {
 
   function targetMapping() {
     var options = state === "previewing" && previewApplied ? previewApplied.options : config
-    return Grid.mapping(monitors, lanes, options)
+    return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, counts: config.workspaceCounts })
   }
 
   function monitorSignature() {
@@ -489,7 +494,33 @@ Item {
     return roles.indexOf(lanes[name])
   }
 
+  // Workspace mode and count change the map, so they run the journaled migration.
+  function setWorkspaceSetting(name, value) {
+    if (state !== "idle" || workspaceData.pending || removalGrace.running) return "busy"
+    var mode = config.workspaceMode
+    if (name === "workspaceMode") {
+      if (Grid.MODES.indexOf(value) === -1) return "invalid"
+      config.workspaceMode = value
+    } else {
+      var count = Number(value)
+      if (!Number.isInteger(count)) return "invalid"
+      var limits = Grid.limits(mode, Math.max(1, workspaceTarget.outputs.length))
+      count = Math.max(limits.min, Math.min(limits.max, count))
+      if (mode === "station") config.minStations = count
+      else {
+        var counts = Object.assign({}, config.workspaceCounts)
+        counts[mode] = count
+        config.workspaceCounts = counts
+      }
+    }
+    config = Object.assign({}, config)
+    store.saveConfig()
+    if (!Grid.equal(workspaceMap, targetMapping())) workspace.reconcile()
+    return "ok"
+  }
+
   function setSetting(name, value) {
+    if (name === "workspaceMode" || name === "workspaceCount") return setWorkspaceSetting(name, value)
     if (name === "hideNative") {
       if (panelWanted) panel.panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
@@ -513,6 +544,10 @@ Item {
     else if (name === "stationAppsMode") {
       if (["hover", "always", "hide"].indexOf(value) === -1) return "invalid"
       config.stationAppsMode = value
+    }
+    else if (name === "indicatorStyle") {
+      if (["prefixed", "number", "roman", "dots"].indexOf(value) === -1) return "invalid"
+      config.indicatorStyle = value
     }
     else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
@@ -637,6 +672,7 @@ Item {
   function keepPreview() { return displayController.keepPreview() }
   function revertPreview(reason) { return displayController.revertPreview(reason) }
   function switchStation(value) { return stations.showStation(value) }
+  function showWorkspace(value, output) { return stations.showWorkspace(value, output) }
   function setBinding(id, combo) { return keybindings.setBinding(id, combo) }
   function approveBinding(combo) { return keybindings.approveBinding(combo) }
   function setWindowSetting(key, value) { return windowSettings.setWindowSetting(key, value) }

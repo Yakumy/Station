@@ -15,6 +15,8 @@ Item {
   property var focused: null
   readonly property var rows: active
     ? OpenApps.rows(mapping, clients, focused, pending, minimum, current) : ({})
+  readonly property var outputRows: active
+    ? OpenApps.outputRows(mapping, clients, focused, pending) : ({})
   property bool dirty: false
   property bool busy: false
   property var monitors: []

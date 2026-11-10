@@ -33,7 +33,7 @@ flowchart TD
   Proxy --> PanelUi[StationPanel]
   Panel --> PanelUi
   PanelUi --> Session[PanelSession]
-  PanelUi --> Tabs[Six feature tabs]
+  PanelUi --> Tabs[Seven feature tabs]
 ```
 
 ## Where things live
@@ -46,7 +46,7 @@ owner and its tab, so one change stays in one place.
 | `Service.qml` | Composition root. Operation state, event routing, startup order, IPC and the public panel surface. |
 | `Panel.qml`, `Bar.qml` | Host entry points. They import the bridge from the top level (see [Bridge identity](#bridge-identity)). |
 | `lib/BarBridge.js` | Bridge library. Pinned at this path because its URL is its identity. |
-| `lib/stations/` | Workspace numbering, migrations, switching, window actions, open-app rows. |
+| `lib/stations/` | Workspace numbering and modes, migrations, switching, window actions, open-app rows, Workspaces tab. |
 | `lib/displays/` | Display identity and geometry, monitor Lua, previews, Keep, screen recovery, Displays tab. |
 | `lib/bars/` | Per-monitor bar settings, layer rule, stock widget leases, Station's bar controls, Bar tab. |
 | `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar. |

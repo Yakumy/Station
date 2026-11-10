@@ -118,10 +118,44 @@ Adding an output expands workspace IDs and keeps windows on their physical outpu
 Returning outputs start empty, and merged windows do not move back. A state file from
 the old fixed three-slot grid (state version 1) receives one conversion.
 
+### Workspace modes
+
+`config.workspaceMode` chooses how workspaces are numbered. The Workspaces tab sets it.
+
+| Mode | Map | Numbered key `n` | Count |
+| --- | --- | --- | --- |
+| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `minStations`, 1 to 10 |
+| `repetitive` | `{ outputs, mode, counts }`, the same IDs as Station | Shows the output's own workspace `n` on the focused output only | `workspaceCounts.repetitive`, N to 10·N, default 5·N |
+| `nonrepetitive` | `{ outputs, mode, counts }`, IDs 1 to 10 | Shows workspace `n` on the output that owns it | `workspaceCounts.nonrepetitive`, N to 10, default 10 |
+
+N is the number of station-bearing outputs. The Repetitive and Non-repetitive counts are
+totals: each output gets `floor(total / N)` and the last output also gets the remainder.
+No output exceeds ten, so an overflow moves back toward the first output. Non-repetitive
+outputs own consecutive blocks in role order, and numbers past the total belong to the
+last output. With two stations on two outputs the first output shows 1 and 3; with ten
+Repetitive workspaces on three outputs they show 1–3, 1–3 and 1–4; with nine
+Non-repetitive workspaces on two outputs they own 1–4 and 5–9.
+
+A Station map has no `mode` field, so maps saved before the modes existed stay valid.
+Changing the mode, or a count that changes a Repetitive or Non-repetitive map, runs the
+journaled migration below. Only `idle` accepts the change. Within the same kind a window
+keeps its number: Station and Repetitive keep the station and output, so switching
+between them moves nothing, and Non-repetitive keeps the workspace number and moves it to
+its new owner. Across kinds a window keeps its output and its rank in that output's list,
+clamped to the output's last workspace, so a Station to Non-repetitive round trip returns
+it to its station. After a Non-repetitive migration each output returns to one of its own
+workspaces; Repetitive outputs keep what they show.
+
+Only Station mode switches every output together. In the other modes follow focus is off,
+a moved window does not switch the other outputs, and Move across steps the window's own
+number at an outer edge.
+
 ### Which stations exist
 
 `existing = {1..minStations} ∪ {stations with a grid client} ∪ {stations displayed}`.
-`minStations` defaults to 3 and accepts 1 to 10.
+`minStations` defaults to 3 and accepts 1 to 10. Repetitive steps through the focused
+output's own count, its occupied numbers and the one it shows. Non-repetitive steps
+through 1 to the total, every occupied number and every shown number.
 
 - `SUPER + n` reaches any station 1 to 10.
 - Arrow navigation moves to the next or previous existing station, with no wrap. At
@@ -199,7 +233,7 @@ neither.
 
 ### Follow focus
 
-When enabled (the default), a focused workspace change on a managed output switches
+Station mode only. When enabled (the default), a focused workspace change on a managed output switches
 the whole station, after a 100 ms debounce. It acts only in `idle`, with no topology
 change in the last 500 ms, and re-reads state first. Station-generated events never
 trigger it.
@@ -532,7 +566,15 @@ file or to `state.json`.
 
 ### Open apps
 
-Settings offers `hover` (the default), `always` and `hide` as `stationAppsMode`.
+The Workspaces tab offers On hover (`hover`, the default), Always on (`always`) and Off
+(`hide`) as `stationAppsMode`, and the indicator style as `indicatorStyle`: `prefixed`
+(S1, or W1 outside Station mode), `number`, `roman` or `dots`.
+
+In Station mode every bar shows the station. In Repetitive and Non-repetitive each bar
+shows its own output: its own numbers, the one it shows and the apps on them, and a
+click shows that number on that output. It reads the shown workspace from Quickshell's
+monitor and refreshes it on workspace events, because Omarchy's indicator, which would
+otherwise refresh it, is usually hidden.
 
 - Hover shows the current station and a chevron, and reveals all occupied and minimum
   stations with one icon per mapped window. It uses the stock tray's 600 ms OutCubic
@@ -623,12 +665,16 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - The frame requests `Style.space(996)` by `Style.space(620)`, capped by the host. Tabs
   do not change it. The header and tabs stay fixed, and the body scrolls vertically only
   on overflow, returning to the top on a tab change.
-- The tabs are Displays, Bar, Windows, Wallpaper, Keybindings and Settings. Service
+- The tabs are Displays, Workspaces, Bar, Windows, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
 - Position is Left (at the bar icon, the default) or Center on the current monitor. It
   uses the output's full-screen card and stays clear of the bar on small screens.
 - Settings holds the two Hide switches, follow focus, panel position, grace delay,
-  minimum stations, open apps and the installed version.
+  and the installed version. Minimum stations and open apps are on the Workspaces tab.
+- The Workspaces tab draws the monitor layout read-only: no drag and no selection, only
+  zoom and pan. Each managed output shows its name, its role and its workspaces in the
+  top-left corner. The tab draws the requested map (`workspaceTarget`), so it changes as
+  soon as a control does.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.

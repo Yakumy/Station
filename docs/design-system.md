@@ -166,7 +166,7 @@ A change passes when, under at least two themes including one light theme (Catpp
 
 ### Layout monitor rectangles
 
-The monitor rectangles in all four layout panels (Displays, Bar, Wallpaper, Windows)
+The monitor rectangles in all five layout panels (Displays, Workspaces, Bar, Wallpaper, Windows)
 use a fixed sharp radius of 0 and never follow the theme rounding.
 
 ### Window geometry preview

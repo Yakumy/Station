@@ -58,7 +58,8 @@ ShellRoot {
       panelTransferUntil:0, panelEvacuationWaiting:0, panelEvacuationSerial:0, panelEvacuationFrom:"",
       rememberedTab:0, rememberedDisplayName:screen.name, pluginVersion:"test", previewBusy:false,
       previewSeconds:12, layoutError:"", windowSettingsBusy:false, monitorBarMinimums:{}, monitorBarMaximumContents:{},
-      openApps:{}, workspaceWidgetEnabled:true, displayWidgetEnabled:true,
+      openApps:{}, workspaceApps:{}, workspaceMap:{outputs:[screen.name]}, workspaceTarget:{outputs:[screen.name]},
+      workspaceWidgetEnabled:true, displayWidgetEnabled:true,
       wallpaper:{notice:"", themePath:"", draft:Wallpaper.resolve({},"",""), layout:{displays:[], width:1920, height:1080}}}
   }
   FloatingWindow {
@@ -93,19 +94,19 @@ ShellRoot {
         station.open()
       } else if (step === 1 || step === 6) {
         if (!require(station.opened && root.state.panelWanted, "open intent")) return
-        station.selectedTab = 4
+        station.selectedTab = 5
       } else if (step === 2 || step === 7) {
-        if (!require(root.state.rememberedTab === 4, "tab setter")) return
+        if (!require(root.state.rememberedTab === 5, "tab setter")) return
         var content = find(station, "stationTabContent", [])
-        if (!require(content && content.children.length >= 6, "all tabs")) return
-        var keys = content.children[4]
+        if (!require(content && content.children.length >= 7, "all tabs")) return
+        var keys = content.children[5]
         keys.beginBindingEdit(root.state.bindStatuses[0]); keys.editingKey = "K"; keys.applyBindingEdit()
         if (!require(root.calls.some(function(row) { return row[0] === "setBinding" && row[1][1] === "SUPER + K" }), "key action")) return
         station.close()
       } else if (step === 3 || step === 8) {
         if (!require(!station.opened && !root.state.panelWanted && root.state.rememberedTab === 0, "explicit dismissal")) return
         if (step === 3) { station.bridgeApi = root.api; station.bridgeSnapshot = root.api.snapshot(); root.trusted = false; station.syncBridge() }
-        else { console.log("PANEL_COMPOSITION_PASS direct and bridge paths, six populated tabs, intent and key action"); stop(); Qt.quit(); return }
+        else { console.log("PANEL_COMPOSITION_PASS direct and bridge paths, seven populated tabs, intent and key action"); stop(); Qt.quit(); return }
       }
       step++
     }

@@ -29,13 +29,14 @@ Item {
 
   property int currentStation: 1
   property int queuedStation: 0
+  property string queuedOutput: ""
   property var lastWindowAction: ({})
 
   function parseJson(raw, fallback) {
     try { return JSON.parse(String(raw || "")) } catch (error) { return fallback }
   }
 
-  function clearQueued() { queuedStation = 0 }
+  function clearQueued() { queuedStation = 0; queuedOutput = "" }
 
   function followFocusChanged() { followFocus.restart() }
 
@@ -53,19 +54,26 @@ Item {
       && Grid.equal(workspaceMap, targetMapping())
   }
 
-  function showStation(stationValue) {
+  // `outputName` names the output a Repetitive switch acts on, as a bar click
+  // does. Otherwise the focused output.
+  function showStation(stationValue, outputName) {
     var stationNumber = Number(stationValue)
     if (!Number.isInteger(stationNumber) || stationNumber < 1 || stationNumber > Model.MAX_STATION) return "invalid"
     // Keep the latest numbered-key intent while the compositor batch runs.
     // Dropping a quick return to S1 leaves the user looking at an empty S2/S3.
-    if (operationState === "switching") { queuedStation = stationNumber; return "queued" }
+    if (operationState === "switching") {
+      queuedStation = stationNumber
+      queuedOutput = outputName ? String(outputName) : ""
+      return "queued"
+    }
     if (!readyForWindows()) return "busy"
     var available = workspaceMap.outputs
     var generation = begin("switching")
     var focused = focusedMonitor()
-    var rules = Hypr.compactRules(available)
-    var statements = rules.slice()
-    statements = statements.concat(stationFocusStatements(stationNumber, focused ? focused.name : available[0]))
+    var finalOutput = outputName && available.indexOf(String(outputName)) !== -1 ? String(outputName)
+      : (focused ? focused.name : available[0])
+    var statements = Hypr.workspaceRules(Grid.assignments(workspaceMap))
+    statements = statements.concat(stationFocusStatements(stationNumber, finalOutput))
     recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: available.slice(), until: Date.now() + 2000 })
     evalLua(Hypr.batch(statements), function(code, message) {
       if (generation !== gen) return
@@ -74,15 +82,22 @@ Item {
         rememberStation(stationNumber)
       }
       var next = queuedStation
+      var nextOutput = queuedOutput
       queuedStation = 0
+      queuedOutput = ""
       finish(generation)
-      if (next && readyForWindows()) showStation(next)
+      if (next && readyForWindows()) showStation(next, nextOutput)
     })
     return "started"
   }
 
   function switchStation(value) {
     return showStation(value)
+  }
+
+  // A bar label or app icon: in Repetitive, that bar's output shows the number.
+  function showWorkspace(value, output) {
+    return showStation(value, Grid.mode(workspaceMap) === "repetitive" ? output : "")
   }
 
   function finishWindowAction(generation, result) {
@@ -120,10 +135,46 @@ Item {
     })
   }
 
+  // Station mode focuses the station on every output. Repetitive shows the number
+  // on one output, and Non-repetitive shows the workspace on its owner.
   function stationFocusStatements(station, finalOutput) {
+    var mode = Grid.mode(workspaceMap)
+    if (mode === "repetitive") {
+      var output = workspaceMap.outputs.indexOf(finalOutput) !== -1 ? finalOutput : workspaceMap.outputs[0]
+      var id = workspaceFor(station, output)
+      return [Hypr.placeWorkspace(id, output), Hypr.focusWorkspace(id)]
+    }
+    if (mode === "nonrepetitive")
+      return [Hypr.placeWorkspace(station, Grid.home(station, finalOutput, workspaceMap)), Hypr.focusWorkspace(station)]
     var outputs = workspaceMap.outputs.filter(function(name) { return name !== finalOutput })
     if (workspaceMap.outputs.indexOf(finalOutput) !== -1) outputs.push(finalOutput)
     return outputs.map(function(output) { return Hypr.focusWorkspace(workspaceFor(station, output)) })
+  }
+
+  // After a migration: Station mode shows the station again. Non-repetitive puts
+  // every output back on a workspace of its own. Repetitive keeps what is shown.
+  function settleStatements(station, finalOutput) {
+    var mode = Grid.mode(workspaceMap)
+    if (mode === "station") return stationFocusStatements(station, finalOutput)
+    var statements = []
+    if (mode === "nonrepetitive") workspaceMap.outputs.forEach(function(output, index) {
+      var first = Grid.start(index, workspaceMap)
+      var last = index === workspaceMap.outputs.length - 1 ? Grid.MAX_STATIONS : first + workspaceMap.counts[index] - 1
+      statements.push(Hypr.homeWorkspace(output, first, last))
+    })
+    if (workspaceMap.outputs.indexOf(finalOutput) !== -1) statements.push(Hypr.focusMonitor(finalOutput))
+    return statements
+  }
+
+  function settleAfterMigration(identity) {
+    if (Grid.mode(workspaceMap) === "station") return
+    var focused = focusedMonitor()
+    var statements = settleStatements(currentStation, focused ? focused.name : "")
+    var client = identity ? clients.find(function(c) { return Grid.sameClient(identity, c) }) : null
+    if (client && client.address) statements.push(Hypr.focusWindow(client.address))
+    if (!statements.length) return
+    recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: workspaceMap.outputs.slice(), until: Date.now() + 2000 })
+    evalLua(Hypr.batch(statements))
   }
 
   function syncWindowStation(client, generation, result) {
@@ -131,7 +182,8 @@ Item {
     if (station === null || workspaceMap.outputs.indexOf(client.monitor) === -1) {
       finishWindowAction(generation, "unmanaged"); return
     }
-    var statements = stationFocusStatements(station, client.monitor)
+    // Only Station mode switches the other outputs along with the window.
+    var statements = Grid.mode(workspaceMap) === "station" ? stationFocusStatements(station, client.monitor) : []
     statements.push(Hypr.focusWindow(client.address))
     recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: workspaceMap.outputs.slice(), until: Date.now() + 2000 })
     evalLua(Hypr.batch(statements), function(code) {
@@ -145,7 +197,9 @@ Item {
 
   function moveActionWindow(client, station, output, follow, generation) {
     var target = workspaceFor(station, output)
-    var statements = Hypr.compactRules(workspaceMap.outputs)
+    if (target === null) { finishWindowAction(generation, "unmanaged"); return }
+    var statements = Hypr.workspaceRules(Grid.assignments(workspaceMap))
+    if (Grid.mode(workspaceMap) !== "station") statements.push(Hypr.placeWorkspace(target, output))
     statements.push(Hypr.moveWindow(client.address, target, follow))
     recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: [client.monitor, output], until: Date.now() + 2000 })
     evalLua(Hypr.batch(statements), function(code, message) {
@@ -171,7 +225,9 @@ Item {
     if (!readyForWindows()) return "busy"
     var generation = begin("moving")
     lastWindowAction = { action: follow ? "send" : "silent", station: station, result: "reading", receivedAt: Date.now() }
-    readActiveWindow(generation, function(client) { moveActionWindow(client, station, client.monitor, follow, generation) }, true)
+    readActiveWindow(generation, function(client) {
+      moveActionWindow(client, station, Grid.home(station, client.monitor, workspaceMap), follow, generation)
+    }, true)
     return "started"
   }
 
@@ -188,9 +244,10 @@ Item {
       if (!readyForWindows()) return
       var focused = focusedMonitor()
       var station = focused ? Grid.station(Number(focused.activeWorkspace.id), workspaceMap) : currentStation
-      var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap)
+      var output = focused && workspaceMap.outputs.indexOf(focused.name) !== -1 ? focused.name : workspaceMap.outputs[0]
+      var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap, output)
       var target = Model.nextExisting(station || currentStation, delta, existing)
-      if (target !== null) showStation(target)
+      if (target !== null) showStation(target, output)
     })
     return "started"
   }
@@ -202,7 +259,7 @@ Item {
     var generation = begin("moving")
     lastWindowAction = { action: "direction", direction: direction, result: "reading", receivedAt: Date.now() }
     readActiveWindow(generation, function(client) {
-      var statements = Hypr.compactRules(workspaceMap.outputs)
+      var statements = Hypr.workspaceRules(Grid.assignments(workspaceMap))
       statements.push(Hypr.nativeMove(client.address, direction))
       var neighbor = Model.neighborMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
       recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: neighbor ? [client.monitor, neighbor] : [client.monitor], until: Date.now() + 2000 })
@@ -226,7 +283,7 @@ Item {
       if (!client) { finishWindowAction(generation, "closed"); return }
       if (Model.windowChanged(before, client)) {
         lastWindowAction = Object.assign({}, lastWindowAction, { afterWorkspace: Number(client.workspace.id), afterMonitor: client.monitor })
-        if (before.monitor !== client.monitor) {
+        if (before.monitor !== client.monitor && Grid.mode(workspaceMap) === "station") {
           // A reconnected output can retain an unrelated active workspace.
           // Hyprland's directional move adopts that workspace, but crossing a
           // display boundary must preserve the window's source station.
@@ -245,6 +302,7 @@ Item {
       }
       var targetMonitor = Model.neighborMonitor(client.monitor, direction, monitors, workspaceMap.outputs)
       var station = Grid.station(Number(client.workspace.id), workspaceMap)
+      if (Grid.mode(workspaceMap) !== "station") { moveAcross(client, station, targetMonitor, direction, generation); return }
       if (!targetMonitor) {
         var delta = Model.step(direction, config.direction)
         if (delta === null || station + delta < 1 || station + delta > Model.MAX_STATION) {
@@ -255,6 +313,25 @@ Item {
       }
       moveActionWindow(client, station, targetMonitor, true, generation)
     })
+  }
+
+  // Repetitive and Non-repetitive have no station to keep: a neighbor's shown
+  // workspace takes the window, and an outer edge steps the window's number.
+  function moveAcross(client, number, targetMonitor, direction, generation) {
+    if (targetMonitor) {
+      var monitor = monitors.find(function(m) { return m.name === targetMonitor })
+      var shown = monitor ? Grid.station(Number(monitor.activeWorkspace && monitor.activeWorkspace.id), workspaceMap) : null
+      if (shown === null || workspaceFor(shown, targetMonitor) === null)
+        shown = Grid.mode(workspaceMap) === "repetitive" ? 1 : Grid.start(workspaceMap.outputs.indexOf(targetMonitor), workspaceMap)
+      moveActionWindow(client, shown, targetMonitor, true, generation)
+      return
+    }
+    var delta = Model.step(direction, config.direction)
+    if (delta === null || number === null || number + delta < 1 || number + delta > Model.MAX_STATION) {
+      finishWindowAction(generation, "edge"); return
+    }
+    var next = number + delta
+    moveActionWindow(client, next, Grid.home(next, client.monitor, workspaceMap), true, generation)
   }
 
   Timer {
@@ -271,6 +348,8 @@ Item {
     interval: 100
     onTriggered: root.refresh(true, function() {
       if (!root.readyForWindows() || Date.now() - root.lastTopologyMs <= 500) return
+      // Only stations keep every output together.
+      if (Grid.mode(root.workspaceMap) !== "station") return
       var monitor = root.focusedMonitor()
       if (!monitor || !root.lanes[monitor.name]) return
       var workspace = Number(monitor.activeWorkspace && monitor.activeWorkspace.id)

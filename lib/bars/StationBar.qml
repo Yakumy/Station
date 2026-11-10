@@ -1,9 +1,11 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
 import "../panel" as PanelUi
+import "../stations/Grid.js" as Grid
 
 Item {
   id: root
@@ -11,6 +13,43 @@ Item {
   property int stationNumber: 1
   property var stationApps: ({})
   property string appsMode: "hover"
+  // Repetitive and Non-repetitive show this bar's output: its own numbers, the one
+  // it shows, and its apps. Station mode shows the station, the same on every bar.
+  property var workspaceMap: null
+  property var workspaceApps: ({})
+  property string indicatorStyle: "prefixed"
+  readonly property var hyprMonitor: {
+    var window = root.QsWindow.window
+    var screen = window ? window.screen : null
+    return screen ? Hyprland.monitorFor(screen) : null
+  }
+  readonly property string screenName: hyprMonitor ? String(hyprMonitor.name || "") : ""
+  readonly property int outputIndex: workspaceMap && Array.isArray(workspaceMap.outputs)
+    ? workspaceMap.outputs.indexOf(screenName) : -1
+  readonly property bool perOutput: Grid.mode(workspaceMap) !== "station" && outputIndex !== -1
+  readonly property var ownNumbers: perOutput ? Grid.numbers(workspaceMap, outputIndex) : []
+  readonly property int activeWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : -1
+  readonly property int shownNumber: perOutput
+    ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
+  readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
+  function labelFor(number) {
+    if (indicatorStyle === "number") return String(number)
+    if (indicatorStyle === "dots") return number === shownNumber ? "\u25cf" : "\u25cb"
+    if (indicatorStyle === "roman") return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][number - 1] || String(number)
+    return (perOutput ? "W" : "S") + number
+  }
+  // Nothing else refreshes per-monitor workspaces while Omarchy's indicator is
+  // hidden. Quickshell credits a switch to the focused monitor only.
+  Connections {
+    target: Hyprland
+    enabled: root.perOutput
+    function onRawEvent(event) {
+      var name = event ? String(event.name) : ""
+      if (name === "workspacev2" || name === "moveworkspacev2" || name === "focusedmon"
+          || name === "changeworkspaceid" || name === "monitoraddedv2" || name === "monitorremovedv2")
+        Hyprland.refreshMonitors()
+    }
+  }
   property bool expanded: false
   property bool opened: false
   property alias anchorItem: logoButton
@@ -39,14 +78,15 @@ Item {
   // and its width limits vertical bars.
   readonly property real appSize: vertical ? indicatorInk.width : indicatorInk.height
   readonly property var stations: {
-    var numbers = Object.keys(stationApps || {}).map(Number)
-    if (numbers.indexOf(stationNumber) === -1) numbers.push(stationNumber)
+    var numbers = Object.keys(groupApps || {}).map(Number)
+    ownNumbers.forEach(function(number) { if (numbers.indexOf(number) === -1) numbers.push(number) })
+    if (numbers.indexOf(shownNumber) === -1) numbers.push(shownNumber)
     return numbers.sort(function(a, b) { return a - b })
   }
   property int groupsRevision: 0
   readonly property var currentGroup: {
     var revision = groupsRevision
-    return stationGroups.itemAt(stations.indexOf(stationNumber))
+    return stationGroups.itemAt(stations.indexOf(shownNumber))
   }
   readonly property real currentOffset: currentGroup ? (vertical ? currentGroup.y : currentGroup.x) : 0
   property real revealProgress: showApps && (alwaysOpen || expanded) ? 1 : 0
@@ -129,22 +169,22 @@ Item {
             id: group
             objectName: "stationGroup-" + modelData
             required property int modelData
-            readonly property var apps: root.stationApps[modelData] || []
+            readonly property var apps: root.groupApps[modelData] || []
             columns: root.vertical ? 1 : 2
             spacing: root.labelGap
             Ui.WidgetButton {
               id: stationButton
               objectName: "stationLabel-" + group.modelData
               bar: root.bar
-              text: "S" + group.modelData
-              opacity: group.modelData === root.stationNumber ? 1 : root.revealProgress
+              text: root.labelFor(group.modelData)
+              opacity: group.modelData === root.shownNumber ? 1 : root.revealProgress
               Behavior on opacity { enabled: false }
               // MonitorBar routes module clicks through its own registered-target
               // hit test, which cannot see this drawer viewport's clip. A hidden
               // preceding station may otherwise extend left over the logo while
               // the current station is translated into the collapsed position.
-              interactive: group.modelData === root.stationNumber || root.revealProgress > 0.99
-              tooltipText: "Station " + group.modelData
+              interactive: group.modelData === root.shownNumber || root.revealProgress > 0.99
+              tooltipText: (root.perOutput ? "Workspace " : "Station ") + group.modelData
               labelVisible: false; hasVisualContent: true
               fixedWidth: root.vertical ? root.barSize : root.primarySlot
               fixedHeight: root.vertical ? root.primarySlot : root.barSize
@@ -170,7 +210,7 @@ Item {
                   required property var modelData
                   bar: root.bar
                   text: modelData.title
-                  tooltipText: "Station " + group.modelData + ": " + modelData.title
+                  tooltipText: (root.perOutput ? "Workspace " : "Station ") + group.modelData + ": " + modelData.title
                   // App targets are meaningful only after the drawer has reached
                   // its open geometry. This also keeps clipped targets from
                   // intercepting the logo during opening and closing.

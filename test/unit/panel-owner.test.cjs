@@ -15,8 +15,8 @@ test('panel session and local editors stay widget-local', () => {
   assert.match(panel, /PanelUi\.PanelSession/); assert.match(panel, /Displays\.DisplayControls/);
   assert.doesNotMatch(runtimeSource(), /PanelSession|DisplayControls/);
   assert.doesNotMatch(panel, /function (?:tryRestorePanel|setBrightness|beginBindingEdit)\(/);
-  for (const name of ['DisplaysTab','BarTab','WindowsTab','WallpaperTab','KeybindingsTab','SettingsTab',
-    'DisplayLayout','BarLayout','WindowsLayout']) assert.doesNotMatch(read(libPath(name+'.qml')), /panelRoot/);
+  for (const name of ['DisplaysTab','WorkspacesTab','BarTab','WindowsTab','WallpaperTab','KeybindingsTab','SettingsTab',
+    'DisplayLayout','WorkspacesLayout','BarLayout','WindowsLayout']) assert.doesNotMatch(read(libPath(name+'.qml')), /panelRoot/);
   const tokens = panel.match(/QtObject \{\n    id: panelTokens[\s\S]*?\n  \}/)[0];
   assert.doesNotMatch(tokens, /service|session|function|\bbar\b/);
   assert.doesNotMatch(session+controls, /import .*BarBridge|execDetached|hyprctl|Transactions/);
@@ -24,6 +24,7 @@ test('panel session and local editors stay widget-local', () => {
     ['displaysTabPort', ['DisplaysTab', 'DisplayLayout']], ['barTabPort', ['BarTab', 'BarLayout']],
     ['windowsTabPort', ['WindowsTab', 'WindowsLayout']], ['keybindingsTabPort', ['KeybindingsTab']],
     ['settingsTabPort', ['SettingsTab']], ['panelIntent', ['PanelSession']],
+    ['workspacesTabPort', ['WorkspacesTab', 'WorkspacesLayout']],
   ]) {
     const source = consumers.map(name => read(libPath(name+'.qml'))).join('\n');
     const consumed = new Set([...source.matchAll(/\bservice\.(\w+)/g)].map(m => m[1]));
@@ -37,7 +38,7 @@ test('panel session and local editors stay widget-local', () => {
 });
 test('all finite tab ports preserve arguments and synchronous results on direct and bridge paths', () => {
   const blocks = [...panel.matchAll(/  QtObject \{\n    id: (panelIntent|\w+TabPort)\n([\s\S]*?)\n  \}/g)];
-  assert.equal(blocks.length,6);
+  assert.equal(blocks.length,7);
   let calls=0;
   for (const [,id,source] of blocks) for (const [,name,args,code] of source.matchAll(/function (\w+)\(([^)]*)\) \{([^\n]*)\}/g)) {
     for (const bridge of [false,true]) {

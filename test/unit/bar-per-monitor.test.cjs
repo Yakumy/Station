@@ -28,7 +28,7 @@ test('3.0 manifest exposes the full bar alongside the widget and service', () =>
 });
 
 test('bar preferences migrate and reject unknown positions', () => {
-  assert.equal(Store.CONFIG_VERSION, 9);
+  assert.equal(Store.CONFIG_VERSION, 10);
   assert.deepEqual(Store.loadConfig({}).bars, {});
   assert.deepEqual(Store.loadConfig({ bars: {
     'DP-1': { enabled: false, position: 'right', width: 54.6, height: 120.4, background: 'blur', style: 'pill', contentSize: 18.4 },
@@ -114,7 +114,7 @@ test('an open panel remembers the Bar tab across a bar-surface rebuild', () => {
   const setPosition = qmlFunction(service, 'setMonitorBarPosition', context);
 
   assert.equal(setPosition('DP-1', 'right'), 'ok');
-  assert.equal(context.rememberedTab, 1);
+  assert.equal(context.rememberedTab, require('../../lib/panel/Tabs.js').index('bar'));
   assert.ok(context.panelTransferUntil > Date.now());
 });
 
@@ -238,7 +238,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const proxy = read('lib/panel/BarServiceProxy.qml');
 
   assert.match(panel, /model: Tabs\.labels\(\)/);
-  assert.deepEqual(require('../../lib/panel/Tabs.js').labels(), ["Displays", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"]);
+  assert.deepEqual(require('../../lib/panel/Tabs.js').labels(), ["Displays", "Workspaces", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"]);
   assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Bars\.BarLayout/);
   assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);
@@ -362,7 +362,7 @@ test('bar width persists the request while runtime measurements provide a safe m
   assert.deepEqual(pending, [
     'DP-1', { enabled: true, position: 'top', width: 48, height: 0, background: 'solid', style: 'default', contentSize: 0 },
   ]);
-  assert.equal(context.rememberedTab, 1);
+  assert.equal(context.rememberedTab, require('../../lib/panel/Tabs.js').index('bar'));
   assert.ok(context.panelTransferUntil > Date.now());
   assert.equal(setWidth('DP-1', 0), 'invalid');
   assert.equal(reportMinimum('../bad', 50), 'invalid');

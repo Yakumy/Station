@@ -9,6 +9,7 @@ import "PanelPosition.js" as PanelPosition
 import "../bars" as Bars
 import "../displays" as Displays
 import "../keybindings" as Keys
+import "../stations" as Stations
 import "." as PanelUi
 import "../wallpaper" as WallpaperUi
 import "../windows" as WindowsUi
@@ -124,6 +125,15 @@ Ui.Panel {
     function setDisplayTransform(name, value) { return root.service ? root.service.setDisplayTransform(name, value) : undefined }
     readonly property var state: root.service ? root.service.state : null
     function swapRole(name, roleIndex) { return root.service ? root.service.swapRole(name, roleIndex) : undefined }
+  }
+
+  QtObject {
+    id: workspacesTabPort
+    readonly property var config: root.service ? root.service.config : ({})
+    readonly property var displayDraft: root.service ? root.service.displayDraft : []
+    readonly property var workspaceTarget: root.service ? root.service.workspaceTarget : ({ outputs: [] })
+    readonly property var state: root.service ? root.service.state : null
+    function setSetting(name, value) { return root.service ? root.service.setSetting(name, value) : undefined }
   }
 
   QtObject {
@@ -303,8 +313,11 @@ Ui.Panel {
     stationNumber: root.stationNumber
     appsMode: root.service ? root.service.config.stationAppsMode : "hide"
     stationApps: root.service ? root.service.openApps : ({})
+    workspaceMap: root.service ? root.service.workspaceMap : null
+    workspaceApps: root.service ? root.service.workspaceApps : ({})
+    indicatorStyle: root.service ? root.service.config.indicatorStyle || "prefixed" : "prefixed"
     onStationSelected: function(number) {
-      if (root.service) root.service.switchStation(String(number))
+      if (root.service) root.service.showWorkspace(String(number), barControls.screenName)
     }
     opened: root.opened
     onPressed: root.toggle()
@@ -496,6 +509,7 @@ Ui.Panel {
             objectName: "stationTabContent"
             width: tabScroll.availableWidth
             Displays.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls }
+            Stations.WorkspacesTab { visible: root.selectedTab === Tabs.index("workspaces"); width: parent.width; tokens: panelTokens; service: root.service ? workspacesTabPort : null }
             Bars.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
             WindowsUi.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }
             WallpaperUi.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; tokens: panelTokens; dismiss: function() { root.close() }; controller: root.service ? root.service.wallpaper : null }

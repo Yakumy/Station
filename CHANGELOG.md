@@ -1,5 +1,14 @@
 # Unreleased
 
+- Add a Workspaces tab after Displays. Its locked layout shows each monitor's role and the
+  workspaces it gets, and it updates as you change the controls. Choose Station (every
+  monitor switches together), Repetitive (every monitor numbers its own workspaces from 1,
+  as Omarchy 4.5 does) or Non-repetitive (each number belongs to one monitor, as in Omarchy
+  4.0). Set how many stations or workspaces you want with − and +, pick the bar indicator
+  style, and choose whether open apps show on hover, always or not at all. Changing the
+  mode or count moves windows with the same journaled migration as a display change.
+  Minimum stations and open apps move here from Settings.
+
 - Play matching theme intros with the saved Span and per-monitor wallpaper framing
   when OWE supports source rectangles, preserving the crop through the final still.
 

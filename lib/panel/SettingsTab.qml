@@ -104,49 +104,6 @@ Column {
       anchors.left: parent.left
       anchors.leftMargin: settingsTab.tokens.space3
       anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - settingsTab.tokens.space6 - stationAppsModeValue.width
-      text: "Show stations open apps"
-      elide: Text.ElideRight
-      color: settingsTab.tokens.textPrimary
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-    }
-    Ui.Dropdown {
-      id: stationAppsModeValue
-      objectName: "stationAppsModeDropdown"
-      anchors.right: parent.right
-      anchors.rightMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
-      width: Style.space(130)
-      showLabel: false
-      value: settingsTab.service ? settingsTab.service.config.stationAppsMode : "hover"
-      options: [
-        { value: "hover", label: "Open on hover" },
-        { value: "always", label: "Always open" },
-        { value: "hide", label: "Hide" }
-      ]
-      foreground: settingsTab.tokens.textPrimary
-      onChanged: function(value) {
-        if (settingsTab.service)
-          settingsTab.service.setSetting("stationAppsMode", value)
-      }
-    }
-  }
-  Item { width: 1; height: settingsTab.tokens.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  Item {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    height: Style.space(48)
-    Text {
-      anchors.left: parent.left
-      anchors.leftMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
       width: parent.width - settingsTab.tokens.space6 - panelPositionValue.width
       text: "Panel opening position"
       elide: Text.ElideRight
@@ -204,43 +161,6 @@ Column {
       foreground: settingsTab.tokens.textPrimary
       onChanged: function(value) {
         if (settingsTab.service) settingsTab.service.setSetting("graceMs", Number(value))
-      }
-    }
-  }
-  Item { width: 1; height: settingsTab.tokens.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  Item {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    height: Style.space(48)
-    Text {
-      anchors.left: parent.left
-      anchors.leftMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - settingsTab.tokens.space6 - stationsValue.width
-      text: "Minimum stations"
-      elide: Text.ElideRight
-      color: settingsTab.tokens.textPrimary
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-    }
-    Ui.Dropdown {
-      id: stationsValue
-      anchors.right: parent.right
-      anchors.rightMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
-      width: Style.space(130)
-      showLabel: false
-      value: settingsTab.service ? String(settingsTab.service.config.minStations) : "3"
-      options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-      foreground: settingsTab.tokens.textPrimary
-      onChanged: function(value) {
-        if (settingsTab.service) settingsTab.service.setSetting("minStations", Number(value))
       }
     }
   }

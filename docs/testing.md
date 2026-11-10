@@ -41,7 +41,8 @@ QML harnesses cover that part.
 | `display-owner`, `display-fileview` | Preview and Keep with fake effects, then real `FileView` objects on temporary files |
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |
 | `layout` | Pointer events on the display layout |
-| `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all six tabs on both paths, fixed frame |
+| `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all seven tabs on both paths, fixed frame |
+| `workspaces-tab` | Workspaces tab badges, roles and count limits in all three modes, rendered |
 | `wallpaper-layout` | Crop gestures |
 | `window-settings`, `window-sliders`, `windows-tab` | Window owner, slider pointer events, preview exchange |
 
