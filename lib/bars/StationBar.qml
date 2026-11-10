@@ -12,7 +12,11 @@ Item {
   property var bar: null
   property int stationNumber: 1
   property var stationApps: ({})
-  property string appsMode: "hover"
+  // Compact "off" lists every available number, "hover" shows the current one and
+  // reveals the rest on hover, "on" shows the current one only. Open apps appear
+  // next to the numbers in "off" and "hover".
+  property string compactMode: "hover"
+  property bool showOpenApps: true
   // Repetitive and Non-repetitive show this bar's output: its own numbers, the one
   // it shows, and its apps. Station mode shows the station, the same on every bar.
   property var workspaceMap: null
@@ -56,9 +60,10 @@ Item {
   signal pressed()
   signal stationSelected(int number)
   readonly property bool vertical: bar ? bar.vertical : false
-  readonly property bool showApps: appsMode !== "hide"
-  readonly property bool alwaysOpen: appsMode === "always"
-  readonly property bool showExpander: appsMode === "hover"
+  readonly property bool listed: compactMode !== "on"
+  readonly property bool showApps: showOpenApps && listed
+  readonly property bool alwaysOpen: compactMode === "off"
+  readonly property bool showExpander: compactMode === "hover"
   readonly property real barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real contentFontSize: Style.font.body
   readonly property real rasterZoom: bar && "effectiveContentSize" in bar
@@ -89,7 +94,7 @@ Item {
     return stationGroups.itemAt(stations.indexOf(shownNumber))
   }
   readonly property real currentOffset: currentGroup ? (vertical ? currentGroup.y : currentGroup.x) : 0
-  property real revealProgress: showApps && (alwaysOpen || expanded) ? 1 : 0
+  property real revealProgress: listed && (alwaysOpen || expanded) ? 1 : 0
   readonly property real collapsedExtent: primarySlot
   readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
   readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
@@ -99,7 +104,7 @@ Item {
   readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0)
   implicitWidth: vertical ? barSize : length
   implicitHeight: vertical ? length : barSize
-  onAppsModeChanged: if (appsMode !== "hover") expanded = false
+  onCompactModeChanged: if (compactMode !== "hover") expanded = false
   Behavior on revealProgress {
     // Exact stock tray drawer timing, including closing and interrupted motion.
     NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
@@ -146,7 +151,7 @@ Item {
     y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
     width: root.vertical ? root.barSize : root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0)
     height: root.vertical ? root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0) : root.barSize
-    HoverHandler { onHoveredChanged: root.expanded = hovered && root.appsMode === "hover" }
+    HoverHandler { onHoveredChanged: root.expanded = hovered && root.compactMode === "hover" }
     Item {
       id: viewport
       width: root.vertical ? root.barSize : root.revealExtent
@@ -189,8 +194,22 @@ Item {
               fixedWidth: root.vertical ? root.barSize : root.primarySlot
               fixedHeight: root.vertical ? root.primarySlot : root.barSize
               onPressed: root.stationSelected(group.modelData)
+              // With every number listed, a filled square stands for the current
+              // one, as in Omarchy's indicator.
+              readonly property bool square: root.alwaysOpen && group.modelData === root.shownNumber
+              Rectangle {
+                objectName: "stationCurrent-" + group.modelData
+                visible: stationButton.square
+                width: root.indicatorInk.height
+                height: width
+                x: (parent.width - width) / 2
+                y: root.inkCenter - height / 2
+                color: stationButton.foreground
+                radius: Style.cornerRadius
+              }
               Text {
                 id: stationLabel
+                visible: !stationButton.square
                 text: stationButton.text; font: indicatorMetrics.font; color: stationButton.foreground
                 x: (parent.width - indicatorMetrics.tightBoundingRect(text).width) / 2
                   - indicatorMetrics.tightBoundingRect(text).x
@@ -198,7 +217,7 @@ Item {
               }
             }
             Grid {
-              visible: group.apps.length > 0
+              visible: root.showApps && group.apps.length > 0
               opacity: root.revealProgress
               columns: root.vertical ? 1 : Math.max(1, group.apps.length)
               spacing: root.appGap

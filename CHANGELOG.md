@@ -4,12 +4,15 @@
   workspaces it gets, and it updates as you change the controls. Choose Sync (every
   monitor switches together), Repetitive (every monitor numbers its own workspaces from 1,
   exactly as Omarchy 4.5 does) or Non-repetitive (each number belongs to one monitor, as in Omarchy
-  4.0). Set how many stations or workspaces you want with − and +, pick the bar indicator
-  style, and choose whether open apps show on hover, always or not at all. Changing the
-  mode or count moves windows with the same journaled migration as a display change.
-  Minimum stations and open apps move here from Settings. Station allows 1 to 5 stations,
-  Repetitive up to 10 workspaces on each monitor, and Non-repetitive up to 20 in all
-  (keys reach 1 to 10). With one monitor the mode selector is disabled.
+  4.0). Sync offers three stations, and the other modes start with five workspaces on each
+  monitor. Use − and + on a monitor in the layout to change its workspaces (up to 10 per
+  monitor), and in Non-repetitive drag workspace numbers onto the monitor you want (up to
+  20 in all; keys reach 1 to 10). Pick the bar indicator style, a compact mode (Off lists
+  every workspace with the current one filled, On hover reveals them on hover, On shows
+  only the current one) and whether open apps show. Changes wait for Apply, and Cancel
+  undoes them. Changing the mode or the workspaces moves windows with the same journaled
+  migration as a display change. Open apps move here from Settings. With one monitor the
+  mode selector is disabled.
 - Make Repetitive use Omarchy 4.5's own workspace blocks (1–10 on the laptop, 11–20 on
   the next monitor) instead of Station's numbering. Omarchy's renumbering on reload and
   hotplug runs as without Station.

@@ -87,7 +87,7 @@ test('store defaults and migrations constrain public values', () => {
   assert.equal(config.mode, 'extend');
   assert.equal(config.direction, 'ltr');
   assert.equal(config.graceMs, 30000);
-  assert.equal(config.minStations, 3);
+  assert.equal('minStations' in config, false);
   assert.deepEqual(config.lanes, {});
   assert.equal(config.hideNative, true);
   assert.equal(config.hideDisplay, false);

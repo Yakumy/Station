@@ -157,11 +157,14 @@ Item {
     var mode = Grid.mode(workspaceMap)
     if (mode === "station") return stationFocusStatements(station, finalOutput)
     var statements = []
-    if (mode === "nonrepetitive") workspaceMap.outputs.forEach(function(output, index) {
-      var first = Grid.start(index, workspaceMap)
-      var last = index === workspaceMap.outputs.length - 1 ? Grid.MAX_GLOBAL : first + workspaceMap.counts[index] - 1
-      statements.push(Hypr.homeWorkspace(output, first, last))
-    })
+    if (mode === "nonrepetitive") {
+      var total = workspaceMap.counts.reduce(function(a, b) { return a + b }, 0)
+      workspaceMap.outputs.forEach(function(output, index) {
+        var own = Grid.numbers(workspaceMap, index)
+        var last = index === workspaceMap.outputs.length - 1
+        statements.push(Hypr.homeWorkspaceAmong(output, own, last ? total : null))
+      })
+    }
     if (Grid.blocked(workspaceMap)) workspaceMap.outputs.forEach(function(output, index) {
       var block = workspaceMap.blocks[index] * Grid.MAX_STATIONS
       statements.push(Hypr.homeWorkspace(output, block + 1, block + Grid.MAX_STATIONS))
@@ -249,7 +252,7 @@ Item {
       var focused = focusedMonitor()
       var station = focused ? Grid.station(Number(focused.activeWorkspace.id), workspaceMap) : currentStation
       var output = focused && workspaceMap.outputs.indexOf(focused.name) !== -1 ? focused.name : workspaceMap.outputs[0]
-      var existing = Grid.existing(clients, monitors, config.minStations, workspaceMap, output)
+      var existing = Grid.existing(clients, monitors, Grid.STATION_COUNT, workspaceMap, output)
       var target = Model.nextExisting(station || currentStation, delta, existing)
       if (target !== null) showStation(target, output)
     })

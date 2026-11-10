@@ -4,13 +4,15 @@ const { rows } = require('../../lib/stations/OpenApps.js');
 const Store = require('../../lib/platform/Store.js');
 const map = { outputs: ['A', 'B'] };
 const client = (address, workspace, extra = {}) => ({ address, workspace: { id: workspace }, mapped: true, class: 'app', ...extra });
-test('station app mode defaults to hover and migrates the boolean preference', () => {
-  assert.equal(Store.loadConfig({}).stationAppsMode, 'hover');
-  assert.equal(Store.loadConfig({ showOpenApps: true }).stationAppsMode, 'hover');
-  assert.equal(Store.loadConfig({ showOpenApps: false }).stationAppsMode, 'hide');
-  assert.equal(Store.loadConfig({ stationAppsMode: 'always' }).stationAppsMode, 'always');
-  assert.equal(Store.loadConfig({ stationAppsMode: 'invalid' }).stationAppsMode, 'hover');
-  assert.equal('showOpenApps' in Store.loadConfig({ showOpenApps: true }), false);
+test('compact mode defaults to hover with open apps, and the old app modes migrate', () => {
+  const fresh = Store.loadConfig({});
+  assert.deepEqual([fresh.compactMode, fresh.showOpenApps], ['hover', true]);
+  assert.deepEqual([Store.loadConfig({ showOpenApps: false }).compactMode, Store.loadConfig({ showOpenApps: false }).showOpenApps], ['hover', false]);
+  assert.equal(Store.loadConfig({ stationAppsMode: 'always' }).compactMode, 'off');
+  assert.equal(Store.loadConfig({ stationAppsMode: 'hide' }).compactMode, 'on');
+  assert.equal(Store.loadConfig({ stationAppsMode: 'invalid' }).compactMode, 'hover');
+  assert.equal(Store.loadConfig({ compactMode: 'on', stationAppsMode: 'always' }).compactMode, 'on');
+  assert.equal('stationAppsMode' in Store.loadConfig({ stationAppsMode: 'always' }), false);
 });
 test('stations aggregate every output, include background stations and preserve empty indicators', () => {
   const cs = [client('a', 1), client('b', 2), client('c', 5), client('d', 6)];

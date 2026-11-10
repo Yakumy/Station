@@ -35,14 +35,14 @@ QML harnesses cover that part.
 
 | Harness | Exercises |
 | --- | --- |
-| `bar-icons`, `bar-rendering`, `open-apps` | Bar glyphs, content zoom and the app drawer |
+| `bar-icons`, `bar-rendering`, `open-apps` | Bar glyphs, content zoom, and the app drawer in each compact mode with apps on and off |
 | `bar-settings`, `bar-tab` | Bar owner and tab, with fake effects |
 | `binding-picker` | Key capture |
 | `display-owner`, `display-fileview` | Preview and Keep with fake effects, then real `FileView` objects on temporary files |
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |
 | `layout` | Pointer events on the display layout |
 | `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all seven tabs on both paths, fixed frame |
-| `workspaces-tab` | Workspaces tab badges, roles and count limits in all three modes, and the disabled selector on one monitor, rendered |
+| `workspaces-tab` | Workspaces tab badges and roles in all three modes, − and + limits, Non-repetitive drop targets and moves, Cancel and Apply, and the disabled selector on one monitor, rendered |
 | `wallpaper-layout` | Crop gestures |
 | `window-settings`, `window-sliders`, `windows-tab` | Window owner, slider pointer events, preview exchange |
 

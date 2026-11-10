@@ -8,6 +8,7 @@ import "lib/panel/Tabs.js" as Tabs
 import "lib/platform/Recovery.js" as Recovery
 import "lib/platform/Transactions.js" as Transactions
 import "lib/platform/Events.js" as Events
+import "lib/platform/Store.js" as Store
 import "lib/stations/Grid.js" as Grid
 import "lib/panel/ServiceContract.js" as ServiceContract
 import "lib/bars" as Bars
@@ -363,10 +364,10 @@ Item {
   }
   Stations.OpenAppsController {
     id: openAppsController
-    active: root.config.stationAppsMode !== "hide"
+    active: root.config.compactMode !== "on"
     mapping: root.workspaceMap
     pending: root.workspaceData.pending
-    minimum: root.config.minStations
+    minimum: Grid.STATION_COUNT
     current: root.currentStation
   }
 
@@ -412,7 +413,7 @@ Item {
 
   function targetMapping() {
     var options = state === "previewing" && previewApplied ? previewApplied.options : config
-    return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, counts: config.workspaceCounts,
+    return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, layout: config.workspaceLayout,
       blocks: omarchyBlocks })
   }
 
@@ -502,33 +503,42 @@ Item {
     return roles.indexOf(lanes[name])
   }
 
-  // Workspace mode and count change the map, so they run the journaled migration.
+  // The Workspaces tab applies its whole draft at once: mode, per-monitor layout,
+  // indicator style, compact mode and open apps. A change to the map runs the
+  // journaled migration, so only `idle` accepts one.
   function setWorkspaceSetting(name, value) {
-    if (state !== "idle" || workspaceData.pending || removalGrace.running) return "busy"
-    var mode = config.workspaceMode
+    var next = Object.assign({}, config)
     if (name === "workspaceMode") {
       if (Grid.MODES.indexOf(value) === -1) return "invalid"
-      config.workspaceMode = value
+      next.workspaceMode = value
     } else {
-      var count = Number(value)
-      if (!Number.isInteger(count)) return "invalid"
-      var limits = Grid.limits(mode, Math.max(1, workspaceTarget.outputs.length))
-      count = Math.max(limits.min, Math.min(limits.max, count))
-      if (mode === "station") config.minStations = count
-      else {
-        var counts = Object.assign({}, config.workspaceCounts)
-        counts[mode] = count
-        config.workspaceCounts = counts
+      if (!value || typeof value !== "object") return "invalid"
+      if (value.workspaceMode !== undefined) {
+        if (Grid.MODES.indexOf(value.workspaceMode) === -1) return "invalid"
+        next.workspaceMode = value.workspaceMode
       }
+      if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
+      if (value.indicatorStyle !== undefined) {
+        if (["prefixed", "number", "roman", "dots"].indexOf(value.indicatorStyle) === -1) return "invalid"
+        next.indicatorStyle = value.indicatorStyle
+      }
+      if (value.compactMode !== undefined) {
+        if (["off", "hover", "on"].indexOf(value.compactMode) === -1) return "invalid"
+        next.compactMode = value.compactMode
+      }
+      if (value.showOpenApps !== undefined) next.showOpenApps = !!value.showOpenApps
     }
-    config = Object.assign({}, config)
+    var mapChanges = next.workspaceMode !== config.workspaceMode
+      || JSON.stringify(next.workspaceLayout) !== JSON.stringify(config.workspaceLayout)
+    if (mapChanges && (state !== "idle" || workspaceData.pending || removalGrace.running)) return "busy"
+    config = next
     store.saveConfig()
     if (!Grid.equal(workspaceMap, targetMapping())) workspace.reconcile()
     return "ok"
   }
 
   function setSetting(name, value) {
-    if (name === "workspaceMode" || name === "workspaceCount") return setWorkspaceSetting(name, value)
+    if (name === "workspaceMode" || name === "workspaces") return setWorkspaceSetting(name, value)
     if (name === "hideNative") {
       if (panelWanted) panel.panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
@@ -549,10 +559,6 @@ Item {
       if (value !== "left" && value !== "center") return "invalid"
       config.panelPosition = value
     }
-    else if (name === "stationAppsMode") {
-      if (["hover", "always", "hide"].indexOf(value) === -1) return "invalid"
-      config.stationAppsMode = value
-    }
     else if (name === "indicatorStyle") {
       if (["prefixed", "number", "roman", "dots"].indexOf(value) === -1) return "invalid"
       config.indicatorStyle = value
@@ -562,7 +568,6 @@ Item {
       var grace = Number(value)
       config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 5000
     }
-    else if (name === "minStations") config.minStations = Math.max(1, Math.min(5, Number(value) || 3))
     else return "invalid"
     config = Object.assign({}, config)
     store.saveConfig()

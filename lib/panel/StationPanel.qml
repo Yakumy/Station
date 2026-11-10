@@ -231,7 +231,7 @@ Ui.Panel {
   }
 
   Timer {
-    interval: root.opened || (root.service && root.service.config.stationAppsMode !== "hide") ? 150 : 1000
+    interval: root.opened || (root.service && root.service.config.compactMode !== "on") ? 150 : 1000
     running: !root.directService
     repeat: true
     triggeredOnStart: true
@@ -311,7 +311,8 @@ Ui.Panel {
     id: barControls
     bar: root.bar
     stationNumber: root.stationNumber
-    appsMode: root.service ? root.service.config.stationAppsMode : "hide"
+    compactMode: root.service ? root.service.config.compactMode || "hover" : "on"
+    showOpenApps: !!root.service && root.service.config.showOpenApps !== false
     stationApps: root.service ? root.service.openApps : ({})
     workspaceMap: root.service ? root.service.workspaceMap : null
     workspaceApps: root.service ? root.service.workspaceApps : ({})

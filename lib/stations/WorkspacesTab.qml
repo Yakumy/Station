@@ -5,30 +5,114 @@ import qs.Commons as Commons
 import "Grid.js" as Grid
 import "." as Stations
 
-// Workspace mode, count, bar indicator style and open apps. The layout shows what
-// each output gets before the migration commits it.
+// Workspace mode, each monitor's workspaces, bar indicator style, compact mode and
+// open apps. Edits stay in a draft that the layout previews; Apply sends it in one
+// call, and the migration commits a changed map. Cancel returns to the saved values.
 Column {
   id: root
   required property var tokens
   required property var service
   readonly property real pad: tokens.regionPadH
   readonly property var config: service ? service.config : ({})
-  readonly property string mode: Grid.MODES.indexOf(config.workspaceMode) !== -1 ? config.workspaceMode : "station"
   readonly property var outputs: service && service.workspaceTarget ? service.workspaceTarget.outputs || [] : []
-  readonly property int outputCount: Math.max(1, outputs.length)
-  readonly property var limits: Grid.limits(mode, outputCount)
-  readonly property int count: Grid.total(mode, outputCount,
-    mode === "station" ? config.minStations : (config.workspaceCounts ? config.workspaceCounts[mode] : null))
-  readonly property var assigned: Grid.assigned(mode, outputCount, count)
-  readonly property bool editable: !!service && service.state === "idle"
+  readonly property bool idle: !!service && service.state === "idle"
   // The modes differ only across monitors, so one monitor locks the selector.
   readonly property bool singleOutput: outputs.length <= 1
-  readonly property real modeNoteHeight: singleOutput ? Style.space(22) : 0
-  spacing: 0
+  readonly property real modeNoteHeight: Style.space(22)
 
-  function changeCount(delta) {
-    var next = Math.max(limits.min, Math.min(limits.max, count + delta))
-    if (service && next !== count) service.setSetting("workspaceCount", next)
+  function savedValues() {
+    return JSON.parse(JSON.stringify({
+      workspaceMode: Grid.MODES.indexOf(config.workspaceMode) !== -1 ? config.workspaceMode : "station",
+      workspaceLayout: config.workspaceLayout || { repetitive: {}, nonrepetitive: {} },
+      indicatorStyle: config.indicatorStyle || "prefixed",
+      compactMode: config.compactMode || "hover",
+      showOpenApps: config.showOpenApps !== false
+    }))
+  }
+  // What the user sees: the mode, the numbers each monitor gets in both per-monitor
+  // modes, and the bar options. Layout entries that change nothing do not count.
+  function effective(values) {
+    return JSON.stringify([values.workspaceMode, values.indicatorStyle, values.compactMode, values.showOpenApps,
+      Grid.assigned("repetitive", outputs, values.workspaceLayout),
+      Grid.assigned("nonrepetitive", outputs, values.workspaceLayout)])
+  }
+  property var base: savedValues()
+  property var draft: savedValues()
+  property string notice: ""
+  readonly property bool dirty: effective(draft) !== effective(base)
+  readonly property string savedKey: JSON.stringify(savedValues())
+  readonly property string mode: draft.workspaceMode
+  readonly property var assigned: Grid.assigned(mode, outputs, draft.workspaceLayout)
+  onSavedKeyChanged: if (!dirty) reset()
+  onModeChanged: notice = ""
+
+  function reset() {
+    base = savedValues()
+    draft = savedValues()
+    notice = ""
+  }
+  function edit(change) {
+    draft = Object.assign(JSON.parse(JSON.stringify(draft)), change)
+    notice = ""
+  }
+  function layoutWith(name, lists) {
+    var layout = JSON.parse(JSON.stringify(draft.workspaceLayout))
+    if (name === "repetitive") outputs.forEach(function(output, index) { layout.repetitive[output] = lists[index].length })
+    else outputs.forEach(function(output, index) { layout.nonrepetitive[output] = lists[index] })
+    return layout
+  }
+
+  // Repetitive: every monitor has its own count, 1 to 10. Non-repetitive: only the
+  // last monitor has − and +. + adds the next number to it, − removes the highest
+  // number while its monitor keeps one.
+  function stepState(output) {
+    var index = outputs.indexOf(output)
+    var none = { shown: false, down: false, up: false }
+    if (index === -1 || mode === "station") return none
+    if (mode === "repetitive") {
+      var count = assigned[index].length
+      return { shown: true, down: count > 1, up: count < Grid.MAX_STATIONS }
+    }
+    if (index !== outputs.length - 1) return none
+    var total = assigned.reduce(function(sum, row) { return sum + row.length }, 0)
+    var holder = assigned.filter(function(row) { return row.indexOf(total) !== -1 })[0]
+    return { shown: true, down: !!holder && holder.length > 1,
+      up: total < Grid.MAX_GLOBAL && assigned[index].length < Grid.MAX_STATIONS }
+  }
+  function changeCount(output, delta) {
+    var index = outputs.indexOf(output)
+    var state = stepState(output)
+    if (!state.shown || (delta < 0 && !state.down) || (delta > 0 && !state.up)) return
+    var lists = assigned.map(function(row) { return row.slice() })
+    if (mode === "repetitive") {
+      if (delta > 0) lists[index].push(lists[index].length + 1)
+      else lists[index].pop()
+    } else {
+      var total = lists.reduce(function(sum, row) { return sum + row.length }, 0)
+      if (delta > 0) lists[index].push(total + 1)
+      else lists.forEach(function(row) { var at = row.indexOf(total); if (at !== -1) row.splice(at, 1) })
+    }
+    edit({ workspaceLayout: layoutWith(mode, lists) })
+  }
+  // Non-repetitive only: give a number to another monitor. Each monitor keeps at
+  // least one and holds at most ten.
+  function moveWorkspace(number, output) {
+    var to = outputs.indexOf(output)
+    if (mode !== "nonrepetitive" || to === -1) return
+    var lists = assigned.map(function(row) { return row.slice() })
+    var from = -1
+    lists.forEach(function(row, index) { if (row.indexOf(number) !== -1) from = index })
+    if (from === -1 || from === to || lists[from].length <= 1 || lists[to].length >= Grid.MAX_STATIONS) return
+    lists[from].splice(lists[from].indexOf(number), 1)
+    lists[to].push(number)
+    lists[to].sort(function(a, b) { return a - b })
+    edit({ workspaceLayout: layoutWith(mode, lists) })
+  }
+  function apply() {
+    if (!service || !dirty) return
+    var result = service.setSetting("workspaces", JSON.parse(JSON.stringify(draft)))
+    if (result === "ok") base = JSON.parse(JSON.stringify(draft))
+    else notice = result === "busy" ? "Station is busy. Try again in a moment." : "These settings could not be applied."
   }
 
   component Caption: Text {
@@ -112,6 +196,10 @@ Column {
         tokens: root.tokens
         outputs: root.outputs
         assigned: root.assigned
+        mode: root.mode
+        steps: root.outputs.map(function(output) { return root.stepState(output) })
+        onCountChangeRequested: function(output, delta) { root.changeCount(output, delta) }
+        onWorkspaceMoved: function(number, output) { root.moveWorkspace(number, output) }
       }
       Caption {
         x: root.pad; width: parent.width - root.pad * 2
@@ -155,77 +243,24 @@ Column {
             }
             ModeSelector {
               objectName: "workspaceModeSelector"
-              enabled: root.editable && !root.singleOutput
+              enabled: !root.singleOutput
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2 + root.modeNoteHeight
+              anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               value: root.mode
               options: [{ value: "station", label: "Sync" }, { value: "repetitive", label: "Repetitive" },
                 { value: "nonrepetitive", label: "Non-repetitive" }]
-              onChanged: function(value) { if (root.service) root.service.setSetting("workspaceMode", value) }
+              onChanged: function(value) { root.edit({ workspaceMode: value }) }
             }
             Caption {
               objectName: "workspaceModeNote"
-              visible: root.singleOutput
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
               anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
               elide: Text.ElideRight
-              text: "Works only on multiple monitors"
-            }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
-          }
-          Item {
-            width: parent.width; height: controlFrame.height / 5
-            enabled: root.editable
-            Column {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: stepper.left; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
-              RowLabel {
-                width: parent.width
-                text: root.mode === "station" ? "Stations" : "Workspaces"
-              }
-              Caption {
-                width: parent.width
-                elide: Text.ElideRight
-                text: root.mode === "station" ? "Each station has one workspace per monitor"
-                  : root.mode === "repetitive" ? "Every monitor numbers its own from 1"
-                  : "Each number belongs to one monitor"
-              }
-            }
-            Row {
-              id: stepper
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: root.tokens.space2
-              Ui.Button {
-                objectName: "workspaceCountDecrease"
-                text: "-"; bordered: true
-                width: Style.spacing.controlHeight; height: Style.spacing.controlHeight
-                enabled: root.editable && root.count > root.limits.min
-                opacity: enabled ? 1 : root.tokens.disabledOpacity
-                onClicked: root.changeCount(-1)
-              }
-              Text {
-                objectName: "workspaceCountValue"
-                width: Style.space(32)
-                anchors.verticalCenter: parent.verticalCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: String(root.count)
-                color: root.tokens.textPrimary
-                font.family: Style.font.family
-                font.pixelSize: Style.font.body
-              }
-              Ui.Button {
-                objectName: "workspaceCountIncrease"
-                text: "+"; bordered: true
-                width: Style.spacing.controlHeight; height: Style.spacing.controlHeight
-                enabled: root.editable && root.count < root.limits.max
-                opacity: enabled ? 1 : root.tokens.disabledOpacity
-                onClicked: root.changeCount(1)
-              }
+              text: root.singleOutput ? "Works only on multiple monitors"
+                : root.mode === "nonrepetitive" ? "Drag workspaces onto a monitor to assign them" : ""
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
@@ -244,7 +279,7 @@ Column {
               anchors.verticalCenter: parent.verticalCenter
               width: Style.space(130)
               showLabel: false
-              value: root.config.indicatorStyle || "prefixed"
+              value: root.draft.indicatorStyle
               options: [
                 { value: "prefixed", label: root.mode === "station" ? "S1 S2 S3" : "W1 W2 W3" },
                 { value: "number", label: "1 2 3" },
@@ -252,42 +287,115 @@ Column {
                 { value: "dots", label: "● ○ ○" }
               ]
               foreground: root.tokens.textPrimary
-              onChanged: function(value) { if (root.service) root.service.setSetting("indicatorStyle", value) }
+              onChanged: function(value) { root.edit({ indicatorStyle: value }) }
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
-            RowLabel {
+            Column {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: appsValue.left; anchors.rightMargin: root.tokens.space2
+              anchors.right: compactValue.left; anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
-              text: "Open apps on indicator"
+              RowLabel { width: parent.width; text: "Compact mode" }
+              Caption {
+                width: parent.width
+                elide: Text.ElideRight
+                text: root.draft.compactMode === "off" ? "Every workspace, the current one filled"
+                  : root.draft.compactMode === "hover" ? "The current one, the rest on hover"
+                  : "Only the current one"
+              }
             }
             Ui.Dropdown {
-              id: appsValue
-              objectName: "stationAppsModeDropdown"
+              id: compactValue
+              objectName: "compactModeDropdown"
               anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               width: Style.space(130)
               showLabel: false
-              value: root.config.stationAppsMode || "hover"
+              value: root.draft.compactMode
               options: [
+                { value: "off", label: "Off" },
                 { value: "hover", label: "On hover" },
-                { value: "hide", label: "Off" },
-                { value: "always", label: "Always on" }
+                { value: "on", label: "On" }
               ]
               foreground: root.tokens.textPrimary
-              onChanged: function(value) { if (root.service) root.service.setSetting("stationAppsMode", value) }
+              onChanged: function(value) { root.edit({ compactMode: value }) }
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 5 - root.modeNoteHeight
+            id: appsRow
+            objectName: "showOpenAppsRow"
+            width: parent.width; height: controlFrame.height / 5
+            // Compact On shows only the current number, so it shows no apps.
+            readonly property bool usable: root.draft.compactMode !== "on"
+            opacity: usable ? 1 : root.tokens.disabledOpacity
+            Column {
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+              anchors.right: appsSwitch.left; anchors.rightMargin: root.tokens.space2
+              anchors.verticalCenter: parent.verticalCenter
+              RowLabel { width: parent.width; text: "Show open apps" }
+              Caption {
+                width: parent.width
+                elide: Text.ElideRight
+                text: appsRow.usable ? "App icons next to each workspace" : "Needs compact mode Off or On hover"
+              }
+            }
+            Ui.ToggleSwitch {
+              id: appsSwitch
+              objectName: "showOpenAppsSwitch"
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.verticalCenter: parent.verticalCenter
+              trackHeight: Style.spacing.controlHeight
+              checked: root.draft.showOpenApps
+              foreground: root.tokens.textPrimary
+              interactive: false
+            }
+            MouseArea {
+              anchors.fill: parent
+              enabled: appsRow.usable
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.edit({ showOpenApps: !root.draft.showOpenApps })
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
         }
       }
     }
   }
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
+  Item {
+    width: parent.width; height: Style.space(64)
+    Caption {
+      objectName: "workspacesNotice"
+      x: root.pad; anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - actions.width - root.pad * 3
+      elide: Text.ElideRight
+      text: root.notice
+      color: root.notice ? Commons.Color.urgent : root.tokens.textDim
+    }
+    Row {
+      id: actions
+      objectName: "workspacesActions"
+      visible: root.dirty
+      anchors.right: parent.right; anchors.rightMargin: root.pad
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: root.tokens.space2
+      Ui.Button {
+        objectName: "workspacesCancel"
+        text: "Cancel"; bordered: true
+        onClicked: root.reset()
+      }
+      Ui.Button {
+        objectName: "workspacesApply"
+        text: root.idle ? "Apply" : "Applying…"
+        accent: Commons.Color.accent
+        background: Commons.Color.accent
+        foreground: Commons.Color.popups.background
+        enabled: root.idle
+        onClicked: root.apply()
+      }
+    }
+  }
 }

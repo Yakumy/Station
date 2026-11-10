@@ -36,7 +36,7 @@ test('fallback polls only without the trusted service and removes all direct wri
   assert.match(panel, /typeof bar\.shell\.serviceFor === "function"/);
   assert.match(panel, /service: directService \|\| \(bridgeSnapshot \? bridgeProxy : null\)/);
   assert.match(panel, /running: !root\.directService/);
-  assert.match(panel, /interval: root\.opened \|\| .*stationAppsMode !== "hide".*\? 150 : 1000/);
+  assert.match(panel, /interval: root\.opened \|\| .*compactMode !== "on".*\? 150 : 1000/);
   assert.doesNotMatch(panel, /\b(?:service|svc)\.\w+\s*=(?!=)/);
   assert.match(service, /BarBridge\.clear\(barBridge\)/);
   const context = { directService: null, bridgeApi: null, bridgeSnapshot: null, bridgeSnapshotText: '' };
@@ -64,23 +64,23 @@ test('fallback polls only without the trusted service and removes all direct wri
   sync();
 });
 
-test('station app display mode is a validated three-option dropdown on the Workspaces tab', () => {
+test('compact mode and open apps are Workspaces tab rows applied with the draft', () => {
   const tab = read('lib/stations/WorkspacesTab.qml');
   const settings = read('lib/panel/SettingsTab.qml');
-  assert.match(tab, /objectName: "stationAppsModeDropdown"/);
-  for (const value of ['hover', 'always', 'hide'])
+  assert.match(tab, /objectName: "compactModeDropdown"/);
+  for (const value of ['off', 'hover', 'on'])
     assert.match(tab, new RegExp('value: "' + value + '"'));
-  assert.doesNotMatch(tab + settings, /setSetting\("showOpenApps"/);
-  assert.doesNotMatch(settings, /stationAppsMode|minStations/, 'Settings no longer duplicates Workspaces rows');
-  assert.ok(tab.indexOf('objectName: "stationAppsModeDropdown"')
-    > tab.indexOf('objectName: "indicatorStyleDropdown"'));
+  assert.match(tab, /objectName: "showOpenAppsSwitch"/);
+  assert.doesNotMatch(tab, /stationAppsMode|workspaceCountIncrease|setSetting\("(?!workspaces")/);
+  assert.match(tab, /service\.setSetting\("workspaces", JSON\.parse\(JSON\.stringify\(draft\)\)\)/);
+  assert.doesNotMatch(settings, /stationAppsMode|minStations|compactMode|showOpenApps/, 'Settings no longer duplicates Workspaces rows');
+  assert.ok(tab.indexOf('objectName: "compactModeDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
+  assert.ok(tab.indexOf('objectName: "showOpenAppsSwitch"') > tab.indexOf('objectName: "compactModeDropdown"'));
 
-  const context = { config: { stationAppsMode: 'hover' }, store: { saveConfig() {} } };
+  const context = { config: { compactMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);
-  assert.equal(setSetting('stationAppsMode', 'invalid'), 'invalid');
-  assert.equal(context.config.stationAppsMode, 'hover');
-  assert.equal(setSetting('stationAppsMode', 'always'), 'ok');
-  assert.equal(context.config.stationAppsMode, 'always');
+  assert.equal(setSetting('stationAppsMode', 'always'), 'invalid');
+  assert.equal(setSetting('minStations', 4), 'invalid');
 });
 
 test('snapshot is detached, including wallpaper, with no controller back-reference or manifest source', () => {

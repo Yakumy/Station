@@ -168,17 +168,29 @@ ShellRoot {
           wait(50)
           verify(Math.abs(item.paintedWidth / item.paintedHeight - 2) < 0.01)
         }
-        bar.appsMode = "always"
+        // Compact Off lists every number, and a filled square stands for the current one.
+        bar.compactMode = "off"
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         verify(!arrow.visible)
         verify(findChild(bar, "stationLabel-1").interactive)
         verify(findChild(bar, "stationApp-a").interactive)
+        verify(findChild(bar, "stationCurrent-2").visible)
+        verify(!findChild(bar, "stationCurrent-1").visible)
         bar.expanded = false
         wait(50)
         compare(bar.revealProgress, 1)
+        // The apps switch hides the icons and keeps the numbers.
+        bar.showOpenApps = false
+        wait(50)
+        verify(!findChild(bar, "stationApp-a").parent.visible)
+        verify(findChild(bar, "stationLabel-1").interactive)
+        bar.showOpenApps = true
+        bar.compactMode = "hover"
+        tryVerify(function() { return bar.revealProgress === 0 }, 1000)
+        verify(!findChild(bar, "stationCurrent-2").visible)
         feed.active = false
         compare(Object.keys(feed.rows).length, 0)
-        bar.appsMode = "hide"
+        bar.compactMode = "on"
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
         verify(!arrow.visible)
         var currentAfterDisable = findChild(bar, "stationLabel-2")
