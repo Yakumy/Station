@@ -307,7 +307,8 @@ trigger it.
 | Switch to station n | `SUPER + 1…0` | Omarchy workspace switch (`SUPER + code:10…19`) |
 | Move window to station n, follow | `SUPER + SHIFT + 1…0` | Omarchy move to workspace |
 | Move window, no follow | `SUPER + SHIFT + ALT + 1…0` | Omarchy move silently |
-| Previous or next station | `CTRL + SUPER + Left/Right` | Omarchy grouped-window focus |
+| Previous or next station, LTR/RTL | `CTRL + SUPER + Left/Right` | Omarchy grouped-window focus |
+| Previous or next station, TTB/BTT | `CTRL + SUPER + Up/Down` | None; personal conflicts require approval |
 | Move across outputs and stations | `SUPER + SHIFT + CTRL + arrows` | Omarchy move window to monitor |
 | (unbind only) | `SUPER + SHIFT + ALT + arrows` | Omarchy move workspace to monitor, which renumbers the workspace and breaks the map. A personal bind on the combo stays. |
 

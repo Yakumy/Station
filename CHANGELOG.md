@@ -1,5 +1,7 @@
 # Unreleased
 
+- Register `CTRL + SUPER + Up/Down` for TTB/BTT station navigation and show them in
+  Keybindings. BTT Up reaches the next existing station; Down reaches the previous one.
 - Fix BTT and TTB window moves at the edge of side-by-side monitors with different
   heights. Up and Down step to the adjacent station on the same monitor instead of
   treating the other monitor as a vertical neighbor. Correct native moves that cross

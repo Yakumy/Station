@@ -50,7 +50,7 @@ test('Omarchy 4.5.0 move-to-monitor defaults are replaced, not reported as confl
 
 test('M1 bind table contains all actions and only approved defaults replace', () => {
   const definitions = B.definitions();
-  assert.equal(definitions.length, 36);
+  assert.equal(definitions.length, 38);
   assert.equal(definitions.filter(value => value.replacement).length, 36);
   assert.ok(definitions.some(value => value.combo === 'SUPER + CTRL + LEFT' && value.replacement));
   const lua = B.applyLua(definitions.slice(0, 1), []);
@@ -59,6 +59,21 @@ test('M1 bind table contains all actions and only approved defaults replace', ()
   const changed = B.applyLua([{ ...definitions[0], combo: 'SUPER + X', replacement: false }], ['SUPER + code:10']);
   assert.match(changed, /hl\.unbind\("SUPER \+ code:10"\)/);
   assert.doesNotMatch(changed, /hl\.unbind\("SUPER \+ X"\)/);
+});
+
+test('vertical station navigation is registered without unbinding unknown owners', () => {
+  for (const key of ['up', 'down']) {
+    const definition = B.definitions().find(row => row.id === `go-${key}`);
+    assert.equal(definition.combo, `SUPER + CTRL + ${key.toUpperCase()}`);
+    assert.equal(definition.method, 'goDirection');
+    assert.equal(definition.argument, key);
+    assert.equal(definition.replacement, false);
+    const lua = B.applyLua([definition], []);
+    assert.match(lua, new RegExp(`omarchy-shell yakumy.station goDirection ${key}`));
+    assert.doesNotMatch(lua, /hl\.unbind/);
+    assert.equal(B.classify(definition.combo, { ok: true, text: 'SUPER + X → Other' }, []).status, 'free');
+    assert.equal(B.classify(definition.combo, { ok: true, text: `${definition.combo} → Personal` }, []).status, 'conflict');
+  }
 });
 
 test('hypr generators validate every external value', () => {

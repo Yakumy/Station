@@ -58,3 +58,31 @@ test('Lua error payload cannot record a successful switch; invalid keys cannot r
   batches[1].done(0, 'ok');
   assert.equal(c.currentStation, 1);
 });
+
+test('BTT and TTB arrows navigate existing stations and stop at the edges', () => {
+  for (const direction of ['btt', 'ttb']) {
+    for (const [station, arrow, expected] of [
+      [2, 'up', direction === 'btt' ? 3 : 1],
+      [2, 'down', direction === 'btt' ? 1 : 3],
+      [1, direction === 'btt' ? 'down' : 'up', null],
+      [3, direction === 'btt' ? 'up' : 'down', null],
+      [2, 'left', null], [2, 'right', null],
+    ]) {
+      const { c, batches } = harness();
+      c.config = { direction };
+      c.monitors = [{ name: 'A', activeWorkspace: { id: station * 2 - 1 } },
+        { name: 'B', activeWorkspace: { id: station * 2 } }];
+      c.clients = [];
+      c.focusedMonitor = () => c.monitors[1];
+      c.refresh = (include, done) => done();
+      c.goDirection = qmlFunction(source, 'goDirection', c);
+      c.goDirection(arrow);
+      assert.equal(batches.length, expected === null ? 0 : 1);
+      if (expected !== null) {
+        assert.ok(batches[0].lua.endsWith(Hypr.focusWorkspace(expected * 2 - 1) + '; ' + Hypr.focusWorkspace(expected * 2)));
+        batches[0].done(0, 'ok');
+        assert.equal(c.currentStation, expected);
+      }
+    }
+  }
+});
