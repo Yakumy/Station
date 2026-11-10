@@ -8,6 +8,7 @@ import qs.Commons
 import "Wallpaper.js" as Wallpaper
 import "../displays/Model.js" as Model
 import "." as WallpaperUi
+import "../platform" as Platform
 
 Item {
   id: root
@@ -407,7 +408,7 @@ Item {
       mask: Region {}
       color: "transparent"
       visible: root.configLoaded && display !== null && !stock && wallpaper.status === Image.Ready && !remap.remapping
-      Ui.ScreenMoveRemap { id: remap; window: surface }
+      Platform.ScreenMoveRemap { id: remap; window: surface }
       WallpaperUi.WallpaperImage {
         id: wallpaper
         // Keep the layer mapped: remapping invokes Hyprland's layer fade and
