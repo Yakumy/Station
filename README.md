@@ -1,15 +1,13 @@
 <div align="center">
   <img src="assets/station-main-logo.svg" alt="Station" width="112">
-  <h1>Every display. One flow.</h1>
-  <p><strong>Synchronized workspaces, display layouts, per-monitor bars, and wallpapers for Omarchy.</strong></p>
-  <p>Keep your work together. Make each screen your own.</p>
+  <h1>All Displays, One flow.</h1>
   <p>
-    <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4%20Quattro-A6B465?style=flat-square" alt="Omarchy 4 Quattro"></a>
+    <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4.5-A6B465?style=flat-square" alt="Omarchy 4.5"></a>
     <a href="manifest.json"><img src="https://img.shields.io/badge/Station-3.0.0-A6B465?style=flat-square" alt="Station 3.0.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
   </p>
   <p>
-    <a href="#install">Install</a> ·
+    <a href="#install--update--uninstall">Install</a> ·
     <a href="#stations">Stations</a> ·
     <a href="#displays">Displays</a> ·
     <a href="#bars">Bars</a> ·
@@ -21,51 +19,39 @@
 
 ![Animated illustration of switching all displays between stations](docs/assets/tours/stations.gif)
 
-*One shortcut switches the whole setup. This is an illustrated tour. The panel previews below show the current UI.*
-
 ## Meet Station
 
-A **station** is one workspace on each active display. Switch stations and every
-screen follows. Send a window to another station and it stays on the same
-physical monitor.
+Station is a multi-monitor manager for Omarchy that helps you arrange your monitor layout easily, manage your workspace assignment, place and customize each monitor's bar, and set one wallpaper across all of your monitors. When you use a multi-monitor setup, you are "Stationary", right? That's where the word Stations comes from.
 
-With two displays, S1 contains workspaces 1 and 2, and S2 contains 3 and 4.
-Station manages that numbering for you, including when a display disconnects.
+## Install & Update & Uninstall
 
-| Your workflow | What Station adds |
-| --- | --- |
-| **Move between projects** | Synchronized stations, directional navigation, and window moves with or without following. |
-| **Change your setup** | A visual display editor with snapping, rotation, Extend/Mirror/Single modes, and guarded previews. |
-| **Make room on every screen** | Independent bar placement, visibility, size, background, and Pill style. |
-| **Frame your desktop** | The same wallpaper everywhere, one image per monitor, or a single image spanning the layout. |
-| **Keep Omarchy familiar** | Native theme styling, familiar shortcuts, monitor-aware bar-position controls, and drag-to-position. |
-
-## Your settings stay yours
-
-Station follows what Hyprland and Omarchy actually apply. If you change a display or a
-gap somewhere else, the panel updates. A reload never forces Station's saved values back
-onto your system, and a temporary terminal change stays temporary.
-
-When you edit a setting in the panel, Station saves only that setting, in a marked
-section at the beginning of `monitors.lua` or `looknfeel.lua`, with a backup. Your own
-rules later in the file still win on the next reload. See
-[system authority](docs/contracts.md#system-authority) for the details.
-
-## Install
-
-Requires **Omarchy 4 (Quattro)** and **Hyprland 0.56+ with Lua configuration**.
-Station manages up to three independent displays.
+To install Station:
 
 ```bash
 omarchy plugin add https://github.com/Yakumy/Station.git --enable
 ```
+
+To update Station:
+
+```bash
+omarchy plugin update yakumy.station
+omarchy restart shell
+```
+
+To remove Station:
+
+```bash
+omarchy plugin remove yakumy.station
+```
+
+## Startup
 
 Click the Station logo in the bar to open the panel. Station discovers your
 displays and enables its workspace shortcuts automatically. No initialization
 command or additional dependencies are needed on a standard Omarchy install.
 
 > [!TIP]
-> Start with **Displays** to arrange your screens, then visit **Bar** and
+> Start with **Displays** to arrange your screens, then visit **Workspaces** to decide how you want your workspaces to be assigned and managed. Then visit **Bar** and
 > **Wallpaper** to customize the setup. **Keybindings** and **Settings** let you
 > adjust how Station fits your workflow.
 
