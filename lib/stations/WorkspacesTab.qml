@@ -161,7 +161,7 @@ Column {
               anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2 + root.modeNoteHeight
               height: Style.spacing.controlHeight
               value: root.mode
-              options: [{ value: "station", label: "Station" }, { value: "repetitive", label: "Repetitive" },
+              options: [{ value: "station", label: "Sync" }, { value: "repetitive", label: "Repetitive" },
                 { value: "nonrepetitive", label: "Non-repetitive" }]
               onChanged: function(value) { if (root.service) root.service.setSetting("workspaceMode", value) }
             }

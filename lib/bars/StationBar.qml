@@ -22,6 +22,9 @@ Item {
   // configured ones, and any other workspace the output holds.
   property bool showWorkspaceIds: false
   property int stationCount: 3
+  // Repetitive uses Omarchy's numbering, and Omarchy's own indicator shows it, so
+  // the widget keeps only the Station mark.
+  readonly property bool omarchyIndicator: Grid.blocked(workspaceMap)
   readonly property var hyprMonitor: {
     var window = root.QsWindow.window
     var screen = window ? window.screen : null
@@ -37,7 +40,7 @@ Item {
     ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
   readonly property var workspaceIds: {
-    if (!showWorkspaceIds || !screenName) return []
+    if (!showWorkspaceIds || !screenName || omarchyIndicator) return []
     var ids = []
     if (outputIndex !== -1) {
       var numbers = []
@@ -128,7 +131,8 @@ Item {
   readonly property real logoExtent: primarySlot
   readonly property real arrowExtent: primarySlot
   readonly property real leadingInset: 0
-  readonly property real drawerEnd: leadingInset + logoExtent + mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0)
+  readonly property real drawerEnd: leadingInset + logoExtent
+    + (omarchyIndicator ? 0 : mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0))
   readonly property real idSlot: vertical ? primarySlot : Style.space(20)
   readonly property real idsExtent: workspaceIds.length ? stationGap + workspaceIds.length * idSlot : 0
   readonly property real length: drawerEnd + idsExtent
@@ -177,6 +181,7 @@ Item {
   Item {
     id: drawer
     objectName: "stationDrawer"
+    visible: !root.omarchyIndicator
     x: root.vertical ? 0 : root.leadingInset + root.logoExtent + root.mainGap
     y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
     width: root.vertical ? root.barSize : root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0)

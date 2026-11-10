@@ -7,17 +7,23 @@ import "../platform/Hypr.js" as Hypr
 // on the second monitor becomes 11, which is station 6. The reload that does this runs
 // the reconcile before any shell event arrives, so only Lua loaded with the
 // configuration can stop it: a file in Omarchy's toggle directory, which loads after
-// its defaults. Removal cleanup deletes the file and reloads.
+// its defaults. Removal cleanup deletes the file and reloads. Repetitive uses
+// Omarchy's own blocks, so it releases the reconcile instead.
 Item {
   id: root
   property string path: ""
   property var evalLua: null
-  readonly property string source: "-- Managed by the Station plugin; removed with it.\n" + Hypr.workspaceAuthority() + "\n"
+  property bool released: false
+  property bool claimed: false
+  readonly property string source: "-- Managed by the Station plugin; removed with it.\n"
+    + Hypr.workspaceAuthority(released) + "\n"
 
   function claim() {
-    evalLua(Hypr.workspaceAuthority())
+    claimed = true
+    evalLua(Hypr.workspaceAuthority(released))
     file.reload()
   }
+  onReleasedChanged: if (claimed) claim()
 
   FileView {
     id: file

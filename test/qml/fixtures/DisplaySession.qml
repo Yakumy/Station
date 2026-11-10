@@ -15,6 +15,7 @@ Item {
   property alias displayOwner: displayController
   property alias workspaceOwner: workspace
   property var config: Store.configDefaults()
+  property var omarchyBlocks: ({ byConnector: {}, taken: [] })
   property var persisted: Store.stateDefaults()
   property var monitors: []
   property var removalGraceRunning: removalGrace.running

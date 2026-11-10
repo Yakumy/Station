@@ -125,16 +125,24 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 | Mode | Map | Numbered key `n` | Count |
 | --- | --- | --- | --- |
 | `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `minStations`, 1 to 5, default 3 |
-| `repetitive` | `{ outputs, mode, counts }`, the same IDs as Station | Shows the output's own workspace `n` on the focused output only | `workspaceCounts.repetitive`, N to 10·N, default 5·N |
+| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceCounts.repetitive`, N to 10·N, default 5·N |
 | `nonrepetitive` | `{ outputs, mode, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceCounts.nonrepetitive`, N to 20 (10 on one output), default 10 |
 
-N is the number of station-bearing outputs. The Repetitive and Non-repetitive counts are
+The tab labels `station` as Sync. N is the number of station-bearing outputs. The Repetitive and Non-repetitive counts are
 totals: each output gets `floor(total / N)` and the last output also gets the remainder.
 No output exceeds ten, so an overflow moves back toward the first output. Non-repetitive
 outputs own consecutive blocks in role order, and numbers past the total belong to the
 last output. With two stations on two outputs the first output shows 1 and 3; with ten
 Repetitive workspaces on three outputs they show 1–3, 1–3 and 1–4; with nine
 Non-repetitive workspaces on two outputs they own 1–4 and 5–9.
+
+Repetitive takes each output's block from Omarchy's
+`~/.local/state/omarchy/monitor-workspaces` (block, connector, identity per line), which
+Omarchy's indicator reads too. An output the file does not list gets the lowest block no
+line holds, internal panels first, as Omarchy assigns it. A changed file re-plans the map.
+A Repetitive map saved without `blocks` still decodes with Station's IDs and migrates into
+the blocks. In Repetitive Omarchy's own workspace indicator shows, and Station's widget
+keeps only its mark.
 
 The numbered keys reach 1 to 10. Non-repetitive workspaces 11 to 20 are reached with
 arrow navigation and the bar.
@@ -236,6 +244,12 @@ the reconcile before any shell event arrives. Station also evaluates the same li
 startup, because the running configuration predates the file. Removal cleanup deletes
 the file and reloads, which hands numbering back to Omarchy. A shell restart does
 neither.
+
+Repetitive is Omarchy's own numbering, so a committed Repetitive map with `blocks`
+releases the authority: the file and the evaluated line put back the reconcile that
+arming kept aside in `o.workspaces.station_reconcile`. Omarchy then renumbers, moves
+and returns windows on reload and hotplug exactly as without Station, and Station's
+migration between two Repetitive maps moves no window. Leaving Repetitive arms it again.
 
 ### Follow focus
 
@@ -710,9 +724,12 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
 `state.stockLease` and `state.displayLease` have the shape
 `{ wasEnabled, section, index, disabledByStation }`.
 
-- Station always leases Omarchy's workspace widget. It numbers each monitor in a block
-  of ten and its clicks focus those blocks, so it cannot show Station's numbering.
-  `hideNative` only controls Station's own workspace numbers (see Open apps).
+- Omarchy's workspace widget numbers each monitor in a block of ten and its clicks focus
+  those blocks. It matches only Repetitive, so Station shows it while the committed map
+  is Repetitive and leases it in every other mode. `hideNative` only controls Station's
+  own workspace numbers (see Open apps).
+- Entering Repetitive shows it again behind Station with `omarchy bar move --after`,
+  falling back to its recorded place.
 - With Hide on (off by default for the Display widget), Station records placement and
   disables an enabled widget. It records a disabled widget as such, and startup and
   removal never enable that one.

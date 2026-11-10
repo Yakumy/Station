@@ -27,6 +27,7 @@ function harness({ capture = false } = {}) {
     layoutWriteKind: '',
     keepFilesPending: false, candidateReady: false, plainCandidateReady: false,
     config: Object.assign(c.Store.configDefaults(), { enabled: ['A', 'B'] }),
+    omarchyBlocks: { byConnector: {}, taken: [] }, omarchyWorkspaces: false,
     persisted: c.Store.stateDefaults(), configLoaded: true, dirsReady: true, stateLoaded: true,
     workspaceData: { mapping: { outputs: ['A', 'B'] }, pending: null, revision: 0 },
     lanes: { A: 1, B: 2 }, monitors: copy(live), clients: copy(windows), displayDraft: [],

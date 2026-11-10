@@ -48,7 +48,17 @@ test('each mode assigns the requested workspaces to outputs as the Workspaces ta
 test('mode maps validate, compare by numbering, and Station maps keep the old shape', () => {
   assert.deepEqual(map(['A', 'B'], 'station', 4), { outputs: ['A', 'B'] });
   const rep = map(['A', 'B'], 'repetitive', 7);
-  assert.deepEqual(rep, { outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 4] });
+  assert.deepEqual(rep, { outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 4], blocks: [0, 1] });
+  // Blocks come from Omarchy's state file; a monitor it has not seen gets the lowest
+  // free block, internal panels first, as Omarchy assigns them.
+  const known = { byConnector: { 'HDMI-A-2': 1, 'eDP-1': 0 }, taken: [0, 1, 2] };
+  assert.deepEqual(G.blocksFor(['HDMI-A-2', 'eDP-1'], known), [1, 0]);
+  assert.deepEqual(G.blocksFor(['HDMI-A-2', 'DP-1'], known), [1, 3]);
+  assert.deepEqual(G.blocksFor(['DP-1', 'eDP-1'], {}), [1, 0]);
+  assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 3], blocks: [1, 1] }), false);
+  assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'nonrepetitive', counts: [3, 3], blocks: [0, 1] }), false);
+  assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 3] }), true);
+  assert.equal(G.equal(rep, Object.assign({}, rep, { blocks: [1, 0] })), false);
   for (const value of [rep, map(['A', 'B'], 'nonrepetitive', 9)]) assert.equal(G.valid(value), true);
   assert.equal(G.valid({ outputs: ['A'], mode: 'nonrepetitive', counts: [11] }), false);
   assert.equal(G.valid({ outputs: ['A', 'B'], mode: 'nonrepetitive', counts: [10, 10] }), true);
@@ -60,10 +70,18 @@ test('mode maps validate, compare by numbering, and Station maps keep the old sh
   assert.equal(G.equal(map(['A', 'B'], 'nonrepetitive', 9), map(['A', 'B'], 'nonrepetitive', 10)), false);
 });
 
-test('repetitive keeps Station IDs, and non-repetitive owns consecutive global numbers', () => {
+test('repetitive uses Omarchy blocks, and non-repetitive owns consecutive global numbers', () => {
   const rep = map(['A', 'B'], 'repetitive', 6);
-  assert.equal(G.workspace(3, 'B', rep), 6);
-  assert.equal(G.station(6, rep), 3);
+  assert.equal(G.workspace(3, 'B', rep), 13);
+  assert.equal(G.station(13, rep), 3);
+  assert.equal(G.slot(13, rep), 1);
+  assert.equal(G.slot(10, rep), 0);
+  assert.equal(G.contains(21, rep), false);
+  assert.deepEqual(G.assignments(rep).slice(0, 4), [[1, 'A'], [11, 'B'], [2, 'A'], [12, 'B']]);
+  // A Repetitive map saved before blocks keeps Station's IDs.
+  const legacy = { outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 3] };
+  assert.equal(G.workspace(3, 'B', legacy), 6);
+  assert.equal(G.station(6, legacy), 3);
   const non = map(['A', 'B'], 'nonrepetitive', 9);
   assert.deepEqual([1, 4, 5, 9, 10].map(id => non.outputs[G.slot(id, non)]), ['A', 'A', 'B', 'B', 'B']);
   assert.equal(G.workspace(5, 'B', non), 5);
@@ -94,10 +112,17 @@ test('mode changes migrate windows by output and rank, and round trip back to th
   assert.deepEqual(there.map(c => [c.monitor, c.workspace.id]), [['B', 6], ['A', 4], ['A', 1]]);
   const back = apply(G.plan(non, station, there, 2), there);
   assert.deepEqual(back.map(c => [c.monitor, c.workspace.id]), [['B', 4], ['A', 7], ['A', 1]]);
-  // Station and Repetitive share IDs, so switching between them moves nothing.
+  // Station to Repetitive keeps each window's output and number, in Omarchy's block.
   const rep = map(['A', 'B'], 'repetitive', 6);
-  const plan = G.plan(station, rep, before, 1);
-  assert.deepEqual(plan.windows.map(r => r.to), before.map(c => c.workspace.id));
+  const repeated = apply(G.plan(station, rep, before, 1), before);
+  assert.deepEqual(repeated.map(c => [c.monitor, c.workspace.id]), [['B', 12], ['A', 5], ['A', 1]]);
+  const returned = apply(G.plan(rep, station, repeated, 1), repeated);
+  assert.deepEqual(returned.map(c => c.workspace.id), before.map(c => c.workspace.id));
+  // Between Repetitive maps Omarchy's reconcile owns the windows, so Station moves none.
+  assert.deepEqual(G.plan(rep, map(['A'], 'repetitive', 6), repeated, 1).windows, []);
+  // A Repetitive map saved before blocks migrates into the blocks.
+  const legacy = { outputs: ['A', 'B'], mode: 'repetitive', counts: [3, 3] };
+  assert.deepEqual(apply(G.plan(legacy, rep, before, 1), before).map(c => c.workspace.id), [12, 5, 1]);
 });
 
 test('a non-repetitive count change hands a number to its new owner and keeps the number', () => {
@@ -116,11 +141,11 @@ test('a non-repetitive count change hands a number to its new owner and keeps th
 
 test('navigation steps per output in Repetitive and globally in Non-repetitive', () => {
   const rep = map(['A', 'B'], 'repetitive', 5);
-  const monitors = [{ name: 'A', activeWorkspace: { id: 1 } }, { name: 'B', activeWorkspace: { id: 10 } }];
-  assert.deepEqual(G.existing([win('0x1', 9, 'A')], monitors, 3, rep, 'A'), [1, 2, 5]);
-  assert.deepEqual(G.existing([], monitors, 3, rep, 'B'), [1, 2, 3, 5]);
+  const monitors = [{ name: 'A', activeWorkspace: { id: 1 } }, { name: 'B', activeWorkspace: { id: 20 } }];
+  assert.deepEqual(G.existing([win('0x1', 9, 'A')], monitors, 3, rep, 'A'), [1, 2, 9]);
+  assert.deepEqual(G.existing([], monitors, 3, rep, 'B'), [1, 2, 3, 10]);
   const non = map(['A', 'B'], 'nonrepetitive', 4);
-  assert.deepEqual(G.existing([win('0x1', 7, 'B')], monitors, 3, non, 'A'), [1, 2, 3, 4, 7, 10]);
+  assert.deepEqual(G.existing([win('0x1', 7, 'B')], monitors, 3, non, 'A'), [1, 2, 3, 4, 7, 20]);
   assert.deepEqual(G.existing([], [], 3, { outputs: ['A', 'B'] }), [1, 2, 3]);
 });
 
@@ -148,7 +173,7 @@ test('Lua helpers validate workspace IDs and connectors', () => {
 
 test('per-output app rows group by the bar output and its number', () => {
   const rep = map(['A', 'B'], 'repetitive', 6);
-  const rows = outputRows(rep, [win('0x1', 1, 'A'), win('0x2', 4, 'B'), win('0x3', -99, 'A')], { address: '0x2' }, null);
+  const rows = outputRows(rep, [win('0x1', 1, 'A'), win('0x2', 12, 'B'), win('0x3', -99, 'A'), win('0x4', 35, 'A')], { address: '0x2' }, null);
   assert.deepEqual(Object.keys(rows), ['A', 'B']);
   assert.deepEqual(rows.A[1].map(x => x.address), ['0x1']);
   assert.deepEqual(rows.B[2].map(x => [x.address, x.focused]), [['0x2', true]]);
@@ -179,12 +204,12 @@ test('switching shows every output in Station mode, one output in Repetitive and
   assert.ok(batches[0].lua.endsWith(H.focusWorkspace(3) + '; ' + H.focusWorkspace(4)));
   ({ c, batches } = switcher(map(['A', 'B'], 'repetitive', 6)));
   c.showStation(2);
-  assert.match(batches[0].lua, /focus\(\{ workspace = "4" \}\)\)$/);
-  assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "3" \}\)/);
+  assert.match(batches[0].lua, /focus\(\{ workspace = "12" \}\)\)$/);
+  assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "2" \}\)/);
   batches[0].done(0, 'ok');
   // A bar click names its own output.
   c.showWorkspace(3, 'A');
-  assert.match(batches[1].lua, /focus\(\{ workspace = "5" \}\)\)$/);
+  assert.match(batches[1].lua, /focus\(\{ workspace = "3" \}\)\)$/);
   ({ c, batches } = switcher(map(['A', 'B'], 'nonrepetitive', 9), 'B'));
   c.showStation(2);
   assert.ok(batches[0].lua.endsWith(H.placeWorkspace(2, 'A') + '; ' + H.focusWorkspace(2)));
@@ -194,11 +219,12 @@ test('switching shows every output in Station mode, one output in Repetitive and
   assert.ok(batches[0].lua.endsWith(H.focusWorkspace(4) + '; ' + H.focusWorkspace(3)));
 });
 
-test('settling after a non-repetitive migration returns each output to its own block', () => {
+test('settling after a non-repetitive or repetitive migration returns each output to its own block', () => {
   const { c } = switcher(map(['A', 'B'], 'nonrepetitive', 9));
   const statements = c.settleStatements(1, 'A');
   assert.deepEqual([...statements], [H.homeWorkspace('A', 1, 4), H.homeWorkspace('B', 5, 20), H.focusMonitor('A')]);
-  assert.deepEqual([...switcher(map(['A', 'B'], 'repetitive', 6)).c.settleStatements(1, 'A')], [H.focusMonitor('A')]);
+  assert.deepEqual([...switcher(map(['A', 'B'], 'repetitive', 6)).c.settleStatements(1, 'A')],
+    [H.homeWorkspace('A', 1, 10), H.homeWorkspace('B', 11, 20), H.focusMonitor('A')]);
 });
 
 test('follow focus and station synchronization belong to Station mode only', () => {

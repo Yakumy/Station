@@ -58,6 +58,12 @@ Item {
   readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
   readonly property string parkedTogglePath: stateDir + "/internal-monitor-disable.parked"
   readonly property string workspaceAuthorityPath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/station-workspaces.lua"
+  // Omarchy's record of each monitor's workspace block. Read only.
+  readonly property string omarchyBlocksPath: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
+    + "/omarchy/monitor-workspaces"
+  property var omarchyBlocks: ({ byConnector: {}, taken: [] })
+  // Repetitive is Omarchy's own numbering: its reconcile runs and its indicator shows.
+  readonly property bool omarchyWorkspaces: Grid.blocked(workspaceMap)
   readonly property alias monitors: compositor.monitors
   readonly property alias clients: compositor.clients
   readonly property alias currentStation: stations.currentStation
@@ -160,13 +166,13 @@ Item {
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
   // Omarchy's workspace widget numbers each monitor in a block of ten, and its
-  // clicks focus those blocks, so it cannot show Station's numbering. Station keeps
-  // it hidden; hideNative only controls Station's own workspace numbers.
+  // clicks focus those blocks, so it can show only Repetitive, which uses those
+  // blocks. Other modes keep it hidden; hideNative controls Station's own numbers.
   Bars.StockWidgetLeases {
     id: leases
     shell: root.shell
     started: root.started
-    config: Object.assign({}, root.config, { hideNative: true })
+    config: Object.assign({}, root.config, { hideNative: !root.omarchyWorkspaces })
     persisted: root.persisted
     saveState: function() { store.saveState() }
     enqueue: function(command, done) { compositor.enqueue(command, done) }
@@ -186,6 +192,7 @@ Item {
   Stations.WorkspaceAuthority {
     id: workspaceAuthority
     path: root.workspaceAuthorityPath
+    released: root.omarchyWorkspaces
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
   Bars.BarLayerSync {
@@ -408,7 +415,8 @@ Item {
 
   function targetMapping() {
     var options = state === "previewing" && previewApplied ? previewApplied.options : config
-    return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, counts: config.workspaceCounts })
+    return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, counts: config.workspaceCounts,
+      blocks: omarchyBlocks })
   }
 
   function monitorSignature() {
@@ -575,6 +583,7 @@ Item {
     }
     displayController.migrateMonitorPrecedence(function() { compositor.refresh(true, function() {
       applyRuntime()
+      if (omarchyWorkspaces && persisted.stockLease) leases.restoreStockLease()
       if (!config.hideDisplay && persisted.displayLease) leases.restoreDisplayLease()
       leases.acquireStockLeases()
       if (!persisted.activeNoticeShown) {
@@ -694,6 +703,29 @@ Item {
     BarBridge.clear(barBridge)
     Quickshell.execDetached(Recovery.cleanupCommand(stateDir, monitorsPath, persisted.stockLease, persisted.displayLease, workspaceAuthorityPath))
   }
+
+  // Connector -> block, and every block Omarchy has handed out, as its bar reads it.
+  function readOmarchyBlocks(text) {
+    var next = { byConnector: {}, taken: [] }
+    String(text || "").split("\n").forEach(function(line) {
+      var fields = line.split("\t")
+      var block = parseInt(fields[0], 10)
+      if (fields.length < 3 || !/^[0-9]+$/.test(fields[0]) || block >= Grid.MAX_STATIONS) return
+      next.taken.push(block)
+      if (fields[1] !== "") next.byConnector[fields[1]] = block
+    })
+    if (JSON.stringify(next) !== JSON.stringify(omarchyBlocks)) omarchyBlocks = next
+  }
+  FileView {
+    path: root.omarchyBlocksPath
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: root.readOmarchyBlocks(text())
+    onLoadFailed: root.readOmarchyBlocks("")
+  }
+  onOmarchyBlocksChanged: if (started && state === "idle" && !Grid.equal(workspaceMap, targetMapping())) workspace.reconcile()
+  onOmarchyWorkspacesChanged: if (started) leases.workspaceVisibilityChanged(!omarchyWorkspaces)
 
   Timer { interval: 1500; running: root.started; repeat: true; onTriggered: root.observeDesktop() }
   Timer { id: reloadDebounce; interval: 300; onTriggered: { keybindings.invalidate(); compositor.refresh(true, function() { root.applyRuntime() }) } }

@@ -88,3 +88,12 @@ test('a reload renumbers a station workspace on the second monitor into station 
 test('the authority line leaves station workspaces alone', { skip: !lua || !existsSync(module_) }, () => {
   assert.equal(reconcile(Hypr.workspaceAuthority()), '');
 });
+
+test('Repetitive releases the authority, so Omarchy renumbers into its blocks again', { skip: !lua || !existsSync(module_) }, () => {
+  const armedThenReleased = Hypr.workspaceAuthority() + '\n' + Hypr.workspaceAuthority(true);
+  assert.ok(reconcile(armedThenReleased).split(',').includes('1->11'));
+  // Arming twice keeps the real reconcile aside, and releasing never armed is harmless.
+  const twice = Hypr.workspaceAuthority() + '\n' + Hypr.workspaceAuthority() + '\n' + Hypr.workspaceAuthority(true);
+  assert.ok(reconcile(twice).split(',').includes('1->11'));
+  assert.ok(reconcile(Hypr.workspaceAuthority(true)).split(',').includes('1->11'));
+});

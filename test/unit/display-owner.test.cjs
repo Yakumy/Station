@@ -96,7 +96,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
     const c={started:false,dirsReady:true,configLoaded:true,stateLoaded:true,previewLoaded:false,
       mappingLoaded:true,monitorsLoaded:true,previewFound:found,stateDir:'/temporary',
       parkedTogglePath:'/temporary/parked',internalDisablePath:'/temporary/flag',Transactions:require('../../lib/platform/Transactions.js'),
-      persisted:{lastStation:3,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
+      persisted:{lastStation:3,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},omarchyWorkspaces:false,
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
       applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){}};

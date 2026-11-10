@@ -104,6 +104,13 @@ ShellRoot {
           findObject(bar, "workspaceId-" + other).pressed(Qt.LeftButton)
           if (bar.picked[0] !== Grid.station(other, bar.workspaceMap)) { fail("click " + other); return }
         }
+        // Repetitive uses Omarchy's blocks and indicator: only the Station mark stays.
+        var saved = bar.workspaceMap
+        bar.workspaceMap = ({ outputs: saved.outputs, mode: "repetitive", counts: saved.outputs.map(function() { return 3 }),
+          blocks: saved.outputs.map(function(name, index) { return index }) })
+        if (!bar.omarchyIndicator || findObject(bar, "stationDrawer").visible || bar.workspaceIds.length
+            || bar.width !== bar.anchorItem.width) { fail("repetitive keeps Station labels"); return }
+        bar.workspaceMap = saved
         console.log("WORKSPACE_IDS " + bar.screenName + " active " + bar.activeWorkspaceId + " row " + ids.join(","))
         phase = 2
         capture.grabToImage(function(result) {

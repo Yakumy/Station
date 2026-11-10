@@ -1,15 +1,18 @@
 # Unreleased
 
 - Add a Workspaces tab after Displays. Its locked layout shows each monitor's role and the
-  workspaces it gets, and it updates as you change the controls. Choose Station (every
+  workspaces it gets, and it updates as you change the controls. Choose Sync (every
   monitor switches together), Repetitive (every monitor numbers its own workspaces from 1,
-  as Omarchy 4.5 does) or Non-repetitive (each number belongs to one monitor, as in Omarchy
+  exactly as Omarchy 4.5 does, with Omarchy's own indicator) or Non-repetitive (each number belongs to one monitor, as in Omarchy
   4.0). Set how many stations or workspaces you want with − and +, pick the bar indicator
   style, and choose whether open apps show on hover, always or not at all. Changing the
   mode or count moves windows with the same journaled migration as a display change.
   Minimum stations and open apps move here from Settings. Station allows 1 to 5 stations,
   Repetitive up to 10 workspaces on each monitor, and Non-repetitive up to 20 in all
   (keys reach 1 to 10). With one monitor the mode selector is disabled.
+- Make Repetitive use Omarchy 4.5's own workspace blocks (1–10 on the laptop, 11–20 on
+  the next monitor) instead of Station's numbering. Omarchy's indicator shows again in
+  Repetitive, and Omarchy's renumbering on reload and hotplug runs as without Station.
 - Fix the workspace indicator setting. Omarchy's indicator numbers each monitor in blocks
   of ten, so with Station it showed the wrong workspaces and its clicks left Station's
   numbering. Station now keeps it hidden, and Settings' Show workspace numbers adds the

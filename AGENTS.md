@@ -100,7 +100,8 @@ session, so check them on every related change.
   approved combos and Station's own applied combos. Use `omarchy menu keybindings --print` for identity. Only real key presses test
   the end-to-end path.
 - **Workspace numbering.** Omarchy's per-monitor reconcile renumbers station workspaces,
-  so `WorkspaceAuthority` must stay armed. See [Workspace authority](docs/contracts.md#workspace-authority).
+  so `WorkspaceAuthority` must stay armed in Sync and Non-repetitive. Repetitive uses
+  Omarchy's blocks and releases it. See [Workspace authority](docs/contracts.md#workspace-authority).
 - **Restart versus removal.** A shell restart must not trigger removal cleanup.
 - **Delegates.** A Repeater delegate can be destroyed during its own handler. Keep
   follow-up actions in a surviving object.

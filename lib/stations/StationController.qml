@@ -151,8 +151,8 @@ Item {
     return outputs.map(function(output) { return Hypr.focusWorkspace(workspaceFor(station, output)) })
   }
 
-  // After a migration: Station mode shows the station again. Non-repetitive puts
-  // every output back on a workspace of its own. Repetitive keeps what is shown.
+  // After a migration: Station mode shows the station again. Non-repetitive and
+  // Repetitive put every output back on a workspace of its own block.
   function settleStatements(station, finalOutput) {
     var mode = Grid.mode(workspaceMap)
     if (mode === "station") return stationFocusStatements(station, finalOutput)
@@ -161,6 +161,10 @@ Item {
       var first = Grid.start(index, workspaceMap)
       var last = index === workspaceMap.outputs.length - 1 ? Grid.MAX_GLOBAL : first + workspaceMap.counts[index] - 1
       statements.push(Hypr.homeWorkspace(output, first, last))
+    })
+    if (Grid.blocked(workspaceMap)) workspaceMap.outputs.forEach(function(output, index) {
+      var block = workspaceMap.blocks[index] * Grid.MAX_STATIONS
+      statements.push(Hypr.homeWorkspace(output, block + 1, block + Grid.MAX_STATIONS))
     })
     if (workspaceMap.outputs.indexOf(finalOutput) !== -1) statements.push(Hypr.focusMonitor(finalOutput))
     return statements

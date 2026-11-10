@@ -65,7 +65,8 @@ test('hypr generators validate every external value', () => {
   assert.equal(H.connector('DP-1'), 'DP-1');
   assert.throws(() => H.connector('DP-1"; os.execute("bad")'), /invalid connector/);
   assert.throws(() => H.address('not-an-address'), /invalid window address/);
-  assert.throws(() => H.workspace(31), /invalid workspace/);
+  assert.equal(H.workspace(100), 100);
+  assert.throws(() => H.workspace(101), /invalid workspace/);
   assert.equal(H.moveWindow('0xabc', 4, false), 'hl.dispatch(hl.dsp.window.move({ window = "address:0xabc", workspace = 4, follow = false }))');
   const rules = H.compactRules(['A', 'C']);
   assert.equal(rules.length, 20);
