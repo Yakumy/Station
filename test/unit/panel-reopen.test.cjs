@@ -222,8 +222,7 @@ test('display hotplug does not summon a panel the user closed', () => {
 test('hiding either stock bar widget preserves an open panel through the rebuild', () => {
   const setter = service.match(/function setSetting\(name, value\) \{([\s\S]*?)\n {2}\}/);
   assert.ok(setter, 'setSetting is defined');
-  // Workspace numbers are Station's own row; the bar is not rebuilt.
-  assert.doesNotMatch(setter[1], /name === "hideNative"\) \{[^}]*panelTransferUntil/);
+  assert.match(setter[1], /name === "hideNative"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
   assert.match(setter[1], /name === "hideDisplay"[\s\S]*?panelTransferUntil = Date\.now\(\) \+ 3000/);
 });
 

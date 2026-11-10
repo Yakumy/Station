@@ -18,13 +18,6 @@ Item {
   property var workspaceMap: null
   property var workspaceApps: ({})
   property string indicatorStyle: "prefixed"
-  // Optional row of the real Hyprland workspace IDs on this output: the
-  // configured ones, and any other workspace the output holds.
-  property bool showWorkspaceIds: false
-  property int stationCount: 3
-  // Repetitive uses Omarchy's numbering, and Omarchy's own indicator shows it, so
-  // the widget keeps only the Station mark.
-  readonly property bool omarchyIndicator: Grid.blocked(workspaceMap)
   readonly property var hyprMonitor: {
     var window = root.QsWindow.window
     var screen = window ? window.screen : null
@@ -39,32 +32,6 @@ Item {
   readonly property int shownNumber: perOutput
     ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
-  readonly property var workspaceIds: {
-    if (!showWorkspaceIds || !screenName || omarchyIndicator) return []
-    var ids = []
-    if (outputIndex !== -1) {
-      var numbers = []
-      if (Grid.mode(workspaceMap) === "station")
-        for (var s = 1; s <= Math.max(1, Math.min(Grid.MAX_STATION_COUNT, stationCount)); s++) numbers.push(s)
-      else numbers = ownNumbers.slice()
-      numbers.forEach(function(number) {
-        var id = Grid.workspace(number, screenName, workspaceMap)
-        if (id !== null) ids.push(id)
-      })
-    }
-    var values = Hyprland.workspaces.values
-    for (var i = 0; i < values.length; i++) {
-      var workspace = values[i]
-      if (workspace.id > 0 && workspace.monitor && workspace.monitor.name === screenName
-          && ids.indexOf(workspace.id) === -1) ids.push(workspace.id)
-    }
-    return ids.sort(function(a, b) { return a - b })
-  }
-  function workspaceById(id) {
-    var values = Hyprland.workspaces.values
-    for (var i = 0; i < values.length; i++) if (values[i].id === id) return values[i]
-    return null
-  }
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)
     if (indicatorStyle === "dots") return number === shownNumber ? "\u25cf" : "\u25cb"
@@ -75,14 +42,12 @@ Item {
   // hidden. Quickshell credits a switch to the focused monitor only.
   Connections {
     target: Hyprland
-    enabled: root.perOutput || root.showWorkspaceIds
+    enabled: root.perOutput
     function onRawEvent(event) {
       var name = event ? String(event.name) : ""
       if (name === "workspacev2" || name === "moveworkspacev2" || name === "focusedmon"
-          || name === "changeworkspaceid" || name === "monitoraddedv2" || name === "monitorremovedv2") {
+          || name === "changeworkspaceid" || name === "monitoraddedv2" || name === "monitorremovedv2")
         Hyprland.refreshMonitors()
-        if (root.showWorkspaceIds) Hyprland.refreshWorkspaces()
-      }
     }
   }
   property bool expanded: false
@@ -131,11 +96,7 @@ Item {
   readonly property real logoExtent: primarySlot
   readonly property real arrowExtent: primarySlot
   readonly property real leadingInset: 0
-  readonly property real drawerEnd: leadingInset + logoExtent
-    + (omarchyIndicator ? 0 : mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0))
-  readonly property real idSlot: vertical ? primarySlot : Style.space(20)
-  readonly property real idsExtent: workspaceIds.length ? stationGap + workspaceIds.length * idSlot : 0
-  readonly property real length: drawerEnd + idsExtent
+  readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0)
   implicitWidth: vertical ? barSize : length
   implicitHeight: vertical ? length : barSize
   onAppsModeChanged: if (appsMode !== "hover") expanded = false
@@ -181,7 +142,6 @@ Item {
   Item {
     id: drawer
     objectName: "stationDrawer"
-    visible: !root.omarchyIndicator
     x: root.vertical ? 0 : root.leadingInset + root.logoExtent + root.mainGap
     y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
     width: root.vertical ? root.barSize : root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0)
@@ -309,46 +269,6 @@ Item {
         x: (parent.width - arrowMetrics.tightBoundingRect.width) / 2 - arrowMetrics.tightBoundingRect.x
         y: root.inkCenter - arrowMetrics.tightBoundingRect.height / 2 - indicatorMetrics.ascent - arrowMetrics.tightBoundingRect.y
         rotation: root.vertical ? 90 : 0
-      }
-    }
-  }
-
-  Grid {
-    id: workspaceIdRow
-    objectName: "workspaceIdRow"
-    visible: root.workspaceIds.length > 0
-    x: root.vertical ? 0 : root.drawerEnd + root.stationGap
-    y: root.vertical ? root.drawerEnd + root.stationGap : 0
-    columns: root.vertical ? 1 : Math.max(1, root.workspaceIds.length)
-    spacing: 0
-    Repeater {
-      model: root.workspaceIds
-      delegate: Ui.WidgetButton {
-        id: idButton
-        required property int modelData
-        readonly property var workspace: root.workspaceById(modelData)
-        readonly property bool shown: modelData === root.activeWorkspaceId
-        readonly property bool occupied: workspace !== null && workspace.toplevels.values.length > 0
-        readonly property var number: Grid.station(modelData, root.workspaceMap)
-        objectName: "workspaceId-" + modelData
-        bar: root.bar
-        text: String(modelData)
-        tooltipText: "Workspace " + modelData
-        opacity: occupied || shown ? 1 : 0.5
-        interactive: number !== null && !shown
-        fixedWidth: root.vertical ? root.barSize : root.idSlot
-        fixedHeight: root.vertical ? root.idSlot : root.barSize
-        onPressed: if (number !== null) root.stationSelected(number)
-        Rectangle {
-          objectName: "workspaceIdActive-" + idButton.modelData
-          visible: idButton.shown
-          width: root.vertical ? Math.max(1, Style.space(2)) : parent.width
-          height: root.vertical ? parent.height : Math.max(1, Style.space(2))
-          x: root.vertical && root.bar && root.bar.position === "right" ? 0 : parent.width - width
-          y: root.vertical ? 0 : parent.height - height
-          color: Commons.Color.accent
-          radius: Style.cornerRadius
-        }
       }
     }
   }

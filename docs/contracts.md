@@ -594,12 +594,7 @@ In Station mode every bar shows the station. In Repetitive and Non-repetitive ea
 shows its own output: its own numbers, the one it shows and the apps on them, and a
 click shows that number on that output. It reads the shown workspace from Quickshell's
 monitor and refreshes it on workspace events, because Omarchy's indicator, which would
-otherwise refresh it, is hidden.
-
-Show workspace numbers in Settings (`hideNative: false`) adds a row after the widget with
-the real Hyprland workspace IDs on that bar's output: the configured ones and any other
-workspace the output holds. The shown one has an accent mark, empty ones are dimmed, and
-a click goes through Station like a label click. IDs outside the map accept no click.
+otherwise refresh it, is usually hidden.
 
 - Hover shows the current station and a chevron, and reveals all occupied and minimum
   stations with one icon per mapped window. It uses the stock tray's 600 ms OutCubic
@@ -724,20 +719,19 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
 `state.stockLease` and `state.displayLease` have the shape
 `{ wasEnabled, section, index, disabledByStation }`.
 
-- Omarchy's workspace widget numbers each monitor in a block of ten and its clicks focus
-  those blocks. It matches only Repetitive, so Station shows it while the committed map
-  is Repetitive and leases it in every other mode. `hideNative` only controls Station's
-  own workspace numbers (see Open apps).
-- Entering Repetitive shows it again behind Station with `omarchy bar move --after`,
-  falling back to its recorded place.
-- With Hide on (off by default for the Display widget), Station records placement and
-  disables an enabled widget. It records a disabled widget as such, and startup and
-  removal never enable that one.
+- Settings' Show Omarchy default workspace indicator is `hideNative` inverted, in every
+  mode. It shows or hides Omarchy's own installed indicator next to Station's widget;
+  Station draws no workspace numbers of its own. Omarchy's indicator numbers each
+  monitor in blocks of ten, so it matches Repetitive; in Sync and Non-repetitive it
+  shows Omarchy's numbering, not Station's.
+- With Hide on (the default for the workspace widget, off for the Display widget),
+  Station records placement and disables an enabled widget. It records a disabled widget
+  as such, and startup and removal never enable that one.
 - Restoring happens only for `disabledByStation && wasEnabled`.
-- An explicit Show of the Display widget also enables it when it was hidden before
-  Station acquired it.
-- Removal returns the workspace widget to its recorded place. `bar put` leaves a present
-  widget where it is, so use `bar move`.
+- An explicit Show also enables a widget hidden before Station acquired it.
+- The workspace widget returns behind Station with `omarchy bar move --after`, falling
+  back to its recorded place. `bar put` leaves a present widget where it is, so use
+  `bar move`.
 - Bar writes rebuild the bar, so Station runs them one at a time.
 
 ## Removal and restart

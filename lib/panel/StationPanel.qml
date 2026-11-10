@@ -178,6 +178,7 @@ Ui.Panel {
     readonly property var config: root.service ? root.service.config : ({})
     readonly property var displayWidgetEnabled: root.service ? root.service.displayWidgetEnabled : null
     function setSetting(name, value) { return root.service ? root.service.setSetting(name, value) : undefined }
+    readonly property var workspaceWidgetEnabled: root.service ? root.service.workspaceWidgetEnabled : null
   }
 
   Displays.DisplayControls {
@@ -315,8 +316,6 @@ Ui.Panel {
     workspaceMap: root.service ? root.service.workspaceMap : null
     workspaceApps: root.service ? root.service.workspaceApps : ({})
     indicatorStyle: root.service ? root.service.config.indicatorStyle || "prefixed" : "prefixed"
-    showWorkspaceIds: !!root.service && root.service.config.hideNative === false
-    stationCount: root.service ? Number(root.service.config.minStations) || 3 : 3
     onStationSelected: function(number) {
       if (root.service) root.service.showWorkspace(String(number), barControls.screenName)
     }

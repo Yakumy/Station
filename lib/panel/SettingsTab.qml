@@ -56,9 +56,10 @@ Column {
   Item { width: 1; height: settingsTab.inset }
 
   PlainToggleRow {
-    objectName: "workspaceNumbersToggle"
-    label: "Show workspace numbers"
-    checked: !!settingsTab.service && settingsTab.service.config.hideNative === false
+    objectName: "omarchyIndicatorToggle"
+    label: "Show Omarchy default workspace indicator"
+    checked: !!settingsTab.service && !settingsTab.service.config.hideNative
+      && settingsTab.service.workspaceWidgetEnabled !== false
     onClicked: if (settingsTab.service)
       settingsTab.service.setSetting("hideNative", checked)
   }

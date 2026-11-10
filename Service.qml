@@ -62,7 +62,7 @@ Item {
   readonly property string omarchyBlocksPath: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
     + "/omarchy/monitor-workspaces"
   property var omarchyBlocks: ({ byConnector: {}, taken: [] })
-  // Repetitive is Omarchy's own numbering: its reconcile runs and its indicator shows.
+  // Repetitive is Omarchy's own numbering, so its reconcile runs.
   readonly property bool omarchyWorkspaces: Grid.blocked(workspaceMap)
   readonly property alias monitors: compositor.monitors
   readonly property alias clients: compositor.clients
@@ -165,14 +165,11 @@ Item {
     saveState: function() { store.saveState() }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
   }
-  // Omarchy's workspace widget numbers each monitor in a block of ten, and its
-  // clicks focus those blocks, so it can show only Repetitive, which uses those
-  // blocks. Other modes keep it hidden; hideNative controls Station's own numbers.
   Bars.StockWidgetLeases {
     id: leases
     shell: root.shell
     started: root.started
-    config: Object.assign({}, root.config, { hideNative: !root.omarchyWorkspaces })
+    config: root.config
     persisted: root.persisted
     saveState: function() { store.saveState() }
     enqueue: function(command, done) { compositor.enqueue(command, done) }
@@ -533,9 +530,11 @@ Item {
   function setSetting(name, value) {
     if (name === "workspaceMode" || name === "workspaceCount") return setWorkspaceSetting(name, value)
     if (name === "hideNative") {
+      if (panelWanted) panel.panelTransferUntil = Date.now() + 3000
       config.hideNative = !!value
       config = Object.assign({}, config)
       store.saveConfig()
+      leases.workspaceVisibilityChanged(config.hideNative)
       return "ok"
     }
     if (name === "hideDisplay") {
@@ -583,7 +582,7 @@ Item {
     }
     displayController.migrateMonitorPrecedence(function() { compositor.refresh(true, function() {
       applyRuntime()
-      if (omarchyWorkspaces && persisted.stockLease) leases.restoreStockLease()
+      if (!config.hideNative && persisted.stockLease) leases.restoreStockLease()
       if (!config.hideDisplay && persisted.displayLease) leases.restoreDisplayLease()
       leases.acquireStockLeases()
       if (!persisted.activeNoticeShown) {
@@ -725,7 +724,6 @@ Item {
     onLoadFailed: root.readOmarchyBlocks("")
   }
   onOmarchyBlocksChanged: if (started && state === "idle" && !Grid.equal(workspaceMap, targetMapping())) workspace.reconcile()
-  onOmarchyWorkspacesChanged: if (started) leases.workspaceVisibilityChanged(!omarchyWorkspaces)
 
   Timer { interval: 1500; running: root.started; repeat: true; onTriggered: root.observeDesktop() }
   Timer { id: reloadDebounce; interval: 300; onTriggered: { keybindings.invalidate(); compositor.refresh(true, function() { root.applyRuntime() }) } }
