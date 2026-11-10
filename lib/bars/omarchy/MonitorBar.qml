@@ -8,6 +8,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "../../platform" as Platform
 
 Item {
   id: root
@@ -1384,7 +1385,7 @@ Item {
     exclusionMode: root.barHidden ? ExclusionMode.Ignore
       : ExclusionMode.Auto
 
-    ScreenMoveRemap {
+    Platform.ScreenMoveRemap {
       id: remapGuard
       window: barWindow
     }
