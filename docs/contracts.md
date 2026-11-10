@@ -150,6 +150,17 @@ the blocks.
 The numbered keys reach 1 to 10. Non-repetitive workspaces 11 to 20 are reached with
 arrow navigation and the bar.
 
+On a fresh install, when neither `config.json` nor `state.json` exists, Station reads
+`hyprctl workspacerules -j` before its first start, while every rule is still the user's
+own, and keeps the assignment it finds (`Grid.adopt`). Only numbered rules naming a
+present connector count, and a later rule for a number wins. Rules that give each monitor
+slots 1 to k of its own block of ten select Repetitive with k workspaces there; rules
+that split one range select Non-repetitive with those numbers, a missing number joining
+the monitor of the number below it and a monitor with no rule taking the next five. With
+no such rules, one monitor, or an assignment the modes cannot hold (more than ten on a
+monitor or numbers past twenty), the defaults stay. The user's rules stay in their
+configuration, and Station does not read them again.
+
 With one output the modes number the same workspaces, so the tab disables the mode
 selector and says it works only on multiple monitors. The saved mode stays in effect.
 
@@ -591,8 +602,8 @@ file or to `state.json`.
 ### Open apps
 
 The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
-`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman` or
-`dots`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
+`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number` or `roman`.
+A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
 `showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
@@ -602,8 +613,11 @@ click shows that number on that output. It reads the shown workspace from Quicks
 monitor and refreshes it on workspace events, because Omarchy's indicator, which would
 otherwise refresh it, is usually hidden.
 
-- Off lists every available number with no chevron. A filled square, as in Omarchy's
-  indicator, stands for the current one.
+- Off lists every available number with no chevron. Omarchy's tiling square glyph
+  (U+F14FB), drawn by `WidgetButton` at Omarchy's icon size, stands for the current one,
+  as in Omarchy's indicator.
+- As in Omarchy's indicator, a number that is not shown and has no window is drawn at
+  half opacity, so the current one reads as active.
 - On hover shows the current number and a chevron, and reveals the rest, with one icon
   per mapped window when apps are on. It uses the stock tray's 600 ms OutCubic motion,
   and the current label stays opaque.
@@ -707,9 +721,11 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - In Repetitive every monitor has − and + after its badges (1 to 10). In Non-repetitive
   only the last monitor has them: + adds the next number to it, − removes the highest
   number, wherever it is, while its monitor keeps one. Non-repetitive badges drag onto
-  another monitor, which then owns that number; each monitor keeps 1 to 10. The mode row
-  keeps room under the centered buttons for a note: the drag hint in Non-repetitive, and
-  "Works only on multiple monitors" with one output.
+  another monitor, which then owns that number; each monitor keeps 1 to 10.
+- The Workspaces frame has four rows of equal height: Mode, Indicator style, Compact
+  mode and Show open apps. As in Displays, a row's message sits in its bottom-left
+  corner: the drag hint in Non-repetitive and "Works only on multiple monitors" with one
+  output under Mode, and what the chosen compact mode and apps switch do.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.
@@ -739,7 +755,7 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
   Station draws no workspace numbers of its own. Omarchy's indicator numbers each
   monitor in blocks of ten, so it matches Repetitive; in Sync and Non-repetitive it
   shows Omarchy's numbering, not Station's.
-- With Hide on (the default for the workspace widget, off for the Display widget),
+- With Hide on (the default for both widgets; a saved `hideDisplay: false` stays),
   Station records placement and disables an enabled widget. It records a disabled widget
   as such, and startup and removal never enable that one.
 - Restoring happens only for `disabledByStation && wasEnabled`.

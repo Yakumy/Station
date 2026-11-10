@@ -38,7 +38,6 @@ Item {
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)
-    if (indicatorStyle === "dots") return number === shownNumber ? "\u25cf" : "\u25cb"
     if (indicatorStyle === "roman") return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][number - 1] || String(number)
     return (perOutput ? "W" : "S") + number
   }
@@ -181,8 +180,14 @@ Item {
               id: stationButton
               objectName: "stationLabel-" + group.modelData
               bar: root.bar
-              text: root.labelFor(group.modelData)
-              opacity: group.modelData === root.shownNumber ? 1 : root.revealProgress
+              // With every number listed, Omarchy's tiling square stands for the
+              // current one, drawn by the button at Omarchy's icon size.
+              readonly property bool square: root.alwaysOpen && group.modelData === root.shownNumber
+              readonly property bool current: group.modelData === root.shownNumber
+              text: square ? "\udb85\udcfb" : root.labelFor(group.modelData)
+              // As in Omarchy's indicator, an empty workspace that is not shown is
+              // dimmed, so the current one reads as active.
+              opacity: (current ? 1 : root.revealProgress) * (current || group.apps.length > 0 ? 1 : 0.5)
               Behavior on opacity { enabled: false }
               // MonitorBar routes module clicks through its own registered-target
               // hit test, which cannot see this drawer viewport's clip. A hidden
@@ -190,23 +195,10 @@ Item {
               // the current station is translated into the collapsed position.
               interactive: group.modelData === root.shownNumber || root.revealProgress > 0.99
               tooltipText: (root.perOutput ? "Workspace " : "Station ") + group.modelData
-              labelVisible: false; hasVisualContent: true
+              labelVisible: square; hasVisualContent: true
               fixedWidth: root.vertical ? root.barSize : root.primarySlot
               fixedHeight: root.vertical ? root.primarySlot : root.barSize
               onPressed: root.stationSelected(group.modelData)
-              // With every number listed, a filled square stands for the current
-              // one, as in Omarchy's indicator.
-              readonly property bool square: root.alwaysOpen && group.modelData === root.shownNumber
-              Rectangle {
-                objectName: "stationCurrent-" + group.modelData
-                visible: stationButton.square
-                width: root.indicatorInk.height
-                height: width
-                x: (parent.width - width) / 2
-                y: root.inkCenter - height / 2
-                color: stationButton.foreground
-                radius: Style.cornerRadius
-              }
               Text {
                 id: stationLabel
                 visible: !stationButton.square

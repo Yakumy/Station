@@ -168,14 +168,20 @@ ShellRoot {
           wait(50)
           verify(Math.abs(item.paintedWidth / item.paintedHeight - 2) < 0.01)
         }
-        // Compact Off lists every number, and a filled square stands for the current one.
+        // Compact Off lists every number, and Omarchy's square glyph stands for the
+        // current one, at Omarchy's icon size. An empty number that is not shown dims.
         bar.compactMode = "off"
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         verify(!arrow.visible)
         verify(findChild(bar, "stationLabel-1").interactive)
         verify(findChild(bar, "stationApp-a").interactive)
-        verify(findChild(bar, "stationCurrent-2").visible)
-        verify(!findChild(bar, "stationCurrent-1").visible)
+        verify(findChild(bar, "stationLabel-2").square)
+        verify(findChild(bar, "stationLabel-2").iconLabel)
+        compare(findChild(bar, "stationLabel-2").text, "\\udb85\\udcfb")
+        verify(!findChild(bar, "stationLabel-1").square)
+        compare(findChild(bar, "stationLabel-1").opacity, 1)
+        compare(findChild(bar, "stationLabel-3").opacity, 0.5)
+        compare(findChild(bar, "stationLabel-2").opacity, 1)
         bar.expanded = false
         wait(50)
         compare(bar.revealProgress, 1)
@@ -187,7 +193,7 @@ ShellRoot {
         bar.showOpenApps = true
         bar.compactMode = "hover"
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
-        verify(!findChild(bar, "stationCurrent-2").visible)
+        verify(!findChild(bar, "stationLabel-2").square)
         feed.active = false
         compare(Object.keys(feed.rows).length, 0)
         bar.compactMode = "on"

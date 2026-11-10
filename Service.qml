@@ -519,7 +519,7 @@ Item {
       }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {
-        if (["prefixed", "number", "roman", "dots"].indexOf(value.indicatorStyle) === -1) return "invalid"
+        if (["prefixed", "number", "roman"].indexOf(value.indicatorStyle) === -1) return "invalid"
         next.indicatorStyle = value.indicatorStyle
       }
       if (value.compactMode !== undefined) {
@@ -560,7 +560,7 @@ Item {
       config.panelPosition = value
     }
     else if (name === "indicatorStyle") {
-      if (["prefixed", "number", "roman", "dots"].indexOf(value) === -1) return "invalid"
+      if (["prefixed", "number", "roman"].indexOf(value) === -1) return "invalid"
       config.indicatorStyle = value
     }
     else if (name === "followFocus") config.followFocus = !!value
@@ -577,6 +577,10 @@ Item {
   function maybeStart() {
     if (started || !store.dirsReady || !store.configLoaded || !store.stateLoaded
         || !displayController.previewLoaded || !workspace.mappingLoaded || !displayController.monitorsLoaded) return
+    if (store.fresh && !workspaceRulesRead) {
+      if (!workspaceRules.running) workspaceRules.running = true
+      return
+    }
     started = true
     workspaceAuthority.claim()
     stations.currentStation = persisted.lastStation
@@ -596,6 +600,33 @@ Item {
         store.saveState()
       }
     }) })
+  }
+
+  // A first start keeps the workspace assignment the user already had: Hyprland's
+  // rules are still all theirs, because Station has applied none yet.
+  property bool workspaceRulesRead: false
+  function adoptWorkspaceRules(text) {
+    if (workspaceRulesRead) return
+    var rules = []
+    try { rules = JSON.parse(String(text || "[]")) } catch (error) { rules = [] }
+    var outputs = monitors.filter(function(m) {
+      return !m.disabled && (m.mirrorOf === undefined || m.mirrorOf === null || m.mirrorOf === ""
+        || m.mirrorOf === "none" || String(m.mirrorOf) === "-1")
+    }).map(function(m) { return String(m.name) })
+    var adopted = Grid.adopt(rules, outputs)
+    if (adopted) {
+      config = Object.assign({}, config, { workspaceMode: adopted.mode,
+        workspaceLayout: Store.workspaceLayout(adopted.layout) })
+      store.saveConfig()
+    }
+    workspaceRulesRead = true
+    maybeStart()
+  }
+  Process {
+    id: workspaceRules
+    command: ["hyprctl", "workspacerules", "-j"]
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.adoptWorkspaceRules(text) }
+    onExited: function(exitCode) { if (exitCode !== 0) root.adoptWorkspaceRules("") }
   }
 
   function togglePanel() {

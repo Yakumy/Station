@@ -18,7 +18,7 @@ Column {
   readonly property bool idle: !!service && service.state === "idle"
   // The modes differ only across monitors, so one monitor locks the selector.
   readonly property bool singleOutput: outputs.length <= 1
-  readonly property real modeNoteHeight: Style.space(22)
+  readonly property int rowCount: 4
 
   function savedValues() {
     return JSON.parse(JSON.stringify({
@@ -120,6 +120,14 @@ Column {
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
+  // A row's message sits in its bottom-left corner, as in Displays.
+  component RowMessage: Caption {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space1
+    visible: text !== ""
+    elide: Text.ElideRight
+  }
   component RowLabel: Text {
     color: root.tokens.textPrimary
     font.family: Style.font.family
@@ -201,12 +209,6 @@ Column {
         onCountChangeRequested: function(output, delta) { root.changeCount(output, delta) }
         onWorkspaceMoved: function(number, output) { root.moveWorkspace(number, output) }
       }
-      Caption {
-        x: root.pad; width: parent.width - root.pad * 2
-        topPadding: root.tokens.space2
-        wrapMode: Text.WordWrap
-        text: "Monitor positions and roles follow Displays."
-      }
     }
     Rectangle {
       width: Math.max(1, Style.normalBorderWidth); height: parent.height
@@ -235,7 +237,7 @@ Column {
           anchors.fill: parent
           spacing: 0
           Item {
-            width: parent.width; height: controlFrame.height / 5 + root.modeNoteHeight
+            width: parent.width; height: controlFrame.height / root.rowCount
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top; anchors.topMargin: root.tokens.space2
@@ -253,19 +255,15 @@ Column {
                 { value: "nonrepetitive", label: "Non-repetitive" }]
               onChanged: function(value) { root.edit({ workspaceMode: value }) }
             }
-            Caption {
+            RowMessage {
               objectName: "workspaceModeNote"
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
-              elide: Text.ElideRight
               text: root.singleOutput ? "Works only on multiple monitors"
                 : root.mode === "nonrepetitive" ? "Drag workspaces onto a monitor to assign them" : ""
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 5
+            width: parent.width; height: controlFrame.height / root.rowCount
             RowLabel {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: styleValue.left; anchors.rightMargin: root.tokens.space2
@@ -283,8 +281,7 @@ Column {
               options: [
                 { value: "prefixed", label: root.mode === "station" ? "S1 S2 S3" : "W1 W2 W3" },
                 { value: "number", label: "1 2 3" },
-                { value: "roman", label: "I II III" },
-                { value: "dots", label: "● ○ ○" }
+                { value: "roman", label: "I II III" }
               ]
               foreground: root.tokens.textPrimary
               onChanged: function(value) { root.edit({ indicatorStyle: value }) }
@@ -292,19 +289,18 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
-            width: parent.width; height: controlFrame.height / 5
-            Column {
+            width: parent.width; height: controlFrame.height / root.rowCount
+            RowLabel {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: compactValue.left; anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
-              RowLabel { width: parent.width; text: "Compact mode" }
-              Caption {
-                width: parent.width
-                elide: Text.ElideRight
-                text: root.draft.compactMode === "off" ? "Every workspace, the current one filled"
-                  : root.draft.compactMode === "hover" ? "The current one, the rest on hover"
-                  : "Only the current one"
-              }
+              text: "Compact mode"
+            }
+            RowMessage {
+              objectName: "compactModeNote"
+              text: root.draft.compactMode === "off" ? "Every workspace, the current one as a square"
+                : root.draft.compactMode === "hover" ? "The current one, the rest on hover"
+                : "Only the current one"
             }
             Ui.Dropdown {
               id: compactValue
@@ -327,20 +323,19 @@ Column {
           Item {
             id: appsRow
             objectName: "showOpenAppsRow"
-            width: parent.width; height: controlFrame.height / 5
+            width: parent.width; height: controlFrame.height / root.rowCount
             // Compact On shows only the current number, so it shows no apps.
             readonly property bool usable: root.draft.compactMode !== "on"
             opacity: usable ? 1 : root.tokens.disabledOpacity
-            Column {
+            RowLabel {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: appsSwitch.left; anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
-              RowLabel { width: parent.width; text: "Show open apps" }
-              Caption {
-                width: parent.width
-                elide: Text.ElideRight
-                text: appsRow.usable ? "App icons next to each workspace" : "Needs compact mode Off or On hover"
-              }
+              text: "Show open apps"
+            }
+            RowMessage {
+              objectName: "showOpenAppsNote"
+              text: appsRow.usable ? "App icons next to each workspace" : "Needs compact mode Off or On hover"
             }
             Ui.ToggleSwitch {
               id: appsSwitch
@@ -358,7 +353,6 @@ Column {
               cursorShape: Qt.PointingHandCursor
               onClicked: root.edit({ showOpenApps: !root.draft.showOpenApps })
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
         }
       }

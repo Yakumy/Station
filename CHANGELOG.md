@@ -8,11 +8,20 @@
   monitor. Use − and + on a monitor in the layout to change its workspaces (up to 10 per
   monitor), and in Non-repetitive drag workspace numbers onto the monitor you want (up to
   20 in all; keys reach 1 to 10). Pick the bar indicator style, a compact mode (Off lists
-  every workspace with the current one filled, On hover reveals them on hover, On shows
-  only the current one) and whether open apps show. Changes wait for Apply, and Cancel
+  every workspace with Omarchy's square for the current one, On hover reveals them on
+  hover, On shows only the current one) and whether open apps show. As in Omarchy's
+  indicator, empty workspaces you are not on are dimmed. Changes wait for Apply, and Cancel
   undoes them. Changing the mode or the workspaces moves windows with the same journaled
   migration as a display change. Open apps move here from Settings. With one monitor the
   mode selector is disabled.
+- Keep the workspace assignment you already had. On a fresh install Station reads your
+  Hyprland workspace rules first: rules that split the numbers between monitors start
+  Non-repetitive with your numbers on each monitor, and rules that give each monitor its
+  own block start Repetitive with your counts. Without such rules it starts in Sync.
+- Remove the dot indicator style, which did not work in the compact modes. A saved dot
+  style shows as S1 S2 S3 (W1 W2 W3).
+- Hide Omarchy's Display icon by default on a fresh install, as the workspace indicator
+  already is.
 - Make Repetitive use Omarchy 4.5's own workspace blocks (1–10 on the laptop, 11–20 on
   the next monitor) instead of Station's numbering. Omarchy's renumbering on reload and
   hotplug runs as without Station.

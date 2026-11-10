@@ -1209,3 +1209,10 @@ user tests; the automated checks do not establish those results.
 - [INFERRED] The indicator matches Station only in Repetitive, which uses Omarchy's blocks.
   In Sync and Non-repetitive its numbered buttons lead to IDs outside Station's map, such
   as 11–15 above.
+- [SRC] Omarchy 4.5's blocks (`default/hypr/monitor-workspaces.lua`) write no workspace rules;
+  they renumber and move workspaces from the reconcile. A workspace rule with a number and
+  a monitor therefore comes from the user's own configuration, or from Station once it has
+  run, which is why Station reads `hyprctl workspacerules -j` only on a fresh install.
+- [SRC] The indicator dims a workspace that is neither occupied nor shown to opacity 0.5,
+  and draws the shown one as a `WidgetButton` icon glyph (U+F14FB while tiling) at
+  `Style.bar.iconSize`.

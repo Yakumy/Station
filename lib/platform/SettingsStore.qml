@@ -18,6 +18,11 @@ Item {
   property bool configLoaded: false
   property bool stateLoaded: false
   property bool dirsReady: false
+  // Neither file existed, so Station has not run here before: workspace rules
+  // already in Hyprland are the user's own.
+  property bool configMissing: false
+  property bool stateMissing: false
+  readonly property bool fresh: configMissing && stateMissing
 
   readonly property string configDir: Quickshell.env("HOME") + "/.config/omarchy/station"
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/station"
@@ -44,7 +49,7 @@ Item {
     atomicWrites: true
     printErrors: false
     onLoaded: { if (!root.configLoaded) { root.config = Store.loadConfig(root.parseJson(text(), {})); root.configLoaded = true; root.loaded() } }
-    onLoadFailed: { if (!root.configLoaded) { root.config = Store.configDefaults(); root.configLoaded = true; root.loaded() } }
+    onLoadFailed: { if (!root.configLoaded) { root.configMissing = true; root.config = Store.configDefaults(); root.configLoaded = true; root.loaded() } }
     onSaved: root.configSaved()
     onSaveFailed: root.configSaveFailed()
   }
@@ -55,7 +60,7 @@ Item {
     atomicWrites: true
     printErrors: false
     onLoaded: { if (!root.stateLoaded) { root.persisted = Store.loadState(root.parseJson(text(), {})); root.stateLoaded = true; root.loaded() } }
-    onLoadFailed: { if (!root.stateLoaded) { root.persisted = Store.stateDefaults(); root.stateLoaded = true; root.loaded() } }
+    onLoadFailed: { if (!root.stateLoaded) { root.stateMissing = true; root.persisted = Store.stateDefaults(); root.stateLoaded = true; root.loaded() } }
   }
 
   Process {

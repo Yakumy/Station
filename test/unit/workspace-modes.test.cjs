@@ -195,6 +195,8 @@ test('preferences load the workspace mode, per-monitor layout, indicator style a
   assert.equal('minStations' in saved, false);
   const bad = Store.loadConfig({ workspaceMode: 'grid', workspaceLayout: [], indicatorStyle: 'emoji', compactMode: 'x' });
   assert.deepEqual([bad.workspaceMode, bad.indicatorStyle, bad.compactMode], ['station', 'prefixed', 'hover']);
+  // The dot style is gone: a saved one falls back to the default.
+  assert.equal(Store.loadConfig({ indicatorStyle: 'dots' }).indicatorStyle, 'prefixed');
   assert.deepEqual(bad.workspaceLayout, { repetitive: {}, nonrepetitive: {} });
   // The old open apps setting becomes compact mode and the apps switch.
   const migrate = value => { const c = Store.loadConfig({ stationAppsMode: value }); return [c.compactMode, c.showOpenApps, 'stationAppsMode' in c]; };
@@ -292,7 +294,7 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number' }), 'ok');
   assert.deepEqual([c.config.compactMode, c.config.showOpenApps, c.config.indicatorStyle], ['off', false, 'number']);
   assert.equal(reconciled, 0, 'bar options do not renumber');
-  for (const bad of [{ workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, null])
+  for (const bad of [{ workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, null])
     assert.equal(c.setWorkspaceSetting('workspaces', bad), 'invalid');
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'nonrepetitive',
     workspaceLayout: { repetitive: {}, nonrepetitive: { A: [1], B: [2, 3, 4, 5, 6] } } }), 'ok');
@@ -305,4 +307,45 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   // Bar options still apply while a migration runs.
   assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'on' }), 'ok');
   assert.equal(c.config.compactMode, 'on');
+});
+
+test('a first start adopts the workspace rules the user already wrote', () => {
+  const rule = (workspace, monitor) => ({ workspaceString: String(workspace), enabled: true, monitor });
+  const outputs = ['HDMI-A-1', 'eDP-1'];
+  // A split of one range is Non-repetitive with those numbers.
+  assert.deepEqual(G.adopt([1, 2, 3].map(n => rule(n, 'HDMI-A-1')).concat([4, 5, 6, 7].map(n => rule(n, 'eDP-1'))), outputs),
+    { mode: 'nonrepetitive', layout: { repetitive: {}, nonrepetitive: { 'HDMI-A-1': [1, 2, 3], 'eDP-1': [4, 5, 6, 7] } } });
+  // Interleaved numbers stay where the user put them; a gap joins the number below it.
+  assert.deepEqual(G.adopt([rule(1, 'eDP-1'), rule(2, 'HDMI-A-1'), rule(5, 'eDP-1')], outputs).layout.nonrepetitive,
+    { 'HDMI-A-1': [2, 3, 4], 'eDP-1': [1, 5] });
+  // A later rule for the same number wins, as in Hyprland.
+  assert.deepEqual(G.adopt([rule(1, 'eDP-1'), rule(2, 'eDP-1'), rule(2, 'HDMI-A-1')], outputs).layout.nonrepetitive,
+    { 'HDMI-A-1': [2], 'eDP-1': [1] });
+  // A monitor with no rule takes the next five.
+  assert.deepEqual(G.adopt([rule(1, 'eDP-1'), rule(2, 'eDP-1')], outputs).layout.nonrepetitive,
+    { 'HDMI-A-1': [3, 4, 5, 6, 7], 'eDP-1': [1, 2] });
+  // Slots 1 to k of each monitor's own block of ten are Repetitive with k workspaces.
+  assert.deepEqual(G.adopt([1, 2, 3].map(n => rule(n, 'eDP-1')).concat([11, 12, 13, 14].map(n => rule(n, 'HDMI-A-1'))), outputs),
+    { mode: 'repetitive', layout: { repetitive: { 'HDMI-A-1': 4, 'eDP-1': 3 }, nonrepetitive: {} } });
+  // Nothing to keep: no numbered rules, rules for other monitors, Station's own gap
+  // rules, one monitor, more than ten on a monitor, or numbers past twenty.
+  assert.equal(G.adopt([], outputs), null);
+  assert.equal(G.adopt([rule(1, 'DP-9'), { workspaceString: 'm[eDP-1]', gapsOut: [1, 1, 1, 1] }, rule('special:x', 'eDP-1')], outputs), null);
+  assert.equal(G.adopt([rule(1, 'eDP-1'), rule(2, 'HDMI-A-1')], ['eDP-1']), null);
+  assert.equal(G.adopt([rule(1, 'HDMI-A-1')].concat([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => rule(n, 'eDP-1'))), outputs), null);
+  assert.equal(G.adopt([rule(1, 'eDP-1'), rule(25, 'HDMI-A-1')], outputs), null);
+  // Whatever it adopts, the saved layout reads back as the same assignment.
+  const adopted = G.adopt([rule(1, 'eDP-1'), rule(2, 'HDMI-A-1'), rule(5, 'eDP-1')], outputs);
+  assert.deepEqual(G.assigned('nonrepetitive', outputs, Store.workspaceLayout(adopted.layout)), [[2, 3, 4], [1, 5]]);
+});
+
+test('the service reads the rules once, before its first start, only on a fresh install', () => {
+  const service = readFileSync(join(__dirname, '../../Service.qml'), 'utf8');
+  const store = readFileSync(join(__dirname, '../../lib/platform/SettingsStore.qml'), 'utf8');
+  assert.match(store, /fresh: configMissing && stateMissing/);
+  const start = service.slice(service.indexOf('function maybeStart()'));
+  assert.ok(start.indexOf('store.fresh && !workspaceRulesRead') < start.indexOf('started = true'));
+  assert.ok(start.indexOf('started = true') < start.indexOf('workspaceAuthority.claim()'));
+  assert.match(service, /command: \["hyprctl", "workspacerules", "-j"\]/);
+  assert.match(service, /Grid\.adopt\(rules, outputs\)/);
 });

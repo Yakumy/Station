@@ -90,8 +90,10 @@ test('store defaults and migrations constrain public values', () => {
   assert.equal('minStations' in config, false);
   assert.deepEqual(config.lanes, {});
   assert.equal(config.hideNative, true);
-  assert.equal(config.hideDisplay, false);
-  assert.equal(S.loadConfig({ hideNative: false, hideDisplay: true }).hideDisplay, true);
+  // Both Omarchy widgets start hidden; a saved choice to show either stays.
+  assert.equal(config.hideDisplay, true);
+  assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideDisplay, false);
+  assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideNative, false);
   assert.equal(S.loadConfig({ graceMs: 0 }).graceMs, 0);
   const state = S.loadState({ lastStation: 99 });
   assert.equal(state.lastStation, 10);
