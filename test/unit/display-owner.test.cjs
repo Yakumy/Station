@@ -99,7 +99,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
       persisted:{lastStation:3,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
-      applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){}};
+      applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){},observedStation(){return null;}};
     c.workspaceAuthority={claim(){calls.push('authority');}};c.root=c;c.store=c;c.compositor=c;c.leases=c;c.stations=c;c.displayController=c;c.workspace=c;
     const start=functionFrom(current,'maybeStart',c);
     start();assert.equal(c.started,false);assert.deepEqual(calls,[]);
@@ -107,6 +107,28 @@ test('root startup waits for owner load gates and routes stale-token recovery on
     assert.equal(c.currentStation,3);
     assert.equal(calls.shift(),'authority','the renumbering guard is armed before any recovery or reload');
     assert.deepEqual(copy(calls),found ? [['rm','-f','/temporary/preview.token'],['sh','-c',c.Transactions.unparkToggle+'hyprctl reload\n','sh','/temporary/parked','/temporary/flag'],'runtime'] : ['runtime']);
+  }
+});
+
+test('startup shows the station in view, not the one saved last session',()=>{
+  const Grid=require('../../lib/stations/Grid.js');
+  const map={outputs:['HDMI-A-2','eDP-1']};
+  const observed=(monitors,workspaceMap=map)=>functionFrom(current,'observedStation',{monitors,workspaceMap,Grid})();
+  // A login: Hyprland opens workspaces 1 and 2, whatever station was saved.
+  assert.equal(observed([{name:'HDMI-A-2',focused:false,activeWorkspace:{id:1}},{name:'eDP-1',focused:true,activeWorkspace:{id:2}}]),1);
+  // A shell restart on station 6 stays there.
+  assert.equal(observed([{name:'HDMI-A-2',focused:true,activeWorkspace:{id:11}}]),6);
+  // Outside the map, or no map yet: the saved station decides.
+  assert.equal(observed([{name:'eDP-1',focused:true,activeWorkspace:{id:99}}]),null);
+  assert.equal(observed([{name:'eDP-1',focused:true,activeWorkspace:{id:1}}],null),null);
+  assert.equal(observed([]),null);
+  for(const [seen,expected] of [[1,1],[null,6]]) {
+    const c={started:false,dirsReady:true,configLoaded:true,stateLoaded:true,previewLoaded:true,mappingLoaded:true,
+      monitorsLoaded:true,previewFound:false,persisted:{lastStation:6,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
+      migrateMonitorPrecedence(){},observedStation(){return seen;}};
+    c.workspaceAuthority={claim(){}};c.root=c;c.store=c;c.stations=c;c.displayController=c;c.workspace=c;
+    functionFrom(current,'maybeStart',c)();
+    assert.equal(c.currentStation,expected);
   }
 });
 

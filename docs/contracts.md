@@ -257,6 +257,12 @@ source station and output.
 A reconnected output can retain an unrelated active workspace. If a native move crosses
 an output boundary, the window must keep its source station.
 
+### Starting station
+
+At startup Station shows the station whose workspace is focused, so a login starts on
+Station 1 (the workspaces Hyprland opens) and a shell restart keeps the station in view.
+The saved `lastStation` applies only when the focused workspace is outside the map.
+
 ### Workspace authority
 
 Omarchy 4.5 gives each monitor its own block of ten workspaces and reconciles them on

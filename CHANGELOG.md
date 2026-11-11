@@ -1,5 +1,6 @@
 # Unreleased
 
+- Start on Station 1 after login, instead of the station that was open at shutdown.
 - Add a Color Match tab after Windows. Select a monitor and adjust its Temperature,
   Tint, Brightness, Gamma and Saturation until its white matches your other monitors.
   Each change applies live on release, as a color profile that Hyprland applies itself,

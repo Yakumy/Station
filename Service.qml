@@ -601,7 +601,7 @@ Item {
     }
     started = true
     workspaceAuthority.claim()
-    stations.currentStation = persisted.lastStation
+    stations.currentStation = observedStation() || persisted.lastStation
     if (displayController.previewFound) {
       Quickshell.execDetached(["rm", "-f", stateDir + "/preview.token"])
       Quickshell.execDetached(["sh", "-c", Transactions.unparkToggle + "hyprctl reload\n", "sh",
@@ -618,6 +618,15 @@ Item {
         store.saveState()
       }
     }) })
+  }
+
+  // The station on screen now. A login starts on the workspaces Hyprland opens
+  // (station 1), and a shell restart keeps the one in view, so the saved station
+  // is only a fallback for a focused workspace outside the map.
+  function observedStation() {
+    var focused = (monitors || []).find(function(m) { return m.focused })
+    var id = focused && focused.activeWorkspace ? Number(focused.activeWorkspace.id) : NaN
+    return workspaceMap && Number.isInteger(id) ? Grid.station(id, workspaceMap) : null
   }
 
   // A first start keeps the workspace assignment the user already had: Hyprland's
