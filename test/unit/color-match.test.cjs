@@ -44,6 +44,27 @@ test('white balance gains: identity at 6500 K, warm lowers blue, cool lowers red
     assert.ok(Math.max(...C.gains({ temperature: t, tint })) <= 1 + 1e-12);
 });
 
+test('saturation 0 sends grey: the encoded colorants still invert to a colorless signal', () => {
+  assert.equal(C.clean({ saturation: -20 }).saturation, 0);
+  const SRGB = [0.4360747, 0.3850649, 0.1430804, 0.2225045, 0.7168786, 0.0606169, 0.0139322, 0.0971045, 0.7141733];
+  for (const settings of [{ saturation: 0 }, { saturation: 0, temperature: 4000, tint: -100, brightness: 50 }]) {
+    const bytes = C.profileBytes(settings);
+    const cols = ['rXYZ', 'gXYZ', 'bXYZ'].map(name => colorant(bytes, name));
+    const m = [0, 1, 2].flatMap(row => cols.map(col => col[row]));
+    // What the screen receives for pure red, green and blue content: m⁻¹ × sRGB.
+    const [a, b, c, d, e, f, g, h, i] = m;
+    const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+    const inv = [e * i - f * h, c * h - b * i, b * f - c * e, f * g - d * i, a * i - c * g, c * d - a * f,
+      d * h - e * g, b * g - a * h, a * e - b * d].map(v => v / det);
+    const gain = C.gains(settings);
+    for (let k = 0; k < 3; k++) {
+      const out = [0, 1, 2].map(row => [0, 1, 2].reduce((sum, j) => sum + inv[row * 3 + j] * SRGB[j * 3 + k], 0));
+      const grey = out.map((v, row) => v / gain[row]);
+      assert.ok(Math.max(...grey) - Math.min(...grey) < 0.01, JSON.stringify({ settings, k, grey }));
+    }
+  }
+});
+
 test('the profile is a well-formed ICC v4 display profile with sRGB colorants when neutral', () => {
   const bytes = C.profileBytes({});
   assert.equal(u32(bytes, 0), bytes.length);

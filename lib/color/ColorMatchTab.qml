@@ -39,7 +39,7 @@ Column {
     { key: "tint", label: "TINT", hint: "Left adds green, right adds magenta" },
     { key: "brightness", label: "BRIGHTNESS", hint: "Dims this monitor to match a darker one" },
     { key: "gamma", label: "GAMMA", hint: "Higher darkens the midtones" },
-    { key: "saturation", label: "SATURATION", hint: "How strong colors look" }
+    { key: "saturation", label: "SATURATION", hint: "0% is black and white" }
   ]
   readonly property real pad: tokens.regionPadH
   spacing: 0

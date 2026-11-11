@@ -1301,5 +1301,8 @@ lcms2, and judged on screen by the maintainer.
   although `misc:disable_autoreload` was false. Station's writes do not rely on it.
 - [LIVE] `debug:disable_logs` is true under Omarchy, so Hyprland logs nothing about ICC
   parsing. A reload resets a runtime `disable_logs = false`.
+- [LIVE] A saturation 0% profile (matrix floor 0.2%) was accepted by `hyprctl eval` with
+  no config error; lcms (`transicc`) maps sRGB red, green and blue to grey within one
+  code value. Not judged on screen by the maintainer yet.
 - [INFER] Screenshots should not show the correction, because it applies at scanout
   composition. Not checked.

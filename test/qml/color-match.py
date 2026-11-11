@@ -143,7 +143,7 @@ ShellRoot {
           var control = findObject(tab, "colorSlider-" + key)
           return Math.round(control.progress * 100)
         })
-        if (JSON.stringify(knobs) !== JSON.stringify([32, 56, 100, 43, 50])) { fail("knob progress " + JSON.stringify(knobs)); return }
+        if (JSON.stringify(knobs) !== JSON.stringify([32, 56, 100, 43, 67])) { fail("knob progress " + JSON.stringify(knobs)); return }
         capture.grabToImage(function(result) {
           result.saveToFile("OUTPUT/color-match-tab.png")
           panel.selectDisplay("eDP-1")
