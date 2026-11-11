@@ -1258,3 +1258,16 @@ user tests; the automated checks do not establish those results.
   and plugin validation. The Windows-tab harness failed `ordered exchange` on
   both this worktree and an unchanged archive of `f2f4cf6`; it is a pre-existing
   failure on this host. Full-run log: `/tmp/station-bar-fix-final.log`.
+
+## Windows preview on one and three monitors (2026-11-11)
+
+- [SRC] The preview selected only the first two enabled outputs and returned
+  immediately with one. It now rotates WINDOW identities through every enabled
+  output. With one, WINDOW and NEXT WINDOW swap twice, returning to their original
+  left/right slots. These are simulated tiles only.
+- [QTTEST] The production clock completes one-, two- and three-output cycles,
+  queues the latest speed, and survives equivalent monitor snapshots. The host
+  Windows-tab harness checks all three cases, midpoint reflow and final sides.
+- [SRC] Interpolation now returns exact endpoint rectangles to avoid floating-point
+  drift at replay boundaries. The former Windows-tab `ordered exchange` assertion
+  also uses a subpixel tolerance; the previously recorded failure no longer occurs.

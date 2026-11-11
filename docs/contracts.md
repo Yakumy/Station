@@ -563,8 +563,12 @@ The panel shows global defaults. It does not inspect per-window rules. External 
 display unrounded until the user edits that control.
 
 The preview shows two windows per monitor at real proportions, with names outside the
-rectangles. After a speed change, a window moves to the next enabled monitor and
-another returns, while remaining tiles reflow. This never moves a real window.
+rectangles. After a speed change, WINDOW tiles move through every enabled monitor
+in order, one transfer at a time, while NEXT WINDOW tiles stay and reflow. With one
+enabled monitor, the two tiles exchange sides, pause, then exchange again so WINDOW
+finishes on the left and NEXT WINDOW on the right. Disabled monitors stay still.
+Repeated changes queue the latest speed without interrupting a move. This never
+moves a real window.
 
 ## Bars
 

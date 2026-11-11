@@ -43,7 +43,8 @@ ShellRoot {
     property var config: ({windows:{innerGap:26,outerGap:20,split:35,rounding:10,speed:0.5}})
     property bool windowSettingsBusy: false
     property string testBarBackground: "solid"
-    function displayEnabled(name) { return name !== "DP-3" }
+    property int enabledCount: 2
+    function displayEnabled(name) { return name === "eDP-1" || (enabledCount > 1 && name === "HDMI-A-2") || enabledCount === 3 }
     function monitorBar(name) {
       if (name === "eDP-1") return {enabled: true, position: "bottom", width: 48, height: 72, background: "blur", style: "pill", contentSize: 18}
       if (name === "HDMI-A-2") return {enabled: true, position: "left", width: 100, height: 0, background: testBarBackground, style: "default", contentSize: 0}
@@ -107,6 +108,10 @@ ShellRoot {
     property var second: null
     interval: 40; running: true; repeat: true
     property bool sawMiddle: false
+    property var thirdStart: null
+    property real singleLeft: 0
+    property bool singleMiddle: false
+    function near(a, b) { return Math.abs(a - b) < 0.001 }
     function fail(reason) { console.log("WINDOWS_CHECK_FAILED " + reason); Qt.quit(); stop() }
     onTriggered: {
       var layout = findObject(tab, "windowsLayout")
@@ -140,7 +145,7 @@ ShellRoot {
         // Observe the actual midpoint signal. A delayed polling tick can miss
         // the pause entirely when another rendering harness is running.
         layout.progressChanged.connect(function() {
-          if (layout.progress !== 1) return
+          if (layout.progress !== 1 || checkTimer.phase > 2) return
           checkTimer.sawMiddle = true
           if (remaining.width <= checkTimer.first.remaining
               || findObject(layout, "windowPreview-2").height >= checkTimer.second.height)
@@ -159,8 +164,8 @@ ShellRoot {
           if (remaining.width <= first.remaining || findObject(layout, "windowPreview-2").height >= second.height) { fail("reflow"); return }
         }
         if (layout.animating) return
-        if (!sawMiddle || a.x !== second.x || a.y !== second.y || b.x !== first.x || b.y !== first.y) {
-          fail("ordered exchange"); return
+        if (!sawMiddle || !near(a.x, second.x) || !near(a.y, second.y) || !near(b.x, first.x) || !near(b.y, first.y)) {
+          fail("ordered exchange " + JSON.stringify({middle:sawMiddle, a:[a.x,a.y], b:[b.x,b.y], first:first, second:second})); return
         }
         var before = {x:a.x,y:a.y,width:a.width,height:a.height}
         layout.previewExchange(0.25)
@@ -171,6 +176,31 @@ ShellRoot {
         return
       }
       if (layout.animating || layout.queuedSpeed >= 0) return
+      if (phase === 2) {
+        fakeService.enabledCount = 3
+        thirdStart = {x:findObject(layout, "windowPreview-5").x, y:findObject(layout, "windowPreview-5").y}
+        layout.previewExchange(2)
+        if (!layout.animating || layout.participants.length !== 3) { fail("third output omitted"); return }
+        phase++; return
+      }
+      if (phase === 3) {
+        var third = findObject(layout, "windowPreview-5")
+        if (near(third.x, thirdStart.x) && near(third.y, thirdStart.y)) { fail("third output did not move"); return }
+        // Keep the delegates used by the general checks above, but disable peers.
+        fakeService.enabledCount = 1
+        singleLeft = a.x
+        layout.progressChanged.connect(function() {
+          if (phase === 4 && layout.progress === 1) {
+            singleMiddle = a.x > remaining.x
+          }
+        })
+        layout.previewExchange(2)
+        if (!layout.animating || layout.participants.length !== 1) { fail("single output omitted"); return }
+        phase++; return
+      }
+      if (phase === 4 && (!singleMiddle || !near(a.x, singleLeft) || a.x >= remaining.x)) {
+        fail("single output did not swap twice"); return
+      }
       tab.preview("rounding", 20)
       if (outline.radius !== 20 || outline.scale !== 1 || !outline.antialiasing) { fail("window radius follows the slider"); return }
       layout.previewExchange(0)
@@ -186,9 +216,13 @@ ShellRoot {
 }
 '''.replace("OUTPUT", str(output))
     (root / "shell.qml").write_text(qml)
-    result = subprocess.run(["quickshell", "--no-color", "-p", str(root)],
-                            env=dict(os.environ, QT_QPA_PLATFORM="wayland"), text=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
+    try:
+        result = subprocess.run(["quickshell", "--no-color", "-p", str(root)],
+                                env=dict(os.environ, QT_QPA_PLATFORM="wayland"), text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=40)
+    except subprocess.TimeoutExpired as error:
+        print(error.stdout.decode() if isinstance(error.stdout, bytes) else error.stdout)
+        raise
     print(result.stdout)
     print(output)
     if "WINDOWS_RENDER_AND_EXCHANGE_OK" not in result.stdout or any(token in result.stdout for token in

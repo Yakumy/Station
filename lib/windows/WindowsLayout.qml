@@ -11,32 +11,50 @@ Ui.BorderSurface {
   objectName: "windowsLayout"
   required property var tokens
   property var values: ({})
-  property bool swapped: false
-  property real progress: 0
+  property int rotation: 0
+  property real timeline: 0
+  readonly property real moveDuration: playbackSpeed > 0 ? 400 / playbackSpeed : 0
+  readonly property real stepDuration: moveDuration + 120
+  readonly property real progress: {
+    if (timeline >= animationSteps) return animationSteps
+    var step = Math.floor(timeline)
+    var fraction = moveDuration > 0 ? Math.min(1, (timeline - step) * stepDuration / moveDuration) : 1
+    return step + 1 - Math.pow(1 - fraction, 3)
+  }
   property real queuedSpeed: -1
   property real playbackSpeed: 1
   readonly property bool animating: exchange.running
-  readonly property var pair: {
+  readonly property var participants: {
     var enabled = []
     displays.forEach(function(display, index) {
       if (service.displayEnabled(display.name)) enabled.push(index)
     })
-    return enabled.slice(0, 2)
+    return enabled
+  }
+  readonly property int animationSteps: Math.max(2, participants.length)
+  readonly property string participantNames: participants.map(function(i) { return displays[i].name }).join("|")
+  onParticipantNamesChanged: {
+    exchange.stop()
+    queuedSpeed = -1
+    rotation = 0
+    timeline = 0
   }
   function previewExchange(speed) {
     if (exchange.running) { queuedSpeed = speed; return }
-    if (pair.length < 2) return
-    if (progress === 2) swapped = !swapped
-    progress = 0
+    if (!participants.length) return
+    if (progress === animationSteps && participants.length > 1)
+      rotation = (rotation + 1) % participants.length
+    timeline = 0
     playbackSpeed = speed
-    if (speed === 0) { progress = 2; return }
+    if (speed === 0) { timeline = animationSteps; return }
     exchange.start()
   }
-  SequentialAnimation {
+  NumberAnimation {
     id: exchange
-    NumberAnimation { target: canvas; property: "progress"; to: 1; duration: 400 / canvas.playbackSpeed; easing.type: Easing.OutCubic }
-    PauseAnimation { duration: 120 }
-    NumberAnimation { target: canvas; property: "progress"; to: 2; duration: 400 / canvas.playbackSpeed; easing.type: Easing.OutCubic }
+    target: canvas; property: "timeline"
+    from: 0; to: canvas.animationSteps
+    duration: canvas.animationSteps * canvas.stepDuration
+    easing.type: Easing.Linear
     onFinished: {
       if (canvas.queuedSpeed >= 0) {
         var speed = canvas.queuedSpeed
@@ -202,7 +220,7 @@ Ui.BorderSurface {
   }
   function windowRect(index) {
     var areas = displays.map(function(_, i) { return workArea(i) })
-    return Preview.rect(index, areas, pair, swapped, progress, values.split, values.innerGap * zoom)
+    return Preview.rect(index, areas, participants, rotation, progress, values.split, values.innerGap * zoom)
   }
   Repeater {
     model: canvas.displays.length * 2

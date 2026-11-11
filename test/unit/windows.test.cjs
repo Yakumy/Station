@@ -38,6 +38,31 @@ test('preview transfers one window at a time and reflows every occupied tile', (
   assert.deepEqual(P.frame(areas, [0,2], false, 0, 50, 0).slice(2,4),
     P.frame(areas, [0,2], false, 1, 50, 0).slice(2,4), 'disabled monitor excluded');
 });
+test('three-monitor preview visits every enabled output and replays continuously', () => {
+  const areas = [{x:0,y:0,width:500,height:300}, {x:600,y:0,width:500,height:400},
+    {x:0,y:500,width:400,height:300}];
+  for (let rotation = 0; rotation < 3; rotation++) {
+    const start = P.frame(areas, [0,1,2], rotation, 0, 35, 10);
+    const end = P.frame(areas, [0,1,2], rotation, 3, 35, 10);
+    assert.deepEqual(end, P.frame(areas, [0,1,2], (rotation + 1) % 3, 0, 35, 10));
+    for (let i = 1; i < 6; i += 2) assert.notDeepEqual(start[i], end[i]);
+    for (let stage = 0; stage <= 3; stage++) {
+      const frame = P.frame(areas, [0,1,2], rotation, stage, 35, 10);
+      for (let i = 0; i < 6; i++) assert.deepEqual(P.rect(i, areas, [0,1,2], rotation, stage, 35, 10), frame[i]);
+    }
+  }
+});
+test('single enabled monitor swaps sides twice and leaves disabled outputs still', () => {
+  const areas = [{x:0,y:0,width:500,height:300}, {x:600,y:0,width:500,height:400}];
+  const start = P.frame(areas, [1], 0, 0, 35, 10);
+  const middle = P.frame(areas, [1], 0, 1, 35, 10);
+  const end = P.frame(areas, [1], 0, 2, 35, 10);
+  assert.deepEqual(start[2], middle[3]);
+  assert.deepEqual(start[3], middle[2]);
+  assert.deepEqual(start, end);
+  assert.deepEqual(start.slice(0,2), middle.slice(0,2));
+  assert.ok(P.rect(3, areas, [1], 0, 0.5, 35, 10).x > start[3].x);
+});
 test('window settings clamp numeric preferences and reject injected values', () => {
   assert.deepEqual(W.clean({innerGap:Infinity, outerGap:-10, split:900, rounding:'os.execute()', speed:NaN}),
     {innerGap:10, outerGap:0, split:75, rounding:0, speed:1});

@@ -1,5 +1,8 @@
 # Unreleased
 
+- Include every enabled monitor in the Windows animation preview. On one monitor,
+  swap the two windows twice and restore WINDOW left / NEXT WINDOW right.
+
 - Move the bar by holding a widget before dragging. Keep the Station panel on the
   current bar edge after relocation, including Pill bars and custom heights.
 
