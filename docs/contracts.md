@@ -616,8 +616,10 @@ file or to `state.json`.
   reserves the configured thickness plus that space. Window gaps never move the bar.
 - A side change reflows in place, so an open panel survives. While the panel is open,
   `config.bars` is authoritative and the shell config write waits for close.
-- The panel keeps the last valid edge until the bar window reports the new axis. It
-  never combines a new edge with old-axis geometry.
+- The panel follows the current bar edge and configured thickness. The host positions
+  it using logical thickness, independent of transient layer-window dimensions.
+- Drag empty bar space to move the bar, or hold a widget for 200 ms before dragging.
+  A short widget drag still reorders widgets; releasing a held move does not click it.
 - Partial-length bars sit centered in a full-length, input-masked surface, because
   Omarchy's keyboard panels need the surface to match the screen.
 - Content zoom scales the subtree, re-rasterizes text and decodes images at the matched

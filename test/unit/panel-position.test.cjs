@@ -54,28 +54,12 @@ test('Center keeps the panel clear of the bar when the screen is too small', () 
   assert.equal(Position.centerGap('top', 0, 0, 0, 0, 830, 500, 8, 8), 8);
 });
 
-test('a cross-axis edge waits for matching thin bar-window geometry', () => {
-  assert.equal(Position.stableBarPosition('left', 'top', 28, 1080, 26), 'left');
-  assert.equal(Position.stableBarPosition('left', 'top', 1920, 1080, 26), 'left');
-  assert.equal(Position.stableBarPosition('left', 'top', 1920, 26, 26), 'top');
-  assert.equal(Position.stableBarPosition('right', 'bottom', 28, 1080, 26), 'right');
-  assert.equal(Position.stableBarPosition('right', 'bottom', 1920, 26, 26), 'bottom');
-  assert.equal(Position.stableBarPosition('left', 'right', 0, 0), 'right');
-  assert.equal(Position.stableBarPosition('top', 'bottom', 0, 0), 'bottom');
-  assert.equal(Position.stableBarPosition('left', 'top', 0, 0), 'left');
-  assert.equal(Position.stableBarPosition('top', 'left', 31, 1080, 31), 'left',
-    'the completed vertical geometry accepts a Style.gapsOut visual extension');
-  assert.equal(Position.stableBarPosition('top', 'left', 1920, 31, 31), 'top',
-    'the prior horizontal geometry remains rejected during the remap');
-  assert.match(readFileSync('lib/panel/PanelSession.qml', 'utf8'), /source \? source\.barSize \+ Style\.gapsOut : 0/);
-});
-
 test('Settings and the live panel bind to the persisted position', () => {
   assert.match(settings, /text: "Panel opening position"/);
   assert.match(settings, /value: "left", label: "Bar"/);
   assert.match(settings, /value: "center", label: "Center"/);
   assert.match(settings, /setSetting\("panelPosition", value\)/);
   assert.match(panel, /centerOnBar: root\.service && root\.service\.config\.panelPosition === "center"/);
-  assert.match(panel, /PanelPosition\.centerGap\(/);
+  assert.match(panel, /PanelPosition\.centerGap\(barPos, screenW, screenH, barThickness, barThickness,/);
   assert.match(service, /panelPosition: root\.config\.panelPosition/);
 });

@@ -1239,3 +1239,22 @@ user tests; the automated checks do not establish those results.
 - [SRC] `ShellIpc` remains available on the installed host. Station registers its
   bar target once in the full-bar entry and forwards hidden-state refreshes to
   every monitor copy, rather than registering one handler per output.
+
+## Bar grab and panel edge repair (2026-11-11)
+
+- [SRC] The module pointer area owns widget presses. Propagating a composed hold
+  to the background cannot transfer its grab; the module now handles held moves
+  through release or cancellation. Short drags retain widget reordering.
+- [SRC] Current `KeyboardPanel.cardOrigin` uses logical `barThickness`, not the
+  layer window dimensions used by the old edge guard. Pill's inset could exceed
+  that guard's thickness tolerance, stranding the panel on its previous edge.
+  The facade now follows the edge and configured height directly; centered-panel
+  gap math uses the same logical thickness as the host.
+- [QTTEST] Pointer coverage checks clicks, short reorder drags, held moves outside
+  all four sides and cancellation. Panel session coverage checks repeated edge
+  changes, custom height and transient screen retention without binding-loop
+  warning suppression. Physical dragging and final placement remain user checks.
+- Validation: `test/run.py all` passed 26/27 groups, including QML compilation
+  and plugin validation. The Windows-tab harness failed `ordered exchange` on
+  both this worktree and an unchanged archive of `f2f4cf6`; it is a pre-existing
+  failure on this host. Full-run log: `/tmp/station-bar-fix-final.log`.

@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import "Tabs.js" as Tabs
-import "PanelPosition.js" as PanelPosition
 
 // Visual session only. Persistent intent remains on Service.
 Item {
@@ -19,8 +18,6 @@ Item {
   property bool sessionTabRestored: false
   // Keep the actual screen during transient null anchor geometry on an axis change.
   property var retainedPanelScreen: null
-  // Accept a new edge only when the bar window has finished changing its axis.
-  property string stablePanelBarPosition: "top"
   property bool monitorTransferClosing: false
   property int monitorTransferSerial: 0
   property string monitorTransferScreen: ""
@@ -319,19 +316,13 @@ Item {
   property QtObject barFacade: QtObject {
     id: panelBarFacade
     readonly property var source: root.bar
-    readonly property string desiredPosition: source ? String(source.position || "top") : "top"
-    readonly property string position: {
-      var window = root.anchorWindow
-      return PanelPosition.stableBarPosition(root.stablePanelBarPosition,
-        desiredPosition, window ? window.width : 0, window ? window.height : 0,
-        source ? source.barSize + Style.gapsOut : 0)
-    }
-    readonly property real barSize: PanelPosition.verticalBarPosition(position)
-      ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+    // KeyboardPanel uses logical bar thickness, not the layer window's axis.
+    // Follow the bar immediately, including while a Pill surface is resizing.
+    readonly property string position: source ? String(source.position || "top") : "top"
+    readonly property real barSize: source && source.barSize > 0 ? source.barSize
+      : (position === "left" || position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
     readonly property var activePopout: source ? source.activePopout : null
     readonly property var clickTargets: source ? source.clickTargets : []
-
-    onPositionChanged: root.stablePanelBarPosition = position
 
     function requestPopout(owner) {
       if (source && typeof source.requestPopout === "function") source.requestPopout(owner)

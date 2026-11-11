@@ -1916,7 +1916,7 @@ Item {
     readonly property real dragThreshold: Style.space(4)
 
     acceptedButtons: Qt.LeftButton
-    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.ArrowCursor
+    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
     pressAndHoldInterval: 200
 
     function startDrag(x, y) {
@@ -2299,6 +2299,7 @@ Item {
     MouseArea {
       id: modulePointer
 
+      property bool movingBar: false
       property bool dragging: false
       property bool suppressClick: false
       property real pressedX: 0
@@ -2310,9 +2311,10 @@ Item {
       acceptedButtons: Qt.LeftButton
       enabled: slot.visible && slot.width > 0 && slot.height > 0
       propagateComposedEvents: true
+      pressAndHoldInterval: 200
       // Only the hovered slot needs the hit test; without the guard every
       // slot on every monitor re-ran it on each click target change.
-      cursorShape: moduleHover.hovered && root.moduleClickTargetAt(slot, mouseX, mouseY) ? Qt.PointingHandCursor : Qt.ArrowCursor
+      cursorShape: movingBar ? Qt.ClosedHandCursor : moduleHover.hovered && root.moduleClickTargetAt(slot, mouseX, mouseY) ? Qt.PointingHandCursor : Qt.ArrowCursor
       // Do not assign drag.target here: ModuleSlot is positioned by the
       // ModuleList positioner, and mutating slot.x/slot.y can leave stale
       // offsets that make neighboring modules overlap after a small aborted
@@ -2327,6 +2329,7 @@ Item {
             return
           }
         }
+        movingBar = false
         dragging = false
         suppressClick = false
         pressedX = mouse.x
@@ -2334,7 +2337,23 @@ Item {
         root.clearBarDrag()
       }
 
+      // The slot owns the pointer grab. Start and finish a held bar move here,
+      // rather than propagating a composed hold to a MouseArea with no grab.
+      onPressAndHold: function(mouse) {
+        if (!pressed || dragging) return
+        movingBar = true
+        root.hideTooltip(slot.activeItem)
+        root.beginBarMove(root.targetWindow(slot))
+        root.updateBarMove(root.windowScreenPoint(
+          slot.mapToItem(null, mouse.x, mouse.y), root.barMoveWindow))
+      }
+
       onPositionChanged: function(mouse) {
+        if (movingBar) {
+          root.updateBarMove(root.windowScreenPoint(
+            slot.mapToItem(null, mouse.x, mouse.y), root.barMoveWindow))
+          return
+        }
         if (!canReorder || !(mouse.buttons & Qt.LeftButton)) return
 
         var distance = Math.abs(mouse.x - pressedX) + Math.abs(mouse.y - pressedY)
@@ -2369,6 +2388,13 @@ Item {
       }
 
       onReleased: function(mouse) {
+        if (movingBar) {
+          movingBar = false
+          suppressClick = true
+          root.finishBarMove()
+          mouse.accepted = true
+          return
+        }
         var wasDragging = dragging
         var targetSlot = root.barDragTarget
         var afterTarget = root.barDragAfter
@@ -2389,6 +2415,8 @@ Item {
       }
 
       onCanceled: {
+        if (movingBar) root.clearBarMove()
+        movingBar = false
         dragging = false
         suppressClick = false
         root.clearBarDrag()

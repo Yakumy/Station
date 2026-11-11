@@ -304,9 +304,6 @@ Ui.Panel {
     function closeForPopoutSwitch() { root.closeForPopoutSwitch() }
   }
 
-  // Delay only KeyboardPanel's view of the bar edge. The real bar and its
-  // modules reflow immediately, while the popout keeps using one internally
-  // consistent position/window-geometry pair throughout the surface remap.
   Bars.StationBar {
     id: barControls
     bar: root.bar
@@ -335,7 +332,7 @@ Ui.Panel {
     // layer-shell anchor/size change required by a horizontal↔vertical move.
     screen: session.currentPanelScreen()
     centerOnBar: root.service && root.service.config.panelPosition === "center"
-    gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barW, barH,
+    gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barThickness, barThickness,
       root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
         ? root.desiredPanelHeight + verticalContentInset : 0,
       margin, Style.gapsOut) : Style.gapsOut

@@ -141,21 +141,27 @@ Item {
       compare(root.view.currentScreenName(), "A")
     }
     function test_screenRetentionAndAxis() {
-      ignoreWarning(/.*Binding loop detected for property "position":[\s\S]*/)
-      ignoreWarning(/.*Binding loop detected for property "position":[\s\S]*/)
       root.view.opened = true
       compare(root.view.currentScreenName(), "A")
       root.anchor = {screen: null, width: 1920, height: 26}
       compare(root.view.currentScreenName(), "A")
       root.host = {position: "left", barSize: 26}
-      compare(root.view.barFacade.position, "top")
+      compare(root.view.barFacade.position, "left")
       root.anchor = {screen: null, width: 26, height: 1080}
       compare(root.view.barFacade.position, "left")
-      root.host = {position: "bottom", barSize: 26}
-      compare(root.view.barFacade.position, "left")
+      root.host = {position: "bottom", barSize: 48}
+      compare(root.view.barFacade.position, "bottom")
+      compare(root.view.barFacade.barSize, 48)
       root.anchor = {screen: screenB, width: 1920, height: 26}
       compare(root.view.barFacade.position, "bottom")
       compare(root.view.currentScreenName(), "A")
+      // Pill inset and custom thickness must not strand the previous edge.
+      for (var edge of ["right", "top", "left", "bottom", "top"]) {
+        root.host = {position: edge, barSize: 48}
+        root.anchor = {screen: screenA, width: 1920, height: 56}
+        compare(root.view.barFacade.position, edge)
+        compare(root.view.barFacade.barSize, 48)
+      }
     }
     function test_survivorWaitsForPreviewAndOldCopy() {
       persistent.panelWanted = true; persistent.previewBusy = true

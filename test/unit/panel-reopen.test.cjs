@@ -29,13 +29,6 @@ test('the keyboard panel retains its output through a bar-axis remap', () => {
     'retain the actual screen before publishing intent');
 });
 
-test('the keyboard panel does not consume a new axis with stale bar-window geometry', () => {
-  const source = readFileSync('lib/panel/PanelSession.qml', 'utf8');
-  assert.match(source, /property string stablePanelBarPosition: "top"/);
-  assert.match(source, /PanelPosition\.stableBarPosition\(root\.stablePanelBarPosition,/);
-  assert.match(panelView, /bar: session.barFacade/);
-});
-
 test('the selected connector survives a panel rebuild and a temporary draft gap', () => {
   const binding = panelView.match(/readonly property string selectedDisplayName: \{([\s\S]*?)\n  \}/);
   assert.ok(binding, 'selected connector is a service-backed binding');

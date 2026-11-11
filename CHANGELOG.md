@@ -1,5 +1,8 @@
 # Unreleased
 
+- Move the bar by holding a widget before dragging. Keep the Station panel on the
+  current bar edge after relocation, including Pill bars and custom heights.
+
 - Keep the shared edges of joined buttons square throughout the panel. Workspaces
   and Wallpaper mode selectors round only the group's outer corners with the theme.
 - Register `CTRL + SUPER + Up/Down` for TTB/BTT station navigation and show them in
