@@ -94,6 +94,8 @@ Item {
   function refreshWindowSettings() {}
   function syncBarBlur() {}
   function syncBarGaps() {}
+  // Color Match reconcile, flattened from colorMatchController.
+  function reconcile() {}
   function focusedClient() { return clients[2] || null }
   function stationFocusStatements(station,output) { return [] }
   function settleStatements(station,output) { return [] }

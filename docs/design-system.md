@@ -129,7 +129,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Select / dropdown** (Mode, Direction, monitor role): the approved render puts compact borderless triggers in the top tab row and inside the monitor cards. `Station/InlineDropdown.qml` keeps the text and chevron content-sized, uses host menu tokens for the popup, and right-aligns Mode's wider menu so named Single-output choices stay readable within the panel.
 
-**Slider** (Brightness, Text size, Scale, Resolution, Refresh, Bar content size, Bar width): host-owned `Ui.PanelSlider` paints the track and knob. The display controls after Brightness use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Bar content size starts at `Style.font.body`; its maximum preserves `Style.spacing.sm` on both cross-axis edges and prevents overlap among the scaled bar regions along the other axis. It reports when a saved request is clamped after the bar geometry shrinks. Bar width uses integer percentages and reports its measured non-overlap minimum below the track when the request is too small. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
+**Slider** (Brightness, Text size, Scale, Resolution, Refresh, Bar content size, Bar width, the five Color Match controls): host-owned `Ui.PanelSlider` paints the track and knob. Color Match tracks stay plain: a warm-to-cool or green-to-magenta track would be a gradient and a private palette, so each row says in dim caption text which way warms, greens or darkens. The display controls after Brightness use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Bar content size starts at `Style.font.body`; its maximum preserves `Style.spacing.sm` on both cross-axis edges and prevents overlap among the scaled bar regions along the other axis. It reports when a saved request is clamped after the bar geometry shrinks. Bar width uses integer percentages and reports its measured non-overlap minimum below the track when the request is too small. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
 
 **Display node** (Displays and Bar layout canvases): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `Style.cornerRadius` [V] (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
 
@@ -171,7 +171,7 @@ A change passes when, under at least two themes including one light theme (Catpp
 
 ### Layout monitor rectangles
 
-The monitor rectangles in all five layout panels (Displays, Workspaces, Bar, Wallpaper, Windows)
+The monitor rectangles in all six layout panels (Displays, Workspaces, Bar, Windows, Color Match, Wallpaper)
 use a fixed sharp radius of 0 and never follow the theme rounding.
 
 ### Window geometry preview

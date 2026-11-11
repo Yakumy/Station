@@ -38,7 +38,7 @@ test('panel session and local editors stay widget-local', () => {
 });
 test('all finite tab ports preserve arguments and synchronous results on direct and bridge paths', () => {
   const blocks = [...panel.matchAll(/  QtObject \{\n    id: (panelIntent|\w+TabPort)\n([\s\S]*?)\n  \}/g)];
-  assert.equal(blocks.length,7);
+  assert.equal(blocks.length,8);
   let calls=0;
   for (const [,id,source] of blocks) for (const [,name,args,code] of source.matchAll(/function (\w+)\(([^)]*)\) \{([^\n]*)\}/g)) {
     for (const bridge of [false,true]) {

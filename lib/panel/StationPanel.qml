@@ -13,6 +13,7 @@ import "../stations" as Stations
 import "." as PanelUi
 import "../wallpaper" as WallpaperUi
 import "../windows" as WindowsUi
+import "../color" as ColorUi
 
 Ui.Panel {
   id: root
@@ -163,6 +164,15 @@ Ui.Panel {
     function monitorBarMinimum(name) { return root.service ? root.service.monitorBarMinimum(name) : undefined }
     function setWindowSetting(key, value) { return root.service ? root.service.setWindowSetting(key, value) : undefined }
     readonly property var windowSettingsBusy: root.service ? root.service.windowSettingsBusy : null
+  }
+
+  QtObject {
+    id: colorTabPort
+    readonly property var colorMatch: root.service ? root.service.colorMatch : null
+    readonly property var displayDraft: root.service ? root.service.displayDraft : []
+    function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
+    function resetColor(name) { return root.service ? root.service.resetColor(name) : undefined }
+    function setColorValue(name, key, value) { return root.service ? root.service.setColorValue(name, key, value) : undefined }
   }
 
   QtObject {
@@ -510,6 +520,7 @@ Ui.Panel {
             Stations.WorkspacesTab { visible: root.selectedTab === Tabs.index("workspaces"); width: parent.width; tokens: panelTokens; service: root.service ? workspacesTabPort : null }
             Bars.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
             WindowsUi.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }
+            ColorUi.ColorMatchTab { visible: root.selectedTab === Tabs.index("color"); width: parent.width; tokens: panelTokens; service: root.service ? colorTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
             WallpaperUi.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; tokens: panelTokens; dismiss: function() { root.close() }; controller: root.service ? root.service.wallpaper : null }
             Keys.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; tokens: panelTokens; service: root.service ? keybindingsTabPort : null }
             PanelUi.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; tokens: panelTokens; service: root.service ? settingsTabPort : null; pluginVersion: root.pluginVersion }

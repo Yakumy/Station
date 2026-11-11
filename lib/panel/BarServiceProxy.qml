@@ -8,6 +8,7 @@ QtObject {
   signal snapshotRefreshRequested()
 
   readonly property bool windowSettingsBusy: snapshot ? snapshot.windowSettingsBusy === true : false
+  readonly property var colorMatch: snapshot && snapshot.colorMatch ? snapshot.colorMatch : ({ busy: false, error: "", values: {}, hdr: [] })
   readonly property var openApps: snapshot ? snapshot.openApps || ({}) : ({})
   readonly property var workspaceApps: snapshot ? snapshot.workspaceApps || ({}) : ({})
   readonly property var workspaceMap: snapshot ? snapshot.workspaceMap || null : null
@@ -48,6 +49,16 @@ QtObject {
   function setWindowSetting(key, value) {
     var result = call("setWindowSetting", [key, value])
     // Publish the busy state before PanelSlider resets liveValue on release.
+    snapshotRefreshRequested()
+    return result
+  }
+  function setColorValue(name, key, value) {
+    var result = call("setColorValue", [name, key, value])
+    snapshotRefreshRequested()
+    return result
+  }
+  function resetColor(name) {
+    var result = call("resetColor", [name])
     snapshotRefreshRequested()
     return result
   }

@@ -55,6 +55,18 @@ second. That caused focus and cursor side effects. The current path suspends
 autoreload, saves, and applies only the edited setting. [LIVE] It took about 70 ms and
 produced no `configreloaded` event.
 
+## Color Match uses ICC colorants, not gamma ramps or CTM
+
+Hyprland applies a monitor's ICC profile as a 3D LUT. The profile's `vcgt` curves never
+reached the hardware on the maintainer's i915 output, while white balance written into
+the colorants did ([LIVE], see
+[Platform findings](platform-findings.md#color-match-icc-profiles-2026-11-11)). The
+`hyprland-ctm-control-v1` protocol is per output but has one client at a time, and
+Omarchy's night light (hyprsunset) already holds it. It also needs a compiled client,
+and Station ships no binary. Gamma ramps (`wlr-gamma-control`) would need a separate
+daemon. The ICC path needs only a file and `hyprctl`, and night light still applies on
+top.
+
 ## Feature folders with one qualifier each
 
 `lib/` was flat, with 50 files mixing policy, owners and tabs. Folders put a feature's

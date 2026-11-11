@@ -118,14 +118,14 @@ test('direct chooser refuses Follow mode and busy state without opening a picker
   }
 });
 
-test('tab presentation identities agree with all seven instantiated feature tabs', () => {
+test('tab presentation identities agree with all eight instantiated feature tabs', () => {
   const order = tabOrder();
-  assert.deepEqual(order, ['Displays', 'Workspaces', 'Bar', 'Windows', 'Wallpaper', 'Keybindings', 'Settings']);
+  assert.deepEqual(order, ['Displays', 'Workspaces', 'Bar', 'Windows', 'Color Match', 'Wallpaper', 'Keybindings', 'Settings']);
   const rows = [...panel.matchAll(/\b\w+\.(\w+)Tab \{[^\n]*?visible: root\.selectedTab === Tabs\.index\("(\w+)"\)/g)];
   assert.equal(rows.length, order.length);
-  for (const [, name, id] of rows) assert.equal(order[Tabs.index(id)], name, name);
+  for (const [, name, id] of rows) assert.equal(order[Tabs.index(id)].replace(/ /g, ''), name, name);
   assert.equal(Tabs.index("unknown"), -1);
-  for (const value of [-1, 7, 1.5, "2", null, NaN]) assert.equal(Tabs.validIndex(value), false);
+  for (const value of [-1, 8, 1.5, "2", null, NaN]) assert.equal(Tabs.validIndex(value), false);
   for (let i = 0; i < order.length; i++) {
     assert.equal(Tabs.validIndex(i), true);
     assert.equal(Tabs.next(i, 1), (i + 1) % order.length);

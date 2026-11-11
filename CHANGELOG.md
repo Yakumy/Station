@@ -1,5 +1,11 @@
 # Unreleased
 
+- Add a Color Match tab after Windows. Select a monitor and adjust its Temperature,
+  Tint, Brightness, Gamma and Saturation until its white matches your other monitors.
+  Each change applies live on release, as a color profile that Hyprland applies itself,
+  with nothing extra to install. Reset returns a monitor to its own colors. Settings
+  follow the monitor to another port. HDR monitors are left alone.
+
 - Include every enabled monitor in the Windows animation preview. On one monitor,
   swap the two windows twice and restore WINDOW left / NEXT WINDOW right.
 

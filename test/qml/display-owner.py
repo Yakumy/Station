@@ -16,7 +16,7 @@ owner = (repo / "lib/displays/DisplayController.qml").read_text()
 others = "\n".join((repo / "lib" / f"{name}.qml").read_text()
     for name in ("panel/PanelIntent", "stations/StationController", "platform/CompositorLane"))
 # The session is flat: route owner ids back to its own functions and stubs.
-flatten = lambda text: re.sub(r"\b(stations|compositor|store|keybindings|barLayers|leases|screenRecovery|windowSettings|panel)\.", "root.", text)
+flatten = lambda text: re.sub(r"\b(stations|compositor|store|keybindings|barLayers|leases|screenRecovery|windowSettings|colorMatchController|panel)\.", "root.", text)
 functions = {m[1]: m[0] for m in re.finditer(
     r"^  function (\w+)\([^\n]*\{\n[\s\S]*?^  \}", others + "\n" + service, re.M)}
 forwarders = re.findall(r"^  function \w+\([^\n]*\{ return displayController\.[^\n]*\}$", service, re.M)

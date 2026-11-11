@@ -30,6 +30,8 @@ function adaptOwners(c) {
   c.continueApply ||= () => c.continuePreviewApply();
   c.continueRevert ||= () => c.continueRevertPreview();
   c.reconcile ||= undefined;
+  // Color Match has its own tests; a scenario only needs its reconcile to exist.
+  c.colorMatchController ||= { reconcile() {} };
   return c;
 }
 module.exports.adaptOwners = adaptOwners;

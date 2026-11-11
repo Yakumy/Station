@@ -12,6 +12,7 @@ import "lib/platform/Store.js" as Store
 import "lib/stations/Grid.js" as Grid
 import "lib/panel/ServiceContract.js" as ServiceContract
 import "lib/bars" as Bars
+import "lib/color" as ColorUi
 import "lib/displays" as Displays
 import "lib/keybindings" as Keys
 import "lib/panel" as PanelUi
@@ -59,6 +60,7 @@ Item {
   readonly property string internalDisablePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
   readonly property string parkedTogglePath: stateDir + "/internal-monitor-disable.parked"
   readonly property string workspaceAuthorityPath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/station-workspaces.lua"
+  readonly property string colorTogglePath: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr/station-color.lua"
   // Omarchy's record of each monitor's workspace block. Read only.
   readonly property string omarchyBlocksPath: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
     + "/omarchy/monitor-workspaces"
@@ -74,6 +76,7 @@ Item {
   readonly property alias displayWidgetEnabled: leases.displayWidgetEnabled
   readonly property alias workspaceWidgetEnabled: leases.workspaceWidgetEnabled
   readonly property alias windowSettingsBusy: windowSettings.windowSettingsBusy
+  readonly property var colorMatch: colorMatchController.snapshot
   readonly property alias wallpaper: wallpaperController
   readonly property var openApps: openAppsController.rows
   readonly property var workspaceApps: openAppsController.outputRows
@@ -239,6 +242,20 @@ Item {
     refreshStyle: function() {
       if (typeof Style.scheduleRefresh === "function") Style.scheduleRefresh()
     }
+  }
+  ColorUi.ColorMatchController {
+    id: colorMatchController
+    monitors: root.monitors
+    settings: root.config.colorMatch || ({})
+    started: root.started
+    operationState: root.state
+    togglePath: root.colorTogglePath
+    profileDir: root.stateDir + "/color"
+    enqueue: function(command, done) { compositor.enqueue(command, done) }
+    publishSettings: function(value) {
+      root.config = Object.assign({}, root.config, { colorMatch: value })
+    }
+    saveSettings: function() { store.saveConfig() }
   }
   Stations.WorkspaceController {
     id: workspace
@@ -463,6 +480,7 @@ Item {
     keybindings.applyBinds()
     barLayers.syncBarBlur()
     barLayers.syncBarGaps()
+    colorMatchController.reconcile()
   }
 
   function setDirectionValue(value) {
@@ -720,6 +738,8 @@ Item {
   function setBinding(id, combo) { return keybindings.setBinding(id, combo) }
   function approveBinding(combo) { return keybindings.approveBinding(combo) }
   function setWindowSetting(key, value) { return windowSettings.setWindowSetting(key, value) }
+  function setColorValue(name, key, value) { return colorMatchController.setValue(name, key, value) }
+  function resetColor(name) { return colorMatchController.reset(name) }
   function acquireStockLeases() { return leases.acquireStockLeases() }
   function setPanelWanted(value) { return panel.setPanelWanted(value) }
   function setPanelScreenName(value) { return panel.setPanelScreenName(value) }
@@ -736,7 +756,7 @@ Item {
 
   Component.onDestruction: {
     BarBridge.clear(barBridge)
-    Quickshell.execDetached(Recovery.cleanupCommand(stateDir, monitorsPath, persisted.stockLease, persisted.displayLease, workspaceAuthorityPath))
+    Quickshell.execDetached(Recovery.cleanupCommand(stateDir, monitorsPath, persisted.stockLease, persisted.displayLease, workspaceAuthorityPath, colorTogglePath))
   }
 
   // Connector -> block, and every block Omarchy has handed out, as its bar reads it.
@@ -792,7 +812,7 @@ Item {
       systemAuthorityVersion: root.persisted.systemAuthorityVersion || 0,
       station: root.currentStation, lanes: root.lanes, unmanaged: root.unmanaged,
       globalBarPosition: barSettings.globalBarPosition, lastGlobalBarPosition: barSettings.lastGlobalBarPosition,
-      bars: root.config.bars,
+      bars: root.config.bars, colorMatch: root.colorMatch,
       themeFollow: { name: wallpaper.themeName, path: wallpaper.themePath, revision: wallpaper.themeRevision,
         watching: wallpaper.themeWatching },
       workspaceMap: root.workspaceMap, migrationPending: root.workspaceData.pending !== null,

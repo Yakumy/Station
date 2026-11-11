@@ -25,6 +25,7 @@ flowchart TD
   Service --> Leases[StockWidgetLeases]
   Service --> Keys[KeybindingsController]
   Service --> Windows[WindowSettingsController]
+  Service --> Color[ColorMatchController]
   Service --> Wallpaper[WallpaperController]
   Service --> Apps[OpenAppsController]
 
@@ -33,7 +34,7 @@ flowchart TD
   Proxy --> PanelUi[StationPanel]
   Panel --> PanelUi
   PanelUi --> Session[PanelSession]
-  PanelUi --> Tabs[Seven feature tabs]
+  PanelUi --> Tabs[Eight feature tabs]
 ```
 
 ## Where things live
@@ -51,6 +52,7 @@ owner and its tab, so one change stays in one place.
 | `lib/bars/` | Per-monitor bar settings, layer rule, stock widget leases, Station's bar controls, Bar tab. |
 | `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar. |
 | `lib/windows/` | Window setting limits, Lua generation, save and read-back, Windows tab. |
+| `lib/color/` | Color Match: ICC profile generation, the toggle file, Color Match tab. |
 | `lib/wallpaper/` | Crop geometry, profiles, staging helper, surfaces, Wallpaper tab. |
 | `lib/keybindings/` | Bind table, conflict check, key picker, Keybindings tab. |
 | `lib/panel/` | Panel frame and lifecycle, panel intent, bridge contract and proxies, Settings tab, shared controls. |
@@ -61,7 +63,7 @@ owner and its tab, so one change stays in one place.
 ### Import rule
 
 Each feature folder has its own QML qualifier: `Bars`, `OmarchyBar`, `Displays`,
-`Keys`, `PanelUi`, `Platform`, `Stations`, `WallpaperUi` and `WindowsUi`. Do not share
+`Keys`, `PanelUi`, `Platform`, `Stations`, `WallpaperUi`, `WindowsUi` and `ColorUi`. Do not share
 one qualifier across folders. Quickshell's loader does not resolve that reliably, and
 offscreen harnesses do not detect the failure. Only `test/lint/compile-qml.py` does.
 
@@ -86,6 +88,7 @@ Service object. Only that owner writes its private state.
 | `StockWidgetLeases` | Hiding and restoring stock widgets | leases in `state.json` |
 | `KeybindingsController` | Conflict check and bind application, once per generation | `appliedBinds` in `state.json` |
 | `WindowSettingsController` | Explicit window edits, read-back, busy state | `looknfeel.lua` |
+| `ColorMatchController` | Per-monitor color settings, ICC profiles, live apply, busy state | `config.colorMatch`, `toggles/hypr/station-color.lua`, `color/*.icc` |
 | `WallpaperController` | Draft, staging, profiles, desktop surfaces | `config.wallpaper`, private copies |
 | `OpenAppsController` | Read-only client feed for the bar | none |
 
@@ -102,7 +105,7 @@ somewhere, and one arbiter makes that coupling visible. Service keeps:
 Pure policy lives in `.js` files with no QML dependency, so Node tests can load it
 directly: `Grid`, `Model`, `MonitorsLua`, `Hypr`, `Binds`, `Store`, `Transactions`,
 `Recovery`, `Events`, `Windows`, `WindowConfig`, `WindowPreview`, `Wallpaper`, `Tabs`,
-`PanelPosition`, `OpenApps`, `ScreenHealth` and `ServiceContract`.
+`PanelPosition`, `OpenApps`, `ScreenHealth`, `ColorMatch` and `ServiceContract`.
 
 ## Panel lifetime
 
@@ -167,6 +170,8 @@ reloads the host config and can recreate the bar under an open panel.
 | `~/.local/state/omarchy/station/wallpapers/` | `WallpaperController` | Private image copies |
 | `~/.config/hypr/monitors.lua` | `DisplayController` | Marked block at the beginning. Station never changes other lines. |
 | `~/.config/hypr/looknfeel.lua` | `WindowSettingsController` | Marked section at the beginning. Station never changes other lines. |
+| `~/.local/state/omarchy/toggles/hypr/station-color.lua` | `ColorMatchController` | Whole file, Station's own. Absent when no monitor is adjusted. |
+| `~/.local/state/omarchy/station/color/*.icc` | `ColorMatchController` | One profile per adjusted connector, named by its content hash |
 
 ## How to add a feature
 

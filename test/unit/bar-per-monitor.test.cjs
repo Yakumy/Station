@@ -238,7 +238,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   const proxy = read('lib/panel/BarServiceProxy.qml');
 
   assert.match(panel, /model: Tabs\.labels\(\)/);
-  assert.deepEqual(require('../../lib/panel/Tabs.js').labels(), ["Displays", "Workspaces", "Bar", "Windows", "Wallpaper", "Keybindings", "Settings"]);
+  assert.deepEqual(require('../../lib/panel/Tabs.js').labels(), ["Displays", "Workspaces", "Bar", "Windows", "Color Match", "Wallpaper", "Keybindings", "Settings"]);
   assert.match(tab, /"Selected: " \+ root\.selectedDisplay\.name/);
   assert.match(tab, /Bars\.BarLayout/);
   assert.doesNotMatch(tab, /component PositionSelector|text: "POSITION"/);

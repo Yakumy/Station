@@ -570,6 +570,55 @@ finishes on the left and NEXT WINDOW on the right. Disabled monitors stay still.
 Repeated changes queue the latest speed without interrupting a move. This never
 moves a real window.
 
+## Color Match
+
+Color Match makes monitors agree on white. Each adjusted monitor gets one ICC v4
+display profile, and Hyprland applies it through its own color pipeline (it builds a
+3D LUT with lcms2). Nothing else is installed.
+
+| Control | Range | Default | What changes in the profile |
+| --- | --- | --- | --- |
+| Temperature | 4000 to 9000 K, steps of 100 | 6500 K | Per-channel gains along the Planckian locus, relative to 6500 K |
+| Tint | −100 (green) to +100 (magenta) | 0 | Up to 30% less green, or less red and blue |
+| Brightness | 50 to 100% | 100% | All three gains. It can only dim. |
+| Gamma | 0.70 to 1.40 | 1.00 | The shared tone curve: the sRGB curve raised to 1/gamma. Higher darkens midtones. |
+| Saturation | 50 to 150% | 100% | A Rec. 709 luminance-preserving saturation matrix |
+
+- Gains are normalized so the brightest channel is 1 before Brightness, so no channel
+  clips. The gains and saturation go into the colorants (`rXYZ`, `gXYZ`, `bXYZ`) as
+  `sRGB × (gains × saturation)⁻¹`. lcms inverts that description, so the screen receives
+  the corrected signal. All channels share one tone curve, because Hyprland cannot
+  represent split curves. The profile has no `vcgt` tag: see
+  [Platform findings](platform-findings.md#color-match-icc-profiles-2026-11-11).
+- Settings are stored in `config.colorMatch` by display identity, so they follow a
+  monitor to another connector. A monitor at all defaults has no entry and no profile.
+- An HDR monitor (`cm` `hdr` or `hdredid`) gets no profile, because an ICC replaces
+  its HDR preset. The tab disables the controls for it and says why.
+- Station owns `toggles/hypr/station-color.lua`, which Omarchy loads after
+  `monitors.lua`. It calls `hl.monitor({ output, icc })` with only those two fields,
+  which keeps the monitor's mode and position. Each call checks that the profile file
+  exists and runs under `pcall`, so a missing profile never becomes a config error.
+- Profiles are named `<connector>-<hash>.icc` from their bytes, so Hyprland never
+  reuses a stale file. Unused profiles are deleted after a successful apply.
+
+A slider applies on release through the fixed `Transactions.colorMatch` script:
+
+1. Write the new profiles, then compare the toggle file with the version the owner read.
+2. Suspend autoreload, replace the file atomically, and apply.
+3. A changed or new profile applies live with `hyprctl eval` of the changed monitors'
+   rules: no reload. A connected monitor that loses its profile (Reset, or all defaults)
+   needs one `hyprctl reload`, because Hyprland cannot clear an ICC live (`icc = ""` is
+   rejected).
+4. Restore autoreload on every exit. A failed apply restores the file only if it is
+   still ours and reloads. The owner then restores the previous settings and saves
+   nothing.
+
+The tab shows the dragged value live and applies on release. Controls stay disabled
+while an apply runs, and an edit is refused as busy unless Station is idle, because a
+reset's reload would cancel a display preview or migration. Startup, reload and hotplug reconcile the file with the saved
+settings, and a matching file costs nothing. A disconnected connector keeps its row,
+so unplugging never forces a reload. Removal deletes the file before its reload.
+
 ## Bars
 
 `Bar.qml` hosts one Omarchy-derived bar per connected output. Activating it removes
@@ -736,7 +785,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - The frame requests `Style.space(996)` by `Style.space(620)`, capped by the host. Tabs
   do not change it. The header and tabs stay fixed, and the body scrolls vertically only
   on overflow, returning to the top on a tab change.
-- The tabs are Displays, Workspaces, Bar, Windows, Wallpaper, Keybindings and Settings. Service
+- The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
 - Position is Left (at the bar icon, the default) or Center on the current monitor. It
   uses the output's full-screen card and stays clear of the bar on small screens.
@@ -808,8 +857,9 @@ detached fixed script with validated positional arguments:
 4. Neutralize the current marked block by changing `disabled = true` to `false` and
    clearing `mirror`, with a backup and an atomic replace. Geometry stays. Single and
    Mirror do not outlive the plugin.
-5. Run `hyprctl reload`, which clears runtime binds and rules. `SUPER + n` must work
-   immediately.
+5. Delete Station's `station-workspaces.lua` and `station-color.lua` toggle files.
+6. Run `hyprctl reload`, which clears runtime binds and rules and returns every output
+   to its own colors. `SUPER + n` must work immediately.
 
 If the shell never answers, the script does nothing, and the user runs `hyprctl reload`.
 Preferences, state, backups and wallpaper copies remain.

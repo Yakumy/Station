@@ -137,7 +137,7 @@ test('new intent setters reject malformed values at the service boundary', () =>
     ['setPanelWanted', 'panelWanted', true, [1, 'true', null]],
     ['setPanelScreenName', 'panelScreenName', 'DP-1', [{}, '../bad', 4]],
     ['setPanelTransferUntil', 'panelTransferUntil', 1234, [NaN, Infinity, -1, '1234']],
-    ['setRememberedTab', 'rememberedTab', 6, [-1, 7, 1.5, '2']],
+    ['setRememberedTab', 'rememberedTab', 7, [-1, 8, 1.5, '2']],
     ['setRememberedDisplayName', 'rememberedDisplayName', 'HDMI-A-1', [{}, 'x;bad', null]],
   ]) {
     const fn = qmlFunction(service, method, context);

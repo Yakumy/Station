@@ -99,7 +99,7 @@ Rectangle {
     (ui / "PanelSeparator.qml").write_text("import QtQuick\nItem { property color foreground }\n")
     source = (repo / "lib/panel/StationPanel.qml").read_text()
     facades = re.findall(r'  QtObject \{\n    id: (?:panelIntent|\w+TabPort)\n[\s\S]*?\n  \}', source)
-    assert len(facades) == 7
+    assert len(facades) == 8
     fixture = (repo / "test/qml/fixtures/tst-panel-session.qml").read_text()
     fixture = fixture.replace("  // COMPOSITION_PORTS", "\n".join(facades))
     (root / "tst_panel.qml").write_text(fixture)

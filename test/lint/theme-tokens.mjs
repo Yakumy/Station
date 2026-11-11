@@ -37,7 +37,7 @@ function checkLine(path, line, code) {
   if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')
       && !APPROVED_PILL_RADIUS.test(code)
       && !(path.endsWith("/WindowsLayout.qml") && code.trim() === "radius: canvas.values.rounding")
-      && !(/\/(Display|Bar|Windows|Wallpaper|Workspaces)Layout\.qml$/.test(path) && code.trim() === "radius: 0")) {
+      && !(/\/(Display|Bar|Windows|Wallpaper|Workspaces|Color)Layout\.qml$/.test(path) && code.trim() === "radius: 0")) {
     report(path, line, 'radius not bound to Style.cornerRadius');
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');
