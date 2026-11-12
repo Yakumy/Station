@@ -49,7 +49,6 @@ ShellRoot {
     property var calls: []
     function displayEnabled(name) { return true }
     function setColorValue(name, key, value) { calls = calls.concat([["set", name, key, value]]); return "ok" }
-    function resetColor(name) { calls = calls.concat([["reset", name]]); return "ok" }
   }
   Item {
     id: panel
@@ -122,7 +121,7 @@ ShellRoot {
         if (findObject(tab, "colorState-HDMI-A-2").text !== "Adjusted") { fail("adjusted card"); return }
         if (findObject(tab, "colorState-eDP-1").text !== "HDR") { fail("hdr card"); return }
         var slider = findObject(tab, "colorSlider-temperature")
-        if (!slider.enabled || !findObject(tab, "colorReset").enabled) { fail("controls enabled"); return }
+        if (!slider.enabled) { fail("controls enabled"); return }
         slider.moved(7349)
         if (findObject(tab, "colorValue-temperature").text !== "7300 K") { fail("live value rounds to 100 K"); return }
         slider.released(7349)
@@ -143,8 +142,15 @@ ShellRoot {
         bright.moved(90)
         if (hint.text !== "Dims this monitor to match a darker one") { fail("cap message clears"); return }
         bright.released(100)
-        findObject(tab, "colorReset").clicked()
-        if (fakeService.calls[fakeService.calls.length - 1][0] !== "reset") { fail("reset"); return }
+        if (findObject(tab, "colorReset") || findObject(tab, "colorNotice")) { fail("removed reset row"); return }
+        var frame = slider.parent.parent.parent
+        var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
+        if (Math.abs(slider.width - slider.knobSize - originalWidth * 1.2 * 0.96) > 0.1 || frame.x < 0) { fail("4 percent reduced slider"); return }
+        var title = findObject(slider.parent, "controlRowTitle")
+        var hintLeft = findObject(slider.parent, "colorHint-temperature")
+        if (Math.abs(slider.x + slider.trackX(0) - title.x) > 0.1 || title.x !== hintLeft.x) { fail("track title hint alignment"); return }
+        var controls = ["temperature", "tint", "brightness", "gamma", "saturation"].map(function(key) { return findObject(tab, "colorSlider-" + key) })
+        if (controls.some(function(control) { return control.width !== slider.width || Math.abs(control.parent.height * 5 - control.parent.parent.height) > 0.1 })) { fail("equal full-height rows"); return }
         phase++
         return
       }
@@ -166,8 +172,8 @@ ShellRoot {
       }
       if (phase === 99) return
       if (phase === 13) {
-        if (findObject(tab, "colorSlider-tint").enabled || findObject(tab, "colorReset").enabled) { fail("hdr disables controls"); return }
-        if (findObject(tab, "colorNotice").text.indexOf("HDR") < 0) { fail("hdr notice"); return }
+        if (findObject(tab, "colorSlider-tint").enabled) { fail("hdr disables controls"); return }
+        if (findObject(tab, "colorHint-tint").text.indexOf("HDR") < 0) { fail("hdr notice"); return }
         owner.started = true
         phase = 14
         return
@@ -187,6 +193,9 @@ ShellRoot {
         answer = 3
         if (owner.setValue("HDMI-A-2", "tint", 40) !== "ok") { fail("second set"); return }
         if (owner.settings["Test Panel"].tint !== 0 || saves !== 1 || owner.error.indexOf("lua error") < 0) { fail("rollback"); return }
+        answer = 0
+        if (owner.setValue("HDMI-A-2", "temperature", 6500) !== "ok") { fail("neutral slider edit"); return }
+        if (Object.keys(owner.settings).length !== 0 || saves !== 2) { fail("neutral removes adjustment"); return }
         console.log("COLOR_MATCH_OK")
         Qt.quit(); stop()
       }

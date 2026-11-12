@@ -84,8 +84,8 @@ Reject anything that computes color from `colors.toml` directly: Quickshell alre
 
 | Role | Token (confirm name) | Case | Use |
 |---|---|---|---|
-| Eyebrow / section label | smallest available, dim | UPPERCASE | `LAYOUT`, `BRIGHTNESS`, `SCALE` — already `Ui.PanelSectionHeader` |
-| Body | `Style.font.body` (12) for row labels and values, `Style.font.caption` (10) for device names and fine print [V, in use] | Sentence | Row labels, dropdown values |
+| Eyebrow / section label | `Style.font.caption`, dim | UPPERCASE | `LAYOUT` uses `Ui.PanelSectionHeader`; control row titles use `PanelUi.ControlLabel`. |
+| Body | `Style.font.body` for control content; `Style.font.caption` for row titles, device names and fine print | Sentence | Dropdown values and control content |
 | Body emphasis | `Font.DemiBold` at the same `Style.font.*` size — sizes only from `Style.font`, weight from `Font.*` [V] | Sentence | Values: `100%`, `1920×1080`, `60 Hz` |
 | Caption | `Style.font.caption` | Sentence | Device names, "Lane 2", fine print |
 | Panel title | `Style.font.title` + `Font.DemiBold` [V, in use] | Sentence | `Station` |
@@ -120,7 +120,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
 
-**Toggle** (Settings: Hide indicator, Follow focus): use the host `Ui.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses the same `Style.space(48)` height and body label style as dropdown rows. Set the switch track to `Style.spacing.controlHeight` so it matches the dropdown trigger height; the row owns clicks and keyboard activation. Do not replace the switch with a chip.
+**Toggle** (Settings: Show indicator, Follow focus): use the host `Ui.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses the same `Style.space(74)` height and caption title style as Display control rows. Set the switch track to `Style.spacing.controlHeight` so it matches the dropdown trigger height; the row owns clicks and keyboard activation. Do not replace the switch with a chip.
 
 **[DECISION, signed off] Secondary vs. primary Action.** §1 says every Action is filled, but a screen can have more than one Action at once (Keep + Revert; Pick another key + Replace and unbind it), and making both equally heavy loses the sense of which one actually commits. Settled rule: the *one* action that commits a consequential change (Keep; Apply; Replace and unbind it) is filled per §1; a same-row action that only cancels or defers (Revert; Pick another key) is neutral-bordered — `Border.controlSpec("normal", …)` border, `Color.popups.text`, no fill — so the eye finds the committing action first. This is now final: one filled commit Action per screen, its cancel/defer partner neutral.
 
@@ -191,3 +191,24 @@ The header and tab row stay fixed above a shared vertical overflow viewport.
 Short tabs leave unused space; expanded notices and binding editors scroll
 inside that frame. Scrollbars appear only on overflow. This replaces the earlier
 content-driven height; theme/font and screen changes can still refit the frame.
+
+### Shared control-panel rows
+
+Displays is the reference for all feature controls. `ControlLabel.qml` places a
+plain-text, uppercase caption at `Style.space(8)` from the top and left, using the
+same dim popup foreground as Displays. Values align to the top right; hints align
+to the bottom left with the same horizontal inset and `Style.space(4)` below.
+Five-row control frames divide their height equally.
+
+`ControlFrame.qml` makes each row control 15.2% wider than the original frame
+width minus two `Style.space(24)` insets. The column split stays fixed; the frame
+expands symmetrically. `ControlSlider.qml` centers every slider with
+`Style.space(8)` on each side of the visible track. Its hit area extends
+by half a knob at each end so the track aligns with row titles and hints.
+Dropdowns and Wallpaper row buttons use the same safe inset. The full-panel
+Settings dropdown uses its previous capped width multiplied by 0.96; its title
+aligns to the dropdown. `ControlButton.qml`
+provides the neutral, full-width row action style. `ActionButton.qml` gives footer
+and binding actions equal `Style.space(180) * 1.2 * 0.96` widths and the host control height;
+the committing action retains the accent fill, and cancellation stays neutral.
+Icon-only canvas, link and key-picker controls retain their specialized roles.

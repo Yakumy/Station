@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Ui as Ui
+import "." as PanelUi
 import qs.Commons
 
 // The display preview's countdown for the tabs that do not carry their own. A preview
@@ -24,13 +25,11 @@ Item {
     font.family: Style.font.family
     font.pixelSize: Style.font.body
   }
-  Ui.Button {
+  PanelUi.ActionButton {
     id: keepButton
     anchors.right: parent.right
     anchors.rightMargin: root.tokens.regionPadH
     anchors.verticalCenter: parent.verticalCenter
-    height: root.tokens.controlHeight
-    radius: Style.cornerRadius
     text: "Keep"
     enabled: !root.service.previewBusy
     accent: Color.accent
@@ -38,13 +37,11 @@ Item {
     foreground: Color.popups.background
     onClicked: root.service.keepPreview()
   }
-  Ui.Button {
+  PanelUi.ActionButton {
     id: revertButton
     anchors.right: keepButton.left
     anchors.rightMargin: root.tokens.space3
     anchors.verticalCenter: parent.verticalCenter
-    height: root.tokens.controlHeight
-    radius: Style.cornerRadius
     text: "Revert"
     enabled: !root.service.previewBusy
     bordered: true

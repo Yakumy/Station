@@ -110,6 +110,21 @@ ShellRoot {
         if (find(tab, "wallpaperSelectedMonitor").text !== "") { fail("same selection heading"); return }
         if (find(tab, "wallpaperImageHint").text !== "fixture.svg") { fail("filename hint"); return }
         if (mode.value !== "same" || follow.value !== "yes") { fail("initial values"); return }
+        var frame = mode.parent.parent.parent
+        var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
+        if (Math.abs(mode.width - originalWidth * 1.2 * 0.96) > 0.1) { fail("4 percent reduced controls"); return }
+        if (frame.x < 0 || mode.x < 0 || mode.x + mode.width > mode.parent.width) { fail("control overflow"); return }
+        var buttons = ["wallpaperChooseImage", "wallpaperThemeBackground", "wallpaperThemePicker"].map(function(name) { return find(tab, name) })
+        if (buttons.some(function(button) { return Math.abs(button.width - mode.width) > 0.1 || button.height !== buttons[0].height })) { fail("unequal row controls"); return }
+        var titles = []
+        function collectTitles(node) {
+          if (node.objectName === "controlRowTitle") titles.push(node)
+          var children = node.children || []
+          for (var i = 0; i < children.length; i++) collectTitles(children[i])
+        }
+        collectTitles(tab)
+        if (JSON.stringify(titles.map(function(title) { return title.text })) !== JSON.stringify(["Mode", "Follow Omarchy theme", "Image", "Theme background", "Theme"])) { fail("row titles"); return }
+        if (titles.some(function(title) { return title.x !== titles[0].x || title.y !== titles[0].y || title.color !== titles[0].color || title.font.pixelSize !== titles[0].font.pixelSize })) { fail("title styling"); return }
         if (mode.width < mode.parent.width * 0.8) { fail("dropdown width"); return }
         save("same", function() { mode.changed("individual"); check.phase = 1 })
       } else if (phase === 1) {

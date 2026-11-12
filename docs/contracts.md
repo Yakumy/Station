@@ -630,9 +630,14 @@ A slider applies on release through the fixed `Transactions.colorMatch` script:
 
 The tab shows the dragged value live and applies on release. Controls stay disabled
 while an apply runs, and an edit is refused as busy unless Station is idle, because a
-reset's reload would cancel a display preview or migration. Startup, reload and hotplug reconcile the file with the saved
+profile reload would cancel a display preview or migration. Startup, reload and hotplug reconcile the file with the saved
 settings, and a matching file costs nothing. A disconnected connector keeps its row,
 so unplugging never forces a reload. Removal deletes the file before its reload.
+
+The control frame contains only the five equal-height adjustment rows. HDR,
+busy and failure messages appear in the row hints. There is no Reset/status row
+or reset action in the panel bridge; returning sliders to their neutral values
+still removes the monitor's adjustment through the normal apply path.
 
 ## Bars
 
@@ -737,7 +742,7 @@ otherwise refresh it, is usually hidden.
 Wallpaper is independent of workspace and monitor policy and emits no monitor commands.
 Its modes are Same on all (the default, following Omarchy), Per monitor, and Span.
 The five control rows are Mode (dropdown), Follow Omarchy theme (Yes/No dropdown),
-Choose image, Choose theme background and Choose theme. The three buttons fill their
+Image, Theme background and Theme (buttons). The three buttons fill their
 row's padded width, with the selected image filename, current background filename,
 and current theme name beneath them. Per monitor shows `Selected: <connector>` above
 the controls; the layout selects that monitor. Other modes leave that heading empty.

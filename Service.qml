@@ -774,7 +774,6 @@ Item {
   function approveBinding(combo) { return keybindings.approveBinding(combo) }
   function setWindowSetting(key, value) { return windowSettings.setWindowSetting(key, value) }
   function setColorValue(name, key, value) { return colorMatchController.setValue(name, key, value) }
-  function resetColor(name) { return colorMatchController.reset(name) }
   function acquireStockLeases() { return leases.acquireStockLeases() }
   function setPanelWanted(value) { return panel.setPanelWanted(value) }
   function setPanelScreenName(value) { return panel.setPanelScreenName(value) }

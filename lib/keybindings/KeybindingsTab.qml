@@ -107,30 +107,24 @@ Column {
 
       Item {
         width: parent.width
-        height: Style.space(44)
-        Text {
-          anchors.left: parent.left
-          anchors.leftMargin: keybindingsTab.tokens.space3
-          anchors.verticalCenter: parent.verticalCenter
-          width: parent.width * 0.36
+        height: Style.space(74)
+        PanelUi.ControlLabel {
+          width: parent.width - keybindingsTab.tokens.space2 * 2
           text: bindingGroup.modelData.label
-          elide: Text.ElideRight
-          color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.body
         }
         Text {
-          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.left: parent.left
+          anchors.leftMargin: keybindingsTab.inset
           anchors.verticalCenter: parent.verticalCenter
-          width: parent.width * 0.39
-          horizontalAlignment: Text.AlignHCenter
+          width: parent.width * 0.65
+          horizontalAlignment: Text.AlignLeft
           text: bindingGroup.modelData.combo
           elide: Text.ElideRight
           // The combo is this row's value, so it carries the emphasis weight.
           color: Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
-          font.weight: Font.DemiBold
+          font.weight: Font.Normal
         }
         Text {
           anchors.right: parent.right
@@ -174,17 +168,13 @@ Column {
             }
             Row {
               spacing: keybindingsTab.tokens.space2
-              Ui.Button {
-                height: keybindingsTab.tokens.controlHeight
-                radius: Style.cornerRadius
+              PanelUi.ActionButton {
                 text: "Pick another key"
                 bordered: true
                 foreground: Color.popups.text
                 onClicked: keybindingsTab.beginBindingEdit(conflictRow.modelData)
               }
-              Ui.Button {
-                height: keybindingsTab.tokens.controlHeight
-                radius: Style.cornerRadius
+              PanelUi.ActionButton {
                 text: "Replace and unbind it"
                 accent: Color.urgent
                 background: Color.urgent
@@ -210,16 +200,14 @@ Column {
                 available: keybindingsTab.active
                 onPicked: function(key) { keybindingsTab.editingKey = key }
               }
-              Ui.Button {
-                height: keybindingsTab.tokens.controlHeight
-                radius: Style.cornerRadius
+              PanelUi.ActionButton {
                 text: "Apply"
                 accent: Color.accent
                 background: Color.accent
                 foreground: Color.popups.background
                 onClicked: keybindingsTab.applyBindingEdit()
               }
-              Ui.Button {
+              PanelUi.ActionButton {
                 text: "Cancel"
                 bordered: true
                 foreground: Color.popups.text

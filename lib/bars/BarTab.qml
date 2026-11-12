@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -105,14 +106,9 @@ Column {
           elide: Text.ElideRight
         }
       }
-      Ui.BorderSurface {
+      PanelUi.ControlFrame {
         id: controlFrame
-        width: parent.width - Style.space(28) * 2
         height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Commons.Color.popups.background
-        borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-        radius: Style.cornerRadius
 
         Column {
           anchors.fill: parent
@@ -122,23 +118,15 @@ Column {
             id: contentSizeRow
             width: parent.width
             height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.tokens.space2
-              text: "CONTENT SIZE"
-            }
+            PanelUi.ControlLabel { text: "CONTENT SIZE" }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
+              anchors.rightMargin: root.tokens.space2
               anchors.top: parent.top
               anchors.topMargin: root.tokens.space2
               text: root.selectedContentSize + " px"
             }
-            Ui.PanelSlider {
-              width: parent.width - root.tokens.space3 * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: root.bar
               minimum: root.selectedMinimumContentSize
@@ -155,10 +143,10 @@ Column {
             Caption {
               visible: root.selectedRequestedContentSize > root.selectedMaximumContentSize
               anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
+              anchors.leftMargin: root.tokens.space2
               anchors.bottom: parent.bottom
               anchors.bottomMargin: root.tokens.space1
-              width: parent.width - root.tokens.space3 * 2
+              width: parent.width - root.tokens.space2 * 2
               text: "Maximum " + root.selectedMaximumContentSize + " px — content needs more bar space."
               color: Commons.Color.urgent
               elide: Text.ElideRight
@@ -174,23 +162,15 @@ Column {
             id: heightRow
             width: parent.width
             height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.tokens.space2
-              text: "HEIGHT"
-            }
+            PanelUi.ControlLabel { text: "HEIGHT" }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
+              anchors.rightMargin: root.tokens.space2
               anchors.top: parent.top
               anchors.topMargin: root.tokens.space2
               text: root.selectedHeight + " px"
             }
-            Ui.PanelSlider {
-              width: parent.width - root.tokens.space3 * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: root.bar
               minimum: root.selectedMinimumHeight
@@ -215,23 +195,15 @@ Column {
             id: widthRow
             width: parent.width
             height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.tokens.space2
-              text: "WIDTH"
-            }
+            PanelUi.ControlLabel { text: "WIDTH" }
             Caption {
               anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
+              anchors.rightMargin: root.tokens.space2
               anchors.top: parent.top
               anchors.topMargin: root.tokens.space2
               text: root.selectedBar.width + "%"
             }
-            Ui.PanelSlider {
-              width: parent.width - root.tokens.space3 * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: root.bar
               minimum: 1
@@ -248,10 +220,10 @@ Column {
             Caption {
               visible: Number(root.selectedBar.width) < root.selectedMinimumWidth
               anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
+              anchors.leftMargin: root.tokens.space2
               anchors.bottom: parent.bottom
               anchors.bottomMargin: root.tokens.space1
-              width: parent.width - root.tokens.space3 * 2
+              width: parent.width - root.tokens.space2 * 2
               text: "Minimum " + root.selectedMinimumWidth + "% — bar items overlap."
               color: Commons.Color.urgent
               elide: Text.ElideRight
@@ -267,20 +239,14 @@ Column {
             id: backgroundRow
             width: parent.width
             height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.tokens.space2
-              text: "BACKGROUND"
-            }
+            PanelUi.ControlLabel { text: "BACKGROUND" }
             Ui.Dropdown {
               id: backgroundDropdown
               objectName: "barBackgroundDropdown"
               anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
+              anchors.leftMargin: root.tokens.space2
               anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
+              anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false
@@ -312,20 +278,14 @@ Column {
             id: styleRow
             width: parent.width
             height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top
-              anchors.topMargin: root.tokens.space2
-              text: "STYLE"
-            }
+            PanelUi.ControlLabel { text: "STYLE" }
             Ui.Dropdown {
               id: styleDropdown
               objectName: "barStyleDropdown"
               anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
+              anchors.leftMargin: root.tokens.space2
               anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
+              anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false

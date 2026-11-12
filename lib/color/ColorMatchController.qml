@@ -12,7 +12,7 @@ Item {
   property var monitors: []
   property var settings: ({})
   property bool started: false
-  // A reset reloads Hyprland, which would cancel a display preview or migration.
+  // Returning to neutral reloads Hyprland, which would cancel a display preview or migration.
   property string operationState: "idle"
   property string togglePath: ""
   property string profileDir: ""
@@ -62,13 +62,6 @@ Item {
     var change = {}
     change[key] = value
     return update(display, ColorMatch.clean(Object.assign({}, current, change)))
-  }
-
-  function reset(name) {
-    if (busy) return "busy"
-    var display = displayNamed(name)
-    if (!display) return "invalid"
-    return update(display, null)
   }
 
   function update(display, values) {

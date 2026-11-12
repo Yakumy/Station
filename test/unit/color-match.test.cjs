@@ -198,7 +198,7 @@ test('the apply writes profiles first, evals with watches suspended, and restore
     'eval ' + C.rule('A', f.profiles, p.file), 'eval hl.config({misc={disable_autoreload=true}})']);
 });
 
-test('a reset removes the file, reloads once and prunes unused profiles', () => {
+test('returning to neutral removes the file, reloads once and prunes unused profiles', () => {
   const f = fixture();
   const p = C.profile('A', { temperature: 5000 });
   const text = C.source(f.profiles, [p]);

@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -63,7 +64,7 @@ Column {
   }
 
   component Caption: Text {
-    color: root.tokens.textPrimary
+    color: root.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -132,15 +133,10 @@ Column {
           elide: Text.ElideRight
         }
       }
-      Ui.BorderSurface {
+      PanelUi.ControlFrame {
         id: controlFrame
-        width: parent.width - Style.space(28) * 2
         height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Commons.Color.popups.background
-        borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-        radius: Style.cornerRadius
-        readonly property real rowHeight: height * 0.165
+        readonly property real rowHeight: height / root.rows.length
 
         Column {
           anchors.fill: parent
@@ -153,27 +149,17 @@ Column {
               required property int index
               width: parent.width
               height: controlFrame.rowHeight
-              Caption {
-                anchors.left: parent.left
-                anchors.leftMargin: root.tokens.space3
-                anchors.top: parent.top
-                anchors.topMargin: root.tokens.space2
-                text: row.modelData.label
-              }
+              PanelUi.ControlLabel { text: row.modelData.label }
               Caption {
                 objectName: "colorValue-" + row.modelData.key
                 anchors.right: parent.right
-                anchors.rightMargin: root.tokens.space3
+                anchors.rightMargin: root.tokens.space2
                 anchors.top: parent.top
                 anchors.topMargin: root.tokens.space2
                 text: root.format(row.modelData.key, root.values[row.modelData.key])
               }
-              Ui.PanelSlider {
+              PanelUi.ControlSlider {
                 objectName: "colorSlider-" + row.modelData.key
-                width: parent.width - root.tokens.space3 * 2
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.verticalCenterOffset: Style.space(2)
                 bar: root.bar
                 minimum: ColorMatch.sliderRange(row.modelData.key)[0]
                 maximum: ColorMatch.sliderRange(row.modelData.key)[1]
@@ -200,52 +186,21 @@ Column {
               }
               Text {
                 anchors.left: parent.left
-                anchors.leftMargin: root.tokens.space3
+                anchors.leftMargin: root.tokens.space2
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: root.tokens.space1
-                width: parent.width - root.tokens.space3 * 2
+                width: parent.width - root.tokens.space2 * 2
                 objectName: "colorHint-" + row.modelData.key
-                text: root.cappedKey === row.modelData.key ? row.modelData.cap : row.modelData.hint
-                color: root.cappedKey === row.modelData.key ? root.tokens.textPrimary : root.tokens.textDim
+                text: root.hdr ? "Color Match is off while this monitor uses HDR."
+                  : root.notice || root.colorMatch.error || (root.busy ? "Applying…"
+                    : root.cappedKey === row.modelData.key ? row.modelData.cap : row.modelData.hint)
+                color: root.notice || root.colorMatch.error ? Commons.Color.urgent
+                  : root.cappedKey === row.modelData.key ? root.tokens.textPrimary : root.tokens.textDim
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 elide: Text.ElideRight
               }
-              Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
-            }
-          }
-          Item {
-            width: parent.width
-            height: controlFrame.height - controlFrame.rowHeight * root.rows.length
-            Text {
-              objectName: "colorNotice"
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space3
-              anchors.right: resetButton.left
-              anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
-              text: root.hdr ? "Color Match is off while this monitor uses HDR."
-                : root.notice || root.colorMatch.error || (root.busy ? "Applying…" : "Changes apply when you release a slider.")
-              color: root.colorMatch.error || root.notice ? Commons.Color.urgent : root.tokens.textDim
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              wrapMode: Text.WordWrap
-              maximumLineCount: 2
-              elide: Text.ElideRight
-            }
-            Ui.Button {
-              id: resetButton
-              objectName: "colorReset"
-              anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              height: root.tokens.controlHeight
-              radius: Style.cornerRadius
-              text: "Reset"
-              enabled: root.usable && !ColorMatch.isNeutral(root.savedValues)
-              bordered: true
-              foreground: Commons.Color.popups.text
-              onClicked: { root.cappedKey = ""; root.report(root.service.resetColor(root.selectedName)) }
+              Ui.PanelSeparator { visible: row.index < root.rows.length - 1; anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
             }
           }
         }

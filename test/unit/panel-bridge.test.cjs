@@ -232,3 +232,11 @@ test('indicator refresh uses only a confirmed scalar and handles replacement and
   c.bridgeCurrent = () => null; sync(); assert.equal(c.resynced, true);
   c.directService = {}; c.bridgeCurrent = () => { throw Error('direct path must not poll'); }; sync();
 });
+
+
+test('Color Match exposes slider edits without a reset action on either panel path', () => {
+  const actions = ServiceContract.actions({});
+  assert.equal(typeof actions.setColorValue, 'function');
+  assert.equal(Object.hasOwn(actions, 'resetColor'), false);
+  assert.doesNotMatch(service + panel + proxy, /function resetColor\(/);
+});

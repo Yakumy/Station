@@ -170,7 +170,6 @@ Ui.Panel {
     readonly property var colorMatch: root.service ? root.service.colorMatch : null
     readonly property var displayDraft: root.service ? root.service.displayDraft : []
     function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
-    function resetColor(name) { return root.service ? root.service.resetColor(name) : undefined }
     function setColorValue(name, key, value) { return root.service ? root.service.setColorValue(name, key, value) : undefined }
   }
 

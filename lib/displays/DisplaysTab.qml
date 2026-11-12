@@ -58,15 +58,7 @@ Column {
     font.pixelSize: Style.font.caption
   }
 
-  component ControlLabel: Text {
-    anchors.left: parent.left
-    anchors.leftMargin: displayTab.gutter
-    anchors.top: parent.top
-    anchors.topMargin: displayTab.gutter
-    color: displayTab.tokens.textDim
-    font.family: Style.font.family
-    font.pixelSize: Style.font.caption
-  }
+  component ControlLabel: PanelUi.ControlLabel {}
 
   function choiceIndex(options, value) {
     for (var i = 0; i < options.length; i++)
@@ -178,14 +170,9 @@ Column {
         }
       }
 
-      Ui.BorderSurface {
+      PanelUi.ControlFrame {
         id: controlFrame
-        width: parent.width - rightColumn.sideInset * 2
         height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Color.popups.background
-        borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-        radius: Style.cornerRadius
 
         Column {
           anchors.fill: parent
@@ -207,9 +194,7 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Ui.PanelSlider {
-              width: parent.width - displayTab.pad * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 1
@@ -245,9 +230,7 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Ui.PanelSlider {
-              width: parent.width - displayTab.pad * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
@@ -282,9 +265,7 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Ui.PanelSlider {
-              width: parent.width - displayTab.pad * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
@@ -327,9 +308,7 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Ui.PanelSlider {
-              width: parent.width - displayTab.pad * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
@@ -378,9 +357,7 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Ui.PanelSlider {
-              width: parent.width - displayTab.pad * 2
-              height: implicitHeight
+            PanelUi.ControlSlider {
               anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
@@ -426,14 +403,12 @@ Column {
       font.family: Style.font.family
       font.pixelSize: Style.font.body
     }
-    Ui.Button {
+    PanelUi.ActionButton {
       id: keepButton
       visible: parent.previewing
       anchors.right: parent.right
       anchors.rightMargin: displayTab.pad
       anchors.verticalCenter: parent.verticalCenter
-      height: displayTab.tokens.controlHeight
-      radius: Style.cornerRadius
       text: "Keep"
       enabled: displayTab.service && !displayTab.service.previewBusy
       accent: Color.accent
@@ -441,14 +416,12 @@ Column {
       foreground: Color.popups.background
       onClicked: displayTab.service.keepPreview()
     }
-    Ui.Button {
+    PanelUi.ActionButton {
       id: revertButton
       visible: parent.previewing
       anchors.right: keepButton.left
       anchors.rightMargin: displayTab.gutter
       anchors.verticalCenter: parent.verticalCenter
-      height: displayTab.tokens.controlHeight
-      radius: Style.cornerRadius
       text: "Revert"
       enabled: displayTab.service && !displayTab.service.previewBusy
       bordered: true

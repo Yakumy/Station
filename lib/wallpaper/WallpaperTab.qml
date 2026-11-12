@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import "Wallpaper.js" as Wallpaper
@@ -26,30 +27,22 @@ Column {
   function fileName(path) { return String(path || "").split("/").pop() }
   readonly property string imagePath: scene.mode === "individual" && selectedDisplay
     ? (scene.perDisplay[selectedDisplay.identity] || scene.source) : scene.source
-  component RowTitle: Caption {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.top: parent.top; anchors.topMargin: root.tokens.space2
-  }
+  component RowTitle: PanelUi.ControlLabel {}
   component RowHint: Caption {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
     anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space1
     wrapMode: Text.NoWrap
     elide: Text.ElideRight
   }
   component RowDropdown: Ui.Dropdown {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
     anchors.verticalCenter: parent.verticalCenter
     showLabel: false
     foreground: root.tokens.textPrimary
   }
-  component RowButton: Ui.Button {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-    anchors.verticalCenter: parent.verticalCenter
-    bordered: true
-  }
+  component RowButton: PanelUi.ControlButton {}
 
   Row {
     width: parent.width
@@ -111,14 +104,9 @@ Column {
           foreground: Color.popups.text
         }
       }
-      Ui.BorderSurface {
+      PanelUi.ControlFrame {
         id: controlFrame
-        width: parent.width - Style.space(28) * 2
         height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Color.popups.background
-        borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-        radius: Style.cornerRadius
         Column {
           anchors.fill: parent
           spacing: 0
@@ -151,6 +139,7 @@ Column {
           Item {
             id: imageRow
             width: parent.width; height: controlFrame.height / 5
+            RowTitle { text: "Image" }
             RowButton {
               objectName: "wallpaperChooseImage"
               text: "Choose image…"
@@ -166,6 +155,7 @@ Column {
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
+            RowTitle { text: "Theme background" }
             RowButton {
               objectName: "wallpaperThemeBackground"
               text: "Choose theme background…"
@@ -176,6 +166,7 @@ Column {
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
+            RowTitle { text: "Theme" }
             RowButton {
               objectName: "wallpaperThemePicker"
               text: "Choose theme…"
@@ -201,12 +192,12 @@ Column {
       anchors.right: parent.right; anchors.rightMargin: root.pad
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.tokens.space2
-      Ui.Button {
+      PanelUi.ActionButton {
         text: "Cancel"; bordered: true
         enabled: root.controller && root.controller.dirty && !root.controller.busy && !root.controller.importBusy
         onClicked: root.controller.reset()
       }
-      Ui.Button {
+      PanelUi.ActionButton {
         text: root.controller && root.controller.importBusy ? "Preparing…"
           : root.controller && root.controller.busy ? "Applying…" : "Apply"
         accent: Color.accent

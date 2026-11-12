@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -123,21 +124,16 @@ Column {
   }
   // A row's message sits in its bottom-left corner, as in Displays.
   component RowMessage: Caption {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
     anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space1
     visible: text !== ""
     elide: Text.ElideRight
   }
-  component RowLabel: Caption {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-    anchors.top: parent.top; anchors.topMargin: root.tokens.space2
-    elide: Text.ElideRight
-  }
+  component RowLabel: PanelUi.ControlLabel {}
   component RowDropdown: Ui.Dropdown {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
     anchors.verticalCenter: parent.verticalCenter
     showLabel: false
     foreground: root.tokens.textPrimary
@@ -189,30 +185,21 @@ Column {
           text: "WORKSPACES"; foreground: Commons.Color.popups.text
         }
       }
-      Ui.BorderSurface {
+      PanelUi.ControlFrame {
         id: controlFrame
-        width: parent.width - Style.space(28) * 2
         height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Commons.Color.popups.background
-        borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-        radius: Style.cornerRadius
         Column {
           anchors.fill: parent
           spacing: 0
           Item {
             width: parent.width; height: controlFrame.height / root.rowCount
-            Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top; anchors.topMargin: root.tokens.space2
-              text: "Mode"
-            }
+            PanelUi.ControlLabel { text: "Mode" }
             RowDropdown {
               objectName: "workspaceModeSelector"
               enabled: !root.singleOutput
               opacity: enabled ? 1 : root.tokens.disabledOpacity
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+              anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
+              anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               value: root.mode
@@ -331,12 +318,12 @@ Column {
       anchors.right: parent.right; anchors.rightMargin: root.pad
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.tokens.space2
-      Ui.Button {
+      PanelUi.ActionButton {
         objectName: "workspacesCancel"
         text: "Cancel"; bordered: true
         onClicked: root.reset()
       }
-      Ui.Button {
+      PanelUi.ActionButton {
         objectName: "workspacesApply"
         text: root.idle ? "Apply" : "Applying…"
         accent: Commons.Color.accent

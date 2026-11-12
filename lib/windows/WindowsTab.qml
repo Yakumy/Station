@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -24,7 +25,7 @@ Column {
   readonly property real thickness: Number(barSettings.height) || (barSettings.position === "left" || barSettings.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
   function preview(key, value) { var next = Object.assign({}, values); next[key] = value; values = next }
   component Caption: Text {
-    color: root.tokens.textPrimary
+    color: root.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
@@ -50,12 +51,8 @@ Column {
     Column {
       width: parent.width * 0.424 - Math.max(1, Style.normalBorderWidth)
       Item { width: parent.width; height: Style.space(28) }
-      Ui.BorderSurface {
-        width: parent.width - Style.space(56); height: Style.space(370)
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Commons.Color.popups.background
-        borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-        radius: Style.cornerRadius
+      PanelUi.ControlFrame {
+        height: Style.space(370)
         Column {
           anchors.fill: parent
           Repeater {
@@ -65,11 +62,10 @@ Column {
               required property var modelData
               required property int index
               width: parent.width; height: Style.space(74)
-              Caption { anchors.left: parent.left; anchors.leftMargin: root.tokens.space3; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: row.modelData.label }
-              Caption { anchors.right: parent.right; anchors.rightMargin: root.tokens.space3; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: root.values[row.modelData.key] + (row.index === 2 ? "%" : row.index === 4 ? "×" : " px") }
-              Ui.PanelSlider {
+              PanelUi.ControlLabel { text: row.modelData.label }
+              Caption { anchors.right: parent.right; anchors.rightMargin: root.tokens.space2; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: root.values[row.modelData.key] + (row.index === 2 ? "%" : row.index === 4 ? "×" : " px") }
+              PanelUi.ControlSlider {
                 id: slider
-                width: parent.width - root.tokens.space3 * 2
                 anchors.centerIn: parent
                 bar: root.bar
                 minimum: row.index === 4 ? 0 : Windows.limits[row.modelData.key][0]
@@ -90,7 +86,7 @@ Column {
                 }
                 Rectangle {
                   visible: row.index < 2
-                  x: Math.min(1, root.thickness / slider.maximum) * parent.width - width / 2
+                  x: slider.trackX(Math.min(1, root.thickness / slider.maximum)) - width / 2
                   anchors.verticalCenter: parent.verticalCenter
                   width: Math.max(1, Style.normalBorderWidth); height: slider.trackHeight + Style.space(6)
                   color: Commons.Color.accent

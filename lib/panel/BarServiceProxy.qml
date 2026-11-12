@@ -63,11 +63,6 @@ QtObject {
     snapshotRefreshRequested()
     return result
   }
-  function resetColor(name) {
-    var result = call("resetColor", [name])
-    snapshotRefreshRequested()
-    return result
-  }
   function switchStation(value) { return call("switchStation", [value]) }
   function showWorkspace(value, output) { return call("showWorkspace", [value, output]) }
   function setSetting(name, value) { return call("setSetting", [name, value]) }
