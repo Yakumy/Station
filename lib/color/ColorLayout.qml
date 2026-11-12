@@ -17,7 +17,6 @@ Ui.BorderSurface {
   readonly property var colorMatch: service && service.colorMatch ? service.colorMatch : ({ values: {}, hdr: [] })
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
-  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real monitorGap: Style.spacing.sm
   clip: true
   color: Commons.Color.popups.background
@@ -71,9 +70,9 @@ Ui.BorderSurface {
       readonly property bool hdr: (canvas.colorMatch.hdr || []).indexOf(modelData.name) !== -1
       readonly property bool adjusted: !ColorMatch.isNeutral((canvas.colorMatch.values || {})[modelData.name])
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom + canvas.monitorGap / 2
-      y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom + canvas.monitorGap / 2 + canvas.labelHeight
+      y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom + canvas.monitorGap / 2
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       z: isSelected ? 1 : 0
       color: isSelected ? Commons.Color.menu.selectedBackground : Commons.Color.popups.background
       borderSpec: Border.flat(isSelected
@@ -87,18 +86,6 @@ Ui.BorderSurface {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: canvas.displaySelected(monitorCard.modelData.name)
-      }
-
-      Text {
-        objectName: "monitorName-" + monitorCard.modelData.name
-        x: 0; y: -height - Style.spacing.sm
-        width: parent.width
-        text: monitorCard.modelData.name
-        textFormat: Text.PlainText
-        color: canvas.tokens ? canvas.tokens.textDim : Commons.Color.popups.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-        elide: Text.ElideRight
       }
 
       Column {

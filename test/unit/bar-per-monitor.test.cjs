@@ -281,7 +281,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(preview, /parent\.height - topInset - bottomInset/);
   assert.match(preview, /position === "left" \? canvas\.barEdgeGap/);
   assert.match(preview, /parent\.height - height - bottomInset/);
-  assert.match(layout, /x: 0; y: -height - Style\.spacing\.sm/);
+  assert.doesNotMatch(layout, /objectName: "monitorName-/);
   assert.match(layout, /barEnabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);

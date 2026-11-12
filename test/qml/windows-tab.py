@@ -139,7 +139,7 @@ ShellRoot {
           fail("windows do not fill the former bar area"); return
         }
         var name = findObject(layout, "monitorName-eDP-1")
-        if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }
+        if (name) { fail("unexpected monitor label"); return }
         if (a.x >= remaining.x || b.x >= findObject(layout, "windowPreview-2").x) {
           fail("window order"); return
         }

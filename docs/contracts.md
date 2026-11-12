@@ -575,8 +575,8 @@ release.
 The panel shows global defaults. It does not inspect per-window rules. External values
 display unrounded until the user edits that control.
 
-The preview shows two windows per monitor at real proportions, with names outside the
-rectangles. After a speed change, WINDOW tiles move through every enabled monitor
+The preview shows two windows per monitor at real proportions, without monitor
+names. After a speed change, WINDOW tiles move through every enabled monitor
 in order, one transfer at a time, while NEXT WINDOW tiles stay and reflow. With one
 enabled monitor, the two tiles exchange sides, pause, then exchange again so WINDOW
 finishes on the left and NEXT WINDOW on the right. Disabled monitors stay still.

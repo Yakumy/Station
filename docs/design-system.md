@@ -179,9 +179,7 @@ The simulated windows in WindowsLayout are an exception to the corner token rule
 radius is the Border roundness value in preview pixels, unscaled, so it stays visible at
 preview zoom and follows the slider while it drags. Every simulated window is active:
 accent border and the selected fill. All other surrounding chrome continues to use
-`Style.cornerRadius`. Monitor labels sit above the upper-left corner, outside the
-rectangle. Reserve a label lane in stacked layouts instead of removing space from the
-illustrated window work area.
+`Style.cornerRadius`. Monitor names are omitted from the Windows layout preview.
 
 ### Panel frame
 
@@ -214,13 +212,10 @@ rows: vertically centered body labels, Settings values at the right, and centere
 semibold binding combinations. They do not use the feature control-panel titles.
 Settings' compact position dropdown is `Style.space(130) * 0.9` wide.
 
-All layout monitor names use a dim caption above the upper-left corner outside
-the rectangle, following Windows. Displays keeps its role dropdown alongside the
-name; Workspaces keeps its role alongside the name. Displays, Workspaces, Bar,
-Color Match and Windows reserve a caption lane in each monitor slot so stacked
-monitors cannot cover the names. Non-Span Wallpaper reserves the same lane and
-shrinks each tile proportionally to keep its crop geometry intact; Span retains
-its continuous monitor geometry.
+Only the Displays layout shows monitor names: dim captions inside the upper-left
+corner of each rectangle, with the role dropdown alongside. Workspaces, Bar,
+Windows, Color Match and Wallpaper layouts omit monitor names and caption lanes.
+Wallpaper tiles retain their exact monitor aspect ratio in every mode.
 Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
 `Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
 the live roundness token.

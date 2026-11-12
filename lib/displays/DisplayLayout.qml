@@ -20,7 +20,6 @@ Ui.BorderSurface {
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
-  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real monitorGap: Style.spacing.sm
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
@@ -130,9 +129,9 @@ Ui.BorderSurface {
       x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2 + offsetX
       y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2 + canvas.labelHeight + offsetY
+        + canvas.monitorGap / 2 + offsetY
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
       color: monitorCard.isSelected ? Color.menu.selectedBackground : canvas.cardBackground
       borderSpec: Border.flat(isSelected
@@ -142,7 +141,7 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
       Row {
-        x: 0; y: -height - Style.spacing.sm
+        x: Style.spacing.sm; y: Style.spacing.sm
         spacing: Style.spacing.sm
         z: 3
         Text {

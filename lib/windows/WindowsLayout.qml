@@ -65,8 +65,7 @@ Ui.BorderSurface {
   required property var service
   readonly property var displays: service ? service.displayDraft : []
   readonly property real horizontalInset: width * 0.1
-  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
-  readonly property real verticalInset: Math.max(height * 0.1, labelHeight + Style.spacing.sm)
+  readonly property real verticalInset: Math.max(height * 0.1, Style.spacing.sm)
   readonly property real monitorGap: Style.spacing.sm
   clip: true
   color: Commons.Color.popups.background
@@ -119,9 +118,9 @@ Ui.BorderSurface {
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2 + canvas.labelHeight
+        + canvas.monitorGap / 2
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       z: isSelected ? 1 : 0
       color: isSelected ? Commons.Color.menu.selectedBackground : Commons.Color.popups.background
       borderSpec: Border.flat(isSelected
@@ -131,16 +130,6 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
-      Text {
-        objectName: "monitorName-" + monitorCard.modelData.name
-        x: 0; y: -height - Style.spacing.sm
-        width: parent.width
-        text: monitorCard.modelData.name
-        color: canvas.tokens.textDim
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-        elide: Text.ElideRight
-      }
     }
   }
   function workArea(monitorIndex) {
@@ -149,8 +138,8 @@ Ui.BorderSurface {
     var size = Model.logicalSize(display)
     var gap = Math.max(0, Number(values.outerGap) || 0) * zoom
     var x = originX + display.x * zoom - bounds.x * zoom + monitorGap / 2
-    var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2 + labelHeight
-    var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap - labelHeight
+    var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2
+    var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap
     return {x:x + gap, y:y + gap, width:Math.max(0,w - gap * 2), height:Math.max(0,h - gap * 2)}
   }
   function windowRect(index) {

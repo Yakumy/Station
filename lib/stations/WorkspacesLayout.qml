@@ -40,7 +40,6 @@ Ui.BorderSurface {
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
   radius: Style.cornerRadius
   readonly property real gridStep: Style.space(16)
-  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real monitorGap: Style.spacing.sm
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
@@ -132,9 +131,9 @@ Ui.BorderSurface {
       x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2 + canvas.labelHeight
+        + canvas.monitorGap / 2
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       color: Commons.Color.popups.background
       borderSpec: Border.flat(dropTarget ? Commons.Color.accent
         : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
@@ -223,26 +222,6 @@ Ui.BorderSurface {
               onClicked: canvas.countChangeRequested(monitorCard.modelData.name, parent.modelData.delta)
             }
           }
-        }
-      }
-
-      Row {
-        x: 0; y: -height - Style.spacing.sm
-        spacing: Style.spacing.sm
-        Text {
-          objectName: "workspaceMonitorName-" + monitorCard.modelData.name
-          text: monitorCard.modelData.name
-          textFormat: Text.PlainText
-          color: canvas.tokens ? canvas.tokens.textDim : Commons.Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-        }
-        Text {
-          objectName: "workspaceMonitorRole-" + monitorCard.modelData.name
-          text: monitorCard.outputIndex !== -1 ? "| " + (monitorCard.outputIndex + 1) : "| Off"
-          color: canvas.tokens ? canvas.tokens.textDim : Commons.Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
         }
       }
 

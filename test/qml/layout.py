@@ -276,6 +276,17 @@ Item {
       mouseClick(target, target.width / 2, target.height / 2)
       compare(service.previews, 0); compare(service.writes, 0)
     }
+    function test_monitor_heading_is_inside_display_card() {
+      var target = card("HDMI-A-2")
+      var name = findChild(target, "monitorName-HDMI-A-2")
+      var menu = findChild(target, "monitorRoleMenu")
+      verify(name !== null && menu !== null)
+      var namePos = name.mapToItem(target, 0, 0)
+      var menuPos = menu.mapToItem(target, 0, 0)
+      verify(namePos.x > 0 && namePos.y > 0)
+      verify(menuPos.x >= namePos.x + name.width)
+      verify(menuPos.y >= 0 && menuPos.y + menu.height <= target.height)
+    }
     function test_card_off_survives_delegate_destruction() {
       var menu = findChild(card("HDMI-A-2"), "monitorRoleMenu")
       verify(menu !== null)
@@ -304,7 +315,7 @@ Item {
       service.displayDraft = displays
       service.writes = 0; wait(10)
       fuzzyCompare((card("HDMI-A-2").width + layout.monitorGap) / layout.zoom, 720, 0.01)
-      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap + layout.labelHeight) / layout.zoom, 1280, 0.01)
+      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap) / layout.zoom, 1280, 0.01)
       move("HDMI-A-2", 1920, 1200)
     }
     function test_three_large_displays_fit() {
@@ -338,7 +349,7 @@ Item {
       var first = barCard("eDP-1"), second = barCard("HDMI-A-2")
       fuzzyCompare(second.x - first.x - first.width, barLayout.monitorGap, 0.01)
     }
-    function test_bar_preview_clears_monitor_name_and_every_card_edge() {
+    function test_bar_preview_omits_monitor_name_and_clears_every_card_edge() {
       service.displayDraft = [
         {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1}
       ]
@@ -350,13 +361,11 @@ Item {
         var target = barCard("eDP-1")
         var preview = findChild(target, "barPreview-eDP-1")
         var name = findChild(target, "monitorName-eDP-1")
-        verify(preview !== null && name !== null)
+        verify(preview !== null && name === null)
         verify(preview.x >= barLayout.barEdgeGap - 0.01)
         verify(preview.x + preview.width <= target.width - barLayout.barEdgeGap + 0.01)
         verify(preview.y >= barLayout.barEdgeGap - 0.01)
-        verify(preview.x + preview.width <= name.x || name.x + name.width <= preview.x
-          || preview.y + preview.height <= name.y || name.y + name.height <= preview.y,
-          "The outside monitor name must clear the bar on every side")
+
         verify(preview.y + preview.height <= target.height - barLayout.barEdgeGap + 0.01)
       }
     }
@@ -477,11 +486,11 @@ Item {
       var target = card("HDMI-A-2")
       var oldWidth = target.width
       var oldCenterX = target.x + target.width / 2
-      var oldCenterY = target.y + target.height / 2 - layout.labelHeight / 2
+      var oldCenterY = target.y + target.height / 2
       layout.zoomAt(1.2, oldCenterX, oldCenterY)
       verify(target.width > oldWidth)
       compare(Math.round(target.x + target.width / 2), Math.round(oldCenterX))
-      compare(Math.round(target.y + target.height / 2 - layout.labelHeight / 2), Math.round(oldCenterY))
+      compare(Math.round(target.y + target.height / 2), Math.round(oldCenterY))
       compare(service.previews, 0)
     }
     function test_background_pan_does_not_modify_monitor_layout() {
