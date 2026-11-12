@@ -63,7 +63,7 @@ test('the staging helper strips compressed PNG metadata without decoding it', ()
     const result = spawnSync('perl', [helper, source, destination], {encoding: 'utf8'});
     assert.equal(result.status, 0, result.stderr);
     const outputPath = result.stdout.trim();
-    assert.equal(outputPath, path.join(destination, 'image.png'));
+    assert.equal(outputPath, path.join(destination, 'renamed.png'));
     const output = fs.readFileSync(outputPath);
     assert.deepEqual(chunks(output).map(value => value.type), ['IHDR', 'IDAT', 'IEND']);
     assert.deepEqual(chunks(output).find(value => value.type === 'IDAT').data,

@@ -14,9 +14,11 @@ QtObject {
   readonly property bool noticeError: snapshot ? snapshot.noticeError === true : false
   readonly property bool pickerBusy: snapshot ? snapshot.pickerBusy === true : false
   readonly property string themePath: snapshot ? snapshot.themePath : ""
+  readonly property string themeName: snapshot && snapshot.themeName ? snapshot.themeName : ""
   readonly property bool dirty: snapshot ? snapshot.dirty === true : false
 
   function call(name, args) { return api ? api.call(name, args) : undefined }
+  function openMenu(kind) { return call("wallpaperOpenMenu", [kind]) }
   function choose(identity) { return call("wallpaperChoose", [identity]) }
   function change(key, value) { return call("wallpaperChange", [key, value]) }
   function frame(value) { return call("wallpaperFrame", [value]) }

@@ -726,6 +726,14 @@ otherwise refresh it, is usually hidden.
 
 Wallpaper is independent of workspace and monitor policy and emits no monitor commands.
 Its modes are Same on all (the default, following Omarchy), Per monitor, and Span.
+The five control rows are Mode (dropdown), Follow Omarchy theme (Yes/No dropdown),
+Choose image, Choose theme background and Choose theme. The three buttons fill their
+row's padded width, with the selected image filename, current background filename,
+and current theme name beneath them. Per monitor shows `Selected: <connector>` above
+the controls; the layout selects that monitor. Other modes leave that heading empty.
+The theme buttons close Station and open Omarchy's native Background and Theme
+menus. There is no Use Omarchy wallpaper or Reset frame button; framing remains
+available through canvas gestures.
 
 - Outputs come from observed Hyprland state. A returning output recovers its choice.
   Mirror sinks inherit through the compositor.
@@ -754,8 +762,8 @@ Its modes are Same on all (the default, following Omarchy), Per monitor, and Spa
 - With Follow off, a pinned profile ignores theme changes. Apply makes the snapshot,
   because a theme may rewrite the same path.
 - Choosing an image closes the panel first, because the native chooser needs focus.
-  The panel returns to Wallpaper on success, cancellation and error. Under Follow, it
-  shows a notice instead of opening the chooser.
+  The panel returns to Wallpaper on success, cancellation and error. Accepting a
+  safely prepared local image turns Follow off; cancellation leaves Follow unchanged.
 - The service draws click-through bottom-layer surfaces above the stock background. The
   default mode leaves the stock surface visible.
 - Animated images show a static first frame.
@@ -786,6 +794,8 @@ argv, recognizes PNG, JPEG, GIF, BMP and WebP by magic bytes, and writes a priva
 - Limits: 128 MiB input, and for PNG 4,096 chunks and a 256 MiB decoded raster.
 - PNG keeps only IHDR, PLTE, IDAT, IEND and small rendering chunks. It discards text,
   ICC, EXIF, animation and unknown chunks without decompressing them.
+- Private image copies retain the source basename with the detected format extension,
+  including across Apply snapshots, so the Choose image hint stays recognizable.
 - Only marked paths under Station's wallpaper directory render. Older unmarked choices
   stay hidden until restaged and the save is acknowledged.
 - A save failure restores the previous wallpaper. Copies survive mode changes, failed

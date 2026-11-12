@@ -90,7 +90,7 @@ test('snapshot is detached, including wallpaper, with no controller back-referen
   context.openApps = { 'DP-1': [{ address: '0x123', focused: true }] };
   context.displayDraft = [{ name: 'DP-1' }];
   context.bindStatuses = [{ id: 'switch-1', status: 'conflict' }];
-  context.wallpaper = { draft: { framing: { zoom: 1 } }, layout: { displays: [{ name: 'DP-1' }] }, station: context };
+  context.wallpaper = { themeName: "tokyo-night", draft: { framing: { zoom: 1 } }, layout: { displays: [{ name: 'DP-1' }] }, station: context };
   context.state = 'idle';
   const data = ServiceContract.snapshot(context);
   data.openApps['DP-1'][0].focused = false;
@@ -105,6 +105,7 @@ test('snapshot is detached, including wallpaper, with no controller back-referen
   assert.equal(context.bindStatuses[0].status, 'conflict');
   assert.equal(context.wallpaper.draft.framing.zoom, 1);
   assert.equal(context.wallpaper.layout.displays.length, 1);
+  assert.equal(data.wallpaper.themeName, 'tokyo-night');
   assert.equal(data.wallpaper.station, undefined);
   assert.equal(data.manifest, undefined);
   assert.equal(data.pluginVersion, 'test');

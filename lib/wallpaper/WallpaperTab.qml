@@ -2,7 +2,6 @@ import QtQuick
 import qs.Ui as Ui
 import qs.Commons
 import "Wallpaper.js" as Wallpaper
-import "../panel" as PanelUi
 import "." as WallpaperUi
 
 Column {
@@ -18,57 +17,40 @@ Column {
   readonly property real pad: tokens.regionPadH
   spacing: 0
   component Caption: Text {
+    textFormat: Text.PlainText
     color: root.tokens.textDim
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
     wrapMode: Text.WordWrap
   }
-  component ModeSelector: Ui.BorderSurface {
-    id: selector
-    property string value: ""
-    property var options: []
-    signal changed(string value)
-    color: Color.popups.background
-    borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
-    radius: Style.cornerRadius
-    clip: true
-
-    Row {
-      anchors.fill: parent
-      anchors.margins: Math.max(1, Style.normalBorderWidth)
-      spacing: 0
-      Repeater {
-        model: selector.options
-        delegate: Item {
-          required property var modelData
-          required property int index
-          width: (selector.width - Math.max(1, Style.normalBorderWidth) * 2) / selector.options.length
-          height: parent.height
-          Ui.Button {
-            anchors.fill: parent
-            topLeftRadius: index === 0 ? Style.cornerRadius : 0
-            bottomLeftRadius: index === 0 ? Style.cornerRadius : 0
-            topRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
-            bottomRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
-            text: modelData.label
-            selected: selector.value === modelData.value
-            focusable: true
-            foreground: Color.popups.text
-            background: Color.popups.background
-            accent: Color.accent
-            onClicked: selector.changed(modelData.value)
-          }
-          Rectangle {
-            visible: index > 0
-            anchors.left: parent.left
-            height: parent.height
-            width: Math.max(1, Style.normalBorderWidth)
-            color: Border.color(Border.controlSpec("normal", Color.popups.text, Color.accent))
-          }
-        }
-      }
-    }
+  function fileName(path) { return String(path || "").split("/").pop() }
+  readonly property string imagePath: scene.mode === "individual" && selectedDisplay
+    ? (scene.perDisplay[selectedDisplay.identity] || scene.source) : scene.source
+  component RowTitle: Caption {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.top: parent.top; anchors.topMargin: root.tokens.space2
   }
+  component RowHint: Caption {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space1
+    wrapMode: Text.NoWrap
+    elide: Text.ElideRight
+  }
+  component RowDropdown: Ui.Dropdown {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.verticalCenter: parent.verticalCenter
+    showLabel: false
+    foreground: root.tokens.textPrimary
+  }
+  component RowButton: Ui.Button {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.verticalCenter: parent.verticalCenter
+    bordered: true
+  }
+
   Row {
     width: parent.width
     height: Style.space(428)
@@ -123,7 +105,10 @@ Column {
         Ui.PanelSectionHeader {
           anchors.left: parent.left; anchors.leftMargin: Style.space(28)
           anchors.verticalCenter: parent.verticalCenter
-          text: "WALLPAPER"; foreground: Color.popups.text
+          objectName: "wallpaperSelectedMonitor"
+          text: root.scene.mode === "individual" && root.selectedDisplay
+            ? "Selected: " + root.selectedDisplay.name : ""
+          foreground: Color.popups.text
         }
       }
       Ui.BorderSurface {
@@ -140,100 +125,63 @@ Column {
           Item {
             id: modeRow
             width: parent.width; height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.top: parent.top; anchors.topMargin: root.tokens.space2
-              text: "MODE"
-            }
-            ModeSelector {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space2
-              height: Style.spacing.controlHeight
-              value: root.scene.mode
+            RowTitle { text: "Mode" }
+            RowDropdown {
+              id: modeDropdown
+              objectName: "wallpaperModeDropdown"
               options: [{ value: "span", label: "Span" }, { value: "individual", label: "Per monitor" }, { value: "same", label: "Same on all" }]
               onChanged: function(value) { root.controller.change("mode", value) }
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
-          }
-          Item {
-            id: imageRow
-            width: parent.width; height: controlFrame.height / 5
-            PanelUi.InlineDropdown {
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.top: parent.top; anchors.topMargin: root.tokens.space1
-              visible: root.scene.mode === "individual"
-              prefix: "Monitor: "
-              value: root.selectedDisplay ? root.selectedDisplay.name : ""
-              options: root.controller ? root.controller.layout.displays.map(function(d) { return { value: d.name, label: d.name } }) : []
-              onChanged: function(value) { root.selectedName = value }
-            }
-            Row {
-              id: imageActions
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              y: root.scene.mode === "individual" ? parent.height - height - root.tokens.space1 : (parent.height - height) / 2
-              spacing: root.tokens.space2
-              Ui.Button {
-                text: "Choose image…"; bordered: true
-                enabled: root.selectedDisplay !== null && root.controller && !root.controller.pickerBusy
-                onClicked: {
-                  var target = root.scene.mode === "individual" ? root.selectedDisplay.identity : ""
-                  var owner = root.controller
-                  if (owner.choose(target)) root.dismiss()
-                }
-              }
-              Ui.Button {
-                text: "Use Omarchy wallpaper"; bordered: true
-                enabled: root.controller && root.controller.themePath !== ""
-                onClicked: root.controller.useTheme()
-              }
-            }
+            Binding { target: modeDropdown; property: "value"; value: root.scene.mode }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
             id: followRow
             width: parent.width; height: controlFrame.height / 5
-            Caption {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              text: "Follow Omarchy wallpaper"
+            RowTitle { text: "Follow Omarchy theme" }
+            RowDropdown {
+              id: followDropdown
+              objectName: "wallpaperFollowDropdown"
+              options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]
+              onChanged: function(value) { root.controller.change("followTheme", value === "yes") }
             }
-            Ui.ToggleSwitch {
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              checked: root.scene.followTheme
-              trackHeight: Style.spacing.controlHeight
-              foreground: Color.popups.text
-              onToggled: root.controller.change("followTheme", !checked)
-            }
+            Binding { target: followDropdown; property: "value"; value: root.scene.followTheme ? "yes" : "no" }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
-            id: frameRow
+            id: imageRow
             width: parent.width; height: controlFrame.height / 5
-            readonly property bool framing: root.scene.mode !== "span" && root.selectedDisplay !== null && canvasLoader.item !== null
-            readonly property var shownFrame: framing
-              ? Wallpaper.frameFor(canvasLoader.item.shownScene, root.selectedDisplay) : Wallpaper.framing({})
-            Caption {
-              visible: frameRow.framing
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: resetFrame.left; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
-              text: frameRow.framing ? root.selectedDisplay.name + " · " + Math.round(frameRow.shownFrame.zoom * 100) + "%" : ""
+            RowButton {
+              objectName: "wallpaperChooseImage"
+              text: "Choose image…"
+              enabled: root.selectedDisplay !== null && root.controller && !root.controller.pickerBusy
+              onClicked: {
+                var target = root.scene.mode === "individual" ? root.selectedDisplay.identity : ""
+                var owner = root.controller
+                if (owner.choose(target)) root.dismiss()
+              }
             }
-            Ui.Button {
-              id: resetFrame
-              visible: frameRow.framing
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              text: "Reset frame"; bordered: true
-              enabled: frameRow.framing && Wallpaper.hasFrame(canvasLoader.item.shownScene, root.selectedDisplay)
-              onClicked: canvasLoader.item.resetSelected()
-            }
+            RowHint { objectName: "wallpaperImageHint"; text: root.fileName(root.imagePath) }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
+            RowButton {
+              objectName: "wallpaperThemeBackground"
+              text: "Choose theme background…"
+              onClicked: root.controller.openMenu("background")
+            }
+            RowHint { text: root.controller ? root.fileName(root.controller.themePath) : "" }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+          }
+          Item {
+            width: parent.width; height: controlFrame.height / 5
+            RowButton {
+              objectName: "wallpaperThemePicker"
+              text: "Choose theme…"
+              onClicked: root.controller.openMenu("theme")
+            }
+            RowHint { text: root.controller ? root.controller.themeName : "" }
           }
         }
       }

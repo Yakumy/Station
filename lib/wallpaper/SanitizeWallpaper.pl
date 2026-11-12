@@ -156,7 +156,13 @@ my @parent_stat = lstat($parent);
 fail('private wallpaper parent must be a real directory')
     unless @parent_stat && S_ISDIR($parent_stat[2]) && !-l _;
 mkdir($directory, 0700) or fail('could not create private wallpaper directory');
-my $destination = "$directory/image.$extension";
+# Retain a recognizable filename for the panel hint. The format extension comes
+# from magic bytes; the basename is data and is never interpreted by a shell.
+my ($name) = $source =~ m{([^/]+)\z};
+$name =~ s/\.[^.]*\z//;
+$name =~ s/[\x00-\x1f\x7f]/_/g;
+$name = 'image' if !length($name) || length($name) > 160 || $name eq '.' || $name eq '..';
+my $destination = "$directory/$name.$extension";
 my $ok = eval {
     sysopen(my $output, $destination, O_WRONLY | O_CREAT | O_EXCL, 0600)
         or fail('could not create sanitized image');

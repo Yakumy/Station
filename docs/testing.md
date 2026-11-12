@@ -46,6 +46,7 @@ QML harnesses cover that part.
 | `color-match` | Color Match tab rendered with HDR and adjusted monitors, live values and release calls; the owner with a real `FileView`, a recording queue and a failed apply |
 | `workspaces-tab` | Workspaces tab badges and roles in all three modes, − and + limits, Non-repetitive drop targets and moves, Cancel and Apply, and the disabled selector on one monitor, rendered |
 | `wallpaper-layout` | Crop gestures |
+| `wallpaper-tab` | Mode and Follow dropdown bindings, filename hints, per-monitor selection and native-menu requests, rendered with a fake owner |
 | `window-settings`, `window-sliders`, `windows-tab` | Window owner, slider pointer events, preview exchange |
 
 ## Continuous integration

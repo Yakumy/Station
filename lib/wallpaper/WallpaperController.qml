@@ -114,6 +114,8 @@ Item {
     if (busy || importBusy) return
     var next = JSON.parse(JSON.stringify(draft))
     next[key] = value
+    if (key === "followTheme" && value === true)
+      next = Wallpaper.resolve(Object.assign({}, preferences, { mode: draft.mode, followTheme: true }), themeKey, themePath, themeRevision)
     draft = next; dirty = true; clearNotice()
   }
   function frame(value) { change("framing", Wallpaper.framing(value)) }
@@ -145,11 +147,8 @@ Item {
     })
   }
   function acceptSanitized(path, target) {
-    if (draft.followTheme) {
-      showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
-      return
-    }
     if (!sanitizedPath(path)) { showNotice("Choose a local image file.", true); return }
+    change("followTheme", false)
     if (target) {
       var map = Object.assign({}, draft.perDisplay); map[target] = path
       change("perDisplay", map)
@@ -162,13 +161,19 @@ Item {
     var target = pickerTarget
     var generation = ++serial
     importBusy = true; showNotice("Preparing wallpaper safely…")
-    stagePath(path, generation, 0, function(code, prepared) {
+    // Keep other monitors on a private copy of the current theme image when a
+    // per-monitor selection turns Follow off.
+    var baseline = draft.followTheme && target ? draft.source : ""
+    var paths = baseline && baseline !== path ? [path, baseline] : [path]
+    stagePaths(paths, generation, function(code, prepared) {
       if (generation !== root.serial) return
       root.importBusy = false
       if (code !== 0) { root.showNotice("The image could not be prepared safely. Choose another file.", true); return }
-      root.acceptSanitized(prepared, target)
+      if (baseline) root.change("source", prepared[baseline])
+      root.acceptSanitized(prepared[path], target)
     })
   }
+
   function prepareLegacyWallpaper() {
     if (!configLoaded || !pluginDir || dirty || busy || importBusy
         || applied.followTheme || applied.safe || !applied.source) return
@@ -205,14 +210,17 @@ Item {
   function choose(identity) {
     if (typeof identity !== "string" || (identity !== "" && !layout.displays.some(function(display) { return display.identity === identity }))) return false
     if (pickerBusy || busy) return false
-    if (draft.followTheme) {
-      showNotice("Turn off Follow Omarchy wallpaper to select your own wallpaper.", true)
-      return false
-    }
     pickerTarget = identity || ""
     // The picker is a separate native window: release the panel's focus grab.
     releasePanel()
     pickerDelay.restart()
+    return true
+  }
+  function openMenu(kind) {
+    if (["background", "theme"].indexOf(kind) === -1 || busy || pickerBusy || menuDelay.running) return false
+    menuDelay.route = "appearance." + kind
+    releasePanel()
+    menuDelay.restart()
     return true
   }
   function useTheme() {
@@ -244,11 +252,11 @@ Item {
     if (pending.copying) return
     pending.copying = true
     var job = pending, folder = stateDir + "/wallpapers/" + Date.now() + "-" + job.serial
-    var destinations = job.paths.map(function(p, i) { return folder + "/" + i + "." + p.split(".").pop().replace(/[^a-zA-Z0-9]/g, "").slice(0, 10) })
+    var destinations = job.paths.map(function(p, i) { return folder + "/" + i + "/" + p.split("/").pop() })
     // Fixed script; every path is a quoted positional argument. Originals and
     // Omarchy's current/background link are never changed. Snapshots survive
     // theme regeneration at the same pathname and deletion of a chosen file.
-    var script = 'set -eu; umask 077; folder=$1; shift; mkdir -p -- "${folder%/*}"; mkdir -- "$folder"; while [ "$#" -gt 0 ]; do cp --reflink=auto -- "$1" "$2"; shift 2; done'
+    var script = 'set -eu; umask 077; folder=$1; shift; mkdir -p -- "${folder%/*}"; mkdir -- "$folder"; while [ "$#" -gt 0 ]; do mkdir -- "${2%/*}"; cp --reflink=auto -- "$1" "$2"; shift 2; done'
     var args = ["bash", "-c", script, "station-wallpaper", folder]
     job.paths.forEach(function(p, i) { args.push(p, destinations[i]) })
     enqueue(args, function(code) {
@@ -352,6 +360,12 @@ Item {
       else if (code !== 1) root.showNotice("The desktop file picker could not open.", true)
       root.returnPanel()
     }
+  }
+  Timer {
+    id: menuDelay
+    property string route: ""
+    interval: 200
+    onTriggered: Quickshell.execDetached(["omarchy", "menu", "summon", route])
   }
   Timer { id: pickerDelay; interval: 200; onTriggered: picker.running = true }
 

@@ -131,7 +131,7 @@ function controller() {
     dirty: true, busy: false, pickerBusy: false, pendingSave: false, repairPending: false,
     repairPrevious: null, repairLegacyKey: '', importBusy: false, failedLegacyKey: '',
     pickerTarget: '', serial: 0,
-    themeKey: 'original', preferences: W.settings({}),
+    themeKey: 'original', themePath: '/tmp/theme.png', themeRevision: 'revision', preferences: W.settings({}),
     layout: layout([monitor('A')]), validation: {count: 1, objectAt: () => ({status: 1})},
     station: {stateDir: '/tmp/station-test', pluginDir: process.cwd(), configLoaded: true,
       config: {}, saveConfig() {this.saved = true},
@@ -150,21 +150,51 @@ function controller() {
   vm.createContext(c); vm.runInContext(methods, c);
   return c;
 }
-test('Follow Omarchy blocks local selection and keeps the panel open with an error', () => {
+test('local selection keeps Follow until a sanitized image is accepted', () => {
   const c = controller();
   c.station.panelWanted = true;
-  assert.equal(c.choose(c.layout.displays[0].identity), false);
-  assert.equal(c.notice, 'Turn off Follow Omarchy wallpaper to select your own wallpaper.');
-  assert.equal(c.noticeError, true);
-  assert.equal(c.station.panelWanted, true);
-  assert.equal(c.pickerDelay.restarts, 0);
-
-  c.change('followTheme', false);
-  assert.equal(c.notice, '');
-  assert.equal(c.noticeError, false);
   assert.equal(c.choose(c.layout.displays[0].identity), true);
   assert.equal(c.station.panelWanted, false);
   assert.equal(c.pickerDelay.restarts, 1);
+  assert.equal(c.draft.followTheme, true, 'opening or cancelling the picker keeps Follow');
+  c.acceptSanitized('/tmp/station-test/wallpapers/a/one.png', '');
+  assert.equal(c.draft.followTheme, false);
+  assert.equal(c.draft.source, '/tmp/station-test/wallpapers/a/one.png');
+});
+test('theme menus validate the route and release panel focus before launch', () => {
+  const c = controller();
+  c.menuDelay = { running: false, route: '', restarts: 0, restart() { this.restarts++; } };
+  c.station.panelWanted = true;
+  assert.equal(c.openMenu('unknown'), false);
+  assert.equal(c.station.panelWanted, true);
+  assert.equal(c.openMenu('background'), true);
+  assert.equal(c.station.panelWanted, false);
+  assert.equal(c.menuDelay.route, 'appearance.background');
+  assert.equal(c.menuDelay.restarts, 1);
+  c.busy = true;
+  assert.equal(c.openMenu('theme'), false);
+  c.busy = false;
+  assert.equal(c.openMenu('theme'), true);
+  assert.equal(c.menuDelay.route, 'appearance.theme');
+});
+test('turning Follow on immediately previews the current theme image', () => {
+  const c = controller();
+  c.draft.followTheme = false;
+  c.change('followTheme', true);
+  assert.equal(c.draft.source, '/tmp/theme.png');
+  assert.equal(c.draft.followTheme, true);
+  assert.equal(c.draft.revision, 'revision');
+});
+test('per-monitor local selection stages the theme baseline before turning Follow off', () => {
+  const c = controller();
+  c.pickerTarget = c.layout.displays[0].identity;
+  c.prepareSelection('/tmp/chosen.jpg');
+  c.station.done(0, '/tmp/station-test/wallpapers/a/chosen.jpg\n');
+  assert.equal(c.draft.followTheme, true);
+  c.station.done(0, '/tmp/station-test/wallpapers/b/theme.png\n');
+  assert.equal(c.draft.followTheme, false);
+  assert.equal(c.draft.source, '/tmp/station-test/wallpapers/b/theme.png');
+  assert.equal(c.draft.perDisplay[c.pickerTarget], '/tmp/station-test/wallpapers/a/chosen.jpg');
 });
 test('framing a monitor marks the draft dirty, survives Apply and ignores an unknown monitor', () => {
   const c = controller();
