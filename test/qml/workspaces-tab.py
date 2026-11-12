@@ -45,7 +45,7 @@ ShellRoot {
       {name: "HDMI-A-2", width: 1920, height: 1200, x: 0, y: -120, scale: 1, transform: 0, enabled: true},
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
     property var config: ({workspaceMode: "station", workspaceLayout: {repetitive: {}, nonrepetitive: {}},
-      indicatorStyle: "prefixed", compactMode: "hover", showOpenApps: true})
+      direction: "ltr", indicatorStyle: "prefixed", compactMode: "hover", showOpenApps: true})
     property var workspaceTarget: ({outputs: ["eDP-1", "HDMI-A-2"]})
     property string state: "idle"
     property var calls: []
@@ -137,7 +137,7 @@ ShellRoot {
         return
       }
       if (phase === 1) {
-        findObject(tab, "workspaceMode-nonrepetitive").clicked()
+        findObject(tab, "workspaceModeSelector").changed("nonrepetitive")
         if (fakeService.calls.length || fakeService.config.workspaceMode !== "station") { fail("mode applied before Apply"); return }
         if (!actions.visible) { fail("actions after an edit"); return }
         if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "6,7,8,9,10") { fail("non-repetitive default"); return }
@@ -162,7 +162,7 @@ ShellRoot {
         if (badges("eDP-1") !== "2,4,5" || badges("HDMI-A-2") !== "1,3,6,7,8") { fail("minus elsewhere"); return }
         findObject(tab, "workspacesCancel").clicked()
         if (actions.visible || tab.mode !== "station" || badges("eDP-1") !== "1,3,5") { fail("cancel"); return }
-        findObject(tab, "workspaceMode-nonrepetitive").clicked()
+        findObject(tab, "workspaceModeSelector").changed("nonrepetitive")
         layout.workspaceMoved(1, "HDMI-A-2")
         phase = -1
         save("nonrepetitive", function() { phase = 2 })
@@ -176,7 +176,7 @@ ShellRoot {
           fail("apply " + JSON.stringify(fakeService.calls)); return
         }
         if (actions.visible) { fail("actions after apply"); return }
-        findObject(tab, "workspaceMode-repetitive").clicked()
+        findObject(tab, "workspaceModeSelector").changed("repetitive")
         if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "1,2,3,4,5") { fail("repetitive default"); return }
         for (var i = 0; i < 7; i++) layout.countChangeRequested("eDP-1", 1)
         for (var j = 0; j < 6; j++) layout.countChangeRequested("HDMI-A-2", -1)
@@ -199,7 +199,7 @@ ShellRoot {
         var selector = findObject(tab, "workspaceModeSelector")
         var note = findObject(tab, "workspaceModeNote")
         if (selector.enabled || note.text !== "Works only on multiple monitors") { fail("single monitor"); return }
-        if (selector.opacity !== tokens.disabledOpacity || findObject(tab, "workspaceMode-repetitive").selected) {
+        if (selector.opacity !== tokens.disabledOpacity) {
           fail("single monitor style"); return
         }
         var frame = findObject(tab, "workspaceModeSelector").parent

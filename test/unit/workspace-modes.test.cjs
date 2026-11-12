@@ -291,10 +291,11 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   c.targetMapping = () => G.mapping([{ name: 'A' }, { name: 'B' }], { A: 1, B: 2 }, {},
     { mode: c.config.workspaceMode, layout: c.config.workspaceLayout });
   c.setWorkspaceSetting = qmlFunction(source, 'setWorkspaceSetting', c);
-  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number' }), 'ok');
+  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number', direction: 'btt' }), 'ok');
+  assert.equal(c.config.direction, 'btt');
   assert.deepEqual([c.config.compactMode, c.config.showOpenApps, c.config.indicatorStyle], ['off', false, 'number']);
   assert.equal(reconciled, 0, 'bar options do not renumber');
-  for (const bad of [{ workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, null])
+  for (const bad of [{ direction: 'sideways' }, { workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, null])
     assert.equal(c.setWorkspaceSetting('workspaces', bad), 'invalid');
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'nonrepetitive',
     workspaceLayout: { repetitive: {}, nonrepetitive: { A: [1], B: [2, 3, 4, 5, 6] } } }), 'ok');

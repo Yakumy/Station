@@ -28,7 +28,7 @@ A Choice (either kind) must never use the Action look, and vice versa. The 4 mod
 
 Joined button groups use square inner corners. Only the first button's left corners
 and the last button's right corners use `Style.cornerRadius`; their shared corners
-are explicitly zero. This applies to the Workspaces and Wallpaper mode selectors,
+are explicitly zero. This applies to the Wallpaper mode selector,
 including selected, hovered and focused states.
 
 **[DECISION] Bind to `Style.cornerRadius` everywhere; never hardcode a radius, including `0`, except joined buttons’ shared corners and the monitor rectangles in the layout panels, which are always sharp.** Omarchy's current default resolves it sharp, which is what gives the panel its "sharp edges." Binding to the token rather than hardcoding zero means the panel still follows a theme that sets a different value, the same way every other token does. No component in this document uses a fixed pixel radius, and nothing is pill-shaped.

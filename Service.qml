@@ -540,6 +540,10 @@ Item {
         if (Grid.MODES.indexOf(value.workspaceMode) === -1) return "invalid"
         next.workspaceMode = value.workspaceMode
       }
+      if (value.direction !== undefined) {
+        if (["ltr", "rtl", "ttb", "btt"].indexOf(value.direction) === -1) return "invalid"
+        next.direction = value.direction
+      }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {
         if (["prefixed", "number", "roman"].indexOf(value.indicatorStyle) === -1) return "invalid"

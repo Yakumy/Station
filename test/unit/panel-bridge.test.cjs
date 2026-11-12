@@ -70,12 +70,12 @@ test('compact mode and open apps are Workspaces tab rows applied with the draft'
   assert.match(tab, /objectName: "compactModeDropdown"/);
   for (const value of ['off', 'hover', 'on'])
     assert.match(tab, new RegExp('value: "' + value + '"'));
-  assert.match(tab, /objectName: "showOpenAppsSwitch"/);
+  assert.match(tab, /objectName: "showOpenAppsDropdown"/);
   assert.doesNotMatch(tab, /stationAppsMode|workspaceCountIncrease|setSetting\("(?!workspaces")/);
   assert.match(tab, /service\.setSetting\("workspaces", JSON\.parse\(JSON\.stringify\(draft\)\)\)/);
   assert.doesNotMatch(settings, /stationAppsMode|minStations|compactMode|showOpenApps/, 'Settings no longer duplicates Workspaces rows');
   assert.ok(tab.indexOf('objectName: "compactModeDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
-  assert.ok(tab.indexOf('objectName: "showOpenAppsSwitch"') > tab.indexOf('objectName: "compactModeDropdown"'));
+  assert.ok(tab.indexOf('objectName: "showOpenAppsDropdown"') > tab.indexOf('objectName: "compactModeDropdown"'));
 
   const context = { config: { compactMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);

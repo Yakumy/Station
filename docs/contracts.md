@@ -129,7 +129,7 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 | `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default 5 |
 | `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default five each |
 
-The tab labels `station` as Sync. Sync offers stations 1 to 3; others appear while
+The tab labels `station` as Station. Station offers stations 1 to 3; others appear while
 they hold a window or are shown. With two outputs the first shows 1, 3 and 5.
 
 Repetitive counts belong to each connector, so every monitor keeps its own.
@@ -812,10 +812,14 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   only the last monitor has them: + adds the next number to it, − removes the highest
   number, wherever it is, while its monitor keeps one. Non-repetitive badges drag onto
   another monitor, which then owns that number; each monitor keeps 1 to 10.
-- The Workspaces frame has four rows of equal height: Mode, Indicator style, Compact
-  mode and Show open apps. As in Displays, a row's message sits in its bottom-left
-  corner: the drag hint in Non-repetitive and "Works only on multiple monitors" with one
-  output under Mode, and what the chosen compact mode and apps switch do.
+- The Workspaces frame has five equal-height dropdown rows: Mode, Indicator style,
+  Compact mode, Stations Direction and Show open apps. Titles sit at the top left,
+  dropdowns fill the width within the row padding, and hints sit at the bottom left.
+  Mode defaults to Station; Compact mode defaults to On hover. Direction moves from
+  Displays to this draft and retains LTR, RTL, TTB and BTT. It is disabled outside
+  Station mode with "only work with Station mode". Show open apps offers Off and On
+  and is disabled with Compact mode On, retaining its saved preference.
+  Mode retains the single-output restriction and the Non-repetitive drag hint.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.

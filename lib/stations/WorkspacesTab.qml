@@ -18,10 +18,11 @@ Column {
   readonly property bool idle: !!service && service.state === "idle"
   // The modes differ only across monitors, so one monitor locks the selector.
   readonly property bool singleOutput: outputs.length <= 1
-  readonly property int rowCount: 4
+  readonly property int rowCount: 5
 
   function savedValues() {
     return JSON.parse(JSON.stringify({
+      direction: config.direction || "ltr",
       workspaceMode: Grid.MODES.indexOf(config.workspaceMode) !== -1 ? config.workspaceMode : "station",
       workspaceLayout: config.workspaceLayout || { repetitive: {}, nonrepetitive: {} },
       indicatorStyle: config.indicatorStyle || "prefixed",
@@ -32,7 +33,7 @@ Column {
   // What the user sees: the mode, the numbers each monitor gets in both per-monitor
   // modes, and the bar options. Layout entries that change nothing do not count.
   function effective(values) {
-    return JSON.stringify([values.workspaceMode, values.indicatorStyle, values.compactMode, values.showOpenApps,
+    return JSON.stringify([values.workspaceMode, values.direction, values.indicatorStyle, values.compactMode, values.showOpenApps,
       Grid.assigned("repetitive", outputs, values.workspaceLayout),
       Grid.assigned("nonrepetitive", outputs, values.workspaceLayout)])
   }
@@ -128,59 +129,18 @@ Column {
     visible: text !== ""
     elide: Text.ElideRight
   }
-  component RowLabel: Text {
-    color: root.tokens.textPrimary
-    font.family: Style.font.family
-    font.pixelSize: Style.font.body
+  component RowLabel: Caption {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.top: parent.top; anchors.topMargin: root.tokens.space2
     elide: Text.ElideRight
   }
-  component ModeSelector: Ui.BorderSurface {
-    id: selector
-    property string value: ""
-    property var options: []
-    signal changed(string value)
-    opacity: enabled ? 1 : root.tokens.disabledOpacity
-    color: Commons.Color.popups.background
-    borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-    radius: Style.cornerRadius
-    clip: true
-
-    Row {
-      anchors.fill: parent
-      anchors.margins: Math.max(1, Style.normalBorderWidth)
-      spacing: 0
-      Repeater {
-        model: selector.options
-        delegate: Item {
-          required property var modelData
-          required property int index
-          width: (selector.width - Math.max(1, Style.normalBorderWidth) * 2) / selector.options.length
-          height: parent.height
-          Ui.Button {
-            anchors.fill: parent
-            topLeftRadius: index === 0 ? Style.cornerRadius : 0
-            bottomLeftRadius: index === 0 ? Style.cornerRadius : 0
-            topRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
-            bottomRightRadius: index === selector.options.length - 1 ? Style.cornerRadius : 0
-            objectName: "workspaceMode-" + modelData.value
-            text: modelData.label
-            selected: selector.enabled && selector.value === modelData.value
-            focusable: true
-            foreground: Commons.Color.popups.text
-            background: Commons.Color.popups.background
-            accent: Commons.Color.accent
-            onClicked: selector.changed(modelData.value)
-          }
-          Rectangle {
-            visible: index > 0
-            anchors.left: parent.left
-            height: parent.height
-            width: Math.max(1, Style.normalBorderWidth)
-            color: Border.color(Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent))
-          }
-        }
-      }
-    }
+  component RowDropdown: Ui.Dropdown {
+    anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
+    anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
+    anchors.verticalCenter: parent.verticalCenter
+    showLabel: false
+    foreground: root.tokens.textPrimary
   }
 
   Row {
@@ -245,17 +205,18 @@ Column {
             Caption {
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.top: parent.top; anchors.topMargin: root.tokens.space2
-              text: "MODE"
+              text: "Mode"
             }
-            ModeSelector {
+            RowDropdown {
               objectName: "workspaceModeSelector"
               enabled: !root.singleOutput
+              opacity: enabled ? 1 : root.tokens.disabledOpacity
               anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
               anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
               anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               value: root.mode
-              options: [{ value: "station", label: "Sync" }, { value: "repetitive", label: "Repetitive" },
+              options: [{ value: "station", label: "Station" }, { value: "repetitive", label: "Repetitive" },
                 { value: "nonrepetitive", label: "Non-repetitive" }]
               onChanged: function(value) { root.edit({ workspaceMode: value }) }
             }
@@ -269,17 +230,11 @@ Column {
           Item {
             width: parent.width; height: controlFrame.height / root.rowCount
             RowLabel {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: styleValue.left; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
               text: "Indicator style"
             }
-            Ui.Dropdown {
+            RowDropdown {
               id: styleValue
               objectName: "indicatorStyleDropdown"
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              width: Style.space(130)
               showLabel: false
               value: root.draft.indicatorStyle
               options: [
@@ -295,9 +250,6 @@ Column {
           Item {
             width: parent.width; height: controlFrame.height / root.rowCount
             RowLabel {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: compactValue.left; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
               text: "Compact mode"
             }
             RowMessage {
@@ -306,12 +258,9 @@ Column {
                 : root.draft.compactMode === "hover" ? "The current one, the rest on hover"
                 : "Only the current one"
             }
-            Ui.Dropdown {
+            RowDropdown {
               id: compactValue
               objectName: "compactModeDropdown"
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              width: Style.space(130)
               showLabel: false
               value: root.draft.compactMode
               options: [
@@ -325,37 +274,39 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
+            width: parent.width; height: controlFrame.height / root.rowCount
+            readonly property bool usable: root.mode === "station"
+            opacity: usable ? 1 : root.tokens.disabledOpacity
+            RowLabel { text: "Stations Direction" }
+            RowDropdown {
+              objectName: "stationsDirectionDropdown"
+              enabled: parent.usable
+              value: root.draft.direction
+              options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" },
+                { value: "ttb", label: "TTB" }, { value: "btt", label: "BTT" }]
+              onChanged: function(value) { root.edit({ direction: value }) }
+            }
+            RowMessage { text: parent.usable ? "" : "only work with Station mode" }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
+          }
+          Item {
             id: appsRow
             objectName: "showOpenAppsRow"
             width: parent.width; height: controlFrame.height / root.rowCount
             // Compact On shows only the current number, so it shows no apps.
             readonly property bool usable: root.draft.compactMode !== "on"
             opacity: usable ? 1 : root.tokens.disabledOpacity
-            RowLabel {
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space3
-              anchors.right: appsSwitch.left; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
-              text: "Show open apps"
-            }
+            RowLabel { text: "Show open apps" }
             RowMessage {
               objectName: "showOpenAppsNote"
               text: appsRow.usable ? "App icons next to each workspace" : "Needs compact mode Off or On hover"
             }
-            Ui.ToggleSwitch {
-              id: appsSwitch
-              objectName: "showOpenAppsSwitch"
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space3
-              anchors.verticalCenter: parent.verticalCenter
-              trackHeight: Style.spacing.controlHeight
-              checked: root.draft.showOpenApps
-              foreground: root.tokens.textPrimary
-              interactive: false
-            }
-            MouseArea {
-              anchors.fill: parent
+            RowDropdown {
+              objectName: "showOpenAppsDropdown"
               enabled: appsRow.usable
-              cursorShape: Qt.PointingHandCursor
-              onClicked: root.edit({ showOpenApps: !root.draft.showOpenApps })
+              value: root.draft.showOpenApps ? "on" : "off"
+              options: [{ value: "off", label: "Off" }, { value: "on", label: "On" }]
+              onChanged: function(value) { root.edit({ showOpenApps: value === "on" }) }
             }
           }
         }

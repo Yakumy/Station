@@ -477,14 +477,6 @@ Ui.Panel {
             anchors.verticalCenter: parent.verticalCenter
             spacing: panelTokens.space3
             PanelUi.InlineDropdown {
-              prefix: "Direction: "
-              value: root.service ? root.service.config.direction : "ltr"
-              options: [{ value: "ltr", label: "LTR" }, { value: "rtl", label: "RTL" },
-                { value: "ttb", label: "TTB" }, { value: "btt", label: "BTT" }]
-              foreground: panelTokens.textDim
-              onChanged: function(value) { if (root.service) root.service.setDirectionValue(value) }
-            }
-            PanelUi.InlineDropdown {
               prefix: "Mode: "
               value: root.modeValue
               options: root.modeOptions
