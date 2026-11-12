@@ -22,7 +22,7 @@ function qmlFunction(source, name, context = {}) {
 }
 
 function publisher(root) {
-  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\)\)/);
+  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\), function\(\) \{ return ServiceContract\.station\(root\) \}\)/);
   return { snapshot: () => ServiceContract.snapshot(root), actions: ServiceContract.actions(root) };
 }
 
@@ -198,4 +198,37 @@ test('explicit close clears intent even while the proxy still shows a transfer w
   assert.equal(live.panelTransferUntil, 0);
   assert.equal(live.panelWanted, false, 'dismissal must not wait for another snapshot');
   assert.equal(live.rememberedTab, 0);
+});
+
+test('fast station reads are detached, read-only, and retired with their publisher', () => {
+  const bridge = {};
+  runInNewContext(read('lib/BarBridge.js').replace(/^\.pragma library\s*/, ''), bridge);
+  const state = { currentStation: 1 };
+  let snapshots = 0;
+  const api = bridge.publish(() => { snapshots++; return ServiceContract.snapshot({wallpaper: {}, ...state}); }, {},
+    () => ServiceContract.station(state));
+  assert.equal(api.station(), 1);
+  state.currentStation = 3;
+  assert.equal(api.station(), 3);
+  assert.equal(snapshots, 0, 'indicator reads never serialize the large snapshot');
+  const replacement = bridge.publish(() => null, {}, () => 2);
+  assert.equal(api.station(), null, 'a retired service cannot supply a stale station');
+  bridge.clear(api);
+  assert.equal(replacement.station(), 2);
+  bridge.clear(replacement);
+  assert.equal(replacement.station(), null);
+});
+test('indicator refresh uses only a confirmed scalar and handles replacement and direct paths', () => {
+  const api = { station: () => 2 };
+  const c = { directService: null, bridgeApi: api, bridgeCurrent: () => api, bridgeStation: 1,
+    syncBridge() { c.resynced = true; } };
+  c.bridgeProxy = { readStation: qmlFunction(proxy, 'readStation', { api }) };
+  const sync = qmlFunction(panel, 'syncStation', c);
+  sync();
+  assert.equal(c.bridgeStation, 2);
+  for (const invalid of [null, undefined, NaN, '3', 0, 21, {}]) {
+    api.station = () => invalid; sync(); assert.equal(c.bridgeStation, 2);
+  }
+  c.bridgeCurrent = () => null; sync(); assert.equal(c.resynced, true);
+  c.directService = {}; c.bridgeCurrent = () => { throw Error('direct path must not poll'); }; sync();
 });

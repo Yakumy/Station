@@ -10,8 +10,14 @@ ShellRoot {
   property var calls: []
   readonly property var station: panelLoader.item
   property bool trusted: true
+  property int snapshotReads: 0
+  property int readsBeforeSwitch: 0
+  property int readsAtIndicator: 0
+  property double indicatorRequestedAt: 0
+  property real indicatorLatency: -1
   property var api: ({
-    snapshot: function() { return JSON.parse(JSON.stringify(root.state)) },
+    snapshot: function() { root.snapshotReads++; return JSON.parse(JSON.stringify(root.state)) },
+    station: function() { return root.state.currentStation },
     call: function(name, args) {
       root.calls.push([name, args])
       if (name === "monitorBar") return {enabled: true, position: "top", width: 100, height: 26, contentSize: 12, style: "default", background: "solid"}
@@ -67,7 +73,14 @@ ShellRoot {
     Loader {
       id: panelLoader
       active: root.state.config !== undefined
-      sourceComponent: PanelUi.StationPanel { bar: host; bridgeCurrent: function() { return root.api } }
+      sourceComponent: PanelUi.StationPanel {
+        bar: host
+        bridgeCurrent: function() { return root.api }
+        onStationNumberChanged: if (root.indicatorRequestedAt > 0) {
+          root.indicatorLatency = Date.now() - root.indicatorRequestedAt
+          root.readsAtIndicator = root.snapshotReads
+        }
+      }
     }
   }
   function find(node, name, visited) {
@@ -106,7 +119,23 @@ ShellRoot {
       } else if (step === 3 || step === 8) {
         if (!require(!station.opened && !root.state.panelWanted && root.state.rememberedTab === 0, "explicit dismissal")) return
         if (step === 3) { station.bridgeApi = root.api; station.bridgeSnapshot = root.api.snapshot(); root.trusted = false; station.syncBridge() }
-        else { console.log("PANEL_COMPOSITION_PASS direct and bridge paths, eight populated tabs, intent and key action"); stop(); Qt.quit(); return }
+        else {
+          // Compact On keeps full snapshots one second apart, but its station
+          // label is always visible. Confirm that the scalar timer wins.
+          root.state = Object.assign({}, root.state, {config: Object.assign({}, root.state.config, {compactMode:"on"})})
+          station.syncBridge()
+        }
+      } else if (step === 9) {
+        root.readsBeforeSwitch = root.snapshotReads
+        root.indicatorRequestedAt = Date.now()
+        root.state = Object.assign({}, root.state, {currentStation: 2})
+      } else if (step === 10) {
+        if (!require(station.stationNumber === 2 && root.indicatorLatency >= 0 && root.indicatorLatency < 180,
+            "indicator latency " + root.indicatorLatency)) return
+        if (!require(root.readsAtIndicator === root.readsBeforeSwitch, "indicator copied a full snapshot")) return
+        console.log("INDICATOR_LATENCY_MS " + root.indicatorLatency)
+        console.log("PANEL_COMPOSITION_PASS direct and bridge paths, eight populated tabs, intent, key action and fast confirmed indicator")
+        stop(); Qt.quit(); return
       }
       step++
     }

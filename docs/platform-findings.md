@@ -1310,3 +1310,26 @@ lcms2, and judged on screen by the maintainer.
   169 at 0.60. Not judged on screen by the maintainer yet.
 - [INFER] Screenshots should not show the correction, because it applies at scanout
   composition. Not checked.
+
+## Station indicator latency (2026-11-12)
+
+- **[SRC]** The replacement-bar label followed the full panel snapshot. With the
+  panel closed, Compact On read it every 1 s; Off and On hover read it every 150 ms.
+  The service changes `currentStation` only after its compositor batch succeeds.
+  The drawer's 600 ms reveal animation is separate from this number update.
+- **[LIVE]** On the installed two-output Station setup, one IPC switch and return
+  settled at the service in 167 ms and 247 ms from invocation (including IPC and
+  status-read overhead). The original station 2 was restored. This measures service
+  completion, not the rendered label or a physical key press. Local evidence is
+  `/tmp/station-switch-latency/results.json`.
+- **[QTTEST]** The production panel with a fake confirmed station reproduced an
+  847 ms label delay on the previous code in closed Compact On. The scalar bridge
+  path updated it in 4 ms in the comparison run, with no full-snapshot read. These
+  are samples, not scheduling guarantees; its timer interval is 50 ms. The full
+  snapshot cadence, direct-service path and switching protocol stay unchanged.
+  `panel-composition` keeps this regression check; publisher retirement, invalid
+  scalar values and failed/queued switches are covered by the unit checks.
+- **[INFER]** A separate scalar read removes the snapshot wait from label updates
+  in all compact modes. End-to-end key-to-render latency also includes IPC,
+  compositor execution and frame scheduling; the isolated timer result does not
+  measure those paths.

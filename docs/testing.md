@@ -42,7 +42,7 @@ QML harnesses cover that part.
 | `display-owner`, `display-fileview` | Preview and Keep with fake effects, then real `FileView` objects on temporary files |
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |
 | `layout` | Pointer events on the display layout |
-| `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all eight tabs on both paths, fixed frame |
+| `panel-session`, `panel-composition`, `panel-size` | Panel lifetime, all eight tabs on both paths, fixed frame; closed Compact On indicator latency without full-snapshot reads |
 | `color-match` | Color Match tab rendered with HDR and adjusted monitors, live values and release calls; the owner with a real `FileView`, a recording queue and a failed apply |
 | `workspaces-tab` | Workspaces tab badges and roles in all three modes, − and + limits, Non-repetitive drop targets and moves, Cancel and Apply, and the disabled selector on one monitor, rendered |
 | `wallpaper-layout` | Crop gestures |

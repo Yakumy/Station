@@ -786,7 +786,7 @@ Item {
   Component.onCompleted: {
     Qt.callLater(barSettings.reconcileActiveBarLayout)
     store.prepare()
-    barBridge = BarBridge.publish(function() { return ServiceContract.snapshot(root) }, ServiceContract.actions(root))
+    barBridge = BarBridge.publish(function() { return ServiceContract.snapshot(root) }, ServiceContract.actions(root), function() { return ServiceContract.station(root) })
   }
 
   Component.onDestruction: {

@@ -31,7 +31,8 @@ Ui.Panel {
   readonly property var service: directService || (bridgeSnapshot ? bridgeProxy : null)
   property alias selectedTab: session.selectedTab
   popoutSwitchClosing: session.popoutSwitchClosing
-  property int stationNumber: service ? service.currentStation : 1
+  property int bridgeStation: 1
+  readonly property int stationNumber: directService ? directService.currentStation : bridgeStation
   readonly property string selectedDisplayName: {
     if (!service) return ""
     var displays = service.displayDraft
@@ -246,6 +247,24 @@ Ui.Panel {
     onTriggered: root.syncBridge()
   }
 
+  // The label is visible even with the panel and app drawer closed. Sample only
+  // the confirmed scalar; keep the larger snapshot on its existing idle cadence.
+  Timer {
+    objectName: "stationIndicatorRefresh"
+    interval: 50
+    running: !root.directService && !!root.bridgeApi
+    repeat: true
+    onTriggered: root.syncStation()
+  }
+
+  function syncStation() {
+    if (directService) return
+    var api = bridgeCurrent()
+    if (!api || api !== bridgeApi) { syncBridge(); return }
+    var value = bridgeProxy.readStation()
+    if (Number.isInteger(value) && value >= 1 && value <= 20) bridgeStation = value
+  }
+
   function syncBridge() {
     // The trusted bar keeps its existing live-service path without polling.
     if (directService) return
@@ -254,10 +273,12 @@ Ui.Panel {
       bridgeApi = null
       bridgeSnapshot = null
       bridgeSnapshotText = ""
+      bridgeStation = 1
       return
     }
     var next = api.snapshot()
     bridgeApi = api
+    if (next && Number.isInteger(next.currentStation)) bridgeStation = next.currentStation
     var serialized = JSON.stringify(next)
     if (serialized !== bridgeSnapshotText) {
       bridgeSnapshotText = serialized

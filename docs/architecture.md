@@ -129,7 +129,7 @@ service, and Station's own full bar is a replacement bar.
 | Path | Panel reaches the service through |
 | --- | --- |
 | Direct | The live Service object. No polling. |
-| Bridge | `BarServiceProxy` and `WallpaperProxy`, reading detached snapshots from `lib/BarBridge.js`. It polls every 150 ms with the panel open or app icons on, otherwise every 1 s. |
+| Bridge | `BarServiceProxy` and `WallpaperProxy`, reading detached snapshots from `lib/BarBridge.js`. It polls every 150 ms with the panel open or app icons on, otherwise every 1 s. The visible station label reads a separate confirmed scalar every 50 ms. |
 
 `lib/panel/ServiceContract.js` defines the snapshot shape and the closed action
 allowlist. To add a panel member, change the contract, the proxies and

@@ -11,7 +11,7 @@ function bridge() {
   return context;
 }
 
-test('the frozen bridge exposes only snapshot and closed, synchronous actions', () => {
+test('the frozen bridge exposes only detached reads and closed, synchronous actions', () => {
   const b = bridge();
   const service = { count: 0 };
   const calls = [];
@@ -19,7 +19,7 @@ test('the frozen bridge exposes only snapshot and closed, synchronous actions', 
     setSetting(name, value) { calls.push([name, value]); return 'ok'; },
     notAnAction: service,
   });
-  assert.deepEqual(Object.keys(api), ['snapshot', 'call']);
+  assert.deepEqual(Object.keys(api), ['snapshot', 'station', 'call']);
   assert.equal(Object.isFrozen(api), true);
   assert.ok(Object.values(api).every(value => value !== service));
   assert.equal(b.current(), api);

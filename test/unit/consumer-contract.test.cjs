@@ -23,7 +23,7 @@ function multiline(source, name, context) {
 function bridge(root) {
   const context = {};
   runInNewContext(read('lib/BarBridge.js').replace(/^\.pragma library\s*/, ''), context);
-  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\)\)/);
+  assert.match(service, /BarBridge\.publish\(function\(\) \{ return ServiceContract\.snapshot\(root\) \}, ServiceContract\.actions\(root\), function\(\) \{ return ServiceContract\.station\(root\) \}\)/);
   return context.publish(() => ServiceContract.snapshot(root), ServiceContract.actions(root));
 }
 function proxy(api) {

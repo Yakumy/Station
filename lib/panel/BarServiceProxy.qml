@@ -44,6 +44,12 @@ QtObject {
     api: root.api
   }
 
+  // Read-only scalar path for the visible indicator; it does not refresh the
+  // larger snapshot or send a service action.
+  function readStation() {
+    return api && typeof api.station === "function" ? api.station() : null
+  }
+
   function call(name, args) { return api ? api.call(name, args) : undefined }
 
   function setWindowSetting(key, value) {

@@ -693,6 +693,15 @@ file or to `state.json`.
 - Content zoom scales the subtree, re-rasterizes text and decodes images at the matched
   physical size.
 
+### Station indicator freshness
+
+A replacement-bar widget samples the service's confirmed station number every 50 ms
+through a detached scalar bridge read. This applies with the panel closed in every
+compact mode. It does not copy the app lists or panel snapshot at that rate, does not
+predict a switch, and never changes the saved station. Full snapshots retain their
+150 ms open/listed and 1 s closed Compact On cadence. The trusted direct-service path
+stays reactive, with no polling. A retired publisher returns no station number.
+
 ### Open apps
 
 The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as

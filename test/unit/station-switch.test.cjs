@@ -25,6 +25,7 @@ function harness() {
 test('rapid numbered switches retain the last request and return to the occupied station', () => {
   const { c, batches } = harness();
   assert.equal(c.showStation(2), 'started');
+  assert.equal(c.currentStation, 1, 'pending switches must not predict the indicator');
   assert.equal(c.showStation(3), 'queued');
   assert.equal(c.showStation(1), 'queued');
   assert.equal(batches.length, 1);
