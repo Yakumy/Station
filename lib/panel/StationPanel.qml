@@ -469,22 +469,6 @@ Ui.Panel {
               }
             }
           }
-          Row {
-            visible: root.selectedTab === Tabs.index("displays")
-            anchors.right: parent.right
-            anchors.rightMargin: panelTokens.regionPadH
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: panelTokens.space3
-            PanelUi.InlineDropdown {
-              prefix: "Mode: "
-              value: root.modeValue
-              options: root.modeOptions
-              popupMinWidth: panelTokens.space6 * 7
-              popupAlignRight: true
-              foreground: panelTokens.textDim
-              onChanged: function(value) { root.changeMode(value) }
-            }
-          }
         }
 
         Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
@@ -507,7 +491,7 @@ Ui.Panel {
             id: tabContent
             objectName: "stationTabContent"
             width: tabScroll.availableWidth
-            Displays.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls }
+            Displays.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls; modeValue: root.modeValue; modeOptions: root.modeOptions; changeMode: function(value) { return root.changeMode(value) } }
             Stations.WorkspacesTab { visible: root.selectedTab === Tabs.index("workspaces"); width: parent.width; tokens: panelTokens; service: root.service ? workspacesTabPort : null }
             Bars.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
             WindowsUi.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }

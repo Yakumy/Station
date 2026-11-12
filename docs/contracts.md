@@ -799,6 +799,8 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - The frame requests `Style.space(996)` by `Style.space(620)`, capped by the host. Tabs
   do not change it. The header and tabs stay fixed, and the body scrolls vertically only
   on overflow, returning to the top on a tab change.
+- Displays keeps its Mode menu inside the layout canvas at the top right. It uses
+  the same preview and panel-evacuation path as the former toolbar menu.
 - The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
 - Position is Left (at the bar icon, the default) or Center on the current monitor. It

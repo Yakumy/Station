@@ -17,7 +17,8 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
   assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
-  assert.match(panel, /prefix: "Mode: "/);
+  assert.doesNotMatch(panel, /prefix: "Mode: "/);
+  assert.match(displays, /prefix: "Mode: "/);
   assert.doesNotMatch(panel, /prefix: "Direction: "/);
   assert.match(read('lib/stations/WorkspacesTab.qml'), /objectName: "stationsDirectionDropdown"/);
   assert.match(displays, /id: leftColumn/);

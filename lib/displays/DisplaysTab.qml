@@ -3,6 +3,7 @@ import qs.Ui as Ui
 import qs.Commons
 import "Model.js" as Model
 import "." as Displays
+import "../panel" as PanelUi
 
 Column {
   id: displayTab
@@ -13,6 +14,9 @@ Column {
   required property var controls
   required property var service
   required property var selectedDisplay
+  property string modeValue: "extend"
+  property var modeOptions: []
+  property var changeMode: function(value) {}
   readonly property real pad: tokens.regionPadH
   readonly property real gutter: tokens.space2
   readonly property var resolutionOptions: {
@@ -118,6 +122,19 @@ Column {
         tokens: displayTab.tokens
         selectedDisplayName: displayTab.selectedDisplayName
         onDisplaySelected: function(name) { displayTab.selectDisplay(name) }
+        PanelUi.InlineDropdown {
+          objectName: "displayModeDropdown"
+          anchors.top: parent.top; anchors.topMargin: displayTab.tokens.space2
+          anchors.right: parent.right; anchors.rightMargin: displayTab.tokens.space3
+          z: 10
+          prefix: "Mode: "
+          value: displayTab.modeValue
+          options: displayTab.modeOptions
+          popupMinWidth: displayTab.tokens.space6 * 7
+          popupAlignRight: true
+          foreground: displayTab.tokens.textDim
+          onChanged: function(value) { displayTab.changeMode(value) }
+        }
       }
 
       Text {
