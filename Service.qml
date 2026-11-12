@@ -593,7 +593,7 @@ Item {
     else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
       var grace = Number(value)
-      config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 5000
+      config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 0
     }
     else return "invalid"
     config = Object.assign({}, config)

@@ -301,7 +301,7 @@ trigger it.
   re-run observation, binds and reconciliation. The debounce exists because
   `omarchy theme set` fires the event twice.
 - `monitoradded`: cancel removal grace, refresh and reconcile. The panel does not open.
-- `monitorremoved`: keep the old map during `graceMs` (default 5000). A reconnect
+- `monitorremoved`: keep the old map during `graceMs` (default 0, no delay). A reconnect
   cancels compaction. Afterward, run a journaled migration.
 - A real topology event during `previewing` cancels the preview. A removal during
   `switching` aborts the switch. During `migrating`, it marks the topology dirty.
@@ -805,7 +805,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
 - Position is Left (at the bar icon, the default) or Center on the current monitor. It
   uses the output's full-screen card and stays clear of the bar on small screens.
-- Settings holds the two Hide switches, follow focus, panel position, grace delay,
+- Settings holds the two Show switches, follow focus, panel position,
   and the installed version. Compact mode and open apps are on the Workspaces tab.
 - The Workspaces tab's monitor positions are fixed: no monitor drag and no selection,
   only zoom and pan. Each managed output shows its name, its role and its workspaces in
@@ -854,7 +854,10 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
   Station draws no workspace numbers of its own. Omarchy's indicator numbers each
   monitor in blocks of ten, so it matches Repetitive; in Sync and Non-repetitive it
   shows Omarchy's numbering, not Station's.
-- With Hide on (the default for both widgets; a saved `hideDisplay: false` stays),
+- Settings' Show Omarchy Display Icon is `hideDisplay` inverted and defaults to Off.
+- The grace-delay control is removed. New configurations use no delay; an existing
+  saved `graceMs` remains honored.
+- With Show off (the default for both widgets; a saved `hideDisplay: false` stays),
   Station records placement and disables an enabled widget. It records a disabled widget
   as such, and startup and removal never enable that one.
 - Restoring happens only for `disabledByStation && wasEnabled`.

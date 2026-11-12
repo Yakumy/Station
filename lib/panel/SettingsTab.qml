@@ -71,11 +71,11 @@ Column {
   }
 
   PlainToggleRow {
-    label: "Hide Omarchy's Display icon"
-    checked: settingsTab.service && (settingsTab.service.config.hideDisplay
-      || settingsTab.service.displayWidgetEnabled === false)
+    label: "Show Omarchy Display Icon"
+    checked: !!settingsTab.service && !settingsTab.service.config.hideDisplay
+      && settingsTab.service.displayWidgetEnabled !== false
     onClicked: if (settingsTab.service)
-      settingsTab.service.setSetting("hideDisplay", !checked)
+      settingsTab.service.setSetting("hideDisplay", checked)
   }
   Item { width: 1; height: settingsTab.tokens.space2 }
   Ui.PanelSeparator {
@@ -124,44 +124,6 @@ Column {
       foreground: settingsTab.tokens.textPrimary
       onChanged: function(value) {
         if (settingsTab.service) settingsTab.service.setSetting("panelPosition", value)
-      }
-    }
-  }
-  Item { width: 1; height: settingsTab.tokens.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
-  Item {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    height: Style.space(48)
-    Text {
-      anchors.left: parent.left
-      anchors.leftMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - settingsTab.tokens.space6 - graceValue.width
-      text: "Grace delay before merging windows after unplug"
-      elide: Text.ElideRight
-      color: settingsTab.tokens.textPrimary
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-    }
-    Ui.Dropdown {
-      id: graceValue
-      anchors.right: parent.right
-      anchors.rightMargin: settingsTab.tokens.space3
-      anchors.verticalCenter: parent.verticalCenter
-      width: Style.space(130)
-      showLabel: false
-      value: settingsTab.service ? String(settingsTab.service.config.graceMs) : "5000"
-      options: [{ value: "0", label: "No delay" }, { value: "3000", label: "3 seconds" },
-        { value: "5000", label: "5 seconds" }, { value: "10000", label: "10 seconds" }]
-      foreground: settingsTab.tokens.textPrimary
-      onChanged: function(value) {
-        if (settingsTab.service) settingsTab.service.setSetting("graceMs", Number(value))
       }
     }
   }

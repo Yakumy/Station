@@ -110,6 +110,7 @@ test('store defaults and migrations constrain public values', () => {
   assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideDisplay, false);
   assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideNative, false);
   assert.equal(S.loadConfig({ graceMs: 0 }).graceMs, 0);
+  assert.equal(S.loadConfig({}).graceMs, 0);
   const state = S.loadState({ lastStation: 99 });
   assert.equal(state.lastStation, 10);
   assert.equal(state.displayLease, null);
