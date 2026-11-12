@@ -72,6 +72,7 @@ Column {
       }
 
       Bars.BarLayout {
+        id: layoutCanvas
         width: parent.width - root.pad * 2
         height: Style.space(370)
         anchors.horizontalCenter: parent.horizontalCenter
@@ -312,5 +313,19 @@ Column {
   }
 
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
-  Item { width: parent.width; height: Style.space(64) }
+  Item {
+    width: parent.width; height: Style.space(64)
+    Text {
+      objectName: "barToggleError"
+      anchors.left: parent.left; anchors.leftMargin: root.pad
+      anchors.right: parent.right; anchors.rightMargin: root.pad
+      anchors.verticalCenter: parent.verticalCenter
+      text: layoutCanvas.barToggleError
+      textFormat: Text.PlainText
+      color: Commons.Color.urgent
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+      wrapMode: Text.WordWrap
+    }
+  }
 }

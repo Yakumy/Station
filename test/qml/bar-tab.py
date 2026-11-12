@@ -49,7 +49,8 @@ ShellRoot {
     function monitorBarMinimum(name) { return name === "eDP-1" ? 58 : 1 }
     function monitorBarMaximumHeight(name) { return name === "HDMI-A-2" ? 60 : 54 }
     function monitorBarMaximumContent(name) { return 24 }
-    function setMonitorBarEnabled() { return "ok" }
+    property bool refuseBar: false
+    function setMonitorBarEnabled() { return refuseBar ? "last-bar" : "ok" }
     function setMonitorBarPosition() { return "ok" }
     function setMonitorBarWidth() { return "ok" }
     function setMonitorBarHeight() { return "ok" }
@@ -115,6 +116,25 @@ ShellRoot {
     }
   }
   Timer {
+    interval: 500; running: true
+    onTriggered: {
+      var layout = null
+      function findLayout(node) {
+        if (typeof node.requestBarEnabled === "function") layout = node
+        var children = node.children || []
+        for (var i = 0; i < children.length; i++) findLayout(children[i])
+      }
+      findLayout(tab)
+      fakeService.refuseBar = true
+      layout.requestBarEnabled("HDMI-A-2", false)
+      layout.applyPendingBar()
+      var message = findObject(tab, "barToggleError")
+      if (message.text === "At least one bar must stay on. Turn on another bar first." && message.color === Commons.Color.urgent)
+        console.log("BAR_LAST_BAR_NOTICE_OK")
+      else console.log("BAR_LAST_BAR_NOTICE_BAD")
+    }
+  }
+  Timer {
     interval: 700; running: true
     onTriggered: capture.grabToImage(function(result) {
       result.saveToFile("OUTPUT/bar-tab.png")
@@ -159,6 +179,6 @@ ShellRoot {
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
     print(result.stdout)
     print(output)
-    if "BAR_TAB_RENDER_OK" not in result.stdout or (not tour and "BAR_DROPDOWN_BINDING_OK" not in result.stdout) or any(token in result.stdout for token in
+    if "BAR_TAB_RENDER_OK" not in result.stdout or (not tour and ("BAR_DROPDOWN_BINDING_OK" not in result.stdout or "BAR_LAST_BAR_NOTICE_OK" not in result.stdout)) or any(token in result.stdout for token in
             ("ERROR", "ReferenceError", "TypeError", "Binding loop", "Unable to assign", "grabToImage:")):
         raise SystemExit(1)

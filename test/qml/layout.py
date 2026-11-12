@@ -191,6 +191,11 @@ Item {
       barLayout.applyPendingBar()
       compare(service.barCalls.length, 1)
       compare(control.checked, true, "A refused change moves the switch back")
+      compare(barLayout.barToggleError, "At least one bar must stay on. Turn on another bar first.")
+      service.refuseBar = false
+      barLayout.requestBarEnabled("HDMI-A-2", true)
+      barLayout.applyPendingBar()
+      compare(barLayout.barToggleError, "", "A successful edit clears the refusal")
       resetBars()
     }
     function test_bar_switch_coalesces_and_never_drops_another_monitor() {

@@ -19,6 +19,7 @@ Ui.BorderSurface {
   // which would freeze the switch mid-throw. The switch moves first, then this applies.
   property string pendingBarName: ""
   property bool pendingBarEnabled: false
+  property string barToggleError: ""
 
   function requestBarEnabled(name, enabled) {
     if (pendingBarName && pendingBarName !== name) applyPendingBar()
@@ -30,7 +31,9 @@ Ui.BorderSurface {
   function applyPendingBar() {
     barToggleApply.stop()
     if (!pendingBarName) return
-    if (service) service.setMonitorBarEnabled(pendingBarName, pendingBarEnabled)
+    var result = service ? service.setMonitorBarEnabled(pendingBarName, pendingBarEnabled) : undefined
+    barToggleError = result === "last-bar"
+      ? "At least one bar must stay on. Turn on another bar first." : ""
     // Cleared last, so a refused change is what moves the switch back.
     pendingBarName = ""
   }
