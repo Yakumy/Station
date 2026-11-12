@@ -43,6 +43,11 @@ Item {
   // Operation arbiter. `state` is the operation; `gen` retires stale callbacks.
   property int gen: 0
   property bool started: false
+  // Hyprland's instance signature names this login. The one Station last started
+  // under tells a fresh login from a shell restart.
+  readonly property string hyprSession: Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || ""
+  property string savedSession: ""
+  property bool sessionLoaded: false
   property int configGeneration: 0
   property string layoutError: ""
   property var expect: ({ kinds: [], outputs: [], until: 0 })
@@ -594,14 +599,19 @@ Item {
 
   function maybeStart() {
     if (started || !store.dirsReady || !store.configLoaded || !store.stateLoaded
-        || !displayController.previewLoaded || !workspace.mappingLoaded || !displayController.monitorsLoaded) return
+        || !displayController.previewLoaded || !workspace.mappingLoaded || !displayController.monitorsLoaded
+        || !sessionLoaded) return
     if (store.fresh && !workspaceRulesRead) {
       if (!workspaceRules.running) workspaceRules.running = true
       return
     }
     started = true
     workspaceAuthority.claim()
-    stations.currentStation = observedStation() || persisted.lastStation
+    stations.currentStation = startingStation()
+    if (hyprSession && hyprSession !== savedSession) {
+      savedSession = hyprSession
+      sessionFile.setText(hyprSession + "\n")
+    }
     if (displayController.previewFound) {
       Quickshell.execDetached(["rm", "-f", stateDir + "/preview.token"])
       Quickshell.execDetached(["sh", "-c", Transactions.unparkToggle + "hyprctl reload\n", "sh",
@@ -620,9 +630,14 @@ Item {
     }) })
   }
 
-  // The station on screen now. A login starts on the workspaces Hyprland opens
-  // (station 1), and a shell restart keeps the one in view, so the saved station
-  // is only a fallback for a focused workspace outside the map.
+  // A login starts on Station 1, whatever was open at shutdown. A shell restart
+  // keeps the station in view, and the saved one only when the focused
+  // workspace is outside the map.
+  function startingStation() {
+    if (!hyprSession || hyprSession !== savedSession) return 1
+    return observedStation() || persisted.lastStation || 1
+  }
+
   function observedStation() {
     var focused = (monitors || []).find(function(m) { return m.focused })
     var id = focused && focused.activeWorkspace ? Number(focused.activeWorkspace.id) : NaN
@@ -648,6 +663,13 @@ Item {
     }
     workspaceRulesRead = true
     maybeStart()
+  }
+  FileView {
+    id: sessionFile
+    path: root.stateDir + "/session"
+    printErrors: false
+    onLoaded: { root.savedSession = String(text()).trim(); root.sessionLoaded = true; root.maybeStart() }
+    onLoadFailed: { root.savedSession = ""; root.sessionLoaded = true; root.maybeStart() }
   }
   Process {
     id: workspaceRules

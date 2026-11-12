@@ -259,9 +259,12 @@ an output boundary, the window must keep its source station.
 
 ### Starting station
 
-At startup Station shows the station whose workspace is focused, so a login starts on
-Station 1 (the workspaces Hyprland opens) and a shell restart keeps the station in view.
-The saved `lastStation` applies only when the focused workspace is outside the map.
+A login starts on Station 1, whatever was open at shutdown. Station keeps the
+`HYPRLAND_INSTANCE_SIGNATURE` it last started under in `~/.local/state/omarchy/station/session`.
+A different or missing signature means a new login. The same one means a shell restart,
+which keeps the station whose workspace is focused, and the saved `lastStation` when the
+focused workspace is outside the map. The focused workspace alone cannot tell a login:
+Hyprland's first workspaces and what the shell sees at login are not reliably Station 1.
 
 ### Workspace authority
 

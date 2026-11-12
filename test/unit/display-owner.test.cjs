@@ -99,7 +99,7 @@ test('root startup waits for owner load gates and routes stale-token recovery on
       persisted:{lastStation:3,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
       Quickshell:{execDetached(args){calls.push(args);}},
       migrateMonitorPrecedence(done){done();},refresh(include,done){done();},
-      applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){},observedStation(){return null;}};
+      applyRuntime(){calls.push('runtime');},acquireStockLeases(){},saveState(){},sessionLoaded:true,hyprSession:'s',savedSession:'s',startingStation(){return 3;}};
     c.workspaceAuthority={claim(){calls.push('authority');}};c.root=c;c.store=c;c.compositor=c;c.leases=c;c.stations=c;c.displayController=c;c.workspace=c;
     const start=functionFrom(current,'maybeStart',c);
     start();assert.equal(c.started,false);assert.deepEqual(calls,[]);
@@ -110,25 +110,41 @@ test('root startup waits for owner load gates and routes stale-token recovery on
   }
 });
 
-test('startup shows the station in view, not the one saved last session',()=>{
+test('a login starts on station 1 and a shell restart keeps the station in view',()=>{
   const Grid=require('../../lib/stations/Grid.js');
   const map={outputs:['HDMI-A-2','eDP-1']};
   const observed=(monitors,workspaceMap=map)=>functionFrom(current,'observedStation',{monitors,workspaceMap,Grid})();
-  // A login: Hyprland opens workspaces 1 and 2, whatever station was saved.
   assert.equal(observed([{name:'HDMI-A-2',focused:false,activeWorkspace:{id:1}},{name:'eDP-1',focused:true,activeWorkspace:{id:2}}]),1);
-  // A shell restart on station 6 stays there.
   assert.equal(observed([{name:'HDMI-A-2',focused:true,activeWorkspace:{id:11}}]),6);
-  // Outside the map, or no map yet: the saved station decides.
   assert.equal(observed([{name:'eDP-1',focused:true,activeWorkspace:{id:99}}]),null);
   assert.equal(observed([{name:'eDP-1',focused:true,activeWorkspace:{id:1}}],null),null);
   assert.equal(observed([]),null);
-  for(const [seen,expected] of [[1,1],[null,6]]) {
+  const starting=(hyprSession,savedSession,seen)=>functionFrom(current,'startingStation',
+    {hyprSession,savedSession,persisted:{lastStation:6},observedStation(){return seen;}})();
+  // A new login, or a first start, opens on station 1 whatever Hyprland focused.
+  assert.equal(starting('b_2','a_1',6),1);
+  assert.equal(starting('b_2','',6),1);
+  assert.equal(starting('','',6),1);
+  // A shell restart in the same login keeps the station in view, else the saved one.
+  assert.equal(starting('b_2','b_2',4),4);
+  assert.equal(starting('b_2','b_2',null),6);
+  // Startup waits for the session file, then records this login once.
+  for(const [saved,expected,writes] of [['a_1',1,1],['b_2',6,0]]) {
+    const written=[];
     const c={started:false,dirsReady:true,configLoaded:true,stateLoaded:true,previewLoaded:true,mappingLoaded:true,
-      monitorsLoaded:true,previewFound:false,persisted:{lastStation:6,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
-      migrateMonitorPrecedence(){},observedStation(){return seen;}};
-    c.workspaceAuthority={claim(){}};c.root=c;c.store=c;c.stations=c;c.displayController=c;c.workspace=c;
+      monitorsLoaded:true,previewFound:false,sessionLoaded:false,hyprSession:'b_2',savedSession:saved,
+      persisted:{lastStation:6,activeNoticeShown:true},config:{hideNative:true,hideDisplay:true},
+      migrateMonitorPrecedence(){},setText(text){written.push(text);}};
+    c.startingStation=functionFrom(current,'startingStation',c);
+    c.observedStation=()=>null;
+    c.workspaceAuthority={claim(){}};c.root=c;c.store=c;c.stations=c;c.displayController=c;c.workspace=c;c.sessionFile=c;
+    functionFrom(current,'maybeStart',c)();
+    assert.equal(c.started,false);
+    c.sessionLoaded=true;
     functionFrom(current,'maybeStart',c)();
     assert.equal(c.currentStation,expected);
+    assert.deepEqual(written,writes?['b_2\n']:[]);
+    assert.equal(c.savedSession,'b_2');
   }
 });
 
@@ -161,7 +177,7 @@ test('startup shows the station in view, not the one saved last session',()=>{
       assert.equal(c.mappingLoaded,true);assert.equal(c.previewBaseline.windows.length,4);
       const saved=c.workspaceFile.setText;
       c.workspaceFile.setText=text=>{saved(text);writeFileSync(journal,text);};
-      c.stateDir=directory;c.started=false;c.previewLoaded=true;c.previewFound=true;c.monitorsLoaded=true;
+      c.stateDir=directory;c.started=false;c.sessionLoaded=true;c.hyprSession=c.savedSession='same';c.previewLoaded=true;c.previewFound=true;c.monitorsLoaded=true;
       c.persisted.activeNoticeShown=true;c.persisted.systemAuthorityVersion=3;c.acquireStockLeases=()=>{};
       const detached=[];
       c.Quickshell.execDetached=args=>{

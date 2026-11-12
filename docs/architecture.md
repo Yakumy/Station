@@ -165,6 +165,7 @@ reloads the host config and can recreate the bar under an open panel.
 | `~/.config/omarchy/station/config.json` | `SettingsStore` | Preferences, identities, lanes, binds, bars, wallpaper |
 | `~/.local/state/omarchy/station/state.json` | `SettingsStore` | Last station, applied binds, leases, lifecycle flags |
 | `~/.local/state/omarchy/station/workspace-map.json` | `WorkspaceController` | Committed map, pending journal, preview baseline |
+| `~/.local/state/omarchy/station/session` | `Service` | Hyprland signature of the last start, to tell a login from a shell restart |
 | `~/.local/state/omarchy/station/preview.token` | `DisplayController` | Marks an active preview for the watchdog |
 | `~/.local/state/omarchy/station/monitors-block.plain.lua` | `DisplayController` | Retained for older cleanup scripts ([why](decisions.md#keep-the-plain-geometry-copy)) |
 | `~/.local/state/omarchy/station/wallpapers/` | `WallpaperController` | Private image copies |
