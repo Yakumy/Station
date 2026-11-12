@@ -25,6 +25,8 @@ Column {
   property string editingKey: ""
   property real editingValue: 0
   property string notice: ""
+  // The row whose slider was pushed past what its setting can reach.
+  property string cappedKey: ""
   readonly property var values: {
     var out = Object.assign({}, savedValues)
     if (editingKey) {
@@ -37,13 +39,14 @@ Column {
   readonly property var rows: [
     { key: "temperature", label: "TEMPERATURE", hint: "Lower is warmer, higher is cooler" },
     { key: "tint", label: "TINT", hint: "Left adds green, right adds magenta" },
-    { key: "brightness", label: "BRIGHTNESS", hint: "Dims this monitor to match a darker one" },
+    { key: "brightness", label: "BRIGHTNESS", hint: "Dims this monitor to match a darker one",
+      cap: "100% is the maximum brightness" },
     { key: "gamma", label: "GAMMA", hint: "Higher darkens the midtones" },
     { key: "saturation", label: "SATURATION", hint: "0% is black and white" }
   ]
   readonly property real pad: tokens.regionPadH
   spacing: 0
-  onSelectedNameChanged: { editingKey = ""; notice = "" }
+  onSelectedNameChanged: { editingKey = ""; notice = ""; cappedKey = "" }
 
   function format(key, value) {
     if (key === "temperature") return value + " K"
@@ -172,14 +175,18 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: Style.space(2)
                 bar: root.bar
-                minimum: ColorMatch.limits[row.modelData.key][0]
-                maximum: ColorMatch.limits[row.modelData.key][1]
+                minimum: ColorMatch.sliderRange(row.modelData.key)[0]
+                maximum: ColorMatch.sliderRange(row.modelData.key)[1]
                 integer: true
                 step: ColorMatch.step(row.modelData.key)
                 value: root.savedValues[row.modelData.key]
                 enabled: root.usable
                 opacity: enabled ? 1 : root.tokens.disabledOpacity
-                onMoved: function(value) { root.editingValue = value; root.editingKey = row.modelData.key }
+                onMoved: function(value) {
+                  root.editingValue = value
+                  root.editingKey = row.modelData.key
+                  root.cappedKey = ColorMatch.capped(row.modelData.key, value) ? row.modelData.key : ""
+                }
                 onReleased: function(value) {
                   var key = row.modelData.key
                   var change = {}
@@ -187,6 +194,8 @@ Column {
                   var next = ColorMatch.clean(Object.assign({}, root.savedValues, change))[key]
                   root.editingKey = ""
                   if (next !== root.savedValues[key]) root.report(root.service.setColorValue(root.selectedName, key, next))
+                  // A knob pushed past the cap returns to the value that applies.
+                  else liveValue = next
                 }
               }
               Text {
@@ -195,8 +204,9 @@ Column {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: root.tokens.space1
                 width: parent.width - root.tokens.space3 * 2
-                text: row.modelData.hint
-                color: root.tokens.textDim
+                objectName: "colorHint-" + row.modelData.key
+                text: root.cappedKey === row.modelData.key ? row.modelData.cap : row.modelData.hint
+                color: root.cappedKey === row.modelData.key ? root.tokens.textPrimary : root.tokens.textDim
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 elide: Text.ElideRight
@@ -235,7 +245,7 @@ Column {
               enabled: root.usable && !ColorMatch.isNeutral(root.savedValues)
               bordered: true
               foreground: Commons.Color.popups.text
-              onClicked: root.report(root.service.resetColor(root.selectedName))
+              onClicked: { root.cappedKey = ""; root.report(root.service.resetColor(root.selectedName)) }
             }
           }
         }

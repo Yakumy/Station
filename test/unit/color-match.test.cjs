@@ -28,6 +28,17 @@ test('values clamp to their ranges and the defaults are neutral', () => {
   assert.deepEqual(C.clean({ temperature: 12000, tint: -500, brightness: 3, gamma: 'x', saturation: 149.6 }),
     { temperature: 9000, tint: -100, brightness: 50, gamma: 100, saturation: 150 });
   assert.equal(C.clean({ temperature: 6449 }).temperature, 6400, 'temperature moves in 100 K steps');
+  assert.deepEqual(C.clean({ saturation: 260, gamma: 10 }), { temperature: 6500, tint: 0, brightness: 100, gamma: 60, saturation: 200 });
+  // Every slider centres its default; brightness runs past its 100% cap.
+  for (const key of C.KEYS) {
+    const [low, high] = C.sliderRange(key);
+    assert.equal((low + high) / 2, C.limits[key][2], key + ' default is the middle of its track');
+    assert.ok(low <= C.limits[key][0] && high >= C.limits[key][1], key + ' track covers its range');
+  }
+  assert.deepEqual(C.sliderRange('brightness'), [50, 150]);
+  assert.equal(C.capped('brightness', 101), true);
+  assert.equal(C.capped('brightness', 100), false);
+  assert.equal(C.capped('saturation', 200), false);
   assert.deepEqual(C.cleanAll({ a: {}, b: { tint: 10 }, c: 'bad' }), { b: { temperature: 6500, tint: 10, brightness: 100, gamma: 100, saturation: 100 } });
 });
 

@@ -131,6 +131,18 @@ ShellRoot {
         var count = fakeService.calls.length
         slider.released(5600)
         if (fakeService.calls.length !== count) { fail("unchanged release applied"); return }
+        // Brightness runs past 100% on the track, stops there and says why.
+        var bright = findObject(tab, "colorSlider-brightness"), hint = findObject(tab, "colorHint-brightness")
+        bright.moved(130)
+        if (findObject(tab, "colorValue-brightness").text !== "100%") { fail("capped value " + findObject(tab, "colorValue-brightness").text); return }
+        if (hint.text !== "100% is the maximum brightness") { fail("cap message " + hint.text); return }
+        bright.released(130)
+        if (fakeService.calls.length !== count) { fail("capped release applied"); return }
+        if (bright.liveValue !== 100) { fail("capped knob returns " + bright.liveValue); return }
+        if (hint.text !== "100% is the maximum brightness") { fail("cap message stays after release"); return }
+        bright.moved(90)
+        if (hint.text !== "Dims this monitor to match a darker one") { fail("cap message clears"); return }
+        bright.released(100)
         findObject(tab, "colorReset").clicked()
         if (fakeService.calls[fakeService.calls.length - 1][0] !== "reset") { fail("reset"); return }
         phase++
@@ -143,7 +155,7 @@ ShellRoot {
           var control = findObject(tab, "colorSlider-" + key)
           return Math.round(control.progress * 100)
         })
-        if (JSON.stringify(knobs) !== JSON.stringify([32, 56, 100, 43, 67])) { fail("knob progress " + JSON.stringify(knobs)); return }
+        if (JSON.stringify(knobs) !== JSON.stringify([32, 56, 50, 50, 50])) { fail("knob progress " + JSON.stringify(knobs)); return }
         capture.grabToImage(function(result) {
           result.saveToFile("OUTPUT/color-match-tab.png")
           panel.selectDisplay("eDP-1")

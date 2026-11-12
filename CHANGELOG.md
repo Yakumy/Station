@@ -6,7 +6,8 @@
   Each change applies live on release, as a color profile that Hyprland applies itself,
   with nothing extra to install. Reset returns a monitor to its own colors. Settings
   follow the monitor to another port. HDR monitors are left alone. Saturation goes
-  down to 0% for a black-and-white screen.
+  from 0% (black and white) to 200%, and Gamma from 0.60 to 1.40. Every slider starts
+  in the middle. Brightness can only dim, so past 100% its row says that is the maximum.
 
 - Include every enabled monitor in the Windows animation preview. On one monitor,
   swap the two windows twice and restore WINDOW left / NEXT WINDOW right.

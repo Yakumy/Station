@@ -589,14 +589,15 @@ display profile, and Hyprland applies it through its own color pipeline (it buil
 | --- | --- | --- | --- |
 | Temperature | 4000 to 9000 K, steps of 100 | 6500 K | Per-channel gains along the Planckian locus, relative to 6500 K |
 | Tint | −100 (green) to +100 (magenta) | 0 | Up to 30% less green, or less red and blue |
-| Brightness | 50 to 100% | 100% | All three gains. It can only dim. |
-| Gamma | 0.70 to 1.40 | 1.00 | The shared tone curve: the sRGB curve raised to 1/gamma. Higher darkens midtones. |
-| Saturation | 0 to 150% | 100% | A Rec. 709 luminance-preserving saturation matrix. 0% is black and white. |
+| Brightness | 50 to 100% | 100% | All three gains. It can only dim. The track runs on to 150% so 100% sits in the middle; past 100% the knob returns and the row says 100% is the maximum. |
+| Gamma | 0.60 to 1.40 | 1.00 | The shared tone curve: the sRGB curve raised to 1/gamma. Higher darkens midtones. |
+| Saturation | 0 to 200% | 100% | A Rec. 709 luminance-preserving saturation matrix. 0% is black and white. |
 
 - Gains are normalized so the brightest channel is 1 before Brightness, so no channel
   clips. The gains and saturation go into the colorants (`rXYZ`, `gXYZ`, `bXYZ`) as
   `sRGB × (gains × saturation)⁻¹`. lcms inverts that description, so the screen receives
-  the corrected signal. Saturation 0 has no inverse, so the matrix uses 0.2% instead;
+  the corrected signal. Every slider puts its default in the middle of its track.
+  Saturation 0 has no inverse, so the matrix uses 0.2% instead;
   lcms then sends every color as grey within one code value. All channels share one
   tone curve, because Hyprland cannot represent split curves. The profile has no `vcgt` tag: see
   [Platform findings](platform-findings.md#color-match-icc-profiles-2026-11-11).

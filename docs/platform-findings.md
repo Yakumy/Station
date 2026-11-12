@@ -1304,5 +1304,9 @@ lcms2, and judged on screen by the maintainer.
 - [LIVE] A saturation 0% profile (matrix floor 0.2%) was accepted by `hyprctl eval` with
   no config error; lcms (`transicc`) maps sRGB red, green and blue to grey within one
   code value. Not judged on screen by the maintainer yet.
+- [LIVE] Saturation 200% and gamma 0.60 profiles were each accepted by `hyprctl eval` on
+  `HDMI-A-2` with no config error, and a reload restored the monitors. lcms maps sRGB
+  (200, 120, 60) to (243, 95, 0) at 200%, clipping at the gamut edge, and mid-grey 128 to
+  169 at 0.60. Not judged on screen by the maintainer yet.
 - [INFER] Screenshots should not show the correction, because it applies at scanout
   composition. Not checked.
