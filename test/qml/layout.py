@@ -31,17 +31,8 @@ with tempfile.TemporaryDirectory(prefix='station-layout-test-') as directory:
     commons = root / 'qs' / 'Commons'
     ui.mkdir(parents=True)
     commons.mkdir(parents=True)
-    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\nToggleSwitch 1.0 ToggleSwitch.qml\n')
+    (ui / 'qmldir').write_text('module qs.Ui\nBorderSurface 1.0 BorderSurface.qml\n')
     (ui / 'BorderSurface.qml').write_text('import QtQuick\nRectangle { property var borderSpec }\n')
-    (ui / 'ToggleSwitch.qml').write_text('''import QtQuick
-Item {
-  property real trackHeight
-  property bool checked
-  property color foreground
-  property color accent
-  signal toggled()
-}
-''')
     (commons / 'qmldir').write_text('module qs.Commons\nsingleton Style 1.0 Style.qml\nsingleton Color 1.0 Color.qml\nsingleton Border 1.0 Border.qml\n')
     (commons / 'Style.qml').write_text('''pragma Singleton
 import QtQuick
@@ -53,6 +44,8 @@ QtObject {
   property var font: ({family: "monospace", caption: 12, body: 12, title: 14, display: 24})
   function space(n) { return n * 5 / 6 }
   function duration(ms) { return ms }
+  property color selectedAccentFill: "white"
+  function normalFillFor(foreground, accent) { return foreground }
 }
 ''')
     (commons / 'Color.qml').write_text('''pragma Singleton
@@ -73,6 +66,8 @@ QtObject {
 ''')
     (root / 'tst_layout.qml').write_text('''import QtQuick
 import QtTest
+import qs.Commons
+import "Probe/panel" as PanelUi
 import "Probe/bars" as Bars
 import "Probe/displays" as Displays
 import "Probe/displays/Model.js" as Model
@@ -140,6 +135,12 @@ Item {
     tokens: barPanelRoot; service: service
     visible: false
   }
+  PanelUi.ToggleSwitch {
+    id: styleSwitch
+    x: 500; y: 200
+    property int toggleCount: 0
+    onToggled: { toggleCount++; checked = !checked }
+  }
   TestCase {
     name: "DisplayLayout"; when: windowShown
     function initTestCase() { failOnWarning(/.*/) }
@@ -169,6 +170,28 @@ Item {
     function resetBars() {
       barLayout.applyPendingBar()
       service.bars = ({}); service.barCalls = []; service.refuseBar = false
+    }
+    function test_switch_tracks_live_roundness_and_respects_click_ownership() {
+      styleSwitch.checked = false; styleSwitch.toggleCount = 0
+      styleSwitch.interactive = true; styleSwitch.busy = false
+      var track = findChild(styleSwitch, "switchTrack")
+      var knob = findChild(styleSwitch, "switchKnob")
+      for (var i = 0; i < 3; i++) {
+        Style.cornerRadius = [0, 4, 12][i]
+        compare(track.radius, Style.cornerRadius)
+        compare(knob.radius, Style.cornerRadius)
+      }
+      Style.cornerRadius = 0
+      mouseClick(styleSwitch, styleSwitch.width / 2, styleSwitch.height / 2)
+      compare(styleSwitch.checked, true)
+      compare(styleSwitch.toggleCount, 1)
+      styleSwitch.busy = true
+      mouseClick(styleSwitch, styleSwitch.width / 2, styleSwitch.height / 2)
+      compare(styleSwitch.toggleCount, 1, "Busy clicks do not toggle")
+      styleSwitch.busy = false; styleSwitch.interactive = false
+      mouseClick(styleSwitch, styleSwitch.width / 2, styleSwitch.height / 2)
+      compare(styleSwitch.toggleCount, 1, "Settings rows own their clicks")
+      styleSwitch.interactive = true
     }
     function test_bar_switch_moves_before_the_bar_change_applies() {
       resetBars()

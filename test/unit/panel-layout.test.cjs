@@ -62,7 +62,7 @@ test('display notices, labels, zoom buttons and settings switches share the inte
   assert.match(layout, /glyph: "-", factor: 1 \/ 1\.2 \}, \{ glyph: "\+", factor: 1\.2/);
   assert.match(settings, /component PlainToggleRow: Item \{/);
   assert.match(settings, /height: Style\.space\(74\)/);
-  assert.match(settings, /Ui\.ToggleSwitch \{[\s\S]*?trackHeight: Style\.spacing\.controlHeight[\s\S]*?interactive: false/);
+  assert.match(settings, /PanelUi\.ToggleSwitch \{[\s\S]*?interactive: false/);
   assert.doesNotMatch(settings, /Ui\.Toggle\s*\{/);
 });
 

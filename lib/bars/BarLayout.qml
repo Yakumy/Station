@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -219,13 +220,10 @@ Ui.BorderSurface {
         }
       }
 
-      Ui.ToggleSwitch {
+      PanelUi.ToggleSwitch {
         objectName: "barEnabledSwitch"
         anchors.centerIn: parent
-        trackHeight: Math.max(Style.space(18), 14)
         checked: monitorCard.barEnabled
-        foreground: Commons.Color.popups.text
-        accent: Commons.Color.accent
         onToggled: {
           canvas.displaySelected(monitorCard.modelData.name)
           canvas.requestBarEnabled(monitorCard.modelData.name, !checked)

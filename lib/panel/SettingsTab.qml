@@ -31,14 +31,12 @@ Column {
       text: parent.label
       elide: Text.ElideRight
     }
-    Ui.ToggleSwitch {
+    PanelUi.ToggleSwitch {
       id: toggleSwitch
       anchors.right: parent.right
       anchors.rightMargin: settingsTab.tokens.space3
       anchors.verticalCenter: parent.verticalCenter
-      trackHeight: Style.spacing.controlHeight
       checked: parent.checked
-      foreground: settingsTab.tokens.textPrimary
       interactive: false
     }
     MouseArea {
