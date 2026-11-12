@@ -118,19 +118,6 @@ Ui.BorderSurface {
       readonly property bool isSelected: false
       readonly property bool outputEnabled: canvas.service
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
-      readonly property var barSetting: canvas.service
-        ? canvas.service.monitorBar(modelData.name)
-        : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
-      readonly property int minimumBarWidth: canvas.service
-        ? canvas.service.monitorBarMinimum(modelData.name) : 1
-      readonly property real effectiveBarWidth: Math.max(Number(barSetting.width) || 100, minimumBarWidth) / 100
-      readonly property int defaultBarHeight: barSetting.position === "left" || barSetting.position === "right"
-        ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-      readonly property real maximumBarHeight: Math.max(defaultBarHeight,
-        canvas.service ? canvas.service.monitorBarMaximumHeight(modelData.name)
-          : Math.floor(Math.min(Number(modelData.width), Number(modelData.height)) * 0.05))
-      readonly property real effectiveBarHeight: Math.max(defaultBarHeight,
-        Math.min(maximumBarHeight, Number(barSetting.height) > 0 ? Number(barSetting.height) : defaultBarHeight))
       x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
@@ -145,46 +132,6 @@ Ui.BorderSurface {
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: 0
       opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
-
-      Rectangle {
-        id: barPreview
-        objectName: "barPreview-" + monitorCard.modelData.name
-        visible: monitorCard.barSetting.enabled
-        color: monitorCard.barSetting.style === "pill" ? "transparent" : canvas.tokens.textDim
-        radius: Style.cornerRadius
-        readonly property bool side: monitorCard.barSetting.position === "left"
-          || monitorCard.barSetting.position === "right"
-        readonly property real topInset: canvas.barEdgeGap
-        readonly property real bottomInset: canvas.barEdgeGap
-        width: side ? Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
-          : Math.max(1, (parent.width - canvas.barEdgeGap * 2) * monitorCard.effectiveBarWidth)
-        height: side
-          ? Math.max(1, (parent.height - topInset - bottomInset) * monitorCard.effectiveBarWidth)
-          : Math.max(2, monitorCard.effectiveBarHeight * canvas.zoom)
-        x: monitorCard.barSetting.position === "left" ? canvas.barEdgeGap
-          : monitorCard.barSetting.position === "right" ? parent.width - width - canvas.barEdgeGap
-          : (parent.width - width) / 2
-        y: monitorCard.barSetting.position === "top" ? topInset
-          : monitorCard.barSetting.position === "bottom" ? parent.height - height - bottomInset
-          : topInset + (parent.height - topInset - bottomInset - height) / 2
-
-        Repeater {
-          model: monitorCard.barSetting.style === "pill" ? [0, 1, 2] : []
-          delegate: Rectangle {
-            required property int modelData
-            readonly property real segmentLength: barPreview.side ? barPreview.height : barPreview.width
-            readonly property real segmentStart: modelData === 0 ? 0
-              : modelData === 1 ? segmentLength * 0.41 : segmentLength * 0.74
-            readonly property real segmentShare: modelData === 1 ? 0.18 : 0.26
-            x: barPreview.side ? 0 : segmentStart
-            y: barPreview.side ? segmentStart : 0
-            width: barPreview.side ? barPreview.width : segmentLength * segmentShare
-            height: barPreview.side ? segmentLength * segmentShare : barPreview.height
-            color: canvas.tokens.textDim
-            radius: Math.min(width, height) / 2
-          }
-        }
-      }
 
       Text {
         objectName: "monitorName-" + monitorCard.modelData.name

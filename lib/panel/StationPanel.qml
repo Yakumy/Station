@@ -161,7 +161,6 @@ Ui.Panel {
     function displayEnabled(name) { return root.service ? root.service.displayEnabled(name) : undefined }
     function monitorBar(name) { return root.service ? root.service.monitorBar(name) : undefined }
     function monitorBarMaximumHeight(name) { return root.service ? root.service.monitorBarMaximumHeight(name) : undefined }
-    function monitorBarMinimum(name) { return root.service ? root.service.monitorBarMinimum(name) : undefined }
     function setWindowSetting(key, value) { return root.service ? root.service.setWindowSetting(key, value) : undefined }
     readonly property var windowSettingsBusy: root.service ? root.service.windowSettingsBusy : null
   }

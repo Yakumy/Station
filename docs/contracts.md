@@ -533,6 +533,9 @@ restores its validated rule. It never cycles the only visible output.
 
 ## Windows tab
 
+The Windows layout preview omits bar indicators. Its simulated windows still use
+the actual bar settings when calculating the available work area.
+
 The controls change **global compositor settings**: inner gap, outer gap, Dwindle split,
 rounding and animation speed.
 
