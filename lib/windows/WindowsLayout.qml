@@ -3,7 +3,6 @@ import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
 import "../displays/Model.js" as Model
-import "Windows.js" as Windows
 import "WindowPreview.js" as Preview
 
 Ui.BorderSurface {
@@ -69,7 +68,6 @@ Ui.BorderSurface {
   readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real verticalInset: Math.max(height * 0.1, labelHeight + Style.spacing.sm)
   readonly property real monitorGap: Style.spacing.sm
-  readonly property real barEdgeGap: Style.spacing.sm
   clip: true
   color: Commons.Color.popups.background
   borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
@@ -149,21 +147,11 @@ Ui.BorderSurface {
     var display = displays[monitorIndex]
     if (!display) return {x:0,y:0,width:0,height:0}
     var size = Model.logicalSize(display)
-    var bar = service.monitorBar(display.name)
-    var pillGap = Math.round(Style.space(8))
-    var gaps = Windows.gaps(values, bar, pillGap)
-    var minimum = bar.position === "left" || bar.position === "right" ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-    var effective = Math.max(minimum, Math.min(service.monitorBarMaximumHeight(display.name), Number(bar.height) || minimum))
-    var thickness = bar.enabled ? Math.max(2, effective * zoom) + barEdgeGap * 2
-      + (bar.style === "pill" ? pillGap * zoom : 0) : 0
+    var gap = Math.max(0, Number(values.outerGap) || 0) * zoom
     var x = originX + display.x * zoom - bounds.x * zoom + monitorGap / 2
     var y = originY + display.y * zoom - bounds.y * zoom + monitorGap / 2 + labelHeight
     var w = size.width * zoom - monitorGap, h = size.height * zoom - monitorGap - labelHeight
-    var left = gaps.left * zoom + (bar.position === "left" ? thickness : 0)
-    var right = gaps.right * zoom + (bar.position === "right" ? thickness : 0)
-    var top = gaps.top * zoom + (bar.position === "top" ? thickness : 0)
-    var bottom = gaps.bottom * zoom + (bar.position === "bottom" ? thickness : 0)
-    return {x:x + left, y:y + top, width:Math.max(0,w - left - right), height:Math.max(0,h - top - bottom)}
+    return {x:x + gap, y:y + gap, width:Math.max(0,w - gap * 2), height:Math.max(0,h - gap * 2)}
   }
   function windowRect(index) {
     var areas = displays.map(function(_, i) { return workArea(i) })

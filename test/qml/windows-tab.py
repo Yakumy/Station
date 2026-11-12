@@ -127,13 +127,16 @@ ShellRoot {
         fakeService.testBarBackground = "blur"
         var blurArea = layout.workArea(1)
         fakeService.testBarBackground = "solid"
-        if (Math.abs(solidArea.x - blurArea.x) > 0.001) {
-          fail("blur default bar gap"); return
+        if (JSON.stringify(solidArea) !== JSON.stringify(transparentArea)
+            || JSON.stringify(solidArea) !== JSON.stringify(blurArea)) {
+          fail("bar reserved space in the window preview"); return
         }
-        // A Transparent bar drops the outer gap on its own edge (left here) and nowhere else.
-        if (Math.abs((solidArea.x - transparentArea.x) - 20 * layout.zoom) > 0.001
-            || Math.abs(solidArea.y - transparentArea.y) > 0.001) {
-          fail("transparent bar kept the gap or moved another edge"); return
+        var display = layout.displays[1]
+        var gap = tab.values.outerGap * layout.zoom
+        var expectedLeft = layout.originX + (display.x - layout.bounds.x) * layout.zoom + layout.monitorGap / 2 + gap
+        var expectedWidth = display.width / display.scale * layout.zoom - layout.monitorGap - gap * 2
+        if (Math.abs(solidArea.x - expectedLeft) > 0.001 || Math.abs(solidArea.width - expectedWidth) > 0.001) {
+          fail("windows do not fill the former bar area"); return
         }
         var name = findObject(layout, "monitorName-eDP-1")
         if (!name || name.x !== 0 || name.y + name.height >= 0) { fail("external label"); return }
