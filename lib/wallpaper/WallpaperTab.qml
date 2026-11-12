@@ -193,11 +193,13 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.tokens.space2
       PanelUi.ActionButton {
+        widthFactor: 0.6
         text: "Cancel"; bordered: true
         enabled: root.controller && root.controller.dirty && !root.controller.busy && !root.controller.importBusy
         onClicked: root.controller.reset()
       }
       PanelUi.ActionButton {
+        widthFactor: 0.6
         text: root.controller && root.controller.importBusy ? "Preparing…"
           : root.controller && root.controller.busy ? "Applying…" : "Apply"
         accent: Color.accent

@@ -404,6 +404,7 @@ Column {
       font.pixelSize: Style.font.body
     }
     PanelUi.ActionButton {
+      widthFactor: 0.6
       id: keepButton
       visible: parent.previewing
       anchors.right: parent.right
@@ -417,6 +418,7 @@ Column {
       onClicked: displayTab.service.keepPreview()
     }
     PanelUi.ActionButton {
+      widthFactor: 0.6
       id: revertButton
       visible: parent.previewing
       anchors.right: keepButton.left

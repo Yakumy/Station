@@ -19,7 +19,8 @@ Ui.BorderSurface {
   onSceneChanged: if (liveCommitted && liveSettled()) releaseFrame()
   readonly property bool spanning: scene.mode === "span"
   readonly property real horizontalInset: width * 0.1
-  readonly property real verticalInset: height * 0.1
+  readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
+  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real gridStep: Style.space(16)
   readonly property real monitorGap: spanning ? 0 : Style.spacing.sm
   property size readySourceSize: Qt.size(1, 1)
@@ -152,9 +153,11 @@ Ui.BorderSurface {
       id: monitor
       required property var modelData
       objectName: "wallpaperMonitor-" + modelData.name
-      x: root.groupX + modelData.x * root.fit + root.monitorGap / 2
-      y: root.groupY + modelData.y * root.fit + (modelData.height * root.fit - height) / 2
-      width: Math.max(1, modelData.width * root.fit - root.monitorGap)
+      x: root.groupX + modelData.x * root.fit + (modelData.width * root.fit - width) / 2
+      y: root.groupY + modelData.y * root.fit + (root.spanning ? 0 : root.labelHeight)
+      width: Math.max(1, Math.min(modelData.width * root.fit - root.monitorGap,
+        (modelData.height * root.fit - root.monitorGap - (root.spanning ? 0 : root.labelHeight))
+          * modelData.width / Math.max(1, modelData.height)))
       // The monitor's exact shape, so this tile shows the same crop as the desktop.
       height: Math.max(1, width * modelData.height / Math.max(1, modelData.width))
       readonly property real tileScale: width / Math.max(1, modelData.width)
@@ -182,21 +185,16 @@ Ui.BorderSurface {
           : Border.controlSpec("normal", Color.popups.text, Color.accent)
         radius: 0
       }
-      Rectangle {
-        anchors.centerIn: parent
-        visible: !framer.pressed
-        width: label.implicitWidth + Style.space(12)
-        height: label.implicitHeight + Style.space(8)
-        color: Color.popups.background
-        radius: Style.cornerRadius
-        Text {
-          id: label
-          anchors.centerIn: parent
-          text: monitor.modelData.name
-          color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-        }
+      Text {
+        objectName: "monitorName-" + monitor.modelData.name
+        x: 0; y: -height - Style.spacing.sm
+        width: parent.width
+        text: monitor.modelData.name
+        textFormat: Text.PlainText
+        color: Qt.darker(Color.popups.text, 1.4)
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+        elide: Text.ElideRight
       }
       MouseArea {
         id: framer

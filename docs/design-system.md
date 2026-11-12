@@ -108,7 +108,7 @@ dark glass tint or a separate palette. Bar appearance
 choices use the host `Ui.Dropdown` at full row width and
 `Style.spacing.controlHeight`.
 
-Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. One shared vertical rhythm between the Displays sidebar, Keybindings rows and Settings rows, so switching tabs doesn't change the page's density.
+Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. Feature control panels share this rhythm. Settings and Keybindings use compact list rows.
 
 ## 7. Component inventory
 
@@ -120,7 +120,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 
 **Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
 
-**Toggle** (Settings: Show indicator, Follow focus): use `PanelUi.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses the same `Style.space(74)` height and caption title style as Display control rows. Use the shared 44 × 24 track, 20-unit knob and 2-unit inset, all scaled by `Style.space`. Track and knob radii both bind to `Style.cornerRadius`, which mirrors the Windows roundness slider; the shape is never forced to a capsule. On uses the theme accent; Off uses the dim popup foreground and host neutral chrome. Switching retains the host-style animation, mirroring and busy handling; the row owns clicks and keyboard activation. Do not replace the switch with a chip.
+**Toggle** (Settings: Show indicator, Follow focus): use `PanelUi.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses `Style.space(48)` height and a vertically centered body label. Use the shared 44 × 24 track, 20-unit knob and 2-unit inset, all scaled by `Style.space`. Track and knob radii both bind to `Style.cornerRadius`, which mirrors the Windows roundness slider; the shape is never forced to a capsule. On uses the theme accent; Off uses the dim popup foreground and host neutral chrome. Switching retains the host-style animation, mirroring and busy handling; the row owns clicks and keyboard activation. Do not replace the switch with a chip.
 
 **[DECISION, signed off] Secondary vs. primary Action.** §1 says every Action is filled, but a screen can have more than one Action at once (Keep + Revert; Pick another key + Replace and unbind it), and making both equally heavy loses the sense of which one actually commits. Settled rule: the *one* action that commits a consequential change (Keep; Apply; Replace and unbind it) is filled per §1; a same-row action that only cancels or defers (Revert; Pick another key) is neutral-bordered — `Border.controlSpec("normal", …)` border, `Color.popups.text`, no fill — so the eye finds the committing action first. This is now final: one filled commit Action per screen, its cancel/defer partner neutral.
 
@@ -200,15 +200,27 @@ same dim popup foreground as Displays. Values align to the top right; hints alig
 to the bottom left with the same horizontal inset and `Style.space(4)` below.
 Five-row control frames divide their height equally.
 
-`ControlFrame.qml` makes each row control 15.2% wider than the original frame
-width minus two `Style.space(24)` insets. The column split stays fixed; the frame
-expands symmetrically. `ControlSlider.qml` centers every slider with
-`Style.space(8)` on each side of the visible track. Its hit area extends
-by half a knob at each end so the track aligns with row titles and hints.
-Dropdowns and Wallpaper row buttons use the same safe inset. The full-panel
-Settings dropdown uses its previous capped width multiplied by 0.96; its title
-aligns to the dropdown. `ControlButton.qml`
-provides the neutral, full-width row action style. `ActionButton.qml` gives footer
-and binding actions equal `Style.space(180) * 1.2 * 0.96` widths and the host control height;
-the committing action retains the accent fill, and cancellation stays neutral.
-Icon-only canvas, link and key-picker controls retain their specialized roles.
+`ControlFrame.qml` uses the original control width multiplied by `1.2 * 0.96 * 0.9`:
+10% narrower than the previous width. The column split stays fixed and the frame
+is centered. `ControlSlider.qml` extends its hit area by half a knob at each end
+so the visible track aligns with row titles and hints. Dropdowns and Wallpaper
+row buttons use the same safe inset. `ControlButton.qml` provides the neutral
+row action style.
+
+`ActionButton.qml` keeps the host control height. Apply, Cancel, Keep and Revert
+use 60% of the previous `Style.space(180) * 1.2 * 0.96` width. Other actions retain
+their previous width. Settings and Keybindings retain their compact hairline list
+rows: vertically centered body labels, Settings values at the right, and centered
+semibold binding combinations. They do not use the feature control-panel titles.
+Settings' compact position dropdown is `Style.space(130) * 0.9` wide.
+
+All layout monitor names use a dim caption above the upper-left corner outside
+the rectangle, following Windows. Displays keeps its role dropdown alongside the
+name; Workspaces keeps its role alongside the name. Displays, Workspaces, Bar,
+Color Match and Windows reserve a caption lane in each monitor slot so stacked
+monitors cannot cover the names. Non-Span Wallpaper reserves the same lane and
+shrinks each tile proportionally to keep its crop geometry intact; Span retains
+its continuous monitor geometry.
+Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
+`Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
+the live roundness token.

@@ -273,7 +273,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
     assert.match(layout, new RegExp('position: "' + side + '"'));
   for (const canvas of [layout, displayLayout, wallpaperLayout]) {
     assert.match(canvas, /horizontalInset: width \* 0\.1/);
-    assert.match(canvas, /verticalInset: height \* 0\.1/);
+    assert.match(canvas, /verticalInset: Math\.max\(height \* 0\.1, Style\.font\.caption \+ Style\.spacing\.sm \* 2\)/);
   }
   const preview = layout.slice(layout.indexOf('id: barPreview'), layout.indexOf('\n      Text {', layout.indexOf('id: barPreview')));
   assert.doesNotMatch(preview, /anchors\.(?:left|right|top|bottom)/);
@@ -281,8 +281,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(preview, /parent\.height - topInset - bottomInset/);
   assert.match(preview, /position === "left" \? canvas\.barEdgeGap/);
   assert.match(preview, /parent\.height - height - bottomInset/);
-  assert.match(layout, /maximumBarHeight \* canvas\.zoom/);
-  assert.match(layout, /horizontalAlignment: Text\.AlignHCenter/);
+  assert.match(layout, /x: 0; y: -height - Style\.spacing\.sm/);
   assert.match(layout, /barEnabled\s*&&\s*monitorCard\.barSetting\.position/);
   assert.match(layout, /effectiveBarHeight \* canvas\.zoom/);
   assert.match(tab, /PanelSeparator[\s\S]*Style\.space\(64\)/);

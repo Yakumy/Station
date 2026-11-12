@@ -125,7 +125,7 @@ ShellRoot {
         var name = findObject(layout, "workspaceMonitorName-HDMI-A-2")
         var card = findObject(layout, "workspaceMonitor-HDMI-A-2")
         if (!role || role.text !== "| 2" || findObject(layout, "workspaceMonitorRole-DP-3").text !== "| Off") { fail("roles"); return }
-        if (!inside(name, card) || !inside(findObject(layout, "workspaceBadge-HDMI-A-2-2"), card)) { fail("labels inside the card"); return }
+        if (inside(name, card) || name.parent.y + name.parent.height >= 0 || !inside(findObject(layout, "workspaceBadge-HDMI-A-2-2"), card)) { fail("outside name and inside badges"); return }
         if (findObject(tab, "workspaceCountIncrease") || findObject(layout, "workspaceStep-eDP-1-up")) { fail("station count controls"); return }
         var selector = findObject(tab, "workspaceModeSelector")
         var row = selector.parent

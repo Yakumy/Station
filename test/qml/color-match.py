@@ -145,7 +145,7 @@ ShellRoot {
         if (findObject(tab, "colorReset") || findObject(tab, "colorNotice")) { fail("removed reset row"); return }
         var frame = slider.parent.parent.parent
         var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
-        if (Math.abs(slider.width - slider.knobSize - originalWidth * 1.2 * 0.96) > 0.1 || frame.x < 0) { fail("4 percent reduced slider"); return }
+        if (Math.abs(slider.width - slider.knobSize - originalWidth * 1.2 * 0.96 * 0.9) > 0.1 || frame.x < 0) { fail("10 percent reduced slider"); return }
         var title = findObject(slider.parent, "controlRowTitle")
         var hintLeft = findObject(slider.parent, "colorHint-temperature")
         if (Math.abs(slider.x + slider.trackX(0) - title.x) > 0.1 || title.x !== hintLeft.x) { fail("track title hint alignment"); return }

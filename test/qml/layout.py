@@ -304,7 +304,7 @@ Item {
       service.displayDraft = displays
       service.writes = 0; wait(10)
       fuzzyCompare((card("HDMI-A-2").width + layout.monitorGap) / layout.zoom, 720, 0.01)
-      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap) / layout.zoom, 1280, 0.01)
+      fuzzyCompare((card("HDMI-A-2").height + layout.monitorGap + layout.labelHeight) / layout.zoom, 1280, 0.01)
       move("HDMI-A-2", 1920, 1200)
     }
     function test_three_large_displays_fit() {
@@ -356,7 +356,7 @@ Item {
         verify(preview.y >= barLayout.barEdgeGap - 0.01)
         verify(preview.x + preview.width <= name.x || name.x + name.width <= preview.x
           || preview.y + preview.height <= name.y || name.y + name.height <= preview.y,
-          "The centered monitor name must clear the bar on every side")
+          "The outside monitor name must clear the bar on every side")
         verify(preview.y + preview.height <= target.height - barLayout.barEdgeGap + 0.01)
       }
     }
@@ -477,11 +477,11 @@ Item {
       var target = card("HDMI-A-2")
       var oldWidth = target.width
       var oldCenterX = target.x + target.width / 2
-      var oldCenterY = target.y + target.height / 2
+      var oldCenterY = target.y + target.height / 2 - layout.labelHeight / 2
       layout.zoomAt(1.2, oldCenterX, oldCenterY)
       verify(target.width > oldWidth)
       compare(Math.round(target.x + target.width / 2), Math.round(oldCenterX))
-      compare(Math.round(target.y + target.height / 2), Math.round(oldCenterY))
+      compare(Math.round(target.y + target.height / 2 - layout.labelHeight / 2), Math.round(oldCenterY))
       compare(service.previews, 0)
     }
     function test_background_pan_does_not_modify_monitor_layout() {

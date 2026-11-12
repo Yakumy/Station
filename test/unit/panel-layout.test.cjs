@@ -61,7 +61,7 @@ test('display notices, labels, zoom buttons and settings switches share the inte
   assert.equal((displays.match(/ControlLabel \{\s*text: "(?:BRIGHTNESS|TEXT SIZE \(ALL DISPLAYS\)|SCALE|RESOLUTION|REFRESH RATE)"/g) || []).length, 5);
   assert.match(layout, /glyph: "-", factor: 1 \/ 1\.2 \}, \{ glyph: "\+", factor: 1\.2/);
   assert.match(settings, /component PlainToggleRow: Item \{/);
-  assert.match(settings, /height: Style\.space\(74\)/);
+  assert.match(settings, /height: Style\.space\(48\)/);
   assert.match(settings, /PanelUi\.ToggleSwitch \{[\s\S]*?interactive: false/);
   assert.doesNotMatch(settings, /Ui\.Toggle\s*\{/);
 });

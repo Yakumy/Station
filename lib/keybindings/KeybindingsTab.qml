@@ -107,24 +107,30 @@ Column {
 
       Item {
         width: parent.width
-        height: Style.space(74)
-        PanelUi.ControlLabel {
-          width: parent.width - keybindingsTab.tokens.space2 * 2
-          text: bindingGroup.modelData.label
-        }
+        height: Style.space(44)
         Text {
           anchors.left: parent.left
-          anchors.leftMargin: keybindingsTab.inset
+          anchors.leftMargin: keybindingsTab.tokens.space3
           anchors.verticalCenter: parent.verticalCenter
-          width: parent.width * 0.65
-          horizontalAlignment: Text.AlignLeft
+          width: parent.width * 0.36
+          text: bindingGroup.modelData.label
+          elide: Text.ElideRight
+          color: Color.popups.text
+          font.family: Style.font.family
+          font.pixelSize: Style.font.body
+        }
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width * 0.39
+          horizontalAlignment: Text.AlignHCenter
           text: bindingGroup.modelData.combo
           elide: Text.ElideRight
           // The combo is this row's value, so it carries the emphasis weight.
           color: Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
-          font.weight: Font.Normal
+          font.weight: Font.DemiBold
         }
         Text {
           anchors.right: parent.right
@@ -201,6 +207,7 @@ Column {
                 onPicked: function(key) { keybindingsTab.editingKey = key }
               }
               PanelUi.ActionButton {
+                widthFactor: 0.6
                 text: "Apply"
                 accent: Color.accent
                 background: Color.accent
@@ -208,6 +215,7 @@ Column {
                 onClicked: keybindingsTab.applyBindingEdit()
               }
               PanelUi.ActionButton {
+                widthFactor: 0.6
                 text: "Cancel"
                 bordered: true
                 foreground: Color.popups.text

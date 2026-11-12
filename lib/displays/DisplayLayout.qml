@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "Model.js" as Model
 import "../panel" as PanelUi
 
@@ -19,9 +20,10 @@ Ui.BorderSurface {
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
   readonly property real gridStep: Style.space(16)
+  readonly property real labelHeight: Style.font.caption + Style.spacing.sm
   readonly property real monitorGap: Style.spacing.sm
   readonly property real horizontalInset: width * 0.1
-  readonly property real verticalInset: height * 0.1
+  readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
   readonly property color cardBackground: Color.popups.background
   readonly property var displays: service ? service.displayDraft : []
   readonly property var bounds: {
@@ -128,9 +130,9 @@ Ui.BorderSurface {
       x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2 + offsetX
       y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2 + offsetY
+        + canvas.monitorGap / 2 + canvas.labelHeight + offsetY
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
+      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap - canvas.labelHeight)
       z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
       color: monitorCard.isSelected ? Color.menu.selectedBackground : canvas.cardBackground
       borderSpec: Border.flat(isSelected
@@ -140,15 +142,16 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
       Row {
-        anchors.centerIn: parent
+        x: 0; y: -height - Style.spacing.sm
         spacing: Style.spacing.sm
         z: 3
         Text {
+          objectName: "monitorName-" + monitorCard.modelData.name
           text: monitorCard.modelData.name
-          color: monitorCard.isSelected || !canvas.tokens
-            ? Color.popups.text : canvas.tokens.textDim
+          textFormat: Text.PlainText
+          color: canvas.tokens ? canvas.tokens.textDim : Color.popups.text
           font.family: Style.font.family
-          font.pixelSize: Style.font.body
+          font.pixelSize: Style.font.caption
         }
         PanelUi.InlineDropdown {
           id: roleMenu
@@ -156,7 +159,7 @@ Ui.BorderSurface {
           visible: canvas.service
           enabled: canvas.service && canvas.service.draftEditable
           prefix: "| "
-          fontSize: Style.font.body
+          fontSize: Style.font.caption
           value: !monitorCard.outputEnabled ? "off"
             : (canvas.service ? String(canvas.service.roleOf(monitorCard.modelData.name)) : "")
           options: {

@@ -26,6 +26,7 @@ Item {
     font.pixelSize: Style.font.body
   }
   PanelUi.ActionButton {
+    widthFactor: 0.6
     id: keepButton
     anchors.right: parent.right
     anchors.rightMargin: root.tokens.regionPadH
@@ -38,6 +39,7 @@ Item {
     onClicked: root.service.keepPreview()
   }
   PanelUi.ActionButton {
+    widthFactor: 0.6
     id: revertButton
     anchors.right: keepButton.left
     anchors.rightMargin: root.tokens.space3

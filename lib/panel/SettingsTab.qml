@@ -20,16 +20,22 @@ Column {
 
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    height: Style.space(74)
+    height: Style.space(48)
     activeFocusOnTab: true
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
     Keys.onSpacePressed: clicked()
 
-    PanelUi.ControlLabel {
-      width: parent.width - settingsTab.tokens.space2 * 2
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.tokens.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - settingsTab.tokens.space6 - toggleSwitch.width
       text: parent.label
       elide: Text.ElideRight
+      color: settingsTab.tokens.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
     }
     PanelUi.ToggleSwitch {
       id: toggleSwitch
@@ -93,20 +99,24 @@ Column {
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    height: Style.space(74)
-    PanelUi.ControlLabel {
-      width: parent.width - settingsTab.tokens.space2 * 2
-      anchors.leftMargin: panelPositionValue.x
+    height: Style.space(48)
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.tokens.space3
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width - settingsTab.tokens.space6 - panelPositionValue.width
       text: "Panel opening position"
       elide: Text.ElideRight
+      color: settingsTab.tokens.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
     }
     Ui.Dropdown {
       id: panelPositionValue
       anchors.right: parent.right
-      anchors.left: parent.left
-      anchors.leftMargin: (parent.width - Math.min(parent.width - settingsTab.tokens.space2 * 2, (parent.width - settingsTab.inset * 2) * 1.2) * 0.96) / 2
-      anchors.rightMargin: anchors.leftMargin
+      anchors.rightMargin: settingsTab.tokens.space3
       anchors.verticalCenter: parent.verticalCenter
+      width: Style.space(130) * 0.9
       showLabel: false
       value: settingsTab.service ? settingsTab.service.config.panelPosition : "left"
       options: [{ value: "left", label: "Bar" }, { value: "center", label: "Center" }]
@@ -126,9 +136,15 @@ Column {
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    height: Style.space(74)
-    PanelUi.ControlLabel {
+    height: Style.space(48)
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: settingsTab.tokens.space3
+      anchors.verticalCenter: parent.verticalCenter
       text: "Installed version"
+      color: settingsTab.tokens.textPrimary
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
     }
     Item {
       anchors.right: parent.right

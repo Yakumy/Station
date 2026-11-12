@@ -319,11 +319,13 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.tokens.space2
       PanelUi.ActionButton {
+        widthFactor: 0.6
         objectName: "workspacesCancel"
         text: "Cancel"; bordered: true
         onClicked: root.reset()
       }
       PanelUi.ActionButton {
+        widthFactor: 0.6
         objectName: "workspacesApply"
         text: root.idle ? "Apply" : "Applying…"
         accent: Commons.Color.accent
