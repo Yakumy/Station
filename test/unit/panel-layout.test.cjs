@@ -12,14 +12,14 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   const wallpaper = read('lib/wallpaper/WallpaperTab.qml');
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
-  assert.match(panel, /tallPanelHeight: Style\.space\(994\)/);
-  assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? Style\.space\(66\) : 0\)/);
+  assert.match(panel, /tallPanelHeight: Style\.space\(1038\)/);
+  assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? Style\.space\(112\) : 0\)/);
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
-  assert.match(panel, /height: root\.tallPanel \? tabContent\.implicitHeight\s*: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
+  assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
   assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
   assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
-  assert.match(panel, /height: root\.tallPanel \? tabContent\.implicitHeight/);
+  assert.match(panel, /value: tabScroll\.contentHeight > tabScroll\.height/);
   assert.match(panel, /visible: root\.tallPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Color\.popups\.text/);
   assert.doesNotMatch(panel, /prefix: "Mode: "/);
   assert.match(displays, /prefix: "Mode: "/);

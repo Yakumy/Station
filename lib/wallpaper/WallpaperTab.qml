@@ -45,7 +45,7 @@ Column {
   Grid {
     id: wallpaperColumns
     width: parent.width
-    height: Style.space(root.narrow ? 840 : 428)
+    height: Style.space(root.narrow ? 884 : 428)
     columns: root.narrow ? 1 : 3
     Column {
       id: left
@@ -65,7 +65,8 @@ Column {
       }
       Loader {
         id: canvasLoader
-        x: root.pad; width: parent.width - root.pad * 2; height: Style.space(370)
+        x: root.pad; width: parent.width - root.pad * 2
+        height: Style.space(370) - (root.narrow ? layoutHint.height : 0)
         active: root.controller !== null
         sourceComponent: WallpaperUi.WallpaperLayout {
           controller: root.controller
@@ -74,6 +75,8 @@ Column {
         }
       }
       Caption {
+        id: layoutHint
+        wrapMode: Text.WordWrap
         x: root.pad; width: parent.width - root.pad * 2
         topPadding: root.tokens.space2
         text: {
@@ -188,18 +191,23 @@ Column {
   Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
   Item {
     width: parent.width
-    height: root.narrow && !(root.controller && root.controller.dirty) ? 0 : Style.space(64)
+    height: root.narrow && !(root.controller && root.controller.dirty) ? 0 : Style.space(root.narrow ? 112 : 64)
     clip: true
     Caption {
-      x: root.pad; anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - actions.width - root.pad * 3
+      x: root.pad; anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
+      anchors.top: root.narrow ? parent.top : undefined
+      anchors.topMargin: root.tokens.space4
+      width: root.narrow ? parent.width - root.pad * 2 : parent.width - actions.width - root.pad * 3
+      wrapMode: Text.WordWrap
       text: root.controller ? root.controller.notice : ""
       color: root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
     }
     Row {
       id: actions
       anchors.right: parent.right; anchors.rightMargin: root.pad
-      anchors.verticalCenter: parent.verticalCenter
+      anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
+      anchors.bottom: root.narrow ? parent.bottom : undefined
+      anchors.bottomMargin: root.tokens.space4
       spacing: root.tokens.space2
       PanelUi.ActionButton {
         widthFactor: 0.6

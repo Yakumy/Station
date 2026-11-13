@@ -140,7 +140,7 @@ Column {
   Grid {
     id: workspaceColumns
     width: parent.width
-    height: Style.space(root.narrow ? 840 : 428)
+    height: Style.space(root.narrow ? 884 : 428)
     columns: root.narrow ? 1 : 3
     Column {
       id: left
@@ -307,12 +307,15 @@ Column {
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
   Item {
     width: parent.width
-    height: root.narrow && !root.dirty ? 0 : Style.space(64)
+    height: root.narrow && !root.dirty ? 0 : Style.space(root.narrow ? 112 : 64)
     clip: true
     Caption {
       objectName: "workspacesNotice"
-      x: root.pad; anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - actions.width - root.pad * 3
+      x: root.pad; anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
+      anchors.top: root.narrow ? parent.top : undefined
+      anchors.topMargin: root.tokens.space4
+      width: root.narrow ? parent.width - root.pad * 2 : parent.width - actions.width - root.pad * 3
+      wrapMode: Text.WordWrap
       elide: Text.ElideRight
       text: root.notice
       color: root.notice ? Commons.Color.urgent : root.tokens.textDim
@@ -322,7 +325,9 @@ Column {
       objectName: "workspacesActions"
       visible: root.dirty
       anchors.right: parent.right; anchors.rightMargin: root.pad
-      anchors.verticalCenter: parent.verticalCenter
+      anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
+      anchors.bottom: root.narrow ? parent.bottom : undefined
+      anchors.bottomMargin: root.tokens.space4
       spacing: root.tokens.space2
       PanelUi.ActionButton {
         widthFactor: 0.6

@@ -46,7 +46,7 @@ Ui.Panel {
   readonly property real desiredPanelHeight: Style.space(620)
   readonly property bool tallPanel: !!service && service.config.panelPosition === "bar-tall"
   readonly property real tallPanelWidth: Style.space(380)
-  readonly property real tallPanelHeight: Style.space(994)
+  readonly property real tallPanelHeight: Style.space(1038)
   readonly property bool tallDrawerOpen: tallPanel && ((service && service.state === "previewing")
     || (root.selectedTab === Tabs.index("workspaces") && workspacesTab.dirty)
     || (root.selectedTab === Tabs.index("wallpaper") && wallpaperTab.controller && wallpaperTab.controller.dirty))
@@ -377,7 +377,7 @@ Ui.Panel {
     // pixels at the current font scale. The host still caps this to the screen.
     contentWidth: panel.fittedContentWidth(root.tallPanel ? root.tallPanelWidth : root.desiredPanelWidth)
     contentHeight: panel.fittedContentHeight(root.tallPanel
-      ? root.tallPanelHeight + (root.tallDrawerOpen ? Style.space(66) : 0)
+      ? root.tallPanelHeight + (root.tallDrawerOpen ? Style.space(112) : 0)
       : root.desiredPanelHeight)
 
     Ui.PanelKeyCatcher {
@@ -385,7 +385,7 @@ Ui.Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onMoveRequested: function(dx, dy) {
-        if (!root.tallPanel && dy && tabScroll.contentItem) {
+        if (dy && tabScroll.contentItem) {
           var limit = Math.max(0, tabScroll.contentHeight - tabScroll.height)
           tabScroll.contentItem.contentY = Math.max(0,
             Math.min(limit, tabScroll.contentItem.contentY + dy * panelTokens.controlHeight))
@@ -527,18 +527,17 @@ Ui.Panel {
           id: tabScroll
           objectName: "stationTabScroll"
           width: parent.width
-          height: root.tallPanel ? tabContent.implicitHeight
-            : Math.max(0, content.height - y - (previewStrip.visible ? previewStrip.height : 0))
+          height: Math.max(0, content.height - y - (previewStrip.visible ? previewStrip.height : 0))
           contentWidth: availableWidth
           contentHeight: tabContent.implicitHeight
           clip: true
           ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-          ScrollBar.vertical.policy: !root.tallPanel && contentHeight > height
+          ScrollBar.vertical.policy: contentHeight > height
             ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
           Binding {
             target: tabScroll.contentItem
             property: "interactive"
-            value: !root.tallPanel && tabScroll.contentHeight > tabScroll.height
+            value: tabScroll.contentHeight > tabScroll.height
           }
           Column {
             id: tabContent
@@ -556,6 +555,7 @@ Ui.Panel {
         }
         PanelUi.PreviewStrip {
           id: previewStrip
+          narrow: root.tallPanel
           objectName: "stationPreviewStrip"
           width: parent.width
           visible: !!root.service && root.service.state === "previewing"

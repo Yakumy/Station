@@ -222,3 +222,7 @@ retain their exact monitor aspect ratio in every mode.
 Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
 `Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
 the live roundness token.
+
+Tall feature grids reserve 44 scaled units below the controls as well as between
+regions. Action drawers put messages above buttons in tall mode. Screen fitting
+bounds the content viewport and enables scrolling so bottom padding remains reachable.

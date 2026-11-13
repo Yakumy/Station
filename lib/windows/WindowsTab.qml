@@ -33,7 +33,7 @@ Column {
   Grid {
     id: windowColumns
     width: parent.width
-    height: Style.space(root.narrow ? 840 : 428)
+    height: Style.space(root.narrow ? 884 : 428)
     columns: root.narrow ? 1 : 3
     Column {
       id: leftColumn
