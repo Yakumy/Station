@@ -114,7 +114,7 @@ Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step)
 
 Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button` [V, `Panel.qml`]. Keybinding entry uses `BindingKeyPicker` (buttons and key events), never an editable text control: native text inputs can retrieve clipboard payloads even while hidden.
 
-**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box. In Bar tall a hairline separates the Station header from the same rail; a vertical mouse-wheel or touchpad gesture moves it horizontally, its scrollbar stays hidden, and labels never shrink or wrap.
+**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box. In Bar portrait a hairline separates the Station header from the same rail; a vertical mouse-wheel or touchpad gesture moves it horizontally, its scrollbar stays hidden, and labels never shrink or wrap.
 
 **Choice chip** (the 4 modifier-key toggles): see §1. Displays uses sliders and compact text menus instead.
 
@@ -220,14 +220,24 @@ switch below the name. Workspace badges occupy the upper half, Color Match statu
 below the name, and Windows names render above its animation. Wallpaper tiles
 retain their exact monitor aspect ratio in every mode.
 Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
-`Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
+`Style.space(14)` knob; Settings keeps the standard switch dimensions. In Bar portrait
+both draw at 70% through `ToggleSwitch.sizeFactor`, rounded to whole units. Both follow
 the live roundness token.
 
-FeatureGeometry owns the six feature tabs’ equal 370-unit frame heights. In tall
+FeatureGeometry owns the six feature tabs’ equal 370-unit frame heights. In Bar portrait
 mode the divider has 36 units to each visible frame, and bottom padding is 36 units.
-The control heading occupies part of the lower half of the gap. Action drawers put messages above buttons in tall mode. Screen fitting
+The control heading occupies part of the lower half of the gap. Portrait action drawers center their buttons and put any message under them in `Style.font.caption`. Screen fitting
 bounds the content viewport and enables scrolling so bottom padding remains reachable.
 
-Tall action drawers use the full inter-frame gap (72 scaled units, twice the
-36-unit half-gap). Without a message, center the buttons vertically. With a
-message, use an 8-unit inset and bound the text above the buttons.
+Portrait action drawers use the full inter-frame gap (72 scaled units, twice the
+36-unit half-gap). `ActionDrawer` centers the buttons horizontally and centers
+the buttons plus an optional caption message (at most two lines, under the
+buttons) vertically. Wide drawers keep the message on the left and the buttons
+on the right. Every confirmation pair reads secondary then primary:
+Revert/Keep, Cancel/Apply.
+
+In Bar portrait, Keybindings rows keep the label on the left (wrapping to two
+lines) and right-align the combo. A long combo may wrap onto a second
+right-aligned line. Resolve is hidden there because the conflict card's Pick
+another key does the same thing; the combo turns `Color.urgent` instead. The
+conflict card's buttons stack centered.

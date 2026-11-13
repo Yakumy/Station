@@ -11,13 +11,16 @@ const service = runtimeSource();
 const panel = readFileSync(join(__dirname, '..', '..', 'lib', 'panel/StationPanel.qml'), 'utf8');
 const settings = readFileSync(join(__dirname, '..', '..', 'lib', 'panel/SettingsTab.qml'), 'utf8');
 
-test('Bar wide remains the default; legacy positions migrate and only named styles persist', () => {
-  assert.equal(Store.configDefaults().panelPosition, 'bar-wide');
-  assert.equal(Store.loadConfig({}).panelPosition, 'bar-wide');
-  assert.equal(Store.loadConfig({ panelPosition: 'left' }).panelPosition, 'bar-wide');
-  assert.equal(Store.loadConfig({ panelPosition: 'center' }).panelPosition, 'center-wide');
-  assert.equal(Store.loadConfig({ panelPosition: 'bar-tall' }).panelPosition, 'bar-tall');
-  assert.equal(Store.loadConfig({ panelPosition: 'outside' }).panelPosition, 'bar-wide');
+test('Bar landscape remains the default; legacy positions migrate and only named styles persist', () => {
+  assert.equal(Store.configDefaults().panelPosition, 'bar-landscape');
+  assert.equal(Store.loadConfig({}).panelPosition, 'bar-landscape');
+  assert.equal(Store.loadConfig({ panelPosition: 'left' }).panelPosition, 'bar-landscape');
+  assert.equal(Store.loadConfig({ panelPosition: 'center' }).panelPosition, 'center-landscape');
+  assert.equal(Store.loadConfig({ panelPosition: 'bar-portrait' }).panelPosition, 'bar-portrait');
+  assert.equal(Store.loadConfig({ panelPosition: 'bar-wide' }).panelPosition, 'bar-landscape');
+  assert.equal(Store.loadConfig({ panelPosition: 'bar-tall' }).panelPosition, 'bar-portrait');
+  assert.equal(Store.loadConfig({ panelPosition: 'center-wide' }).panelPosition, 'center-landscape');
+  assert.equal(Store.loadConfig({ panelPosition: 'outside' }).panelPosition, 'bar-landscape');
 
   const start = service.indexOf('  function setSetting(name, value) {');
   const end = service.indexOf('\n  }', start) + '\n  }'.length;
@@ -25,11 +28,12 @@ test('Bar wide remains the default; legacy positions migrate and only named styl
   let saves = 0;
   const context = { config, store: { saveConfig() { saves++; } }, root: null };
   const setSetting = runInNewContext('(' + service.slice(start, end).trim() + '\n)', context);
-  assert.equal(setSetting('panelPosition', 'bar-tall'), 'ok');
-  assert.equal(context.config.panelPosition, 'bar-tall');
+  assert.equal(setSetting('panelPosition', 'bar-portrait'), 'ok');
+  assert.equal(context.config.panelPosition, 'bar-portrait');
   assert.equal(saves, 1);
   assert.equal(setSetting('panelPosition', 'outside'), 'invalid');
-  assert.equal(context.config.panelPosition, 'bar-tall');
+  assert.equal(setSetting('panelPosition', 'bar-tall'), 'invalid');
+  assert.equal(context.config.panelPosition, 'bar-portrait');
   assert.equal(saves, 1);
 });
 
@@ -58,12 +62,12 @@ test('Center keeps the panel clear of the bar when the screen is too small', () 
 
 test('Settings and the live panel bind to the persisted position', () => {
   assert.match(settings, /text: "Panel opening position"/);
-  assert.match(settings, /value: "bar-wide", label: "Bar wide"/);
-  assert.match(settings, /value: "bar-tall", label: "Bar tall"/);
-  assert.match(settings, /value: "center-wide", label: "Center wide"/);
+  assert.match(settings, /value: "bar-landscape", label: "Bar landscape"/);
+  assert.match(settings, /value: "bar-portrait", label: "Bar portrait"/);
+  assert.match(settings, /value: "center-landscape", label: "Center landscape"/);
   assert.match(settings, /setSetting\("panelPosition", value\)/);
-  assert.match(panel, /centerOnBar: root\.service && root\.service\.config\.panelPosition === "center-wide"/);
-  assert.match(panel, /tallPanelWidth: Style\.space\(380\)/);
+  assert.match(panel, /centerOnBar: root\.service && root\.service\.config\.panelPosition === "center-landscape"/);
+  assert.match(panel, /portraitPanelWidth: Style\.space\(380\)/);
   assert.match(panel, /PanelPosition\.centerGap\(barPos, screenW, screenH, barThickness, barThickness,/);
   assert.match(service, /panelPosition: root\.config\.panelPosition/);
 });

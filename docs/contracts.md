@@ -837,14 +837,14 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   the same preview and panel-evacuation path as the former toolbar menu.
 - The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
-- Panel style is Bar wide (at the bar icon, the default), Bar tall, or Center wide.
-  Bar tall uses the stock control-panel width (`Style.space(380)`), stacks each layout
+- Panel style is Bar landscape (at the bar icon, the default), Bar portrait, or Center landscape.
+  Bar portrait uses the stock control-panel width (`Style.space(380)`), stacks each layout
   above its controls with equal 370-unit frame heights. The 72-unit gap between visible frames
   includes the control heading. Its hairline divides that gap into equal 36-unit
   halves; the bottom clear space is also 36 units. The card keeps
   one fixed base height across tabs; content scrolls when screen fitting reduces the available height. A rule separates the
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
-  drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Tall drawers are 72 scaled units high (the sum of both divider gaps). Buttons are vertically centered without a message; messages occupy bounded space above the buttons with 8-unit outer insets. Center wide
+  drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Portrait drawers are 72 scaled units high (the sum of both divider gaps). Buttons are horizontally centered. A message sits under them in caption type, at most two lines, and the buttons and message are vertically centered together. `lib/panel/ActionDrawer.qml` owns every feature drawer and the preview strip, and positions its children with `x`/`y` only: switching anchors at runtime once left Keep unpainted in a live portrait preview. Keybindings rows keep the label on the left and right-align the combo; a conflict is shown in the combo color, the conflict card's choices stack centered, and Cancel/Apply sit centered under the editor. Center landscape
   uses the output's full-screen card and stays clear of the bar on small screens.
 - Settings holds the two Show switches, panel style,
   and the installed version. Compact mode and open apps are on the Workspaces tab.

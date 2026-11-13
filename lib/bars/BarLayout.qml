@@ -9,6 +9,7 @@ Ui.BorderSurface {
   id: canvas
   required property var tokens
   property string selectedDisplayName: ""
+  property bool narrow: false
   signal displaySelected(string name)
   required property var service
   readonly property var displays: service ? service.displayDraft : []
@@ -145,6 +146,7 @@ Ui.BorderSurface {
           trackWidth: Style.space(32)
           trackHeight: Style.space(18)
           knobSize: Style.space(14)
+          sizeFactor: canvas.narrow ? 0.7 : 1
           x: (parent.width - width) / 2
           checked: monitorCard.barEnabled
           onToggled: {

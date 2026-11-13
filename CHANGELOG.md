@@ -1,5 +1,11 @@
 # Unreleased
 
+- Rename the panel styles to Bar landscape, Bar portrait and Center landscape. A saved
+  Bar wide, Bar tall or Center wide setting keeps its placement. In Bar portrait, Keep
+  and Revert stay visible during a display preview, every Cancel/Apply and Keep/Revert
+  pair is centered with its message underneath in small type, switches are 30% smaller,
+  and Keybindings shows each shortcut on the right of its row.
+
 - Restore the previous control frame width and center monitor names in every layout
   tab. Keep slider knobs clear of frame edges while using 99% of the available row
   width for sliders, dropdowns and buttons. Center each Display role menu beside its

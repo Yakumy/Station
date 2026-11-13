@@ -314,51 +314,32 @@ Column {
       }
     }
   }
-  Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
-  Item {
+  PanelUi.ActionDrawer {
+    id: actionDrawer
+    objectName: "workspacesDrawer"
+    buttonsName: "workspacesActions"
+    showButtons: root.dirty
     width: parent.width
-    height: root.narrow && !root.dirty ? 0 : (root.narrow ? geometry.actionHeight : Style.space(64))
-    clip: true
-    Caption {
-      id: drawerNotice
-      visible: text.length > 0
-      objectName: "workspacesNotice"
-      x: root.pad; anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
-      anchors.top: root.narrow ? parent.top : undefined
-      anchors.topMargin: root.tokens.space2
-      width: root.narrow ? parent.width - root.pad * 2 : parent.width - actions.width - root.pad * 3
-      anchors.bottom: root.narrow ? actions.top : undefined
-      anchors.bottomMargin: root.tokens.space1
-      wrapMode: Text.WordWrap
-      elide: Text.ElideRight
-      text: root.notice
-      color: root.notice ? Commons.Color.urgent : root.tokens.textDim
+    tokens: root.tokens
+    narrow: root.narrow
+    open: root.dirty
+    message: root.notice
+    messageColor: root.notice ? Commons.Color.urgent : root.tokens.textDim
+    PanelUi.ActionButton {
+      widthFactor: 0.6
+      objectName: "workspacesCancel"
+      text: "Cancel"; bordered: true
+      onClicked: root.reset()
     }
-    Row {
-      id: actions
-      objectName: "workspacesActions"
-      visible: root.dirty
-      anchors.right: parent.right; anchors.rightMargin: root.pad
-      anchors.verticalCenter: root.narrow && drawerNotice.text.length > 0 ? undefined : parent.verticalCenter
-      anchors.bottom: root.narrow && drawerNotice.text.length > 0 ? parent.bottom : undefined
-      anchors.bottomMargin: root.tokens.space2
-      spacing: root.tokens.space2
-      PanelUi.ActionButton {
-        widthFactor: 0.6
-        objectName: "workspacesCancel"
-        text: "Cancel"; bordered: true
-        onClicked: root.reset()
-      }
-      PanelUi.ActionButton {
-        widthFactor: 0.6
-        objectName: "workspacesApply"
-        text: root.idle ? "Apply" : "Applying…"
-        accent: Commons.Color.accent
-        background: Commons.Color.accent
-        foreground: Commons.Color.popups.background
-        enabled: root.idle
-        onClicked: root.apply()
-      }
+    PanelUi.ActionButton {
+      widthFactor: 0.6
+      objectName: "workspacesApply"
+      text: root.idle ? "Apply" : "Applying…"
+      accent: Commons.Color.accent
+      background: Commons.Color.accent
+      foreground: Commons.Color.popups.background
+      enabled: root.idle
+      onClicked: root.apply()
     }
   }
 }

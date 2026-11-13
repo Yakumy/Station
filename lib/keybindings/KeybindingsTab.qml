@@ -10,6 +10,10 @@ Column {
   required property var tokens
   required property var service
   property bool active: false
+  // Bar portrait: the combo is right-aligned on the label's row and every button
+  // row is centered. The conflict card's Pick another key opens the same
+  // editor as Resolve, so the narrow row shows the conflict in the combo color.
+  property bool narrow: false
   property string editingBindingId: ""
   property var editingModifiers: ({ SUPER: false, CTRL: false, ALT: false, SHIFT: false })
   property string editingKey: ""
@@ -22,6 +26,7 @@ Column {
     { label: "Station above", combo: "SUPER + CTRL + ↑", ids: ["go-up"] },
     { label: "Station below", combo: "SUPER + CTRL + ↓", ids: ["go-down"] },
     { label: "Move across monitors and stations", combo: "SUPER + SHIFT + CTRL + ← → ↑ ↓",
+      narrowCombo: "SUPER + SHIFT + CTRL +\n← → ↑ ↓",
       ids: ["shift-left", "shift-right", "shift-up", "shift-down"] }
   ]
 
@@ -106,36 +111,62 @@ Column {
       readonly property bool hasSeparator: index < keybindingsTab.bindingGroups.length - 1
 
       Item {
+        id: bindingRow
         width: parent.width
         height: Style.space(44)
+        readonly property bool conflicted: bindingGroup.groupState === "conflict"
+        readonly property real sideInset: keybindingsTab.tokens.space3
         Text {
+          objectName: "bindingLabel"
           anchors.left: parent.left
-          anchors.leftMargin: keybindingsTab.tokens.space3
+          anchors.leftMargin: parent.sideInset
           anchors.verticalCenter: parent.verticalCenter
-          width: parent.width * 0.36
+          width: keybindingsTab.narrow
+            ? Math.max(0, comboText.x - parent.sideInset - keybindingsTab.tokens.space3)
+            : parent.width * 0.36
           text: bindingGroup.modelData.label
+          wrapMode: keybindingsTab.narrow ? Text.WordWrap : Text.NoWrap
+          maximumLineCount: keybindingsTab.narrow ? 2 : 1
           elide: Text.ElideRight
           color: Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
         }
+        readonly property string comboLabel: keybindingsTab.narrow && bindingGroup.modelData.narrowCombo
+          ? bindingGroup.modelData.narrowCombo : bindingGroup.modelData.combo
+        TextMetrics {
+          id: comboMetrics
+          // The widest line sets the width.
+          text: bindingRow.comboLabel.split("\n").reduce(function(a, b) { return a.length >= b.length ? a : b })
+          font: comboText.font
+        }
         Text {
-          anchors.horizontalCenter: parent.horizontalCenter
+          id: comboText
+          objectName: "bindingCombo"
+          // Narrow rows put the combo on the right and give the label what is
+          // left; wide rows keep the centered value column.
+          width: keybindingsTab.narrow
+            ? Math.min(Math.ceil(comboMetrics.advanceWidth), parent.width * 0.62)
+            : parent.width * 0.39
+          x: keybindingsTab.narrow ? parent.width - parent.sideInset - width
+            : Math.round((parent.width - width) / 2)
           anchors.verticalCenter: parent.verticalCenter
-          width: parent.width * 0.39
-          horizontalAlignment: Text.AlignHCenter
-          text: bindingGroup.modelData.combo
+          horizontalAlignment: keybindingsTab.narrow ? Text.AlignRight : Text.AlignHCenter
+          text: parent.comboLabel
+          // A combo too long for its share wraps onto a second right-aligned line.
+          wrapMode: keybindingsTab.narrow ? Text.WordWrap : Text.NoWrap
+          maximumLineCount: keybindingsTab.narrow ? 2 : 1
           elide: Text.ElideRight
           // The combo is this row's value, so it carries the emphasis weight.
-          color: Color.popups.text
+          color: keybindingsTab.narrow && parent.conflicted ? Color.urgent : Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
           font.weight: Font.DemiBold
         }
         PanelUi.ActionButton {
-          visible: bindingGroup.groupState === "conflict"
+          visible: parent.conflicted && !keybindingsTab.narrow
           anchors.right: parent.right
-          anchors.rightMargin: keybindingsTab.tokens.space3
+          anchors.rightMargin: parent.sideInset
           anchors.verticalCenter: parent.verticalCenter
           widthFactor: 0.8
           text: "Resolve"
@@ -175,8 +206,13 @@ Column {
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
-            Row {
+            // Two full-width choices do not fit side by side in Bar portrait,
+            // so they stack, centered.
+            Grid {
+              objectName: "conflictChoices"
+              columns: keybindingsTab.narrow ? 1 : 2
               spacing: keybindingsTab.tokens.space2
+              x: keybindingsTab.narrow ? Math.round((parent.width - width) / 2) : 0
               PanelUi.ActionButton {
                 text: "Pick another key"
                 bordered: true
@@ -209,6 +245,19 @@ Column {
                 available: keybindingsTab.active
                 onPicked: function(key) { keybindingsTab.editingKey = key }
               }
+            }
+            Row {
+              objectName: "bindingEditActions"
+              visible: keybindingsTab.editingBindingId === conflictRow.modelData.id
+              spacing: keybindingsTab.tokens.space2
+              x: keybindingsTab.narrow ? Math.round((parent.width - width) / 2) : 0
+              PanelUi.ActionButton {
+                widthFactor: 0.6
+                text: "Cancel"
+                bordered: true
+                foreground: Color.popups.text
+                onClicked: keybindingsTab.editingBindingId = ""
+              }
               PanelUi.ActionButton {
                 widthFactor: 0.6
                 text: "Apply"
@@ -216,13 +265,6 @@ Column {
                 background: Color.accent
                 foreground: Color.popups.background
                 onClicked: keybindingsTab.applyBindingEdit()
-              }
-              PanelUi.ActionButton {
-                widthFactor: 0.6
-                text: "Cancel"
-                bordered: true
-                foreground: Color.popups.text
-                onClicked: keybindingsTab.editingBindingId = ""
               }
             }
           }

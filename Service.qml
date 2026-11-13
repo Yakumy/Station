@@ -583,7 +583,7 @@ Item {
       return "ok"
     }
     if (name === "panelPosition") {
-      if (["bar-wide", "bar-tall", "center-wide"].indexOf(value) === -1) return "invalid"
+      if (["bar-landscape", "bar-portrait", "center-landscape"].indexOf(value) === -1) return "invalid"
       config.panelPosition = value
     }
     else if (name === "indicatorStyle") {

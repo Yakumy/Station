@@ -94,6 +94,30 @@ ShellRoot {
     }
     return null
   }
+  function findAll(node, name, visited, found) {
+    if (!node || visited.indexOf(node) >= 0) return found
+    visited.push(node)
+    if (node.objectName === name) found.push(node)
+    var lists = [node.data || [], node.children || [], node.contentItem ? [node.contentItem] : []]
+    for (var j = 0; j < lists.length; j++) for (var i = 0; i < lists[j].length; i++)
+      findAll(lists[j][i], name, visited, found)
+    return found
+  }
+  function centeredIn(item, container) {
+    return Math.abs(item.x + item.width / 2 - container.width / 2) < 1
+  }
+  // Portrait drawers: buttons centered, a caption message under them, both
+  // inside the strip, and the pair vertically centered.
+  function drawerReadable(drawer) {
+    var actions = find(drawer, drawer.buttonsName, [])
+    var message = find(drawer, "actionDrawerMessage", [])
+    if (!actions || !message || !message.visible || !centeredIn(actions, drawer)) return false
+    var top = actions.y, bottom = message.y + message.height
+    return actions.y + actions.height <= message.y + 0.5 && top >= 0 && bottom <= drawer.height + 0.5
+      && Math.abs(top - (drawer.height - bottom)) < 1.5
+      && message.font.pixelSize === Style.font.caption
+      && message.horizontalAlignment === Text.AlignHCenter
+  }
   function sliderClearance(node, visited) {
     if (!node || visited.indexOf(node) >= 0) return true
     visited.push(node)
@@ -177,7 +201,7 @@ ShellRoot {
               && Math.abs(layout.width - controls.width) < 1, "equal frames " + index)) return
         }
       } else if (step === 23) {
-        console.log("PANEL_GEOMETRY_PASS six tall tabs with equal frames and centered dividers")
+        console.log("PANEL_GEOMETRY_PASS six portrait tabs with equal frames and centered dividers")
         station.open()
         var tab = find(station, "stationTabContent", []).children[1]
         station.selectedTab = 1
@@ -185,16 +209,69 @@ ShellRoot {
         tab.notice = ""
       } else if (step === 24) {
         var tab = find(station, "stationTabContent", []).children[1]
-        var actions = find(tab, "workspacesActions", [])
-        if (!require(tab.dirty && Math.abs(actions.y + actions.height / 2 - actions.parent.height / 2) < 1,
-            "empty drawer centers buttons")) return
-        tab.notice = "A longer workspace message that wraps above the action buttons."
+        var drawer = find(tab, "workspacesDrawer", [])
+        var actions = find(drawer, "workspacesActions", [])
+        if (!require(tab.dirty && Math.abs(actions.y + actions.height / 2 - drawer.height / 2) < 1
+            && root.centeredIn(actions, drawer), "empty drawer centers buttons")) return
+        tab.notice = "A longer workspace message that wraps under the action buttons."
       } else if (step === 25) {
         var tab = find(station, "stationTabContent", []).children[1]
-        var actions = find(tab, "workspacesActions", [])
-        var notice = find(tab, "workspacesNotice", [])
-        if (!require(notice.visible && notice.y + notice.height <= actions.y, "drawer message stays above buttons")) return
+        var drawer = find(tab, "workspacesDrawer", [])
+        if (!require(root.drawerReadable(drawer), "drawer message stays under centered buttons")) return
         console.log("PANEL_DRAWER_PASS empty and populated compact drawers")
+        // Bar portrait, then a runtime landscape/portrait round trip during a preview: the
+        // Keep/Revert drawer must stay fully painted and inside the viewport.
+        station.selectedTab = 0
+        root.state = Object.assign({}, root.state, {state: "previewing", previewSeconds: 9,
+          config: Object.assign({}, root.state.config, {panelPosition: "bar-portrait"})})
+        find(station, "stationTabContent", []).children[0].narrow = false
+      } else if (step >= 26 && step <= 28) {
+        find(station, "stationTabContent", []).children[0].narrow = step !== 27
+      } else if (step === 29) {
+        var tab = find(station, "stationTabContent", []).children[0]
+        var drawer = find(tab, "displayActions", [])
+        var keep = find(drawer, "displayKeep", []), revert = find(drawer, "displayRevert", [])
+        var scroll = find(station, "stationTabScroll", [])
+        var height = Style.spacing.controlHeight
+        if (!require(station.portraitPanel && station.portraitDrawerOpen && keep.visible && revert.visible
+            && Math.abs(keep.height - height) < 0.5 && Math.abs(revert.height - height) < 0.5
+            && keep.width > 0 && revert.width > 0, "portrait preview buttons painted")) return
+        if (!require(root.drawerReadable(drawer), "portrait preview drawer layout")) return
+        var bottom = keep.mapToItem(scroll, 0, keep.height).y
+        if (!require(bottom > 0 && bottom <= scroll.height + 0.5, "Keep inside viewport " + bottom + "/" + scroll.height)) return
+        console.log("PANEL_PREVIEW_PASS portrait Keep and Revert survive a landscape/portrait toggle")
+        root.state = Object.assign({}, root.state, {state: "idle"})
+        station.selectedTab = 6
+        var keys = find(station, "stationTabContent", []).children[6]
+        keys.beginBindingEdit(root.state.bindStatuses[0])
+      } else if (step === 30) {
+        var keys = find(station, "stationTabContent", []).children[6]
+        if (!require(keys.narrow, "keybindings follow Bar portrait")) return
+        var labels = findAll(keys, "bindingLabel", [], [])
+        var combos = findAll(keys, "bindingCombo", [], [])
+        if (!require(labels.length === 8 && combos.length === 8, "binding rows")) return
+        for (var i = 0; i < combos.length; i++) {
+          var row = combos[i].parent
+          var right = combos[i].x + combos[i].width
+          if (!require(Math.abs(right - (row.width - row.sideInset)) < 1
+              && combos[i].horizontalAlignment === Text.AlignRight, "combo right-aligned " + i)) return
+          if (!require(labels[i].x + labels[i].width <= combos[i].x + 0.5, "label clears combo " + i)) return
+        }
+        for (var name of ["conflictChoices", "bindingEditActions"]) {
+          var group = find(keys, name, [])
+          if (!require(group && group.visible && root.centeredIn(group, group.parent)
+              && group.x >= -0.5 && group.x + group.width <= group.parent.width + 0.5, "centered " + name)) return
+        }
+        console.log("PANEL_KEYS_PASS portrait keybinding rows and centered conflict actions")
+        var content = find(station, "stationTabContent", [])
+        var settingsTrack = find(content.children[7], "switchTrack", [])
+        var barTrack = find(find(content.children[2], "barEnabledSwitch", []), "switchTrack", [])
+        if (!require(content.children[7].narrow && settingsTrack && barTrack
+            && settingsTrack.width === Math.round(Style.space(44) * 0.7)
+            && settingsTrack.height === Math.round(Style.space(24) * 0.7)
+            && barTrack.width === Math.round(Style.space(32) * 0.7)
+            && barTrack.height === Math.round(Style.space(18) * 0.7), "portrait switches at 70%")) return
+        console.log("PANEL_SWITCH_PASS portrait switches at 70%")
         stop(); Qt.quit(); return
       }
       step++

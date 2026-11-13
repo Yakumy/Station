@@ -8,6 +8,7 @@ Column {
   required property var tokens
   required property string pluginVersion
   required property var service
+  property bool narrow: false
   readonly property real inset: tokens.regionPadH
   spacing: 0
   onVisibleChanged: if (visible && tokens && service)
@@ -44,6 +45,7 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       checked: parent.checked
       interactive: false
+      sizeFactor: settingsTab.narrow ? 0.7 : 1
     }
     MouseArea {
       anchors.fill: parent
@@ -98,18 +100,27 @@ Column {
       font.family: Style.font.family
       font.pixelSize: Style.font.body
     }
+    // The current style name sets the width, so it is never elided, while
+    // Bar portrait keeps the base width and the row label stays whole.
+    TextMetrics {
+      id: currentPosition
+      text: panelPositionValue.currentLabel()
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+    }
     Ui.Dropdown {
       id: panelPositionValue
       anchors.right: parent.right
       anchors.rightMargin: settingsTab.tokens.space3
       anchors.verticalCenter: parent.verticalCenter
-      width: Style.space(130) * 0.99
+      width: Math.max(Style.space(130) * 0.99, Math.ceil(currentPosition.advanceWidth)
+        + Style.spacing.controlPaddingX + Style.spacing.md + Style.spacing.controlGap + Style.space(20))
       showLabel: false
-      value: settingsTab.service ? settingsTab.service.config.panelPosition : "bar-wide"
+      value: settingsTab.service ? settingsTab.service.config.panelPosition : "bar-landscape"
       options: [
-        { value: "bar-wide", label: "Bar wide" },
-        { value: "bar-tall", label: "Bar tall" },
-        { value: "center-wide", label: "Center wide" }
+        { value: "bar-landscape", label: "Bar landscape" },
+        { value: "bar-portrait", label: "Bar portrait" },
+        { value: "center-landscape", label: "Center landscape" }
       ]
       foreground: settingsTab.tokens.textPrimary
       onChanged: function(value) {

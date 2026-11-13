@@ -82,6 +82,7 @@ Column {
         height: geometry.frameHeight
         anchors.horizontalCenter: parent.horizontalCenter
         tokens: root.tokens; service: root.service
+        narrow: root.narrow
         selectedDisplayName: root.selectedDisplay ? root.selectedDisplay.name : ""
         onDisplaySelected: function(name) { root.selectDisplay(name) }
       }

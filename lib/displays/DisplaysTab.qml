@@ -407,61 +407,39 @@ Column {
     }
   }
 
-  Item {
+  PanelUi.ActionDrawer {
+    id: displayActions
+    objectName: "displayActions"
+    readonly property bool previewing: !!displayTab.service && displayTab.service.state === "previewing"
     width: parent.width
-    readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
-    height: displayTab.narrow && !previewing ? 0 : (displayTab.narrow ? geometry.actionHeight : Style.space(66))
-    clip: true
-    Ui.PanelSeparator { width: parent.width; foreground: displayTab.tokens.textPrimary }
-    Text {
-      visible: parent.previewing
-      anchors.left: parent.left
-      anchors.leftMargin: displayTab.pad
-      anchors.right: displayTab.narrow ? parent.right : revertButton.left
-      anchors.rightMargin: displayTab.gutter
-      anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
-      anchors.top: displayTab.narrow ? parent.top : undefined
-      anchors.topMargin: displayTab.tokens.space2
-      text: displayTab.service && displayTab.service.previewBusy ? "Applying layout and moving windows…" : "Keep these settings? Reverting in "
-        + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
-      color: displayTab.tokens.textPrimary
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-      anchors.bottom: displayTab.narrow ? keepButton.top : undefined
-      anchors.bottomMargin: displayTab.tokens.space1
-      elide: Text.ElideRight
-      wrapMode: Text.WordWrap
+    tokens: displayTab.tokens
+    narrow: displayTab.narrow
+    open: previewing
+    showButtons: previewing
+    wideHeight: Style.space(66)
+    wideMessageSize: Style.font.body
+    messageColor: displayTab.tokens.textPrimary
+    message: !previewing ? ""
+      : displayTab.service.previewBusy ? "Applying layout and moving windows…"
+      : "Keep these settings? Reverting in " + displayTab.service.previewSeconds + " s"
+    PanelUi.ActionButton {
+      widthFactor: 0.6
+      objectName: "displayRevert"
+      text: "Revert"
+      enabled: displayTab.service && !displayTab.service.previewBusy
+      bordered: true
+      foreground: Color.popups.text
+      onClicked: displayTab.service.revertPreview("")
     }
     PanelUi.ActionButton {
       widthFactor: 0.6
-      id: keepButton
-      visible: parent.previewing
-      anchors.right: parent.right
-      anchors.rightMargin: displayTab.pad
-      anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
-      anchors.bottom: displayTab.narrow ? parent.bottom : undefined
-      anchors.bottomMargin: displayTab.tokens.space2
+      objectName: "displayKeep"
       text: "Keep"
       enabled: displayTab.service && !displayTab.service.previewBusy
       accent: Color.accent
       background: Color.accent
       foreground: Color.popups.background
       onClicked: displayTab.service.keepPreview()
-    }
-    PanelUi.ActionButton {
-      widthFactor: 0.6
-      id: revertButton
-      visible: parent.previewing
-      anchors.right: keepButton.left
-      anchors.rightMargin: displayTab.gutter
-      anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
-      anchors.bottom: displayTab.narrow ? parent.bottom : undefined
-      anchors.bottomMargin: displayTab.tokens.space2
-      text: "Revert"
-      enabled: displayTab.service && !displayTab.service.previewBusy
-      bordered: true
-      foreground: Color.popups.text
-      onClicked: displayTab.service.revertPreview("")
     }
   }
 }
