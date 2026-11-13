@@ -153,6 +153,31 @@ ShellRoot {
         if (!require(root.readsAtIndicator === root.readsBeforeSwitch, "indicator copied a full snapshot")) return
         console.log("INDICATOR_LATENCY_MS " + root.indicatorLatency)
         console.log("PANEL_COMPOSITION_PASS direct and bridge paths, eight populated tabs, intent, key action and fast confirmed indicator")
+      } else if (step >= 11 && step <= 22) {
+        var index = Math.floor((step - 11) / 2)
+        var content = find(station, "stationTabContent", [])
+        var tab = content.children[index]
+        if (step % 2 === 1) {
+          station.selectedTab = index
+          tab.narrow = true
+        } else {
+          var layout = find(tab, index === 1 ? "workspacesLayout" : index === 3 ? "windowsLayout" : "featureLayoutFrame", [])
+          var controls = find(tab, "featureControlFrame", [])
+          var divider = find(tab, "featureDivider", [])
+          if (!require(layout && controls && divider, "geometry objects " + index)) return
+          var bottom = layout.mapToItem(tab, 0, layout.height).y
+          var top = controls.mapToItem(tab, 0, 0).y
+          var line = divider.mapToItem(tab, 0, divider.height / 2).y
+          if (!require(Math.abs((line - bottom) - (top - line)) < 1,
+              "divider midpoint " + index + ": " + bottom + "/" + line + "/" + top)) return
+          var controlBottom = controls.mapToItem(controls.parent.parent, 0, controls.height).y
+          if (!require(Math.abs(controls.parent.parent.height - controlBottom - (line - bottom)) < 1,
+              "matching bottom padding " + index)) return
+          if (!require(Math.abs(layout.height - controls.height) < 1
+              && Math.abs(layout.width - controls.width) < 1, "equal frames " + index)) return
+        }
+      } else if (step === 23) {
+        console.log("PANEL_GEOMETRY_PASS six tall tabs with equal frames and centered dividers")
         stop(); Qt.quit(); return
       }
       step++

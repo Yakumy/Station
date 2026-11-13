@@ -12,7 +12,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   const wallpaper = read('lib/wallpaper/WallpaperTab.qml');
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
-  assert.match(panel, /tallPanelHeight: Style\.space\(1038\)/);
+  assert.match(panel, /featureGeometry\.stackedHeight/);
   assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? Style\.space\(112\) : 0\)/);
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
   assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
@@ -41,11 +41,11 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /displayWidgetEnabled !== false/);
   assert.match(settings, /setSetting\("hideDisplay", checked\)/);
   assert.match(settings, /Installed version/);
-  assert.match(wallpaper, /height: Style\.space\(370\)/);
-  assert.match(wallpaper, /height: root\.narrow \? Style\.space\(44\) : Style\.space\(428\)/);
-  assert.match(wallpaper, /anchors\.centerIn: parent[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
+  assert.match(wallpaper, /height: geometry\.frameHeight/);
+  assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
+  assert.match(wallpaper, /anchors\.horizontalCenter: parent\.horizontalCenter[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
   assert.match(wallpaper, /"DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"/);
-  assert.match(wallpaper, /id: controlFrame[\s\S]*?height: Style\.space\(370\)/);
+  assert.match(wallpaper, /id: controlFrame[\s\S]*?height: geometry\.frameHeight/);
   assert.match(wallpaper, /objectName: "wallpaperModeDropdown"/);
   assert.match(wallpaper, /value: "span", label: "Span"[\s\S]*?value: "individual", label: "Per monitor"[\s\S]*?value: "same", label: "Same on all"/);
   assert.equal((wallpaper.match(/height: controlFrame\.height \/ 5/g) || []).length, 5);

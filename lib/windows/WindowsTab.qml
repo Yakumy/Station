@@ -30,21 +30,23 @@ Column {
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
-  Grid {
+  PanelUi.FeatureGeometry { id: geometry }
+
+  Item {
     id: windowColumns
     width: parent.width
-    height: Style.space(root.narrow ? 884 : 428)
-    columns: root.narrow ? 1 : 3
+    height: root.narrow ? geometry.stackedHeight : Style.space(428)
     Column {
       id: leftColumn
       width: root.narrow ? windowColumns.width : windowColumns.width * 0.576
       Item {
-        width: parent.width; height: Style.space(28)
+        width: parent.width; height: geometry.headingHeight
         Ui.PanelSectionHeader { anchors.left: parent.left; anchors.leftMargin: root.tokens.regionPadH; anchors.verticalCenter: parent.verticalCenter; text: "LAYOUT"; foreground: root.tokens.textPrimary }
       }
       WindowsUi.WindowsLayout {
+        objectName: "windowsLayout"
         width: parent.width - root.tokens.regionPadH * 2
-        height: Style.space(370)
+        height: geometry.frameHeight
         anchors.horizontalCenter: parent.horizontalCenter
         tokens: root.tokens; service: root.service
         values: root.values
@@ -52,21 +54,29 @@ Column {
       }
     }
     Item {
+      x: root.narrow ? 0 : leftColumn.width
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight : 0
       width: root.narrow ? windowColumns.width : Math.max(1, Style.normalBorderWidth)
-      height: root.narrow ? Style.space(44) : Style.space(428)
+      height: root.narrow ? geometry.separatorSlot : Style.space(428)
       Rectangle {
-        anchors.centerIn: parent
+        objectName: "featureDivider"
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: root.narrow ? geometry.halfGap - height / 2 : 0
         width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
         color: Commons.Color.popups.text; opacity: 0.12
       }
     }
     Column {
+      x: root.narrow ? 0 : leftColumn.width + Math.max(1, Style.normalBorderWidth)
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight + geometry.separatorSlot : 0
       width: root.narrow ? windowColumns.width
         : windowColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
-      Item { width: parent.width; height: Style.space(28) }
+      Item { width: parent.width; height: geometry.headingHeight }
       PanelUi.ControlFrame {
-        height: Style.space(370)
+        objectName: "featureControlFrame"
+        narrow: root.narrow
+        height: geometry.frameHeight
         Column {
           anchors.fill: parent
           Repeater {

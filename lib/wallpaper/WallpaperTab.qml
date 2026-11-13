@@ -42,16 +42,17 @@ Column {
   }
   component RowButton: PanelUi.ControlButton {}
 
-  Grid {
+  PanelUi.FeatureGeometry { id: geometry }
+
+  Item {
     id: wallpaperColumns
     width: parent.width
-    height: Style.space(root.narrow ? 884 : 428)
-    columns: root.narrow ? 1 : 3
+    height: root.narrow ? geometry.stackedHeight : Style.space(428)
     Column {
       id: left
       width: root.narrow ? wallpaperColumns.width : wallpaperColumns.width * 0.576
       Item {
-        width: parent.width; height: Style.space(28)
+        width: parent.width; height: geometry.headingHeight
         Ui.PanelSectionHeader {
           anchors.left: parent.left; anchors.leftMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
@@ -64,9 +65,10 @@ Column {
         }
       }
       Loader {
+        objectName: "featureLayoutFrame"
         id: canvasLoader
         x: root.pad; width: parent.width - root.pad * 2
-        height: Style.space(370) - (root.narrow ? layoutHint.height : 0)
+        height: geometry.frameHeight
         active: root.controller !== null
         sourceComponent: WallpaperUi.WallpaperLayout {
           controller: root.controller
@@ -76,6 +78,9 @@ Column {
       }
       Caption {
         id: layoutHint
+        parent: canvasLoader
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: root.tokens.space2
         wrapMode: Text.WordWrap
         x: root.pad; width: parent.width - root.pad * 2
         topPadding: root.tokens.space2
@@ -88,25 +93,31 @@ Column {
       }
     }
     Item {
+      x: root.narrow ? 0 : left.width
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight : 0
       width: root.narrow ? wallpaperColumns.width : Math.max(1, Style.normalBorderWidth)
-      height: root.narrow ? Style.space(44) : Style.space(428)
+      height: root.narrow ? geometry.separatorSlot : Style.space(428)
       Rectangle {
-        anchors.centerIn: parent
+        objectName: "featureDivider"
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: root.narrow ? geometry.halfGap - height / 2 : 0
         width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
         color: Color.popups.text; opacity: 0.12
       }
     }
     Column {
+      x: root.narrow ? 0 : left.width + Math.max(1, Style.normalBorderWidth)
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight + geometry.separatorSlot : 0
       id: rightColumn
       width: root.narrow ? wallpaperColumns.width
         : wallpaperColumns.width - left.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       enabled: root.controller && !root.controller.busy && !root.controller.importBusy
       Item {
-        width: parent.width; height: Style.space(28)
+        width: parent.width; height: geometry.headingHeight
         Ui.PanelSectionHeader {
-          anchors.left: parent.left; anchors.leftMargin: Style.space(28)
+          anchors.left: parent.left; anchors.leftMargin: geometry.headingHeight
           anchors.verticalCenter: parent.verticalCenter
           objectName: "wallpaperSelectedMonitor"
           text: root.scene.mode === "individual" && root.selectedDisplay
@@ -115,8 +126,10 @@ Column {
         }
       }
       PanelUi.ControlFrame {
+        objectName: "featureControlFrame"
+        narrow: root.narrow
         id: controlFrame
-        height: Style.space(370)
+        height: geometry.frameHeight
         Column {
           anchors.fill: parent
           spacing: 0

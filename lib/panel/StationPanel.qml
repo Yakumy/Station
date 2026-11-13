@@ -46,7 +46,9 @@ Ui.Panel {
   readonly property real desiredPanelHeight: Style.space(620)
   readonly property bool tallPanel: !!service && service.config.panelPosition === "bar-tall"
   readonly property real tallPanelWidth: Style.space(380)
-  readonly property real tallPanelHeight: Style.space(1038)
+  readonly property real tallPanelHeight: Style.space(67) + panelTokens.controlHeight
+    + panelTokens.space1 + Math.max(1, Style.normalBorderWidth) * 3 + featureGeometry.stackedHeight
+  PanelUi.FeatureGeometry { id: featureGeometry }
   readonly property bool tallDrawerOpen: tallPanel && ((service && service.state === "previewing")
     || (root.selectedTab === Tabs.index("workspaces") && workspacesTab.dirty)
     || (root.selectedTab === Tabs.index("wallpaper") && wallpaperTab.controller && wallpaperTab.controller.dirty))

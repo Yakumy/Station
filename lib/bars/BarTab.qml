@@ -42,11 +42,12 @@ Column {
     font.pixelSize: Style.font.caption
   }
 
-  Grid {
+  PanelUi.FeatureGeometry { id: geometry }
+
+  Item {
     id: barColumns
     width: parent.width
-    height: Style.space(root.narrow ? 884 : 428)
-    columns: root.narrow ? 1 : 3
+    height: root.narrow ? geometry.stackedHeight : Style.space(428)
 
     Column {
       id: leftColumn
@@ -55,7 +56,7 @@ Column {
 
       Item {
         width: parent.width
-        height: Style.space(28)
+        height: geometry.headingHeight
         Ui.PanelSectionHeader {
           anchors.left: parent.left
           anchors.leftMargin: root.pad
@@ -75,9 +76,10 @@ Column {
       }
 
       Bars.BarLayout {
+        objectName: "featureLayoutFrame"
         id: layoutCanvas
         width: parent.width - root.pad * 2
-        height: Style.space(370)
+        height: geometry.frameHeight
         anchors.horizontalCenter: parent.horizontalCenter
         tokens: root.tokens; service: root.service
         selectedDisplayName: root.selectedDisplay ? root.selectedDisplay.name : ""
@@ -86,10 +88,14 @@ Column {
     }
 
     Item {
+      x: root.narrow ? 0 : leftColumn.width
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight : 0
       width: root.narrow ? barColumns.width : Math.max(1, Style.normalBorderWidth)
-      height: root.narrow ? Style.space(44) : Style.space(428)
+      height: root.narrow ? geometry.separatorSlot : Style.space(428)
       Rectangle {
-        anchors.centerIn: parent
+        objectName: "featureDivider"
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: root.narrow ? geometry.halfGap - height / 2 : 0
         width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
         color: Commons.Color.popups.text
@@ -98,15 +104,17 @@ Column {
     }
 
     Column {
+      x: root.narrow ? 0 : leftColumn.width + Math.max(1, Style.normalBorderWidth)
+      y: root.narrow ? geometry.headingHeight + geometry.frameHeight + geometry.separatorSlot : 0
       width: root.narrow ? barColumns.width
         : barColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       Item {
         width: parent.width
-        height: Style.space(28)
+        height: geometry.headingHeight
         Text {
           anchors.left: parent.left
-          anchors.leftMargin: Style.space(28)
+          anchors.leftMargin: geometry.headingHeight
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width - Style.space(56)
           text: root.selectedDisplay ? "Selected: " + root.selectedDisplay.name : "No monitor selected"
@@ -117,8 +125,10 @@ Column {
         }
       }
       PanelUi.ControlFrame {
+        objectName: "featureControlFrame"
+        narrow: root.narrow
         id: controlFrame
-        height: Style.space(370)
+        height: geometry.frameHeight
 
         Column {
           anchors.fill: parent
@@ -313,7 +323,7 @@ Column {
 
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
   Item {
-    width: parent.width; height: Style.space(64)
+    width: parent.width; height: root.narrow && !layoutCanvas.barToggleError ? 0 : Style.space(64)
     Text {
       objectName: "barToggleError"
       anchors.left: parent.left; anchors.leftMargin: root.pad

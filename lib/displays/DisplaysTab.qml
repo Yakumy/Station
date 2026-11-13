@@ -75,11 +75,12 @@ Column {
 
   spacing: 0
 
-  Grid {
+  PanelUi.FeatureGeometry { id: geometry }
+
+  Item {
     id: displayColumns
     width: parent.width
-    height: Style.space(displayTab.narrow ? 884 : 428)
-    columns: displayTab.narrow ? 1 : 3
+    height: displayTab.narrow ? geometry.stackedHeight : Style.space(428)
 
     Column {
       id: leftColumn
@@ -88,7 +89,7 @@ Column {
 
       Item {
         width: parent.width
-        height: Style.space(28)
+        height: geometry.headingHeight
         Ui.PanelSectionHeader {
           anchors.left: parent.left
           anchors.leftMargin: displayTab.pad
@@ -108,9 +109,10 @@ Column {
       }
 
       Displays.DisplayLayout {
+        objectName: "featureLayoutFrame"
         id: layoutCanvas
         width: parent.width - displayTab.pad * 2
-        height: Style.space(370) - (displayTab.narrow && layoutError.visible ? layoutError.height : 0)
+        height: geometry.frameHeight
         anchors.horizontalCenter: parent.horizontalCenter
         service: displayTab.service
         tokens: displayTab.tokens
@@ -133,6 +135,9 @@ Column {
 
       Text {
         id: layoutError
+        parent: layoutCanvas
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: displayTab.tokens.space2
         visible: displayTab.service && displayTab.service.layoutError !== ""
         width: parent.width - displayTab.pad * 2
         x: displayTab.pad
@@ -146,10 +151,14 @@ Column {
     }
 
     Item {
+      x: displayTab.narrow ? 0 : leftColumn.width
+      y: displayTab.narrow ? geometry.headingHeight + geometry.frameHeight : 0
       width: displayTab.narrow ? displayColumns.width : Math.max(1, Style.normalBorderWidth)
-      height: displayTab.narrow ? Style.space(44) : Style.space(428)
+      height: displayTab.narrow ? geometry.separatorSlot : Style.space(428)
       Rectangle {
-        anchors.centerIn: parent
+        objectName: "featureDivider"
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: displayTab.narrow ? geometry.halfGap - height / 2 : 0
         width: displayTab.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: displayTab.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
         color: Color.popups.text
@@ -158,15 +167,17 @@ Column {
     }
 
     Column {
+      x: displayTab.narrow ? 0 : leftColumn.width + Math.max(1, Style.normalBorderWidth)
+      y: displayTab.narrow ? geometry.headingHeight + geometry.frameHeight + geometry.separatorSlot : 0
       id: rightColumn
       width: displayTab.narrow ? displayColumns.width
         : displayColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
-      readonly property real sideInset: Style.space(28)
+      readonly property real sideInset: geometry.headingHeight
 
       Item {
         width: parent.width
-        height: Style.space(28)
+        height: geometry.headingHeight
         Text {
           anchors.left: parent.left
           anchors.leftMargin: rightColumn.sideInset
@@ -180,8 +191,10 @@ Column {
       }
 
       PanelUi.ControlFrame {
+        objectName: "featureControlFrame"
+        narrow: displayTab.narrow
         id: controlFrame
-        height: Style.space(370)
+        height: geometry.frameHeight
 
         Column {
           anchors.fill: parent

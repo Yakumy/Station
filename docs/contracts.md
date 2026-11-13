@@ -839,8 +839,9 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
 - Panel style is Bar wide (at the bar icon, the default), Bar tall, or Center wide.
   Bar tall uses the stock control-panel width (`Style.space(380)`), stacks each layout
-  above its controls with a 44-unit gap after every layout canvas and the same clear
-  space below the controls. A hairline is centered in the inter-panel gap. The card keeps
+  above its controls with equal 370-unit frame heights. The 72-unit gap between visible frames
+  includes the control heading. Its hairline divides that gap into equal 36-unit
+  halves; the bottom clear space is also 36 units. The card keeps
   one fixed base height across tabs; content scrolls when screen fitting reduces the available height. A rule separates the
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
   drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Tall drawers place wrapped messages above the buttons with theme spacing at both edges. Center wide

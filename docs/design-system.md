@@ -223,6 +223,7 @@ Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
 `Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
 the live roundness token.
 
-Tall feature grids reserve 44 scaled units below the controls as well as between
-regions. Action drawers put messages above buttons in tall mode. Screen fitting
+FeatureGeometry owns the six feature tabs’ equal 370-unit frame heights. In tall
+mode the divider has 36 units to each visible frame, and bottom padding is 36 units.
+The control heading occupies part of the lower half of the gap. Action drawers put messages above buttons in tall mode. Screen fitting
 bounds the content viewport and enables scrolling so bottom padding remains reachable.
