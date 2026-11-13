@@ -178,6 +178,23 @@ ShellRoot {
         }
       } else if (step === 23) {
         console.log("PANEL_GEOMETRY_PASS six tall tabs with equal frames and centered dividers")
+        station.open()
+        var tab = find(station, "stationTabContent", []).children[1]
+        station.selectedTab = 1
+        tab.draft = Object.assign({}, tab.draft, {showOpenApps: !tab.draft.showOpenApps})
+        tab.notice = ""
+      } else if (step === 24) {
+        var tab = find(station, "stationTabContent", []).children[1]
+        var actions = find(tab, "workspacesActions", [])
+        if (!require(tab.dirty && Math.abs(actions.y + actions.height / 2 - actions.parent.height / 2) < 1,
+            "empty drawer centers buttons")) return
+        tab.notice = "A longer workspace message that wraps above the action buttons."
+      } else if (step === 25) {
+        var tab = find(station, "stationTabContent", []).children[1]
+        var actions = find(tab, "workspacesActions", [])
+        var notice = find(tab, "workspacesNotice", [])
+        if (!require(notice.visible && notice.y + notice.height <= actions.y, "drawer message stays above buttons")) return
+        console.log("PANEL_DRAWER_PASS empty and populated compact drawers")
         stop(); Qt.quit(); return
       }
       step++

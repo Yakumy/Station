@@ -227,3 +227,7 @@ FeatureGeometry owns the six feature tabs’ equal 370-unit frame heights. In ta
 mode the divider has 36 units to each visible frame, and bottom padding is 36 units.
 The control heading occupies part of the lower half of the gap. Action drawers put messages above buttons in tall mode. Screen fitting
 bounds the content viewport and enables scrolling so bottom padding remains reachable.
+
+Tall action drawers use the full inter-frame gap (72 scaled units, twice the
+36-unit half-gap). Without a message, center the buttons vertically. With a
+message, use an 8-unit inset and bound the text above the buttons.

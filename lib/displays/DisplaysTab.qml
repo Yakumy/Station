@@ -410,7 +410,7 @@ Column {
   Item {
     width: parent.width
     readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
-    height: displayTab.narrow && !previewing ? 0 : Style.space(displayTab.narrow ? 112 : 66)
+    height: displayTab.narrow && !previewing ? 0 : (displayTab.narrow ? geometry.actionHeight : Style.space(66))
     clip: true
     Ui.PanelSeparator { width: parent.width; foreground: displayTab.tokens.textPrimary }
     Text {
@@ -421,12 +421,15 @@ Column {
       anchors.rightMargin: displayTab.gutter
       anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
       anchors.top: displayTab.narrow ? parent.top : undefined
-      anchors.topMargin: displayTab.tokens.space4
+      anchors.topMargin: displayTab.tokens.space2
       text: displayTab.service && displayTab.service.previewBusy ? "Applying layout and moving windows…" : "Keep these settings? Reverting in "
         + (displayTab.service ? displayTab.service.previewSeconds : 0) + " s"
       color: displayTab.tokens.textPrimary
       font.family: Style.font.family
       font.pixelSize: Style.font.body
+      anchors.bottom: displayTab.narrow ? keepButton.top : undefined
+      anchors.bottomMargin: displayTab.tokens.space1
+      elide: Text.ElideRight
       wrapMode: Text.WordWrap
     }
     PanelUi.ActionButton {
@@ -437,7 +440,7 @@ Column {
       anchors.rightMargin: displayTab.pad
       anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
       anchors.bottom: displayTab.narrow ? parent.bottom : undefined
-      anchors.bottomMargin: displayTab.tokens.space4
+      anchors.bottomMargin: displayTab.tokens.space2
       text: "Keep"
       enabled: displayTab.service && !displayTab.service.previewBusy
       accent: Color.accent
@@ -453,7 +456,7 @@ Column {
       anchors.rightMargin: displayTab.gutter
       anchors.verticalCenter: displayTab.narrow ? undefined : parent.verticalCenter
       anchors.bottom: displayTab.narrow ? parent.bottom : undefined
-      anchors.bottomMargin: displayTab.tokens.space4
+      anchors.bottomMargin: displayTab.tokens.space2
       text: "Revert"
       enabled: displayTab.service && !displayTab.service.previewBusy
       bordered: true

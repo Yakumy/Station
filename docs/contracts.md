@@ -844,7 +844,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   halves; the bottom clear space is also 36 units. The card keeps
   one fixed base height across tabs; content scrolls when screen fitting reduces the available height. A rule separates the
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
-  drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Tall drawers place wrapped messages above the buttons with theme spacing at both edges. Center wide
+  drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Tall drawers are 72 scaled units high (the sum of both divider gaps). Buttons are vertically centered without a message; messages occupy bounded space above the buttons with 8-unit outer insets. Center wide
   uses the output's full-screen card and stays clear of the bar on small screens.
 - Settings holds the two Show switches, panel style,
   and the installed version. Compact mode and open apps are on the Workspaces tab.

@@ -204,13 +204,18 @@ Column {
   Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
   Item {
     width: parent.width
-    height: root.narrow && !(root.controller && root.controller.dirty) ? 0 : Style.space(root.narrow ? 112 : 64)
+    height: root.narrow && !(root.controller && root.controller.dirty) ? 0 : (root.narrow ? geometry.actionHeight : Style.space(64))
     clip: true
     Caption {
+      id: drawerNotice
+      visible: text.length > 0
       x: root.pad; anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
       anchors.top: root.narrow ? parent.top : undefined
-      anchors.topMargin: root.tokens.space4
+      anchors.topMargin: root.tokens.space2
       width: root.narrow ? parent.width - root.pad * 2 : parent.width - actions.width - root.pad * 3
+      anchors.bottom: root.narrow ? actions.top : undefined
+      anchors.bottomMargin: root.tokens.space1
+      elide: Text.ElideRight
       wrapMode: Text.WordWrap
       text: root.controller ? root.controller.notice : ""
       color: root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
@@ -218,9 +223,9 @@ Column {
     Row {
       id: actions
       anchors.right: parent.right; anchors.rightMargin: root.pad
-      anchors.verticalCenter: root.narrow ? undefined : parent.verticalCenter
-      anchors.bottom: root.narrow ? parent.bottom : undefined
-      anchors.bottomMargin: root.tokens.space4
+      anchors.verticalCenter: root.narrow && drawerNotice.text.length > 0 ? undefined : parent.verticalCenter
+      anchors.bottom: root.narrow && drawerNotice.text.length > 0 ? parent.bottom : undefined
+      anchors.bottomMargin: root.tokens.space2
       spacing: root.tokens.space2
       PanelUi.ActionButton {
         widthFactor: 0.6

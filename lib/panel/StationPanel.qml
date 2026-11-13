@@ -379,7 +379,7 @@ Ui.Panel {
     // pixels at the current font scale. The host still caps this to the screen.
     contentWidth: panel.fittedContentWidth(root.tallPanel ? root.tallPanelWidth : root.desiredPanelWidth)
     contentHeight: panel.fittedContentHeight(root.tallPanel
-      ? root.tallPanelHeight + (root.tallDrawerOpen ? Style.space(112) : 0)
+      ? root.tallPanelHeight + (root.tallDrawerOpen ? featureGeometry.actionHeight : 0)
       : root.desiredPanelHeight)
 
     Ui.PanelKeyCatcher {

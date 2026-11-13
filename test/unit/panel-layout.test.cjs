@@ -13,7 +13,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
   assert.match(panel, /featureGeometry\.stackedHeight/);
-  assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? Style\.space\(112\) : 0\)/);
+  assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? featureGeometry\.actionHeight : 0\)/);
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
   assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
