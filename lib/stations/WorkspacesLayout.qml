@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -141,12 +142,45 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputIndex !== -1 || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
 
+      Row {
+        id: monitorIdentity
+        objectName: "workspaceMonitorIdentity-" + monitorCard.modelData.name
+        anchors.centerIn: parent
+        spacing: Style.spacing.sm
+        z: 2
+
+        PanelUi.MonitorName {
+          id: monitorName
+          centerInParent: false
+          name: monitorCard.modelData.name
+          anchors.verticalCenter: parent.verticalCenter
+        }
+        Text {
+          objectName: "workspaceMonitorSeparator-" + monitorCard.modelData.name
+          text: "|"
+          textFormat: Text.PlainText
+          color: monitorName.foreground
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          anchors.verticalCenter: parent.verticalCenter
+        }
+        Text {
+          objectName: "workspaceMonitorRole-" + monitorCard.modelData.name
+          text: monitorCard.outputIndex === -1 ? "Off" : String(monitorCard.outputIndex + 1)
+          textFormat: Text.PlainText
+          color: monitorName.foreground
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          anchors.verticalCenter: parent.verticalCenter
+        }
+      }
+
       Flow {
         objectName: "workspaceBadges-" + monitorCard.modelData.name
         x: Style.spacing.sm
         y: Style.spacing.sm
         width: Math.max(0, parent.width - Style.spacing.sm * 2)
-        height: Math.max(0, parent.height - Style.spacing.sm * 2)
+        height: Math.max(0, (parent.height - Style.font.caption) / 2 - Style.spacing.sm * 2)
         spacing: Style.spacing.xs
         clip: true
         Repeater {

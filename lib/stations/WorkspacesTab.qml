@@ -131,10 +131,7 @@ Column {
     elide: Text.ElideRight
   }
   component RowLabel: PanelUi.ControlLabel {}
-  component RowDropdown: Ui.Dropdown {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
-    anchors.verticalCenter: parent.verticalCenter
+  component RowDropdown: PanelUi.ControlDropdown {
     showLabel: false
     foreground: root.tokens.textPrimary
   }
@@ -198,9 +195,6 @@ Column {
               objectName: "workspaceModeSelector"
               enabled: !root.singleOutput
               opacity: enabled ? 1 : root.tokens.disabledOpacity
-              anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
-              anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               value: root.mode
               options: [{ value: "station", label: "Station" }, { value: "repetitive", label: "Repetitive" },

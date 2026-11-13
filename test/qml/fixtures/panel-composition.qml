@@ -94,6 +94,23 @@ ShellRoot {
     }
     return null
   }
+  function sliderClearance(node, visited) {
+    if (!node || visited.indexOf(node) >= 0) return true
+    visited.push(node)
+    if (node.knobSize !== undefined && node.trackX !== undefined) {
+      // The host enlarges the knob by 15% on hover. Check both endpoint
+      // extents against the actual row, without issuing a slider release.
+      var reach = node.knobSize * 1.15 / 2
+      for (var end of [0, 1]) {
+        var center = node.x + node.trackX(end)
+        if (center - reach <= 0 || center + reach >= node.parent.width) return false
+      }
+    }
+    var children = node.children || []
+    for (var i = 0; i < children.length; i++)
+      if (!sliderClearance(children[i], visited)) return false
+    return true
+  }
   Timer {
     interval: 180; running: true; repeat: true
     property int step: 0
@@ -112,6 +129,7 @@ ShellRoot {
         if (!require(root.state.rememberedTab === 6, "tab setter")) return
         var content = find(station, "stationTabContent", [])
         if (!require(content && content.children.length >= 8, "all tabs")) return
+        if (!require(root.sliderClearance(content, []), "hovered slider endpoint clearance")) return
         var keys = content.children[6]
         keys.beginBindingEdit(root.state.bindStatuses[0]); keys.editingKey = "K"; keys.applyBindingEdit()
         if (!require(root.calls.some(function(row) { return row[0] === "setBinding" && row[1][1] === "SUPER + K" }), "key action")) return

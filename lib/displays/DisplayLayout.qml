@@ -141,24 +141,34 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
       Row {
-        x: Style.spacing.sm; y: Style.spacing.sm
+        id: monitorIdentity
+        objectName: "monitorIdentity-" + monitorCard.modelData.name
+        anchors.centerIn: parent
         spacing: Style.spacing.sm
         z: 3
+        PanelUi.MonitorName {
+          id: monitorName
+          centerInParent: false
+          name: monitorCard.modelData.name
+          anchors.verticalCenter: parent.verticalCenter
+        }
         Text {
-          objectName: "monitorName-" + monitorCard.modelData.name
-          text: monitorCard.modelData.name
+          objectName: "monitorRoleSeparator-" + monitorCard.modelData.name
+          text: "|"
           textFormat: Text.PlainText
-          color: canvas.tokens ? canvas.tokens.textDim : Color.popups.text
+          color: monitorName.foreground
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
+          anchors.verticalCenter: parent.verticalCenter
         }
         PanelUi.InlineDropdown {
           id: roleMenu
           objectName: "monitorRoleMenu"
           visible: canvas.service
           enabled: canvas.service && canvas.service.draftEditable
-          prefix: "| "
           fontSize: Style.font.caption
+          foreground: monitorName.foreground
+          anchors.verticalCenter: parent.verticalCenter
           value: !monitorCard.outputEnabled ? "off"
             : (canvas.service ? String(canvas.service.roleOf(monitorCard.modelData.name)) : "")
           options: {

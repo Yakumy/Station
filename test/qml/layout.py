@@ -278,13 +278,21 @@ Item {
     }
     function test_monitor_heading_is_inside_display_card() {
       var target = card("HDMI-A-2")
+      var identity = findChild(target, "monitorIdentity-HDMI-A-2")
       var name = findChild(target, "monitorName-HDMI-A-2")
+      var separator = findChild(target, "monitorRoleSeparator-HDMI-A-2")
       var menu = findChild(target, "monitorRoleMenu")
-      verify(name !== null && menu !== null)
+      verify(identity !== null && name !== null && separator !== null && menu !== null)
+      var identityPos = identity.mapToItem(target, 0, 0)
       var namePos = name.mapToItem(target, 0, 0)
+      var separatorPos = separator.mapToItem(target, 0, 0)
       var menuPos = menu.mapToItem(target, 0, 0)
       verify(namePos.x > 0 && namePos.y > 0)
-      verify(menuPos.x >= namePos.x + name.width)
+      fuzzyCompare(identityPos.x + identity.width / 2, target.width / 2, 0.51)
+      fuzzyCompare(namePos.y + name.height / 2, menuPos.y + menu.height / 2, 0.51)
+      fuzzyCompare(separatorPos.y + separator.height / 2, menuPos.y + menu.height / 2, 0.51)
+      compare(separator.text, "|")
+      fuzzyCompare(namePos.y + name.height / 2, target.height / 2, 0.51)
       verify(menuPos.y >= 0 && menuPos.y + menu.height <= target.height)
     }
     function test_card_off_survives_delegate_destruction() {
@@ -349,7 +357,7 @@ Item {
       var first = barCard("eDP-1"), second = barCard("HDMI-A-2")
       fuzzyCompare(second.x - first.x - first.width, barLayout.monitorGap, 0.01)
     }
-    function test_bar_preview_omits_monitor_name_and_clears_every_card_edge() {
+    function test_bar_preview_centers_monitor_name_and_clears_every_card_edge() {
       service.displayDraft = [
         {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1}
       ]
@@ -360,8 +368,14 @@ Item {
         wait(10)
         var target = barCard("eDP-1")
         var preview = findChild(target, "barPreview-eDP-1")
+        var identity = findChild(target, "barMonitorIdentity-eDP-1")
         var name = findChild(target, "monitorName-eDP-1")
-        verify(preview !== null && name === null)
+        var control = findChild(target, "barEnabledSwitch")
+        verify(preview !== null && identity !== null && name !== null && control !== null)
+        fuzzyCompare(identity.x + identity.width / 2, target.width / 2, 0.51)
+        fuzzyCompare(identity.y + identity.height / 2, target.height / 2, 0.51)
+        verify(control.y >= name.y + name.height)
+        fuzzyCompare(name.x + name.width / 2, control.x + control.width / 2, 0.51)
         verify(preview.x >= barLayout.barEdgeGap - 0.01)
         verify(preview.x + preview.width <= target.width - barLayout.barEdgeGap + 0.01)
         verify(preview.y >= barLayout.barEdgeGap - 0.01)

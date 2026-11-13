@@ -257,7 +257,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.ok(tab.indexOf('id: contentSizeRow') < tab.indexOf('id: heightRow'));
   assert.ok(tab.indexOf('id: heightRow') < tab.indexOf('id: widthRow'));
   assert.match(tab, /text: "BACKGROUND"/);
-  assert.match(tab, /Ui\.Dropdown[\s\S]*?value: "solid", label: "Solid color"[\s\S]*?value: "transparent", label: "Transparent"[\s\S]*?value: "blur", label: "Blur"/);
+  assert.match(tab, /PanelUi\.ControlDropdown[\s\S]*?value: "solid", label: "Solid color"[\s\S]*?value: "transparent", label: "Transparent"[\s\S]*?value: "blur", label: "Blur"/);
   assert.match(tab, /setMonitorBarBackground\(root\.selectedDisplay\.name, value\)/);
   assert.match(tab, /Binding \{[\s\S]*?target: backgroundDropdown[\s\S]*?property: "value"[\s\S]*?value: root\.selectedBar\.background/,
     'the host dropdown writes its own value, so an external Binding must keep it monitor-specific');

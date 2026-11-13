@@ -139,9 +139,9 @@ test('the preview countdown shows on every tab that has none of its own', () => 
   assert.match(strip, /root\.service\.revertPreview\(""\)/);
 });
 
-test('only Displays layout renders monitor names', () => {
-  for (const path of ['lib/bars/BarLayout.qml', 'lib/windows/WindowsLayout.qml',
+test('all six layouts render shared centered monitor names', () => {
+  for (const path of ['lib/displays/DisplayLayout.qml', 'lib/bars/BarLayout.qml', 'lib/windows/WindowsLayout.qml',
     'lib/stations/WorkspacesLayout.qml', 'lib/color/ColorLayout.qml', 'lib/wallpaper/WallpaperLayout.qml']) {
-    assert.doesNotMatch(read(path), /objectName: "(?:workspaceMonitorName|monitorName)-/);
+    assert.match(read(path), /PanelUi\.MonitorName \{/);
   }
 });

@@ -5,11 +5,8 @@ import qs.Commons as Commons
 
 // Secondary row actions share the same safe inset as the Display sliders.
 Ui.Button {
-  anchors.left: parent.left
-  anchors.right: parent.right
-  anchors.leftMargin: Style.space(8)
-  anchors.rightMargin: Style.space(8)
-  anchors.verticalCenter: parent.verticalCenter
+  width: (parent.width - Style.space(8) * 2) * 0.99
+  anchors.centerIn: parent
   height: Style.spacing.controlHeight
   radius: Style.cornerRadius
   bordered: true

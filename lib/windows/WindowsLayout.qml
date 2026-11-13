@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -168,7 +169,8 @@ Ui.BorderSurface {
         radius: canvas.values.rounding
       }
       Text {
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Math.max(Style.spacing.sm, parent.height / 4 - height / 2)
         width: Math.max(0,parent.width - Style.spacing.sm * 2)
         horizontalAlignment: Text.AlignHCenter
         text: nextWindow ? "NEXT WINDOW" : "WINDOW"
@@ -177,6 +179,21 @@ Ui.BorderSurface {
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
       }
+    }
+  }
+
+  // Above the animated windows, so the monitor identity stays visible.
+  Repeater {
+    model: canvas.displays
+    Item {
+      required property var modelData
+      readonly property var size: Model.logicalSize(modelData)
+      x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom + canvas.monitorGap / 2
+      y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom + canvas.monitorGap / 2
+      width: Math.max(1, size.width * canvas.zoom - canvas.monitorGap)
+      height: Math.max(1, size.height * canvas.zoom - canvas.monitorGap)
+      opacity: canvas.service.displayEnabled(modelData.name) ? 1 : canvas.tokens.disabledOpacity
+      PanelUi.MonitorName { name: parent.modelData.name }
     }
   }
 

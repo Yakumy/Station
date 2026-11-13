@@ -121,8 +121,15 @@ ShellRoot {
         if (badges("eDP-1") !== "1,3,5" || badges("HDMI-A-2") !== "2,4,6" || badges("DP-3") !== "") {
           fail("station badges " + badges("eDP-1") + " / " + badges("HDMI-A-2")); return
         }
-        if (findObject(layout, "workspaceMonitorName-HDMI-A-2") || findObject(layout, "workspaceMonitorRole-HDMI-A-2")) { fail("unexpected monitor heading"); return }
         var card = findObject(layout, "workspaceMonitor-HDMI-A-2")
+        var identity = findObject(layout, "workspaceMonitorIdentity-HDMI-A-2")
+        var separator = findObject(layout, "workspaceMonitorSeparator-HDMI-A-2")
+        var role = findObject(layout, "workspaceMonitorRole-HDMI-A-2")
+        if (!identity || !separator || !role || separator.text !== "|" || role.text !== "2") { fail("monitor role heading"); return }
+        var identityPos = identity.mapToItem(card, 0, 0)
+        if (Math.abs(identityPos.x + identity.width / 2 - card.width / 2) > 0.51
+            || Math.abs(identityPos.y + identity.height / 2 - card.height / 2) > 0.51) { fail("centered monitor role heading"); return }
+        if (findObject(layout, "workspaceMonitorRole-DP-3").text !== "Off") { fail("disabled monitor role"); return }
         if (!inside(findObject(layout, "workspaceBadge-HDMI-A-2-2"), card)) { fail("inside badges"); return }
         if (findObject(tab, "workspaceCountIncrease") || findObject(layout, "workspaceStep-eDP-1-up")) { fail("station count controls"); return }
         var selector = findObject(tab, "workspaceModeSelector")

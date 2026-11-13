@@ -824,6 +824,15 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - The frame requests `Style.space(996)` by `Style.space(620)`, capped by the host. Tabs
   do not change it. The header and tabs stay fixed, and the body scrolls vertically only
   on overflow, returning to the top on a tab change.
+- All six layout canvases center a plain-text monitor name inside each monitor.
+  Displays separates the name from its role dropdown with `|`; Workspaces shows
+  the same separator and role as read-only text. Other controls and status text stay
+  clear of the name, including the Windows animation.
+- Feature control frames use their pre-`ea956ed` width, capped to their column.
+  Sliders, dropdowns and row buttons use 99% of the width within the row padding,
+  centered. Slider knobs, including their hover enlargement, remain inside the
+  frame at both endpoints.
+  Action buttons also use 99% of their previous width.
 - Displays keeps its Mode menu inside the layout canvas at the top right. It uses
   the same preview and panel-evacuation path as the former toolbar menu.
 - The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
@@ -833,8 +842,8 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
 - Settings holds the two Show switches, follow focus, panel position,
   and the installed version. Compact mode and open apps are on the Workspaces tab.
 - The Workspaces tab's monitor positions are fixed: no monitor drag and no selection,
-  only zoom and pan. Each managed output shows its name, its role and its workspaces in
-  the top-left corner.
+  only zoom and pan. Each output centers its name; managed workspaces and count
+  controls occupy the upper half.
 - Every Workspaces control edits a draft that the layout draws at once. Cancel and Apply
   appear once the draft differs from the saved values. Apply sends the whole draft in one
   `setSetting("workspaces", …)` call; Cancel restores the saved values.
@@ -844,7 +853,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   another monitor, which then owns that number; each monitor keeps 1 to 10.
 - The Workspaces frame has five equal-height dropdown rows: Mode, Indicator style,
   Compact mode, Stations Direction and Show open apps. Titles sit at the top left,
-  dropdowns fill the width within the row padding, and hints sit at the bottom left.
+  dropdowns use the shared inset width, and hints sit at the bottom left.
   Mode defaults to Station; Compact mode defaults to On hover. Direction moves from
   Displays to this draft and retains LTR, RTL, TTB and BTT. It is disabled outside
   Station mode with "only work with Station mode". Show open apps offers Off and On

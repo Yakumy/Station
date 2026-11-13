@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import "Wallpaper.js" as Wallpaper
@@ -184,6 +185,8 @@ Ui.BorderSurface {
           : Border.controlSpec("normal", Color.popups.text, Color.accent)
         radius: 0
       }
+
+      PanelUi.MonitorName { name: monitor.modelData.name }
 
       MouseArea {
         id: framer

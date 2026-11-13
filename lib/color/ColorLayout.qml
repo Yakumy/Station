@@ -1,4 +1,5 @@
 import QtQuick
+import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -82,6 +83,8 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
+      PanelUi.MonitorName { name: monitorCard.modelData.name }
+
       MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
@@ -89,7 +92,8 @@ Ui.BorderSurface {
       }
 
       Column {
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: parent.height / 2 + Style.font.caption / 2 + Style.spacing.xs
         width: parent.width - Style.spacing.lg * 2
         spacing: Style.spacing.xs
         Text {

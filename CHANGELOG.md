@@ -1,5 +1,11 @@
 # Unreleased
 
+- Restore the previous control frame width and center monitor names in every layout
+  tab. Keep slider knobs clear of frame edges while using 99% of the available row
+  width for sliders, dropdowns and buttons. Center each Display role menu beside its
+  monitor name with a `|` separator, show the same read-only role in Workspaces, and
+  center each Bar switch below its monitor name.
+
 - Start on Station 1 after login, instead of the station that was open at shutdown.
 - Add a Color Match tab after Windows. Select a monitor and adjust its Temperature,
   Tint, Brightness, Gamma and Saturation until its white matches your other monitors.

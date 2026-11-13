@@ -145,10 +145,14 @@ ShellRoot {
         if (findObject(tab, "colorReset") || findObject(tab, "colorNotice")) { fail("removed reset row"); return }
         var frame = slider.parent.parent.parent
         var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
-        if (Math.abs(slider.width - slider.knobSize - originalWidth * 1.2 * 0.96 * 0.9) > 0.1 || frame.x < 0) { fail("10 percent reduced slider"); return }
+        var expectedControlWidth = (frame.width - Style.space(8) * 2) * 0.99
+        if (Math.abs(frame.controlWidth - originalWidth * 1.2 * 0.96) > 0.1
+            || Math.abs(slider.width - expectedControlWidth) > 0.1 || frame.x < 0) {
+          fail("restored frame and inset slider"); return
+        }
         var title = findObject(slider.parent, "controlRowTitle")
         var hintLeft = findObject(slider.parent, "colorHint-temperature")
-        if (Math.abs(slider.x + slider.trackX(0) - title.x) > 0.1 || title.x !== hintLeft.x) { fail("track title hint alignment"); return }
+        if (slider.x + slider.trackX(0) - slider.knobSize * 1.15 / 2 <= title.x || title.x !== hintLeft.x) { fail("endpoint clearance and title hint alignment"); return }
         var controls = ["temperature", "tint", "brightness", "gamma", "saturation"].map(function(key) { return findObject(tab, "colorSlider-" + key) })
         if (controls.some(function(control) { return control.width !== slider.width || Math.abs(control.parent.height * 5 - control.parent.parent.height) > 0.1 })) { fail("equal full-height rows"); return }
         phase++

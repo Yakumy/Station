@@ -35,10 +35,7 @@ Column {
     wrapMode: Text.NoWrap
     elide: Text.ElideRight
   }
-  component RowDropdown: Ui.Dropdown {
-    anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
-    anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
-    anchors.verticalCenter: parent.verticalCenter
+  component RowDropdown: PanelUi.ControlDropdown {
     showLabel: false
     foreground: root.tokens.textPrimary
   }

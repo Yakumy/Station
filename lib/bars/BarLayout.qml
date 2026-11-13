@@ -124,6 +124,36 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
 
+      Column {
+        id: monitorIdentity
+        objectName: "barMonitorIdentity-" + monitorCard.modelData.name
+        anchors.centerIn: parent
+        spacing: Style.spacing.xs
+        z: 3
+
+        PanelUi.MonitorName {
+          id: monitorName
+          centerInParent: false
+          name: monitorCard.modelData.name
+          width: Math.min(implicitWidth, monitorCard.width - Style.spacing.sm * 2)
+          x: (parent.width - width) / 2
+        }
+
+        PanelUi.ToggleSwitch {
+          id: barEnabledSwitch
+          objectName: "barEnabledSwitch"
+          trackWidth: Style.space(32)
+          trackHeight: Style.space(18)
+          knobSize: Style.space(14)
+          x: (parent.width - width) / 2
+          checked: monitorCard.barEnabled
+          onToggled: {
+            canvas.displaySelected(monitorCard.modelData.name)
+            canvas.requestBarEnabled(monitorCard.modelData.name, !checked)
+          }
+        }
+      }
+
       Rectangle {
         id: barPreview
         objectName: "barPreview-" + monitorCard.modelData.name
@@ -203,18 +233,6 @@ Ui.BorderSurface {
         }
       }
 
-      PanelUi.ToggleSwitch {
-        objectName: "barEnabledSwitch"
-        trackWidth: Style.space(32)
-        trackHeight: Style.space(18)
-        knobSize: Style.space(14)
-        anchors.centerIn: parent
-        checked: monitorCard.barEnabled
-        onToggled: {
-          canvas.displaySelected(monitorCard.modelData.name)
-          canvas.requestBarEnabled(monitorCard.modelData.name, !checked)
-        }
-      }
     }
   }
 }

@@ -241,14 +241,9 @@ Column {
             width: parent.width
             height: controlFrame.height / 5
             PanelUi.ControlLabel { text: "BACKGROUND" }
-            Ui.Dropdown {
+            PanelUi.ControlDropdown {
               id: backgroundDropdown
               objectName: "barBackgroundDropdown"
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space2
-              anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false
               options: [
@@ -280,14 +275,9 @@ Column {
             width: parent.width
             height: controlFrame.height / 5
             PanelUi.ControlLabel { text: "STYLE" }
-            Ui.Dropdown {
+            PanelUi.ControlDropdown {
               id: styleDropdown
               objectName: "barStyleDropdown"
-              anchors.left: parent.left
-              anchors.leftMargin: root.tokens.space2
-              anchors.right: parent.right
-              anchors.rightMargin: root.tokens.space2
-              anchors.verticalCenter: parent.verticalCenter
               height: Style.spacing.controlHeight
               showLabel: false
               options: [

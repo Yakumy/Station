@@ -179,7 +179,7 @@ The simulated windows in WindowsLayout are an exception to the corner token rule
 radius is the Border roundness value in preview pixels, unscaled, so it stays visible at
 preview zoom and follows the slider while it drags. Every simulated window is active:
 accent border and the selected fill. All other surrounding chrome continues to use
-`Style.cornerRadius`. Monitor names are omitted from the Windows layout preview.
+`Style.cornerRadius`. Monitor names stay centered above the Windows animation.
 
 ### Panel frame
 
@@ -198,24 +198,27 @@ same dim popup foreground as Displays. Values align to the top right; hints alig
 to the bottom left with the same horizontal inset and `Style.space(4)` below.
 Five-row control frames divide their height equally.
 
-`ControlFrame.qml` uses the original control width multiplied by `1.2 * 0.96 * 0.9`:
-10% narrower than the previous width. The column split stays fixed and the frame
-is centered. `ControlSlider.qml` extends its hit area by half a knob at each end
-so the visible track aligns with row titles and hints. Dropdowns and Wallpaper
-row buttons use the same safe inset. `ControlButton.qml` provides the neutral
-row action style.
+`ControlFrame.qml` restores the control width multiplier `1.2 * 0.96`, before
+commit `ea956ed` narrowed it on 2026-11-12. The column split stays fixed and the
+frame is centered and capped to the column with a `Style.space(8)` inset on each
+side when the previous formula would overflow. Sliders, dropdowns and row buttons
+use 99% of the row width after the shared `Style.space(8)` inset at each end.
+Sliders retain the host's half-knob track inset, keeping both endpoint knobs and their hover enlargement
+inside the frame. `ControlButton.qml` provides the neutral row action style.
 
-`ActionButton.qml` keeps the host control height. Apply, Cancel, Keep and Revert
-use 60% of the previous `Style.space(180) * 1.2 * 0.96` width. Other actions retain
-their previous width. Settings and Keybindings retain their compact hairline list
+`ActionButton.qml` keeps the host control height and uses 99% of the original action
+width. Apply, Cancel, Keep and Revert retain their additional 60% width factor.
+Settings and Keybindings retain their compact hairline list
 rows: vertically centered body labels, Settings values at the right, and centered
 semibold binding combinations. They do not use the feature control-panel titles.
-Settings' compact position dropdown is `Style.space(130) * 0.9` wide.
+Settings' compact position dropdown is `Style.space(130) * 0.99` wide.
 
-Only the Displays layout shows monitor names: dim captions inside the upper-left
-corner of each rectangle, with the role dropdown alongside. Workspaces, Bar,
-Windows, Color Match and Wallpaper layouts omit monitor names and caption lanes.
-Wallpaper tiles retain their exact monitor aspect ratio in every mode.
+All six layouts show plain-text, dim monitor names centered inside each monitor,
+using `MonitorName.qml`. Displays centers `name | role`, with the role remaining a
+dropdown. Workspaces centers the same identity as read-only text. Bar centers the
+switch below the name. Workspace badges occupy the upper half, Color Match status sits
+below the name, and Windows names render above its animation. Wallpaper tiles
+retain their exact monitor aspect ratio in every mode.
 Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
 `Style.space(14)` knob; Settings keeps the standard switch dimensions. Both follow
 the live roundness token.

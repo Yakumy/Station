@@ -106,7 +106,7 @@ Item {
       verify(first.y + first.height <= canvas.height - canvas.verticalInset + 0.01)
       fuzzyCompare(second.x - first.x - first.width, 0, 0.01)
     }
-    function test_non_span_modes_omit_names_without_distorting_crops() {
+    function test_non_span_modes_center_names_without_distorting_crops() {
       controller.draft = Object.assign({}, controller.draft, {mode: "individual"})
       var first = findChild(canvas, "wallpaperMonitor-A")
       var second = findChild(canvas, "wallpaperMonitor-B")
@@ -114,7 +114,9 @@ Item {
       verify(second.x - first.x - first.width >= canvas.monitorGap - 0.01)
       fuzzyCompare(first.width / first.height, first.modelData.width / first.modelData.height, 0.01)
       var name = findChild(first, "monitorName-A")
-      verify(name === null)
+      verify(name !== null)
+      fuzzyCompare(name.x + name.width / 2, first.width / 2, 0.51)
+      fuzzyCompare(name.y + name.height / 2, first.height / 2, 0.51)
     }
     function test_edges_clamp_and_zoom_keeps_image_fixed() {
       controller.frame({zoom: 2, x: 100, y: -100})

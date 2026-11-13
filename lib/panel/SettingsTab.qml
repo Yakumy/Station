@@ -116,7 +116,7 @@ Column {
       anchors.right: parent.right
       anchors.rightMargin: settingsTab.tokens.space3
       anchors.verticalCenter: parent.verticalCenter
-      width: Style.space(130) * 0.9
+      width: Style.space(130) * 0.99
       showLabel: false
       value: settingsTab.service ? settingsTab.service.config.panelPosition : "left"
       options: [{ value: "left", label: "Bar" }, { value: "center", label: "Center" }]
