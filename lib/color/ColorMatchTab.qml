@@ -15,6 +15,7 @@ Column {
   required property var selectDisplay
   required property var service
   required property var selectedDisplay
+  property bool narrow: false
   readonly property string selectedName: selectedDisplay ? selectedDisplay.name : ""
   readonly property var colorMatch: service && service.colorMatch
     ? service.colorMatch : ({ busy: false, error: "", values: {}, hdr: [] })
@@ -69,13 +70,15 @@ Column {
     font.pixelSize: Style.font.caption
   }
 
-  Row {
+  Grid {
+    id: colorColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(root.narrow ? 840 : 428)
+    columns: root.narrow ? 1 : 3
 
     Column {
       id: leftColumn
-      width: parent.width * 0.576
+      width: root.narrow ? colorColumns.width : colorColumns.width * 0.576
       spacing: 0
       Item {
         width: parent.width
@@ -108,15 +111,21 @@ Column {
       }
     }
 
-    Rectangle {
-      width: Math.max(1, Style.normalBorderWidth)
-      height: parent.height
-      color: Commons.Color.popups.text
-      opacity: 0.12
+    Item {
+      width: root.narrow ? colorColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: root.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Commons.Color.popups.text
+        opacity: 0.12
+      }
     }
 
     Column {
-      width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
+      width: root.narrow ? colorColumns.width
+        : colorColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       Item {
         width: parent.width

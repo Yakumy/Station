@@ -12,11 +12,15 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   const wallpaper = read('lib/wallpaper/WallpaperTab.qml');
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
-  assert.match(panel, /contentHeight: panel\.fittedContentHeight\(root\.desiredPanelHeight\)/);
-  assert.doesNotMatch(panel, /content\.implicitHeight/);
+  assert.match(panel, /tallPanelHeight: Style\.space\(994\)/);
+  assert.match(panel, /root\.tallPanelHeight \+ \(root\.tallDrawerOpen \? Style\.space\(66\) : 0\)/);
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
-  assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
+  assert.match(panel, /height: root\.tallPanel \? tabContent\.implicitHeight\s*: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
+  assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
+  assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
+  assert.match(panel, /height: root\.tallPanel \? tabContent\.implicitHeight/);
+  assert.match(panel, /visible: root\.tallPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Color\.popups\.text/);
   assert.doesNotMatch(panel, /prefix: "Mode: "/);
   assert.match(displays, /prefix: "Mode: "/);
   assert.doesNotMatch(panel, /prefix: "Direction: "/);
@@ -38,6 +42,8 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /setSetting\("hideDisplay", checked\)/);
   assert.match(settings, /Installed version/);
   assert.match(wallpaper, /height: Style\.space\(370\)/);
+  assert.match(wallpaper, /height: root\.narrow \? Style\.space\(44\) : Style\.space\(428\)/);
+  assert.match(wallpaper, /anchors\.centerIn: parent[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
   assert.match(wallpaper, /"DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"/);
   assert.match(wallpaper, /id: controlFrame[\s\S]*?height: Style\.space\(370\)/);
   assert.match(wallpaper, /objectName: "wallpaperModeDropdown"/);
@@ -86,7 +92,8 @@ test('larger panel reserves the reference canvas and discrete slider stops', () 
   const width = panel.match(/desiredPanelWidth:\s*Style\.space\((\d+)\)/);
   assert.ok(width, 'panel width is a Style.space request');
   assert.ok(Number(width[1]) >= 996, `panel requests ${width[1]} theme units`);
-  assert.match(panel, /fittedContentWidth\(root\.desiredPanelWidth\)/);
+  assert.match(panel, /fittedContentWidth\(root\.tallPanel \? root\.tallPanelWidth : root\.desiredPanelWidth\)/);
+  assert.match(panel, /tallPanelWidth: Style\.space\(380\)/);
 });
 
 test('bar logo shares the Omarchy menu foreground and size token', () => {

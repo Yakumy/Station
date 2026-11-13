@@ -14,6 +14,7 @@ Column {
   required property var controls
   required property var service
   required property var selectedDisplay
+  property bool narrow: false
   property string modeValue: "extend"
   property var modeOptions: []
   property var changeMode: function(value) {}
@@ -74,14 +75,15 @@ Column {
 
   spacing: 0
 
-  Row {
+  Grid {
     id: displayColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(displayTab.narrow ? 840 : 428)
+    columns: displayTab.narrow ? 1 : 3
 
     Column {
       id: leftColumn
-      width: parent.width * 0.576
+      width: displayTab.narrow ? displayColumns.width : displayColumns.width * 0.576
       spacing: 0
 
       Item {
@@ -142,16 +144,22 @@ Column {
       }
     }
 
-    Rectangle {
-      width: Math.max(1, Style.normalBorderWidth)
-      height: displayColumns.height
-      color: Color.popups.text
-      opacity: 0.12
+    Item {
+      width: displayTab.narrow ? displayColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: displayTab.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: displayTab.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: displayTab.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Color.popups.text
+        opacity: 0.12
+      }
     }
 
     Column {
       id: rightColumn
-      width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
+      width: displayTab.narrow ? displayColumns.width
+        : displayColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       readonly property real sideInset: Style.space(28)
 
@@ -387,8 +395,9 @@ Column {
 
   Item {
     width: parent.width
-    height: Style.space(66)
     readonly property bool previewing: displayTab.service && displayTab.service.state === "previewing"
+    height: displayTab.narrow && !previewing ? 0 : Style.space(66)
+    clip: true
     Ui.PanelSeparator { width: parent.width; foreground: displayTab.tokens.textPrimary }
     Text {
       visible: parent.previewing

@@ -44,6 +44,12 @@ Ui.Panel {
   readonly property string pluginVersion: service && service.manifest && service.manifest.version ? String(service.manifest.version) : ""
   readonly property real desiredPanelWidth: Style.space(996)
   readonly property real desiredPanelHeight: Style.space(620)
+  readonly property bool tallPanel: !!service && service.config.panelPosition === "bar-tall"
+  readonly property real tallPanelWidth: Style.space(380)
+  readonly property real tallPanelHeight: Style.space(994)
+  readonly property bool tallDrawerOpen: tallPanel && ((service && service.state === "previewing")
+    || (root.selectedTab === Tabs.index("workspaces") && workspacesTab.dirty)
+    || (root.selectedTab === Tabs.index("wallpaper") && wallpaperTab.controller && wallpaperTab.controller.dirty))
 
   // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
   // these; nothing below this block hardcodes a colour, radius or step.
@@ -359,7 +365,7 @@ Ui.Panel {
     // screen is stable for same-axis moves but can be transient during the
     // layer-shell anchor/size change required by a horizontal↔vertical move.
     screen: session.currentPanelScreen()
-    centerOnBar: root.service && root.service.config.panelPosition === "center"
+    centerOnBar: root.service && root.service.config.panelPosition === "center-wide"
     gap: centerOnBar ? PanelPosition.centerGap(barPos, screenW, screenH, barThickness, barThickness,
       root.desiredPanelWidth, (barPos === "top" || barPos === "bottom")
         ? root.desiredPanelHeight + verticalContentInset : 0,
@@ -369,15 +375,17 @@ Ui.Panel {
     padding: 0
     // The reference's wider two-column canvas is approximately 830 logical
     // pixels at the current font scale. The host still caps this to the screen.
-    contentWidth: panel.fittedContentWidth(root.desiredPanelWidth)
-    contentHeight: panel.fittedContentHeight(root.desiredPanelHeight)
+    contentWidth: panel.fittedContentWidth(root.tallPanel ? root.tallPanelWidth : root.desiredPanelWidth)
+    contentHeight: panel.fittedContentHeight(root.tallPanel
+      ? root.tallPanelHeight + (root.tallDrawerOpen ? Style.space(66) : 0)
+      : root.desiredPanelHeight)
 
     Ui.PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       onCloseRequested: root.close()
       onMoveRequested: function(dx, dy) {
-        if (dy && tabScroll.contentItem) {
+        if (!root.tallPanel && dy && tabScroll.contentItem) {
           var limit = Math.max(0, tabScroll.contentHeight - tabScroll.height)
           tabScroll.contentItem.contentY = Math.max(0,
             Math.min(limit, tabScroll.contentItem.contentY + dy * panelTokens.controlHeight))
@@ -418,9 +426,33 @@ Ui.Panel {
           }
         }
 
-        Item {
+        Ui.PanelSeparator {
+          visible: root.tallPanel
+          width: parent.width
+          foreground: Color.popups.text
+        }
+
+        Flickable {
+          id: tabRail
           width: parent.width
           height: panelTokens.controlHeight + panelTokens.space1
+          contentWidth: tabs.width + panelTokens.regionPadH * 2
+          contentHeight: height
+          clip: true
+          interactive: contentWidth > width
+          boundsBehavior: Flickable.StopAtBounds
+          WheelHandler {
+            target: null
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onWheel: function(event) {
+              var delta = event.pixelDelta.y || event.pixelDelta.x
+                || event.angleDelta.y / 120 * panelTokens.controlHeight * 2
+                || event.angleDelta.x / 120 * panelTokens.controlHeight * 2
+              var limit = Math.max(0, tabRail.contentWidth - tabRail.width)
+              tabRail.contentX = Math.max(0, Math.min(limit, tabRail.contentX - delta))
+              event.accepted = true
+            }
+          }
           Row {
             id: tabs
             anchors.left: parent.left
@@ -495,27 +527,29 @@ Ui.Panel {
           id: tabScroll
           objectName: "stationTabScroll"
           width: parent.width
-          height: Math.max(0, content.height - y - (previewStrip.visible ? previewStrip.height : 0))
+          height: root.tallPanel ? tabContent.implicitHeight
+            : Math.max(0, content.height - y - (previewStrip.visible ? previewStrip.height : 0))
           contentWidth: availableWidth
           contentHeight: tabContent.implicitHeight
           clip: true
           ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-          ScrollBar.vertical.policy: contentHeight > height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+          ScrollBar.vertical.policy: !root.tallPanel && contentHeight > height
+            ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
           Binding {
             target: tabScroll.contentItem
             property: "interactive"
-            value: tabScroll.contentHeight > tabScroll.height
+            value: !root.tallPanel && tabScroll.contentHeight > tabScroll.height
           }
           Column {
             id: tabContent
             objectName: "stationTabContent"
             width: tabScroll.availableWidth
-            Displays.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls; modeValue: root.modeValue; modeOptions: root.modeOptions; changeMode: function(value) { return root.changeMode(value) } }
-            Stations.WorkspacesTab { visible: root.selectedTab === Tabs.index("workspaces"); width: parent.width; tokens: panelTokens; service: root.service ? workspacesTabPort : null }
-            Bars.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
-            WindowsUi.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }
-            ColorUi.ColorMatchTab { visible: root.selectedTab === Tabs.index("color"); width: parent.width; tokens: panelTokens; service: root.service ? colorTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
-            WallpaperUi.WallpaperTab { visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; tokens: panelTokens; dismiss: function() { root.close() }; controller: root.service ? root.service.wallpaper : null }
+            Displays.DisplaysTab { visible: root.selectedTab === Tabs.index("displays"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; service: root.service ? displaysTabPort : null; selectedDisplay: root.selectedDisplay; selectedDisplayName: root.selectedDisplayName; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) }; controls: displayControls; modeValue: root.modeValue; modeOptions: root.modeOptions; changeMode: function(value) { return root.changeMode(value) } }
+            Stations.WorkspacesTab { id: workspacesTab; visible: root.selectedTab === Tabs.index("workspaces"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; service: root.service ? workspacesTabPort : null }
+            Bars.BarTab { visible: root.selectedTab === Tabs.index("bar"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; service: root.service ? barTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
+            WindowsUi.WindowsTab { visible: root.selectedTab === Tabs.index("windows"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; service: root.service ? windowsTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar }
+            ColorUi.ColorMatchTab { visible: root.selectedTab === Tabs.index("color"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; service: root.service ? colorTabPort : null; selectedDisplay: root.selectedDisplay; bar: root.bar; selectDisplay: function(name) { root.selectDisplay(name) } }
+            WallpaperUi.WallpaperTab { id: wallpaperTab; visible: root.selectedTab === Tabs.index("wallpaper"); width: parent.width; narrow: root.tallPanel; tokens: panelTokens; dismiss: function() { root.close() }; controller: root.service ? root.service.wallpaper : null }
             Keys.KeybindingsTab { active: root.opened && visible; visible: root.selectedTab === Tabs.index("keybindings"); width: parent.width; tokens: panelTokens; service: root.service ? keybindingsTabPort : null }
             PanelUi.SettingsTab { visible: root.selectedTab === Tabs.index("settings"); width: parent.width; tokens: panelTokens; service: root.service ? settingsTabPort : null; pluginVersion: root.pluginVersion }
           }

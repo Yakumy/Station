@@ -12,6 +12,7 @@ Column {
   required property var selectDisplay
   required property var service
   required property var selectedDisplay
+  property bool narrow: false
   readonly property var selectedBar: selectedDisplay && service
     ? service.monitorBar(selectedDisplay.name)
     : ({ enabled: true, position: "top", width: 100, height: 0, background: "solid", style: "default", contentSize: 0 })
@@ -41,13 +42,15 @@ Column {
     font.pixelSize: Style.font.caption
   }
 
-  Row {
+  Grid {
+    id: barColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(root.narrow ? 840 : 428)
+    columns: root.narrow ? 1 : 3
 
     Column {
       id: leftColumn
-      width: parent.width * 0.576
+      width: root.narrow ? barColumns.width : barColumns.width * 0.576
       spacing: 0
 
       Item {
@@ -82,15 +85,21 @@ Column {
       }
     }
 
-    Rectangle {
-      width: Math.max(1, Style.normalBorderWidth)
-      height: parent.height
-      color: Commons.Color.popups.text
-      opacity: 0.12
+    Item {
+      width: root.narrow ? barColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: root.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Commons.Color.popups.text
+        opacity: 0.12
+      }
     }
 
     Column {
-      width: parent.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
+      width: root.narrow ? barColumns.width
+        : barColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       Item {
         width: parent.width

@@ -10,6 +10,7 @@ Column {
   required property var tokens
   required property var dismiss
   required property var controller
+  property bool narrow: false
   readonly property var scene: controller ? controller.draft : Wallpaper.resolve({}, "", "")
   property string selectedName: ""
   readonly property var selectedDisplay: controller ? (controller.layout.displays.find(function(d) {
@@ -41,12 +42,14 @@ Column {
   }
   component RowButton: PanelUi.ControlButton {}
 
-  Row {
+  Grid {
+    id: wallpaperColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(root.narrow ? 840 : 428)
+    columns: root.narrow ? 1 : 3
     Column {
       id: left
-      width: parent.width * 0.576
+      width: root.narrow ? wallpaperColumns.width : wallpaperColumns.width * 0.576
       Item {
         width: parent.width; height: Style.space(28)
         Ui.PanelSectionHeader {
@@ -81,13 +84,20 @@ Column {
         }
       }
     }
-    Rectangle {
-      width: Math.max(1, Style.normalBorderWidth); height: parent.height
-      color: Color.popups.text; opacity: 0.12
+    Item {
+      width: root.narrow ? wallpaperColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: root.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Color.popups.text; opacity: 0.12
+      }
     }
     Column {
       id: rightColumn
-      width: parent.width - left.width - Math.max(1, Style.normalBorderWidth)
+      width: root.narrow ? wallpaperColumns.width
+        : wallpaperColumns.width - left.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       enabled: root.controller && !root.controller.busy && !root.controller.importBusy
       Item {
@@ -177,7 +187,9 @@ Column {
   }
   Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
   Item {
-    width: parent.width; height: Style.space(64)
+    width: parent.width
+    height: root.narrow && !(root.controller && root.controller.dirty) ? 0 : Style.space(64)
+    clip: true
     Caption {
       x: root.pad; anchors.verticalCenter: parent.verticalCenter
       width: parent.width - actions.width - root.pad * 3

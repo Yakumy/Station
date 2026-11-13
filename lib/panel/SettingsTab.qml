@@ -83,19 +83,6 @@ Column {
     foreground: Color.popups.text
   }
 
-  PlainToggleRow {
-    label: "Follow focus (keep monitors on the same station)"
-    checked: settingsTab.service && settingsTab.service.config.followFocus
-    onClicked: if (settingsTab.service)
-      settingsTab.service.setSetting("followFocus", !checked)
-  }
-  Item { width: 1; height: settingsTab.tokens.space2 }
-  Ui.PanelSeparator {
-    width: settingsTab.width - settingsTab.inset * 2
-    x: settingsTab.inset
-    foreground: Color.popups.text
-  }
-
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
@@ -118,8 +105,12 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       width: Style.space(130) * 0.99
       showLabel: false
-      value: settingsTab.service ? settingsTab.service.config.panelPosition : "left"
-      options: [{ value: "left", label: "Bar" }, { value: "center", label: "Center" }]
+      value: settingsTab.service ? settingsTab.service.config.panelPosition : "bar-wide"
+      options: [
+        { value: "bar-wide", label: "Bar wide" },
+        { value: "bar-tall", label: "Bar tall" },
+        { value: "center-wide", label: "Center wide" }
+      ]
       foreground: settingsTab.tokens.textPrimary
       onChanged: function(value) {
         if (settingsTab.service) settingsTab.service.setSetting("panelPosition", value)

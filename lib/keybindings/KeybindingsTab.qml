@@ -132,17 +132,20 @@ Column {
           font.pixelSize: Style.font.body
           font.weight: Font.DemiBold
         }
-        Text {
+        PanelUi.ActionButton {
+          visible: bindingGroup.groupState === "conflict"
           anchors.right: parent.right
           anchors.rightMargin: keybindingsTab.tokens.space3
           anchors.verticalCenter: parent.verticalCenter
-          text: keybindingsTab.statusLabel(bindingGroup.groupState)
-          color: bindingGroup.groupState === "conflict" ? Color.urgent
-            : (bindingGroup.groupState === "replacement" ? Color.accent
-              : Qt.darker(Color.popups.text, 1.4))
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-          font.weight: bindingGroup.groupState === "conflict" ? Font.DemiBold : Font.Medium
+          widthFactor: 0.8
+          text: "Resolve"
+          bordered: true
+          accent: Color.urgent
+          foreground: Color.urgent
+          onClicked: {
+            var conflicts = keybindingsTab.conflictsFor(bindingGroup.modelData.ids)
+            if (conflicts.length) keybindingsTab.beginBindingEdit(conflicts[0])
+          }
         }
       }
 

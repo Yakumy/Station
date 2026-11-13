@@ -583,14 +583,13 @@ Item {
       return "ok"
     }
     if (name === "panelPosition") {
-      if (value !== "left" && value !== "center") return "invalid"
+      if (["bar-wide", "bar-tall", "center-wide"].indexOf(value) === -1) return "invalid"
       config.panelPosition = value
     }
     else if (name === "indicatorStyle") {
       if (["prefixed", "number", "roman"].indexOf(value) === -1) return "invalid"
       config.indicatorStyle = value
     }
-    else if (name === "followFocus") config.followFocus = !!value
     else if (name === "graceMs") {
       var grace = Number(value)
       config.graceMs = isFinite(grace) ? Math.max(0, Math.min(30000, grace)) : 0

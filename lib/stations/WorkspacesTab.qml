@@ -13,6 +13,7 @@ Column {
   id: root
   required property var tokens
   required property var service
+  property bool narrow: false
   readonly property real pad: tokens.regionPadH
   readonly property var config: service ? service.config : ({})
   readonly property var outputs: service && service.workspaceTarget ? service.workspaceTarget.outputs || [] : []
@@ -136,12 +137,14 @@ Column {
     foreground: root.tokens.textPrimary
   }
 
-  Row {
+  Grid {
+    id: workspaceColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(root.narrow ? 840 : 428)
+    columns: root.narrow ? 1 : 3
     Column {
       id: left
-      width: parent.width * 0.576
+      width: root.narrow ? workspaceColumns.width : workspaceColumns.width * 0.576
       Item {
         width: parent.width; height: Style.space(28)
         Ui.PanelSectionHeader {
@@ -167,12 +170,19 @@ Column {
         onWorkspaceMoved: function(number, output) { root.moveWorkspace(number, output) }
       }
     }
-    Rectangle {
-      width: Math.max(1, Style.normalBorderWidth); height: parent.height
-      color: Commons.Color.popups.text; opacity: 0.12
+    Item {
+      width: root.narrow ? workspaceColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: root.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Commons.Color.popups.text; opacity: 0.12
+      }
     }
     Column {
-      width: parent.width - left.width - Math.max(1, Style.normalBorderWidth)
+      width: root.narrow ? workspaceColumns.width
+        : workspaceColumns.width - left.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
       Item {
         width: parent.width; height: Style.space(28)
@@ -296,7 +306,9 @@ Column {
   }
   Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
   Item {
-    width: parent.width; height: Style.space(64)
+    width: parent.width
+    height: root.narrow && !root.dirty ? 0 : Style.space(64)
+    clip: true
     Caption {
       objectName: "workspacesNotice"
       x: root.pad; anchors.verticalCenter: parent.verticalCenter

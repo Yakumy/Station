@@ -12,6 +12,7 @@ Column {
   required property var selectedDisplay
   required property var bar
   required property var service
+  property bool narrow: false
   property var values: Windows.displayValues(service ? service.config.windows : null)
   readonly property var savedValues: service ? service.config.windows : null
   property bool editing: false
@@ -29,11 +30,14 @@ Column {
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
   }
-  Row {
+  Grid {
+    id: windowColumns
     width: parent.width
-    height: Style.space(428)
+    height: Style.space(root.narrow ? 840 : 428)
+    columns: root.narrow ? 1 : 3
     Column {
-      width: parent.width * 0.576
+      id: leftColumn
+      width: root.narrow ? windowColumns.width : windowColumns.width * 0.576
       Item {
         width: parent.width; height: Style.space(28)
         Ui.PanelSectionHeader { anchors.left: parent.left; anchors.leftMargin: root.tokens.regionPadH; anchors.verticalCenter: parent.verticalCenter; text: "LAYOUT"; foreground: root.tokens.textPrimary }
@@ -47,9 +51,19 @@ Column {
         id: layout
       }
     }
-    Rectangle { width: Math.max(1, Style.normalBorderWidth); height: parent.height; color: Commons.Color.popups.text; opacity: 0.12 }
+    Item {
+      width: root.narrow ? windowColumns.width : Math.max(1, Style.normalBorderWidth)
+      height: root.narrow ? Style.space(44) : Style.space(428)
+      Rectangle {
+        anchors.centerIn: parent
+        width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
+        height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
+        color: Commons.Color.popups.text; opacity: 0.12
+      }
+    }
     Column {
-      width: parent.width * 0.424 - Math.max(1, Style.normalBorderWidth)
+      width: root.narrow ? windowColumns.width
+        : windowColumns.width - leftColumn.width - Math.max(1, Style.normalBorderWidth)
       Item { width: parent.width; height: Style.space(28) }
       PanelUi.ControlFrame {
         height: Style.space(370)
