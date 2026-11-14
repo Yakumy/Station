@@ -73,22 +73,28 @@ Commit all notes before you submit, because validation binds the exact final com
    #12370 is a past example.
 4. Create an issue in `omacom/omarchy-plugin-marketplace`, titled
    `[Verify]: Station <manifest version> update`, with `gh issue create --body-file`.
-   Use these exact headings and add nothing else. The parser rejects changes.
+   Use these exact headings, each followed by a blank line, and add nothing else. The
+   parser rejects changes.
 
    ```markdown
    ### Verification action
+
    Verify and publish a newer upstream commit
 
    ### Plugin ID
+
    yakumy.station
 
    ### Repository URL
+
    https://github.com/Yakumy/Station
 
    ### Target commit
+
    <full 40-character published default-branch HEAD>
 
    ### Verification acknowledgment
+
    - [x] I understand that only the exact target commit can become a verified marketplace snapshot and that verification is not a security audit.
    ```
 
