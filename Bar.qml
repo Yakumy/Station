@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
 import "lib/bars/omarchy" as OmarchyBar
+import "lib/bars/omarchy/BarModel.js" as BarModel
 import "lib/BarBridge.js" as BarBridge
 
 // Station's full-bar entry. Each connected output owns an isolated copy of
@@ -76,7 +77,7 @@ Item {
     copy.widthPercent = Number(entry.width) > 0 ? Number(entry.width) : 100
     copy.height = Number(entry.height) > 0 ? Number(entry.height) : 0
     copy.background = ["solid", "transparent", "blur"].indexOf(entry.background) !== -1
-      ? entry.background : (copy.transparent === true ? "transparent" : "solid")
+      ? entry.background : BarModel.hostBackground(copy)
     copy.style = ["default", "pill"].indexOf(entry.style) !== -1 ? entry.style : "default"
     copy.contentSize = Number(entry.contentSize) > 0 ? Math.round(Number(entry.contentSize)) : 0
     copy.transparent = copy.background === "transparent"

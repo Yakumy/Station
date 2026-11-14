@@ -133,3 +133,41 @@ test('cleanup preserves leases in flanking center sections and the tray', () => 
       section, '2', '1', section, '2', '1']).status, 0);
   }
 });
+
+test('removal cleanup survives a busy shell: it retries listPlugins and finishes after a failed widget restore', () => {
+  const root = mkdtempSync(join(tmpdir(), 'station-cleanup-busy-'));
+  try {
+    const state = join(root, 'state');
+    const bin = join(root, 'bin');
+    mkdirSync(state); mkdirSync(bin);
+    const monitors = join(root, 'monitors.lua');
+    const toggle = join(root, 'station-workspaces.lua');
+    const log = join(root, 'log');
+    writeFileSync(monitors, '-- personal\n');
+    writeFileSync(toggle, '-- toggle\n');
+    writeFileSync(join(state, 'state.json'), JSON.stringify({ stockLease: { wasEnabled: true }, appliedBinds: ['x'] }));
+    const counter = join(root, 'count');
+    const commands = {
+      // The first two listPlugins calls time out, as during a plugin reload.
+      'omarchy-shell': `#!/bin/sh\n[ "$2" = ping ] && exit 0\nn=$(cat "${counter}" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "${counter}"\n[ $n -le 2 ] && { echo "omarchy-shell is not responding" >&2; exit 1; }\nprintf "[]\\n"\n`,
+      omarchy: `#!/bin/sh\necho "omarchy $*" >> "${log}"\nexit 1\n`,
+      hyprctl: `#!/bin/sh\necho "hyprctl $*" >> "${log}"\n`,
+      sleep: '#!/bin/sh\nexit 0\n',
+    };
+    for (const [name, body] of Object.entries(commands)) {
+      const path = join(bin, name); writeFileSync(path, body); chmodSync(path, 0o755);
+    }
+    const result = spawnSync('sh', ['-c', R.cleanup, 'sh', state, monitors,
+      'left', '1', '1', 'right', '5', '0', toggle],
+      { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(counter, 'utf8').trim(), '3');
+    const calls = readFileSync(log, 'utf8');
+    assert.match(calls, /omarchy plugin enable omarchy\.workspaces/);
+    assert.match(calls, /hyprctl reload/);
+    assert.equal(existsSync(toggle), false);
+    assert.equal(JSON.parse(readFileSync(join(state, 'state.json'), 'utf8')).stockLease, null);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

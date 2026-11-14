@@ -1,3 +1,16 @@
+# Unreleased
+
+- Show the host bar's current background after installing Station. A monitor without
+  a saved Station bar setting now follows Omarchy's `bar.background`: `none` is
+  Transparent, `glassy` is Blur and `opaque` is Solid, so a clear Omarchy bar no longer
+  turns solid on install.
+- Make removal cleanup survive a busy shell. The cleanup script retries `listPlugins`
+  and the widget restore instead of giving up after one timed-out call, so a removal
+  during a plugin rescan still restores the stock widgets, deletes the toggle files and
+  reloads Hyprland.
+- Center the Workspaces monitor heading exactly. Cards sit at fractional, zoomed
+  geometry, where pixel snapping only moved the heading up to a pixel off center.
+
 # 4.0.0 — Workspace modes and Color Match
 
 - Rewrite the README around the panel tabs with new screenshots and GIFs, and refresh

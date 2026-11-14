@@ -86,7 +86,8 @@ Item {
       ? { enabled: row.enabled !== false,
           position: ["top", "bottom", "left", "right"].indexOf(row.position) !== -1 ? row.position : fallback,
           width: width, height: height, background: background, style: style, contentSize: contentSize }
-      : { enabled: true, position: fallback, width: 100, height: 0, background: "solid", style: "default", contentSize: 0 }
+      : { enabled: true, position: fallback, width: 100, height: 0,
+          background: BarModel.hostBackground(shellBar), style: "default", contentSize: 0 }
   }
 
   function monitorBarMaximumHeight(name) {

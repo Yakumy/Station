@@ -146,6 +146,8 @@ Ui.BorderSurface {
         id: monitorIdentity
         objectName: "workspaceMonitorIdentity-" + monitorCard.modelData.name
         anchors.centerIn: parent
+        // Cards sit at zoomed, fractional geometry, so pixel snapping only offsets the row.
+        anchors.alignWhenCentered: false
         spacing: Style.spacing.sm
         z: 2
 

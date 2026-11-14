@@ -159,6 +159,7 @@ This page records how Hyprland, Omarchy and Quickshell actually behave, so nobod
 | Working pattern: start a detached script, wait ~3 s, retry `omarchy-shell shell ping` up to 15 s, read `listPlugins`; if the plugin is `enabled` → do nothing (restart); else restore the stock widget, neutralise `monitors.lua`, clear the lease, `hyprctl reload`. Restart produced `restart-skip`; disable and remove ran cleanup after about 5 s and left default `SUPER+1` and grouped-focus bindings restored and no Station binds. | [LIVE] |
 | A detached watchdog (`sleep 20; [ -e token ] && { rm token; hyprctl reload; }`) **survives `SIGKILL` of the shell**; it removed the token, reloaded at 19.99 s and restored geometry. | [LIVE] |
 | Normal removal leaves an inert backup directory under the plugin tree. | [LIVE] |
+| On 2026-11-14, `omarchy plugin remove yakumy.station --yes` on Omarchy 4 printed `omarchy-shell is not responding` and left every removal step undone: both leases and `appliedBinds` stayed in `state.json`, both stock widgets stayed disabled, and `station-workspaces.lua` stayed. `omarchy-shell` gives each IPC call 2 s (`OMARCHY_SHELL_IPC_TIMEOUT`), and the shell logged 17 plugin reloads for the deleted folder at that moment, so a single `listPlugins` call can time out. Which call failed was not captured. The cleanup script now retries `listPlugins` and each widget command; the retry is proven with fake commands only. | [LIVE][INFER] |
 
 ### 8.5 Popout panel (UI)
 

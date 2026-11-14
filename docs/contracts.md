@@ -667,7 +667,7 @@ One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 | Height | From the theme's thickness to 5% of the mode's shorter native side. A live minimum can clamp it. |
 | Width | 1 to 100%. Requests below the measured non-overlap minimum stay visible and the bar clamps. |
 | Enabled | The switch moves at once, and `BarLayout` applies the change after the throw, because building a bar blocks the shell's thread. While the panel is open the host write is deferred like every other bar control, because it would rebuild all widgets and the panel with them. Closing the panel in that gap still applies it. A refused change moves the switch back. Refusing the last enabled bar also shows a red message: "At least one bar must stay on. Turn on another bar first." A successful on/off edit clears it. |
-| Background | Solid, Transparent or Blur. See [below](#bar-background-blur). |
+| Background | Solid, Transparent or Blur. See [below](#bar-background-blur). A monitor with no saved row shows the host bar's `bar.background`: `none` (or the older `transparent: true`) is Transparent, `glassy` is Blur, and `opaque` or no value is Solid. Installing Station must not change how the bar looks. |
 | Style | Omarchy default, or Pill with separate left, center and right islands. |
 
 ### Bar background blur
@@ -916,8 +916,11 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
 detached fixed script with validated positional arguments:
 
 1. Wait, then look for the shell for up to about 15 s.
-2. If the shell answers and `listPlugins` shows Station enabled, stop. This is a restart.
-3. Otherwise restore only the leased widgets.
+2. Read `listPlugins`, retrying for up to about 15 s, because the shell drops IPC calls
+   while it rebuilds plugins. If it never answers, stop. If it shows Station enabled,
+   stop. This is a restart.
+3. Otherwise restore only the leased widgets. Each widget command retries, and a widget
+   that still fails does not stop the remaining steps.
 4. Neutralize the current marked block by changing `disabled = true` to `false` and
    clearing `mirror`, with a backup and an atomic replace. Geometry stays. Single and
    Mirror do not outlive the plugin.

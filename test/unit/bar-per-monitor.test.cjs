@@ -636,3 +636,27 @@ test('drag completion targets its source monitor even when focus is elsewhere', 
     ['setMonitorBarPosition', ['eDP-1', 'right']]]);
   assert.match(read('Bar.qml'), /root.requestMonitorPosition\(monitorBar, position\)/);
 });
+
+test('a monitor without a Station row shows the host bar background', () => {
+  const BarModel = require('../../lib/bars/omarchy/BarModel.js');
+  assert.equal(BarModel.hostBackground({ background: 'none' }), 'transparent');
+  assert.equal(BarModel.hostBackground({ background: 'glassy' }), 'blur');
+  assert.equal(BarModel.hostBackground({ background: 'opaque' }), 'solid');
+  assert.equal(BarModel.hostBackground({ transparent: true }), 'transparent');
+  assert.equal(BarModel.hostBackground({}), 'solid');
+  assert.equal(BarModel.hostBackground(null), 'solid');
+
+  const context = { config: { bars: {} }, shell: { barConfig: { bar: { position: 'left', background: 'none' } } } };
+  const monitorBar = qmlFunction(service, 'monitorBar', context);
+  assert.deepEqual(JSON.parse(JSON.stringify(monitorBar('DP-1'))), {
+    enabled: true, position: 'left', width: 100, height: 0, background: 'transparent', style: 'default', contentSize: 0,
+  });
+  // A saved row is an explicit edit and wins over the host.
+  context.config.bars['DP-1'] = { enabled: true, position: 'top', background: 'solid' };
+  assert.equal(monitorBar('DP-1').background, 'solid');
+
+  // Bar.qml renders the same fallback.
+  const bar = read('Bar.qml');
+  assert.match(bar, /import "lib\/bars\/omarchy\/BarModel\.js" as BarModel/);
+  assert.match(bar, /\? entry\.background : BarModel\.hostBackground\(copy\)/);
+});
