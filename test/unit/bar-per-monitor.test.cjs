@@ -20,9 +20,9 @@ function qmlFunction(source, name, context = {}) {
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
 
-test('3.0 manifest exposes the full bar alongside the widget and service', () => {
+test('4.0 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '3.0.0');
+  assert.equal(manifest.version, '4.0.0');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });

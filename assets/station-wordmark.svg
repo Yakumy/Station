@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="140" viewBox="0 0 300 70" role="img" aria-labelledby="title desc">
+  <title id="title">STATION</title>
+  <desc id="desc">Station's banner pixel wordmark, recreated as font-independent vector outlines.</desc>
+  <g fill="#A6B465" fill-rule="evenodd">
+    <path d="M10 0H30V5H35V10H40V20H25V10H15V30H30V35H40V60H35V65H30V70H10V65H5V60H0V50H15V60H25V40H10V35H0V10H5V5H10Z"/>
+    <path transform="translate(46)" d="M0 0H40V10H27V70H13V10H0Z"/>
+    <path transform="translate(92)" d="M10 0H30V5H35V10H40V70H26V40H14V70H0V10H5V5H10ZM14 10V30H26V10Z"/>
+    <path transform="translate(138)" d="M0 0H40V10H27V70H13V10H0Z"/>
+    <path transform="translate(184)" d="M0 0H14V70H0Z"/>
+    <path transform="translate(206)" d="M10 0H30V5H35V10H40V60H35V65H30V70H10V65H5V60H0V10H5V5H10ZM14 10V60H26V10Z"/>
+    <path transform="translate(254)" d="M0 0H14V10H20V20H26V30H32V0H46V70H32V50H26V40H20V30H14V70H0Z"/>
+  </g>
+</svg>

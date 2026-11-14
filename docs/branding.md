@@ -100,3 +100,17 @@ The running plugin still uses Omarchy's `qs.Commons` color tokens and follows
 the user's selected theme, as required by the [design system](design-system.md).
 Do not hardcode this branding palette into plugin QML. Apply the Station desktop
 theme to obtain these colors for recordings through the normal theme tokens.
+
+## README media
+
+README screenshots and GIFs live in `docs/assets/readme/`, next to the README, so they
+need no external host. Record a GIF's source video at full resolution, then export it
+at half width and 12 frames per second:
+
+```sh
+ffmpeg -i tab.mp4 -vf "fps=12,scale=960:-1:flags=lanczos,split[a][b];\
+[a]palettegen=max_colors=128:stats_mode=diff[p];\
+[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" tab.gif
+```
+
+Use a GIF or a screenshot for a section, never both.

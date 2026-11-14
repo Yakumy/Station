@@ -1,5 +1,7 @@
-# Unreleased
+# 4.0.0 — Workspace modes and Color Match
 
+- Rewrite the README around the panel tabs with new screenshots and GIFs, and refresh
+  the marketplace preview.
 - Rename the panel styles to Bar landscape, Bar portrait and Center landscape. A saved
   Bar wide, Bar tall or Center wide setting keeps its placement. In Bar portrait, Keep
   and Revert stay visible during a display preview, every Cancel/Apply and Keep/Revert

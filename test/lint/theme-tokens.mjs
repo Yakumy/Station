@@ -10,7 +10,9 @@ const textExtensions = new Set(['.qml', '.js', '.mjs', '.json', '.svg', '.css', 
 const runtimeDirectories = new Set(['lib', 'assets']);
 // Approved branding artwork (docs/BRANDING.md), not theme-driven UI palettes.
 // This is an exact-file exception, never an exemption for new files in assets/.
-const brandingArtwork = new Set(['assets/station-main-logo.svg', 'assets/station-main-logo-mask.svg']);
+const brandingArtwork = new Set([
+  'assets/station-main-logo.svg', 'assets/station-main-logo-mask.svg', 'assets/station-wordmark.svg'
+]);
 
 const HEX = /#(?:[\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})(?![\da-f])/i;
 const ELEVATION = /\b(?:DropShadow|FastBlur|GaussianBlur|MaskedBlur|RecursiveBlur|DirectionalBlur|RadialBlur|ZoomBlur|Glow)\s*\{/;
