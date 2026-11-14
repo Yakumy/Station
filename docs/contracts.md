@@ -878,6 +878,9 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
 
 - `panelWanted` is written on every open change, and destruction never writes it. A
   rebuilt widget reads `true` and reopens. A real close writes `false`.
+- A rebuilt widget reopens the panel only on its own output: the screen it kept while
+  open, or its own bar window's screen. Until that window resolves it waits; it never
+  takes `panelScreenName` as its own, or it could claim the panel from another output.
 - A shell restart starts closed, because the flag is in memory.
 - A change that lands before the service binding resolves is held and replayed.
 - `closeForPopoutSwitch` is not a dismissal. The bar closes the old copy after the new

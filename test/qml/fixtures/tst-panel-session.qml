@@ -175,6 +175,21 @@ Item {
       root.peers = [{opened: true, currentScreenName: function() { return "A" }}]
       verify(root.view.tryRestorePanel()); verify(root.view.opened)
     }
+    function test_unresolvedRebuildDoesNotClaimAnotherOutputsPanel() {
+      // A rebuilt widget on B before its bar window resolves, while the panel belongs to A.
+      root.view.destroy(); wait(0)
+      root.anchor = {screen: null, width: 1920, height: 26}
+      root.view = sessionComponent.createObject(root)
+      persistent.panelWanted = true; persistent.panelScreenName = "A"
+      root.view.serviceResolved()
+      compare(root.view.ownScreenName(), "")
+      verify(!root.view.tryRestorePanel()); verify(!root.view.opened)
+      root.anchor = {screen: screenB, width: 1920, height: 26}
+      verify(!root.view.tryRestorePanel()); verify(!root.view.opened)
+      wait(100)
+      verify(!root.view.opened); compare(count("show"), 0)
+      compare(persistent.panelScreenName, "A")
+    }
     function test_disconnectedOutputFallback() {
       persistent.panelWanted = true; persistent.panelScreenName = "B"
       verify(!root.view.tryRestorePanel())

@@ -67,6 +67,14 @@ Item {
     return screen ? String(screen.name || "") : ""
   }
 
+  // The output this widget really sits on: the screen it kept while open, or its
+  // own bar window's. Never the service's panel output: a rebuilt widget whose
+  // window has not resolved yet would otherwise claim another output's panel.
+  function ownScreenName() {
+    var screen = retainedPanelScreen || (anchorWindow && anchorWindow.screen) || null
+    return screen ? String(screen.name || "") : ""
+  }
+
   function screenByName(name) {
     var wanted = String(name || "")
     if (!wanted) return null
@@ -122,7 +130,7 @@ Item {
     if (!isAvailable() || !service.panelEvacuationWaiting) return
     var serial = Number(service.panelEvacuationSerial)
     if (!serial || serial <= handledEvacuationSerial) return
-    var mine = currentScreenName()
+    var mine = ownScreenName()
     if (!mine || mine !== service.panelEvacuationFrom) return
     handledEvacuationSerial = serial
     var releases = service.panelEvacuationReleases || []
@@ -231,7 +239,7 @@ Item {
   function tryRestorePanel() {
     if (!isAvailable() || !service.panelWanted) return true
     if (service.previewBusy || service.panelEvacuationWaiting) return false
-    var mine = currentScreenName()
+    var mine = ownScreenName()
     if (!mine) return false
     var wanted = service.panelScreenName
     if (wanted && wanted !== mine) {

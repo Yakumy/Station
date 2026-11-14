@@ -77,19 +77,19 @@ test('a rebuilt panel waits for its original output and falls back when that out
     isAvailable: () => true, service: serviceState,
     bar: { moduleWidgets: () => peers },
     Quickshell: { screens },
-    currentScreenName: () => 'eDP-1',
+    ownScreenName: () => 'eDP-1',
     root: { opened: false }, showSurface: () => { opened++; },
   };
   const restore = panelFunction('tryRestorePanel', context);
   assert.equal(restore(), false);
   assert.equal(opened, 0);
-  context.currentScreenName = () => 'HDMI-A-2';
+  context.ownScreenName = () => 'HDMI-A-2';
   peers = [{ opened: true }];
   assert.equal(restore(), false, 'an old copy can still be open while being replaced');
   peers = [];
   assert.equal(restore(), true);
   assert.equal(opened, 1);
-  context.currentScreenName = () => 'eDP-1';
+  context.ownScreenName = () => 'eDP-1';
   screens.pop();
   assert.equal(restore(), true);
   assert.equal(opened, 2);
@@ -113,7 +113,7 @@ test('the surviving widget accepts a transfer while the removed output still has
     isAvailable: () => true, service: { panelWanted: true, panelScreenName: 'eDP-1', panelTransferUntil: Date.now() + 3000 },
     bar: { moduleWidgets: () => [{ opened: true, currentScreenName: () => 'HDMI-A-2' }] },
     Quickshell: { screens: [{ name: 'eDP-1' }, { name: 'HDMI-A-2' }] },
-    currentScreenName: () => 'eDP-1',
+    ownScreenName: () => 'eDP-1',
     root: { opened: false }, showSurface() { opened++; },
   };
   assert.equal(panelFunction('tryRestorePanel', context)(), true);
@@ -227,7 +227,7 @@ test('a surviving panel hides peer surfaces and stays open, and closes if it can
       service: { panelEvacuationWaiting: 1, panelEvacuationSerial: 4, panelEvacuationFrom: 'A', panelEvacuationReleases: ['B'],
         previewBusy: true, displayEnabled: name => name === 'C' },
       opened: true, handledEvacuationSerial: 0, releasedPeers: [], monitorTransferSerial: 0, monitorTransferScreen: '',
-      isAvailable: () => true, currentScreenName: () => 'A',
+      isAvailable: () => true, ownScreenName: () => 'A',
       monitorTransferAck: { restart() { calls.push('ack-timer'); } },
       setPeerSurfacesVisible(names, visible) { calls.push(['peers', [...names], visible]); return found; },
       closeForMonitorTransfer() { calls.push('close'); },

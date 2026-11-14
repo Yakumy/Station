@@ -1,5 +1,8 @@
 # Unreleased
 
+- Keep the panel on its monitor during a display change. A bar widget rebuilt on
+  another monitor could open the panel there before its own window had resolved, and
+  the original panel then closed.
 - Show the host bar's current background after installing Station. A monitor without
   a saved Station bar setting now follows Omarchy's `bar.background`: `none` is
   Transparent, `glassy` is Blur and `opaque` is Solid, so a clear Omarchy bar no longer
