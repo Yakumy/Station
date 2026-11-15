@@ -1,5 +1,12 @@
-# Unreleased
+# 4.1.0 — Theme carousel
 
+- Choose a theme and a theme background inside the Wallpaper tab. Both buttons now
+  open a carousel over the layout canvas instead of closing Station for Omarchy's
+  menus. Left and Right browse, Enter chooses and Escape closes. Nothing changes until
+  Apply, which switches the theme with Omarchy on the background you chose and then
+  saves the wallpaper with the selected mode and framing.
+- In Per monitor, a theme background applies only to the selected monitor. The theme
+  stays global.
 - Keep the panel on its monitor during a display change. A bar widget rebuilt on
   another monitor could open the panel there before its own window had resolved, and
   the original panel then closed.

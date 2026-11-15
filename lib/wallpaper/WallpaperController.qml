@@ -53,18 +53,34 @@ Item {
   property string failedLegacyKey: ""
   property int serial: 0
   property string pickerTarget: ""
+  readonly property string homeDir: Quickshell.env("HOME") || ""
+  readonly property string omarchyDir: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
+  // Omarchy themes listed on demand for the in-panel pickers, and a theme or Omarchy
+  // background chosen there. Neither reaches Omarchy until Apply.
+  property var themes: []
+  property bool themesLoading: false
+  property string pendingTheme: ""
+  property string pendingBackground: ""
+  // While Apply runs the Omarchy command: the theme it should leave current.
+  property string themeSwitchName: ""
+  property bool themeSwitchExited: false
+  property bool themeReadAfterSwitch: false
   readonly property bool pickerBusy: picker.running || pickerDelay.running || importBusy
   onAppliedChanged: {
     if (!dirty && !busy && !importBusy) reset()
     Qt.callLater(prepareLegacyWallpaper)
   }
   onThemeTokenChanged: {
+    // Station's own Omarchy command finishes once a read after its exit settles.
+    if (themeSwitchName) return
+    if (pendingTheme && pendingTheme === themeName) { pendingTheme = ""; pendingBackground = "" }
+    else if (!pendingTheme && pendingBackground) pendingBackground = ""
     // A theme switch wins over an in-flight Apply only while following it.
     if (busy && pending && !pendingSave && pending.scene.followTheme) {
       serial++; busy = false; pending = null
       showNotice("Wallpaper changed with Omarchy. Review your selection and apply again.")
     }
-    if (draft.followTheme) {
+    if (draft.followTheme && !pendingTheme) {
       var next = dirty ? JSON.parse(JSON.stringify(draft)) : JSON.parse(JSON.stringify(applied))
       next.source = themePath
       next.revision = themeRevision
@@ -84,7 +100,11 @@ Item {
     return next
   }
   function clearNotice() { notice = ""; noticeError = false }
-  function reset() { draft = JSON.parse(JSON.stringify(applied)); dirty = false; clearNotice() }
+  function reset() {
+    draft = JSON.parse(JSON.stringify(applied)); dirty = false
+    pendingTheme = ""; pendingBackground = ""
+    clearNotice()
+  }
   function preferenceSaved() {
     if (repairPending) {
       repairPending = false; repairPrevious = null; repairLegacyKey = ""
@@ -115,8 +135,60 @@ Item {
     var next = JSON.parse(JSON.stringify(draft))
     next[key] = value
     if (key === "followTheme" && value === true)
-      next = Wallpaper.resolve(Object.assign({}, preferences, { mode: draft.mode, followTheme: true }), themeKey, themePath, themeRevision)
+      next = followScene(pendingTheme || themeName, pendingTheme ? pendingBackground : "")
     draft = next; dirty = true; clearNotice()
+  }
+  // The Follow scene a theme and background would give: their saved profile, keyed the
+  // way Omarchy will report them, previewed from the background's own file.
+  function followScene(name, value) {
+    var settings = Object.assign({}, preferences, { mode: draft.mode, followTheme: true })
+    var background = Wallpaper.themeBackground(Wallpaper.themeEntry(themes, name), value)
+    if (!background || (name === themeName && background.omarchy === themePath))
+      return Wallpaper.resolve(settings, themeKey, themePath, themeRevision)
+    return Wallpaper.resolve(settings, JSON.stringify([name, background.omarchy]), background.path, "")
+  }
+  function loadThemes() {
+    if (themesLoading || !pluginDir || !homeDir) return false
+    themesLoading = true
+    enqueue(["perl", pluginDir + "/lib/wallpaper/ListThemes.pl", homeDir + "/.config/omarchy/themes",
+      omarchyDir + "/themes", homeDir + "/.config/omarchy/backgrounds",
+      homeDir + "/.local/state/omarchy/theme-backgrounds", themeStateDir + "/theme"], function(code, output) {
+      root.themesLoading = false
+      if (code !== 0) { root.showNotice("Could not list Omarchy themes.", true); return }
+      root.themes = Wallpaper.themeList(output)
+    })
+    return true
+  }
+  // A theme is global. Under Follow every monitor previews the background it will open on.
+  function previewTheme(name) {
+    if (busy || importBusy) return false
+    var theme = Wallpaper.themeEntry(themes, Wallpaper.themeName(name))
+    if (!theme) return false
+    var current = theme.name === themeName
+    pendingTheme = current ? "" : theme.name
+    pendingBackground = current ? "" : theme["default"]
+    if (draft.followTheme) draft = followScene(theme.name, pendingBackground)
+    dirty = true
+    if (draft.followTheme || current) clearNotice()
+    else showNotice("Follow Omarchy theme is off, so your wallpaper stays as it is.")
+    return true
+  }
+  // With a monitor identity the background becomes that monitor's own image. Without
+  // one it becomes Omarchy's background, which every following monitor shows.
+  function previewBackground(value, identity) {
+    if (busy || importBusy || pickerBusy) return false
+    var name = pendingTheme || themeName
+    var background = Wallpaper.themeBackground(Wallpaper.themeEntry(themes, name), value)
+    if (!background) return false
+    if (identity) {
+      if (draft.mode !== "individual" || !layout.displays.some(function(display) { return display.identity === identity })) return false
+      prepareSelection(background.path, identity)
+      return true
+    }
+    pendingBackground = !pendingTheme && background.omarchy === themePath ? "" : background.path
+    draft = followScene(name, background.path)
+    dirty = true; clearNotice()
+    return true
   }
   function frame(value) { change("framing", Wallpaper.framing(value)) }
   function frameDisplay(identity, value) {
@@ -156,9 +228,9 @@ Item {
     change("frames", Wallpaper.framesWithoutImage(draft, target))
     change("safe", true)
   }
-  function prepareSelection(path) {
+  function prepareSelection(path, identity) {
     if (!Wallpaper.path(path)) { showNotice("Choose a local image file.", true); return }
-    var target = pickerTarget
+    var target = identity === undefined ? pickerTarget : identity
     var generation = ++serial
     importBusy = true; showNotice("Preparing wallpaper safely…")
     // Keep other monitors on a private copy of the current theme image when a
@@ -216,18 +288,12 @@ Item {
     pickerDelay.restart()
     return true
   }
-  function openMenu(kind) {
-    if (["background", "theme"].indexOf(kind) === -1 || busy || pickerBusy || menuDelay.running) return false
-    menuDelay.route = "appearance." + kind
-    releasePanel()
-    menuDelay.restart()
-    return true
-  }
   function useTheme() {
     change("source", themePath); change("perDisplay", {}); change("safe", true); frame({}); change("frames", {})
   }
   function apply() {
     if (busy || importBusy || !dirty || !layout.displays.length) return
+    if (pendingTheme || pendingBackground) { startThemeSwitch(); return }
     var scene = JSON.parse(JSON.stringify(draft))
     var paths = [scene.source]
     if (scene.mode === "individual") Object.keys(scene.perDisplay).forEach(function(key) {
@@ -239,6 +305,54 @@ Item {
     pending = { scene: scene, paths: paths, key: themeKey, serial: serial }
     validation.model = paths
     Qt.callLater(checkImages)
+  }
+  // Omarchy applies the theme or background first, with its own transition. The
+  // wallpaper profile is saved only once a theme read after the command confirms it.
+  function startThemeSwitch() {
+    var name = pendingTheme || themeName
+    var background = Wallpaper.themeBackground(Wallpaper.themeEntry(themes, name), pendingBackground)
+    var command = pendingTheme
+      ? Wallpaper.themeCommand(pendingTheme, background, homeDir + "/.local/state/omarchy/theme-backgrounds")
+      : Wallpaper.backgroundCommand(background)
+    if (!command || !homeDir) {
+      pendingTheme = ""; pendingBackground = ""
+      showNotice("That theme is no longer available. Choose it again.", true)
+      return
+    }
+    serial++; busy = true
+    showNotice(pendingTheme ? "Applying " + Wallpaper.themeEntry(themes, name).label + "…" : "Applying background…")
+    themeSwitchName = name; themeSwitchExited = false
+    themeSwitch.command = command
+    themeSwitch.running = true
+  }
+  function themeSwitchEnded(code) {
+    if (!themeSwitchName) return
+    if (code !== 0) {
+      themeSwitchName = ""; busy = false
+      showNotice("Omarchy could not apply the theme. Your previous theme is unchanged.", true)
+      return
+    }
+    themeSwitchExited = true
+    themeSwitchTimeout.restart()
+    readTheme()
+  }
+  function finishThemeSwitch(timedOut) {
+    if (!themeSwitchName || !themeSwitchExited) return
+    var target = themeSwitchName
+    if (themeName !== target && !timedOut) return
+    themeSwitchTimeout.stop()
+    themeSwitchName = ""; themeSwitchExited = false; busy = false
+    if (themeName !== target) {
+      showNotice("Omarchy did not report the new theme. Review your selection and apply again.", true)
+      return
+    }
+    pendingTheme = ""; pendingBackground = ""
+    if (draft.followTheme) {
+      var next = JSON.parse(JSON.stringify(draft))
+      next.source = themePath; next.revision = themeRevision
+      draft = next
+    }
+    apply()
   }
   function checkImages() {
     if (!busy || !pending || validation.count !== pending.paths.length) return
@@ -290,8 +404,9 @@ Item {
     themeWatch.running = false
   }
   function readTheme() {
-    if (themeRead.running) themeRereadPending = true
-    else themeRead.running = true
+    if (themeRead.running) { themeRereadPending = true; return }
+    themeReadAfterSwitch = themeSwitchExited
+    themeRead.running = true
   }
   Instantiator {
     id: validation
@@ -318,6 +433,7 @@ Item {
           root.themeWatchDirectory = directory
           root.restartThemeWatch()
         }
+        if (root.themeReadAfterSwitch) { root.themeReadAfterSwitch = false; root.finishThemeSwitch(false) }
       }
     }
     onExited: function(code) {
@@ -361,12 +477,12 @@ Item {
       root.returnPanel()
     }
   }
-  Timer {
-    id: menuDelay
-    property string route: ""
-    interval: 200
-    onTriggered: Quickshell.execDetached(["omarchy", "menu", "summon", route])
+  Process {
+    id: themeSwitch
+    onExited: function(code) { root.themeSwitchEnded(code) }
   }
+  // Omarchy names the theme before it returns; a missing report still frees Apply.
+  Timer { id: themeSwitchTimeout; interval: 5000; onTriggered: root.finishThemeSwitch(true) }
   Timer { id: pickerDelay; interval: 200; onTriggered: picker.running = true }
 
   Image {

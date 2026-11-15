@@ -54,7 +54,7 @@ test('consumer-required wallpaper methods are present on both direct and proxy p
   assert.ok(aliases.includes('owner'));
   const names = ['controller', ...aliases].join('|');
   const calls = new Set([...consumers.matchAll(new RegExp('\\b(?:' + names + ')\\.(\\w+)\\s*\\(', 'g'))].map(m => m[1]));
-  assert.deepEqual([...calls].sort(), ['apply', 'change', 'choose', 'frame', 'frameDisplay', 'openMenu', 'reset']);
+  assert.deepEqual([...calls].sort(), ['apply', 'change', 'choose', 'frame', 'frameDisplay', 'loadThemes', 'previewBackground', 'previewTheme', 'reset']);
   for (const name of calls) assert.ok(methods(direct).has(name), 'direct consumer contract: ' + name);
   const missing = [...calls].filter(name => !methods(proxySource).has(name));
   assert.deepEqual(missing, [], 'consumer aliases must not hide missing proxy methods');
@@ -67,7 +67,8 @@ test('all existing common wallpaper commands preserve direct/proxy arguments and
   const controller = {};
   const args = { choose: [''], change: ['followTheme', false], frame: [{ zoom: 2, x: 0.2, y: -0.1 }],
     frameDisplay: ['identity', { zoom: 2, x: 0.2, y: 0.1 }],
-    reset: [], useTheme: [], openMenu: ['background'], apply: [] };
+    reset: [], useTheme: [], loadThemes: [], previewTheme: ['nord'],
+    previewBackground: ['/usr/share/omarchy/themes/nord/backgrounds/a.jpg', 'identity'], apply: [] };
   for (const name of Object.keys(args)) controller[name] = (...values) => {
     calls.push([name, copy(values)]);
     return name === 'choose' ? true : name === 'apply' ? false : name + '-result';

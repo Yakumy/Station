@@ -17,6 +17,46 @@ Column {
     return d.name === root.selectedName
   }) || controller.layout.displays[0] || null) : null
   readonly property real pad: tokens.regionPadH
+  // "theme" or "background" while a chooser covers the layout canvas.
+  property string picker: ""
+  readonly property bool individual: scene.mode === "individual" && selectedDisplay !== null
+  readonly property string themeShown: controller ? (controller.pendingTheme || controller.themeName) : ""
+  readonly property var themeEntry: controller ? Wallpaper.themeEntry(controller.themes, themeShown) : null
+  readonly property var pickerItems: {
+    if (!controller) return []
+    if (picker === "theme") return controller.themes.map(function(theme) {
+      return { key: theme.name, image: theme.preview,
+        label: theme.label + (theme.name === root.controller.themeName ? " · current" : "") }
+    })
+    if (picker === "background" && themeEntry) return themeEntry.backgrounds.map(function(background) {
+      return { key: background.path, image: background.path, label: background.file }
+    })
+    return []
+  }
+  readonly property string pickerCurrent: {
+    if (!controller) return ""
+    if (picker === "theme") return themeShown
+    if (!themeEntry) return ""
+    if (controller.pendingBackground) return controller.pendingBackground
+    var live = themeEntry.backgrounds.find(function(background) { return background.omarchy === root.controller.themePath })
+    return live ? live.path : themeEntry["default"]
+  }
+  function openPicker(kind) {
+    if (!controller || controller.busy || controller.importBusy) return
+    controller.loadThemes()
+    picker = kind
+  }
+  function closePicker() {
+    picker = ""
+    if (canvasLoader.item) canvasLoader.item.forceActiveFocus()
+  }
+  function pick(key) {
+    var owner = root.controller
+    if (picker === "theme") owner.previewTheme(key)
+    else owner.previewBackground(key, root.individual ? root.selectedDisplay.identity : "")
+    closePicker()
+  }
+  onVisibleChanged: if (!visible) picker = ""
   spacing: 0
   component Caption: Text {
     textFormat: Text.PlainText
@@ -56,12 +96,17 @@ Column {
         Ui.PanelSectionHeader {
           anchors.left: parent.left; anchors.leftMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
-          text: "LAYOUT"; foreground: Color.popups.text
+          objectName: "wallpaperCanvasHeading"
+          text: root.picker === "theme" ? "THEME"
+            : root.picker === "background" ? (root.individual ? "BACKGROUND · " + root.selectedDisplay.name : "BACKGROUND")
+            : "LAYOUT"
+          foreground: Color.popups.text
         }
         Caption {
           anchors.right: parent.right; anchors.rightMargin: root.pad
           anchors.verticalCenter: parent.verticalCenter
-          text: root.scene.mode === "span" ? "DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"
+          text: root.picker ? "← → TO BROWSE"
+            : root.scene.mode === "span" ? "DRAG TO ARRANGE" : "DRAG TO FRAME · SCROLL TO ZOOM"
         }
       }
       Loader {
@@ -73,7 +118,26 @@ Column {
         sourceComponent: WallpaperUi.WallpaperLayout {
           controller: root.controller
           selectedName: root.selectedDisplay ? root.selectedDisplay.name : ""
+          contentVisible: root.picker === ""
           onSelected: function(name) { root.selectedName = name }
+        }
+      }
+      Loader {
+        id: pickerLoader
+        parent: canvasLoader
+        anchors.fill: parent
+        z: 2
+        active: root.picker !== "" && root.controller !== null
+        onLoaded: item.forceActiveFocus()
+        sourceComponent: WallpaperUi.ThemeCarousel {
+          objectName: "wallpaperThemeCarousel"
+          tokens: root.tokens
+          items: root.pickerItems
+          current: root.pickerCurrent
+          emptyText: root.controller && root.controller.themesLoading ? "Loading themes…"
+            : root.picker === "theme" ? "No Omarchy themes found" : "This theme has no still backgrounds"
+          onPicked: function(key) { root.pick(key) }
+          onClosed: root.closePicker()
         }
       }
       Caption {
@@ -84,6 +148,7 @@ Column {
         wrapMode: Text.WordWrap
         x: root.pad; width: parent.width - root.pad * 2
         topPadding: root.tokens.space2
+        visible: root.picker === ""
         text: {
           if (!root.controller) return ""
           if (root.scene.mode !== "span") return "Monitor positions follow Displays. Only active displays are shown."
@@ -182,9 +247,14 @@ Column {
             RowButton {
               objectName: "wallpaperThemeBackground"
               text: "Choose theme background…"
-              onClicked: root.controller.openMenu("background")
+              onClicked: root.openPicker("background")
             }
-            RowHint { text: root.controller ? root.fileName(root.controller.themePath) : "" }
+            RowHint {
+              objectName: "wallpaperThemeBackgroundHint"
+              text: !root.controller ? ""
+                : root.controller.pendingBackground ? root.fileName(root.controller.pendingBackground) + " · on Apply"
+                : root.fileName(root.controller.themePath)
+            }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
           }
           Item {
@@ -193,9 +263,14 @@ Column {
             RowButton {
               objectName: "wallpaperThemePicker"
               text: "Choose theme…"
-              onClicked: root.controller.openMenu("theme")
+              onClicked: root.openPicker("theme")
             }
-            RowHint { text: root.controller ? root.controller.themeName : "" }
+            RowHint {
+              objectName: "wallpaperThemeHint"
+              text: !root.controller ? ""
+                : root.controller.pendingTheme ? (root.themeEntry ? root.themeEntry.label : root.controller.pendingTheme) + " · on Apply"
+                : root.controller.themeName
+            }
           }
         }
       }
@@ -206,9 +281,11 @@ Column {
     width: parent.width
     tokens: root.tokens
     narrow: root.narrow
-    open: !!(root.controller && root.controller.dirty)
-    message: root.controller ? root.controller.notice : ""
-    messageColor: root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
+    open: !!(root.controller && root.controller.dirty) || root.picker !== ""
+    // While a chooser is open its keys take the message line, like other tabs' hints.
+    message: root.picker ? "Press Enter to select · Esc to go back"
+      : root.controller ? root.controller.notice : ""
+    messageColor: !root.picker && root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
     PanelUi.ActionButton {
       widthFactor: 0.6
       text: "Cancel"; bordered: true

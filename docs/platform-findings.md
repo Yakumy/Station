@@ -1334,3 +1334,24 @@ lcms2, and judged on screen by the maintainer.
   in all compact modes. End-to-end key-to-render latency also includes IPC,
   compositor execution and frame scheduling; the isolated timer result does not
   measure those paths.
+
+## Theme switching with a chosen background (2026-11-16)
+
+- **[SRC]** `omarchy-theme-set` (omarchy-dev on 2026-11-16) chooses a new theme's
+  background from `~/.config/omarchy/backgrounds/<theme>/` and the staged theme's
+  `backgrounds/`, sorted by path. When the previous theme differs, it uses the path in
+  `~/.local/state/omarchy/theme-backgrounds/<theme>` if that file exists, otherwise the
+  first. A remembered path under `~/.local/state/omarchy/current/theme/backgrounds/` is
+  remapped to the staged copy, so writing that form selects a bundled background. When
+  the theme is unchanged it cycles to the next background instead, so Station uses
+  `omarchy theme bg set` for the current theme.
+- **[SRC]** It writes `theme.name` before it links `current/background`, and links it
+  before it returns. A theme read started after the command exits sees both.
+- **[SRC]** The command returns once the visible retints finish; the rest run detached
+  because Station's process has no terminal on stdin.
+- **[QTTEST]** The Wallpaper tab harness opens both carousels, browses, wraps, chooses,
+  closes on Escape and targets the selected monitor in Per monitor. A render with the
+  28 installed themes centered the chosen card. Keys were driven through the
+  carousel's functions, not real key events.
+- **[INFER]** The remembered-file handoff is not a public Omarchy interface. Its
+  behavior is covered by unit tests against a fake `omarchy`, not by a live switch.

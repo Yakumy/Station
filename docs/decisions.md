@@ -122,6 +122,17 @@ A 250 ms poll cost about 2% of one core and 57,600 processes an hour on the test
 would write outside the plugin, runs only after slow app updates, and misses
 `omarchy theme bg set`.
 
+## Choose themes inside the panel
+
+Omarchy's theme menu applies a theme as soon as it is selected and picks the background
+itself. Station's carousel keeps the choice in the draft, previews the background with
+the selected mode, and applies both on Apply. It does not re-implement theme switching:
+it records the chosen background in Omarchy's own remembered-background file and runs
+`omarchy theme set`, so templates, app retints, intros and transitions stay Omarchy's.
+If Omarchy stops reading that file, the theme still applies and opens on Omarchy's
+choice; the fallback would be `omarchy theme bg set` afterwards, at the cost of a
+second transition.
+
 ## Panel controls end with their panel
 
 Brightness and text-size requests live in the panel. A request pending when a bar rebuild

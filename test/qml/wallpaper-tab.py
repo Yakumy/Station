@@ -49,11 +49,24 @@ ShellRoot {
     property bool noticeError: false
     property string themePath: "IMAGE"
     property string themeName: "tokyo-night"
-    property string menu: ""
+    property var themes: [
+      {name: "nord", label: "Nord", preview: "IMAGE", default: "IMAGE",
+        backgrounds: [{path: "IMAGE", file: "fixture.svg", omarchy: "/state/nord.svg"}]},
+      {name: "tokyo-night", label: "Tokyo Night", preview: "IMAGE", default: "IMAGE",
+        backgrounds: [{path: "IMAGE", file: "fixture.svg", omarchy: "IMAGE"}]},
+      {name: "white", label: "White", preview: "IMAGE", default: "IMAGE",
+        backgrounds: [{path: "IMAGE", file: "fixture.svg", omarchy: "/state/white.svg"}]}]
+    property bool themesLoading: false
+    property string pendingTheme: ""
+    property string pendingBackground: ""
+    property int loads: 0
+    property var previewedBackground: null
     property string chosen: ""
     function change(key, value) { var next = Object.assign({}, draft); next[key] = value; draft = next; dirty = true }
     function choose(identity) { chosen = identity; return true }
-    function openMenu(kind) { menu = kind; return true }
+    function loadThemes() { loads++; return true }
+    function previewTheme(name) { pendingTheme = name; dirty = true; return true }
+    function previewBackground(path, identity) { previewedBackground = [path, identity]; return true }
     function reset() {}
     function apply() {}
     function frame(value) { change("framing", value) }
@@ -143,18 +156,65 @@ ShellRoot {
         if (find(tab, "wallpaperSelectedMonitor").text !== "Selected: HDMI-A-2") { fail("monitor heading"); return }
         if (follow.value !== "no") { fail("accepted image did not update Follow"); return }
         save("individual", function() {
-          find(tab, "wallpaperThemeBackground").clicked()
-          if (owner.menu !== "background") { check.fail("background menu"); return }
           find(tab, "wallpaperThemePicker").clicked()
-          if (owner.menu !== "theme") { check.fail("theme menu"); return }
-          mode.value = "individual"
-          owner.change("mode", "span")
           check.phase = 3
         })
       } else if (phase === 3) {
+        var carousel = find(tab, "wallpaperThemeCarousel")
+        if (!carousel || owner.loads !== 1 || tab.picker !== "theme") { fail("theme carousel did not open"); return }
+        if (!carousel.activeFocus) { fail("carousel focus"); return }
+        if (find(tab, "wallpaperCanvasHeading").text !== "THEME") { fail("carousel heading"); return }
+        if (carousel.count !== 3 || carousel.currentItem.key !== "tokyo-night") { fail("carousel starts on the current theme"); return }
+        if (carousel.currentItem.label !== "Tokyo Night · current") { fail("current theme label"); return }
+        if (find(tab, "actionDrawerMessage").text !== "Press Enter to select · Esc to go back") { fail("chooser hint in the message line"); return }
+        if (find(tab, "featureLayoutFrame").item.contentVisible !== false
+            || find(tab, "wallpaperMonitor-eDP-1").visible) { fail("monitors stay visible under the chooser"); return }
+        var card = find(carousel, "themeCarouselCard")
+        if (!card || card.width > carousel.width * 0.5 || card.height <= 0) { fail("carousel card geometry"); return }
+        carousel.step(1)
+        save("theme-carousel", function() {
+          if (carousel.currentItem.key !== "white") { check.fail("step right"); return }
+          carousel.step(1)
+          if (carousel.currentItem.key !== "nord") { check.fail("wrap around"); return }
+          carousel.choose()
+          if (owner.pendingTheme !== "nord" || tab.picker !== "") { check.fail("Return chooses and closes"); return }
+          check.phase = 4
+        })
+      } else if (phase === 4) {
+        if (find(tab, "wallpaperThemeHint").text !== "Nord · on Apply") { fail("pending theme hint"); return }
+        find(tab, "wallpaperThemeBackground").clicked()
+        phase = 5
+      } else if (phase === 5) {
+        var backgrounds = find(tab, "wallpaperThemeCarousel")
+        if (!backgrounds || backgrounds.count !== 1) { fail("background carousel lists the pending theme"); return }
+        if (find(tab, "wallpaperCanvasHeading").text !== "BACKGROUND · HDMI-A-2") { fail("per-monitor background heading"); return }
+        backgrounds.choose()
+        if (!owner.previewedBackground || owner.previewedBackground[1] !== "B") { fail("per-monitor background target"); return }
+        find(tab, "wallpaperThemePicker").clicked()
+        phase = 6
+      } else if (phase === 6) {
+        var escape = find(tab, "wallpaperThemeCarousel")
+        if (!escape) { fail("reopen"); return }
+        escape.closed()
+        if (tab.picker !== "" || owner.pendingTheme !== "nord") { fail("Escape closes without choosing"); return }
+        if (!find(tab, "wallpaperMonitor-eDP-1").visible) { fail("monitors return after the chooser"); return }
+        if (find(tab, "actionDrawerMessage").text === "Press Enter to select · Esc to go back") { fail("hint outlives the chooser"); return }
+        mode.value = "individual"
+        owner.change("mode", "span")
+        phase = 7
+      } else if (phase === 7) {
+        find(tab, "wallpaperThemeBackground").clicked()
+        phase = 8
+      } else if (phase === 8) {
+        var shared = find(tab, "wallpaperThemeCarousel")
+        if (!shared || find(tab, "wallpaperCanvasHeading").text !== "BACKGROUND") { fail("shared background heading"); return }
+        shared.choose()
+        if (owner.previewedBackground[1] !== "") { fail("shared background has no monitor target"); return }
+        phase = 9
+      } else if (phase === 9) {
         if (find(tab, "wallpaperSelectedMonitor").text !== "") { fail("span selection heading"); return }
         if (mode.value !== "span") { fail("external mode binding"); return }
-        save("span", function() { check.phase = 4 })
+        save("span", function() { check.phase = 10 })
       } else {
         console.log("WALLPAPER_TAB_OK")
         stop(); Qt.quit()

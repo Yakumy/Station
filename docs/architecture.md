@@ -53,7 +53,7 @@ owner and its tab, so one change stays in one place.
 | `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar. |
 | `lib/windows/` | Window setting limits, Lua generation, save and read-back, Windows tab. |
 | `lib/color/` | Color Match: ICC profile generation, the toggle file, Color Match tab. |
-| `lib/wallpaper/` | Crop geometry, profiles, staging helper, surfaces, Wallpaper tab. |
+| `lib/wallpaper/` | Crop geometry, profiles, staging helper, theme listing, surfaces, Wallpaper tab and theme carousel. |
 | `lib/keybindings/` | Bind table, conflict check, key picker, Keybindings tab. |
 | `lib/panel/` | Panel frame and lifecycle, panel intent, bridge contract and proxies, Settings tab, shared controls. |
 | `lib/platform/` | Compositor queues, config and state files, Lua generators, fixed shell templates, event matching. |

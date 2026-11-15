@@ -9,6 +9,8 @@ Ui.BorderSurface {
   id: root
   required property var controller
   property string selectedName: ""
+  // False while a chooser floats over the canvas: only the frame and its grid remain.
+  property bool contentVisible: true
   signal selected(string name)
   readonly property var layout: controller.layout
   readonly property var scene: controller.draft
@@ -141,7 +143,7 @@ Ui.BorderSurface {
     height: root.readySourceSize.height * root.imageFit
     x: (root.width - width) / 2
     y: (root.height - height) / 2
-    visible: root.spanning
+    visible: root.spanning && root.contentVisible
     fillMode: Image.PreserveAspectFit
     onStatusChanged: if (status === Image.Ready && sourceSize.width > 0 && sourceSize.height > 0)
       root.readySourceSize = sourceSize
@@ -152,6 +154,7 @@ Ui.BorderSurface {
     delegate: Item {
       id: monitor
       required property var modelData
+      visible: root.contentVisible
       objectName: "wallpaperMonitor-" + modelData.name
       x: root.groupX + modelData.x * root.fit + (modelData.width * root.fit - width) / 2
       y: root.groupY + modelData.y * root.fit
@@ -222,7 +225,7 @@ Ui.BorderSurface {
   }
   MouseArea {
     anchors.fill: parent
-    enabled: root.spanning && !root.controller.busy
+    enabled: root.spanning && root.contentVisible && !root.controller.busy
     cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
     property real startX: 0
     property real startY: 0
@@ -242,7 +245,7 @@ Ui.BorderSurface {
     onWheel: function(wheel) { root.zoom(wheel.angleDelta.y > 0 ? 1.1 : 1 / 1.1); wheel.accepted = true }
   }
   Text {
-    visible: !root.layout.displays.length
+    visible: !root.layout.displays.length && root.contentVisible
     anchors.centerIn: parent
     text: "No active displays"
     color: Color.popups.text

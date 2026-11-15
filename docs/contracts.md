@@ -746,9 +746,50 @@ Image, Theme background and Theme (buttons). The three buttons fill their
 row's padded width, with the selected image filename, current background filename,
 and current theme name beneath them. Per monitor shows `Selected: <connector>` above
 the controls; the layout selects that monitor. Other modes leave that heading empty.
-The theme buttons close Station and open Omarchy's native Background and Theme
-menus. There is no Use Omarchy wallpaper or Reset frame button; framing remains
+The theme buttons keep Station open and float a carousel over the layout canvas.
+There is no Use Omarchy wallpaper or Reset frame button; framing remains
 available through canvas gestures.
+
+### Theme and background choosers
+
+- Choose theme lists every Omarchy theme with a palette, from
+  `~/.config/omarchy/themes` and `$OMARCHY_PATH/themes`, showing each theme's
+  `preview.png`. `ListThemes.pl` builds the list with fixed argv; theme and file
+  names stay JSON data. A cloned (`.git`) user theme contributes no symbolic link, as
+  in `omarchy-theme-set`.
+- Choose theme background lists the still backgrounds of the chosen theme, or of the
+  current one: `~/.config/omarchy/backgrounds/<theme>/` first, then the theme's
+  `backgrounds/`, in Omarchy's order. Videos are not offered.
+- Left and Right (or `h`/`l`) browse and wrap, the wheel browses, Return, Enter or
+  Space chooses, and a click centers a card or chooses the centered one. Escape closes
+  the carousel without choosing and leaves the panel open. The carousel opens on the
+  pending or current choice.
+- While the carousel is open the canvas hides its monitors, image and hint, keeping only
+  its frame and grid, and the carousel holds pointer input so nothing reaches the
+  layout. The centered card, the one Return chooses, is 1.2 times a card's size and its
+  neighbours 0.8 times. The name and position sit under the cards.
+- The message line of the Cancel/Apply strip, where the tab shows notices and errors,
+  reads `Press Enter to select · Esc to go back` while the carousel is open. In
+  portrait the strip opens for it.
+- The heading reads `THEME`, `BACKGROUND` or `BACKGROUND · <connector>` while it is
+  open, with `← → TO BROWSE` on the right. The row hints add `· on Apply` to a pending
+  theme or background.
+- Choosing changes only the draft. Nothing reaches Omarchy before Apply, and Cancel
+  drops the pending theme and background.
+- A theme is global. Under Follow, every monitor previews the background the theme will
+  open on: the one Omarchy remembers for it, otherwise its first. The preview uses the
+  saved profile for that theme and background. With Follow off the wallpaper stays.
+- In Per monitor, a theme background becomes the selected monitor's own image through
+  the same safe import as Choose image, so it turns Follow off and the other monitors
+  keep a private copy of their current preview. In Same on all and Span it becomes
+  Omarchy's background and turns Follow on.
+- Apply runs one Omarchy command first. A new theme records the chosen background in
+  `~/.local/state/omarchy/theme-backgrounds/<theme>`, then runs
+  `omarchy theme set <theme>`, so Omarchy opens the theme on that background with its
+  own transition and intro. A background for the current theme runs
+  `omarchy theme bg set`. Station saves the wallpaper profile only after a theme read
+  started after the command exits names the new theme. A failed command keeps the
+  choice and reports an error; a missing report frees Apply after 5 seconds.
 
 - Outputs come from observed Hyprland state. A returning output recovers its choice.
   Mirror sinks inherit through the compositor.
