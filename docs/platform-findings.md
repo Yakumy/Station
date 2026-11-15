@@ -1355,3 +1355,16 @@ lcms2, and judged on screen by the maintainer.
   carousel's functions, not real key events.
 - **[INFER]** The remembered-file handoff is not a public Omarchy interface. Its
   behavior is covered by unit tests against a fake `omarchy`, not by a live switch.
+
+## Plugin bar api without center-reveal properties (2026-11-16)
+
+- **[INFER]** GitHub issue #10 reports that on Omarchy `4.0.0.r7840.gac6cb9c-1`,
+  `PluginBarApi.qml` no longer declares `centerSectionRevealHeld` or
+  `_centerHoverRevealSuppressed`. Assigning an undeclared QML property throws, so
+  `bindPluginBarApi()` stopped before `syncPluginBarApiObjects()` and third-party
+  widgets got no click targets. Station did not run that build.
+- **[SRC]** The 4.0.6 and 4.5.0-3 packages still declare both properties.
+- **[SRC]** Station now assigns each optional api property only when the api declares
+  it, as it already did for the tray-section properties. `bar-per-monitor.test.cjs`
+  runs the production functions in Node against a fake api that throws on an
+  undeclared property, with and without the two properties.

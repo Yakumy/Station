@@ -1,3 +1,10 @@
+# Unreleased
+
+- Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
+  longer has the center-reveal properties. Station assigned them unconditionally, and
+  the error stopped it before it handed the widgets their click targets. Reported with
+  the fix in #10.
+
 # 4.1.0 — Theme carousel
 
 - Choose a theme and a theme background inside the Wallpaper tab. Both buttons now

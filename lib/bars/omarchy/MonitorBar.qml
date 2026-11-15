@@ -184,8 +184,13 @@ Item {
     api.barSize = Qt.binding(function() { return root.barSize })
     api.transparent = Qt.binding(function() { return root.transparent })
     api.foregroundAnimationEnabled = Qt.binding(function() { return root.foregroundAnimationEnabled })
-    api.centerSectionRevealHeld = Qt.binding(function() { return root.centerSectionRevealHeld })
-    api._centerHoverRevealSuppressed = Qt.binding(function() { return root.centerHoverRevealSuppressed })
+    // Omarchy builds differ in which of these the api declares. Assigning one it
+    // lacks throws, which would skip the sync below and leave the plugin's widgets
+    // with no click targets.
+    if ("centerSectionRevealHeld" in api)
+      api.centerSectionRevealHeld = Qt.binding(function() { return root.centerSectionRevealHeld })
+    if ("_centerHoverRevealSuppressed" in api)
+      api._centerHoverRevealSuppressed = Qt.binding(function() { return root.centerHoverRevealSuppressed })
     if ("traySectionDragActive" in api)
       api.traySectionDragActive = Qt.binding(function() { return root.traySectionDragActive })
     if ("traySectionPopoutOpen" in api)

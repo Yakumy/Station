@@ -660,3 +660,38 @@ test('a monitor without a Station row shows the host bar background', () => {
   assert.match(bar, /import "lib\/bars\/omarchy\/BarModel\.js" as BarModel/);
   assert.match(bar, /\? entry\.background : BarModel\.hostBackground\(copy\)/);
 });
+
+// Omarchy 4.0.0.r7840 dropped the center-reveal properties from PluginBarApi. QML
+// throws on an undeclared property, which used to skip the click-target sync.
+test('plugin bar api binding skips properties the host api does not declare', () => {
+  const source = read('lib/bars/omarchy/MonitorBar.qml');
+  const declared = ['pluginId', 'foreground', 'barForeground', 'background', 'urgent', 'fontFamily',
+    'position', 'vertical', 'barSize', 'transparent', 'foregroundAnimationEnabled',
+    'activePopout', 'clickTargets', 'layoutConfig', 'foreignPopoutMarker'];
+  const strictApi = names => new Proxy(Object.fromEntries(names.map(name => [name, null])), {
+    has: (target, key) => key in target,
+    set: (target, key, value) => {
+      if (!(key in target)) throw new Error('Cannot assign to non-existent property "' + String(key) + '"');
+      target[key] = value;
+      return true;
+    }
+  });
+  const root = { centerSectionRevealHeld: true, centerHoverRevealSuppressed: true, activePopout: null,
+    pluginOwnsBarObject: () => false, pluginClickTargets: id => ['target:' + id],
+    publicLayoutConfig: () => ({ right: [] }) };
+  const context = { root, Qt: { binding: read => read() } };
+  root.syncPluginBarApiObjects = qmlFunction(source, 'syncPluginBarApiObjects', context);
+  const bind = qmlFunction(source, 'bindPluginBarApi', context);
+
+  const current = strictApi(declared);
+  current.pluginId = 'third.party';
+  bind(current);
+  assert.deepEqual(current.clickTargets, ['target:third.party']);
+
+  const older = strictApi(declared.concat(['centerSectionRevealHeld', '_centerHoverRevealSuppressed']));
+  older.pluginId = 'third.party';
+  bind(older);
+  assert.equal(older.centerSectionRevealHeld, true);
+  assert.equal(older._centerHoverRevealSuppressed, true);
+  assert.deepEqual(older.clickTargets, ['target:third.party']);
+});
