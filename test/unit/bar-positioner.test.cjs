@@ -78,6 +78,15 @@ test('tray flow length excludes the collapsed drawer and grows with reveal', () 
   assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 24), 56);
   assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 64), 96);
   assert.equal(BarModel.visibleModuleFlowLength('omarchy.audio', 40, 64, 0), 40);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 0, true), 32);
+});
+
+// Omarchy 4.5's tray is pinned + chevron + revealed drawer, with nothing reserved.
+// Subtracting the hidden drawer again clamped a collapsed tray to zero (issue #11).
+test('a tray that sizes to its revealed drawer keeps its whole length', () => {
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 32, 64, 0, false), 32);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 56, 64, 24, false), 56);
+  assert.equal(BarModel.visibleModuleFlowLength('omarchy.tray', 96, 64, 64, false), 96);
 });
 
 test('minimumBarLength keeps edge regions clear of an asymmetric centered group', () => {

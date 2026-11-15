@@ -4,6 +4,10 @@
   longer has the center-reveal properties. Station assigned them unconditionally, and
   the error stopped it before it handed the widgets their click targets. Reported with
   the fix in #10.
+- Show the system tray on Omarchy 4.5. Its tray no longer counts the hidden drawer in
+  its size, and Station still subtracted it, so the collapsed tray shrank to nothing
+  and could not be hovered. Station now subtracts it only from Omarchy 4.0's tray.
+  Reported with the fix in #11.
 
 # 4.1.0 — Theme carousel
 

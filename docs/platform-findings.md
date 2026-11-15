@@ -657,7 +657,8 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
 - [SRC] Station now uses the host button margin on both sides of both internal
   controls and enters the same uniform subtree zoom path as other widgets. The
   tray slot subtracts `drawerExtent - revealExtent` from its flow footprint, so
-  the Pill follows the chevron while collapsed and grows as icons reveal.
+  the Pill follows the chevron while collapsed and grows as icons reveal. This
+  applies only to Omarchy 4.0's tray; see the 2026-11-16 tray note.
 - [SRC][QTTEST] Bar height is capped at 5% of the monitor mode's shorter native
   side. Each live bar reports a content-size maximum that preserves
   `Style.spacing.sm` on both cross-axis edges and checks the fully revealed
@@ -1368,3 +1369,20 @@ lcms2, and judged on screen by the maintainer.
   it, as it already did for the tray-section properties. `bar-per-monitor.test.cjs`
   runs the production functions in Node against a fake api that throws on an
   undeclared property, with and without the two properties.
+
+## Tray sizing in Omarchy 4.5 (2026-11-16)
+
+- **[SRC]** GitHub issue #11. In the 4.0.6 package, `Tray.qml` sizes its horizontal
+  root as `pinnedWidth + chevron + drawerExtent`, reserving the hidden drawer. In
+  4.5.0-3 it is `pinnedRow + chevronWidth + revealExtent`: the drawer opens between
+  the pinned icons and the chevron and only the revealed part counts. Subtracting the
+  hidden part again made a collapsed tray's slot negative, clamped to zero, and moved
+  its content out of view, so the tray could not be hovered.
+- **[SRC]** The 4.5 tray adds `fixedAtStart`, `sectionShown`, `hasDrawer` and other
+  root properties with that layout; 4.0.6 has none of them. Station treats a tray
+  without `fixedAtStart` as reserving its drawer and leaves any other tray's length and
+  position as the tray reports them.
+- **[QTTEST]** `bar-tray-reserve` runs the production slot bindings against doubles of
+  both tray shapes, horizontal and vertical, collapsed to fully revealed.
+- **[INFER]** The tray on the maintainer's 4.5.0-3 desktop is expected to show again
+  after the update; the installed bar is the check.

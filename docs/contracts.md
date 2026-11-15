@@ -652,7 +652,9 @@ center box without moving its anchor, horizontally or vertically. Their extents
 count toward Pill backgrounds, minimum width, and maximum content size. Older
 three-section layouts continue to work. Widgets in `tray` render inside a tray
 widget that provides a `sectionHost`; older tray widgets without that port keep
-their previous behavior.
+their previous behavior. A Pill follows the tray's painted length: Station subtracts
+the collapsed drawer only from a tray that reserves it in its size (Omarchy 4.0,
+without `fixedAtStart`).
 
 Inline settings updates and widget placement lookup cover every section. Dragging
 to the outer edges of the center box inserts into the corresponding flanking

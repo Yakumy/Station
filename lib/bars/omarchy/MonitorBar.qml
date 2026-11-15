@@ -2129,17 +2129,22 @@ Item {
       ? Math.max(0, Number(activeItem.implicitWidth) || 0) : 0
     readonly property real baseContentHeight: activeItem && activeItem.visible
       ? Math.max(0, Number(activeItem.implicitHeight) || 0) : 0
-    readonly property real trayFlowInset: moduleName === "omarchy.tray" && activeItem
-      && "drawerExtent" in activeItem && "revealExtent" in activeItem
+    // Omarchy 4.0's tray counts its whole hidden drawer in its implicit size. The
+    // 4.5 tray, which opens the drawer between the pinned icons and the chevron
+    // (fixedAtStart came with that layout), counts only the revealed part, so
+    // subtracting the hidden part again would shrink it to nothing.
+    readonly property bool trayReservesDrawer: moduleName === "omarchy.tray" && !!activeItem
+      && "drawerExtent" in activeItem && "revealExtent" in activeItem && !("fixedAtStart" in activeItem)
+    readonly property real trayFlowInset: trayReservesDrawer
       ? Math.max(0, Number(activeItem.drawerExtent) - Number(activeItem.revealExtent)) : 0
     readonly property real visibleBaseContentWidth: root.vertical ? baseContentWidth
       : BarModel.visibleModuleFlowLength(moduleName, baseContentWidth,
         activeItem && "drawerExtent" in activeItem ? activeItem.drawerExtent : 0,
-        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0)
+        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0, trayReservesDrawer)
     readonly property real visibleBaseContentHeight: root.vertical
       ? BarModel.visibleModuleFlowLength(moduleName, baseContentHeight,
         activeItem && "drawerExtent" in activeItem ? activeItem.drawerExtent : 0,
-        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0)
+        activeItem && "revealExtent" in activeItem ? activeItem.revealExtent : 0, trayReservesDrawer)
       : baseContentHeight
     readonly property real baseFlowLength: root.vertical
       ? visibleBaseContentHeight : visibleBaseContentWidth
