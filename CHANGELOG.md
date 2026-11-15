@@ -1,4 +1,4 @@
-# Unreleased
+# 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
   longer has the center-reveal properties. Station assigned them unconditionally, and
