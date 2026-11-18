@@ -49,7 +49,8 @@ Column {
   readonly property string savedKey: JSON.stringify(savedValues())
   readonly property string mode: draft.workspaceMode
   readonly property var assigned: Grid.assigned(mode, outputs, draft.workspaceLayout)
-  // Station mode only: a held monitor keeps its workspace while the others switch.
+  // Station mode only: a monitor switched off (held) keeps its workspace while the
+  // others switch.
   readonly property bool holdable: mode === "station" && !singleOutput
   readonly property var held: holdable ? Grid.held({ outputs: outputs }, draft.heldOutputs) : []
   onSavedKeyChanged: if (!dirty) reset()
@@ -240,7 +241,7 @@ Column {
               objectName: "workspaceModeNote"
               text: root.singleOutput ? "Works only on multiple monitors"
                 : root.mode === "nonrepetitive" ? "Drag workspaces onto a monitor to assign them"
-                : root.held.length ? "Held monitors switch only when focused" : ""
+                : root.held.length ? "Monitors switched off keep their workspace" : ""
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }

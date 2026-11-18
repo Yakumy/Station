@@ -182,8 +182,8 @@ number at an outer edge.
 ### Held outputs
 
 `config.heldOutputs` lists connectors that keep their workspace when the station changes.
-The Workspaces tab sets it with each monitor's Hold toggle, shown in Station mode with two
-or more managed outputs. It applies only in Station mode and only to managed outputs; the
+The Workspaces tab sets it with the on/off switch under each monitor's name (off is held),
+shown in Station mode with two or more managed outputs. It applies only in Station mode and only to managed outputs; the
 other modes and unknown names ignore it. It changes no workspace ID and no map, so it
 applies in any state and runs no migration.
 
