@@ -45,6 +45,10 @@ Item {
     return null
   }
 
+  // Station mode leaves these outputs on their workspace while the others switch.
+  function heldOutputs() { return Grid.held(workspaceMap, config ? config.heldOutputs : []) }
+  function isHeld(output) { return heldOutputs().indexOf(output) !== -1 }
+
   function workspaceFor(station, output) {
     return Grid.workspace(Number(station), output, workspaceMap)
   }
@@ -72,12 +76,14 @@ Item {
     var focused = focusedMonitor()
     var finalOutput = outputName && available.indexOf(String(outputName)) !== -1 ? String(outputName)
       : (focused ? focused.name : available[0])
+    var heldSwitch = Grid.mode(workspaceMap) === "station" && isHeld(finalOutput)
     var statements = Hypr.workspaceRules(Grid.assignments(workspaceMap))
     statements = statements.concat(stationFocusStatements(stationNumber, finalOutput))
     recordExpectedEvents({ kinds: ["workspace", "focusedmon"], outputs: available.slice(), until: Date.now() + 2000 })
     evalLua(Hypr.batch(statements), function(code, message) {
       if (generation !== gen) return
-      if (code === 0 && (!message || message.trim() === "ok")) {
+      // A held output switching alone does not change the station the rest show.
+      if (code === 0 && (!message || message.trim() === "ok") && !heldSwitch) {
         currentStation = stationNumber
         rememberStation(stationNumber)
       }
@@ -95,9 +101,11 @@ Item {
     return showStation(value)
   }
 
-  // A bar label or app icon: in Repetitive, that bar's output shows the number.
+  // A bar label or app icon: in Repetitive, or on a held output's bar, that bar's
+  // output shows the number.
   function showWorkspace(value, output) {
-    return showStation(value, Grid.mode(workspaceMap) === "repetitive" ? output : "")
+    var own = Grid.mode(workspaceMap) === "repetitive" || isHeld(output)
+    return showStation(value, own ? output : "")
   }
 
   function finishWindowAction(generation, result) {
@@ -135,8 +143,9 @@ Item {
     })
   }
 
-  // Station mode focuses the station on every output. Repetitive shows the number
-  // on one output, and Non-repetitive shows the workspace on its owner.
+  // Station mode focuses the station on every output that is not held, or only on a
+  // held output the switch came from. Repetitive shows the number on one output, and
+  // Non-repetitive shows the workspace on its owner.
   function stationFocusStatements(station, finalOutput) {
     var mode = Grid.mode(workspaceMap)
     if (mode === "repetitive") {
@@ -146,8 +155,7 @@ Item {
     }
     if (mode === "nonrepetitive")
       return [Hypr.placeWorkspace(station, Grid.home(station, finalOutput, workspaceMap)), Hypr.focusWorkspace(station)]
-    var outputs = workspaceMap.outputs.filter(function(name) { return name !== finalOutput })
-    if (workspaceMap.outputs.indexOf(finalOutput) !== -1) outputs.push(finalOutput)
+    var outputs = Grid.switchedOutputs(workspaceMap, config ? config.heldOutputs : [], finalOutput)
     return outputs.map(function(output) { return Hypr.focusWorkspace(workspaceFor(station, output)) })
   }
 
@@ -196,8 +204,10 @@ Item {
     evalLua(Hypr.batch(statements), function(code) {
       if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
       if (code !== 0) { finishWindowAction(generation, "error"); return }
-      currentStation = station
-      rememberStation(station)
+      if (Grid.mode(workspaceMap) !== "station" || !isHeld(client.monitor)) {
+        currentStation = station
+        rememberStation(station)
+      }
       finishWindowAction(generation, result)
     })
   }
@@ -364,6 +374,8 @@ Item {
       if (Grid.mode(root.workspaceMap) !== "station") return
       var monitor = root.focusedMonitor()
       if (!monitor || !root.lanes[monitor.name]) return
+      // A held output shows its own workspace; focusing it moves no other output.
+      if (root.isHeld(monitor.name)) return
       var workspace = Number(monitor.activeWorkspace && monitor.activeWorkspace.id)
       if (!Grid.contains(workspace, root.workspaceMap)) return
       var station = Grid.station(workspace, root.workspaceMap)

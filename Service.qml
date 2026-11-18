@@ -554,6 +554,11 @@ Item {
         next.compactMode = value.compactMode
       }
       if (value.showOpenApps !== undefined) next.showOpenApps = !!value.showOpenApps
+      // Held outputs change which outputs a switch shows, never the map.
+      if (value.heldOutputs !== undefined) {
+        if (!Array.isArray(value.heldOutputs)) return "invalid"
+        next.heldOutputs = Store.heldOutputs(value.heldOutputs)
+      }
     }
     var mapChanges = next.workspaceMode !== config.workspaceMode
       || JSON.stringify(next.workspaceLayout) !== JSON.stringify(config.workspaceLayout)

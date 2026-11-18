@@ -20,6 +20,8 @@ function adaptOwners(c) {
     operationState: () => c.state,
     removalGraceRunning: () => !!(c.removalGrace && c.removalGrace.running),
   })) if (!Object.hasOwn(c, key)) Object.defineProperty(c, key, { get: read, configurable: true });
+  // Controllers read `config` as a bound property; a harness that sets none has the defaults.
+  if (!Object.hasOwn(c, 'config')) c.config = {};
   c.recordExpectedEvents ||= value => { c.expect = value; };
   c.setOperationState ||= value => { c.state = value; };
   c.reportError ||= value => { c.layoutError = value; };

@@ -240,7 +240,7 @@ function switcher(workspaceMap, focused = 'B') {
     evalLua(lua, done) { batches.push({ lua, done }); } };
   c.root = c;
   adaptOwners(c);
-  for (const name of ['begin', 'finish', 'clearQueued', 'showStation', 'showWorkspace', 'stationFocusStatements',
+  for (const name of ['heldOutputs', 'isHeld', 'begin', 'finish', 'clearQueued', 'showStation', 'showWorkspace', 'stationFocusStatements',
     'settleStatements']) c[name] = qmlFunction(source, name, c);
   return { c, batches };
 }
@@ -349,4 +349,73 @@ test('the service reads the rules once, before its first start, only on a fresh 
   assert.ok(start.indexOf('started = true') < start.indexOf('workspaceAuthority.claim()'));
   assert.match(service, /command: \["hyprctl", "workspacerules", "-j"\]/);
   assert.match(service, /Grid\.adopt\(rules, outputs\)/);
+});
+
+test('held outputs apply only in Station mode and only to managed outputs', () => {
+  const station = { outputs: ['A', 'B', 'C'] };
+  assert.deepEqual(G.held(station, ['C', 'X']), ['C']);
+  assert.deepEqual(G.held(station, null), []);
+  assert.deepEqual(G.held(map(['A', 'B', 'C'], 'repetitive'), ['C']), []);
+  assert.deepEqual(G.held(map(['A', 'B', 'C'], 'nonrepetitive'), ['C']), []);
+  // A switch from a free output skips held ones and finishes on the focused output.
+  assert.deepEqual(G.switchedOutputs(station, ['C'], 'B'), ['A', 'B']);
+  assert.deepEqual(G.switchedOutputs(station, ['A', 'C'], 'B'), ['B']);
+  // A switch pressed on a held output moves that output alone.
+  assert.deepEqual(G.switchedOutputs(station, ['C'], 'C'), ['C']);
+  assert.deepEqual(G.switchedOutputs(station, [], 'B'), ['A', 'C', 'B']);
+});
+
+test('a held output keeps its workspace when the station changes, and switches alone when focused', () => {
+  let { c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'B');
+  c.config = { heldOutputs: ['C'] };
+  assert.equal(c.showStation(2), 'started');
+  // Station 2 is 4 on A and 5 on B; C keeps showing its own workspace.
+  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(4) + '; ' + H.focusWorkspace(5)));
+  assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "6" \}\)/);
+  batches[0].done(0, 'ok');
+  assert.equal(c.currentStation, 2);
+  ({ c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'C'));
+  c.config = { heldOutputs: ['C'] };
+  c.showStation(3);
+  // Station 3 on C is workspace 9, and nothing else moves.
+  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(9)));
+  assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "[78]" \}\)/);
+  batches[0].done(0, 'ok');
+  assert.equal(c.currentStation, 1, 'the station the other outputs show is unchanged');
+  assert.equal(c.persisted.lastStation, undefined);
+  // A click on a held output's bar label switches that output, wherever focus is.
+  ({ c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'A'));
+  c.config = { heldOutputs: ['C'] };
+  c.showWorkspace(2, 'C');
+  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(6)));
+  assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "[45]" \}\)/);
+  // Repetitive ignores the held list.
+  ({ c, batches } = switcher(map(['A', 'B'], 'repetitive', [3, 3]), 'B'));
+  c.config = { heldOutputs: ['B'] };
+  c.showStation(2);
+  assert.match(batches[0].lua, /focus\(\{ workspace = "12" \}\)\)$/);
+});
+
+test('held outputs load, validate and apply without renumbering', () => {
+  assert.deepEqual(Store.loadConfig({}).heldOutputs, []);
+  assert.deepEqual(Store.loadConfig({ heldOutputs: ['DP-3', 'DP-3', 'bad name', 7, 'HDMI-A-1'] }).heldOutputs, ['DP-3', 'HDMI-A-1']);
+  assert.deepEqual(Store.loadConfig({ heldOutputs: 'DP-3' }).heldOutputs, []);
+  let reconciled = 0;
+  const c = { Grid: G, Store, state: 'migrating', workspaceData: { pending: null }, removalGrace: { running: false },
+    config: Store.loadConfig({}), workspaceMap: { outputs: ['A', 'B'] },
+    store: { saveConfig() {} }, workspace: { reconcile() { reconciled++; } } };
+  c.targetMapping = () => G.mapping([{ name: 'A' }, { name: 'B' }], { A: 1, B: 2 }, {},
+    { mode: c.config.workspaceMode, layout: c.config.workspaceLayout });
+  c.setWorkspaceSetting = qmlFunction(source, 'setWorkspaceSetting', c);
+  // Holding changes no workspace map, so it applies even while a migration runs.
+  assert.equal(c.setWorkspaceSetting('workspaces', { heldOutputs: ['B'] }), 'ok');
+  assert.deepEqual(c.config.heldOutputs, ['B']);
+  assert.equal(reconciled, 0);
+  assert.equal(c.setWorkspaceSetting('workspaces', { heldOutputs: 'B' }), 'invalid');
+});
+
+test('follow focus and window follow leave a held output alone', () => {
+  const controller = read('lib/stations/StationController.qml');
+  assert.match(controller, /if \(root\.isHeld\(monitor\.name\)\) return/);
+  assert.match(controller, /if \(Grid\.mode\(workspaceMap\) !== "station" \|\| !isHeld\(client\.monitor\)\) \{\n\s+currentStation = station/);
 });

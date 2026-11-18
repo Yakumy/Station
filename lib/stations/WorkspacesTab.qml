@@ -29,13 +29,16 @@ Column {
       workspaceLayout: config.workspaceLayout || { repetitive: {}, nonrepetitive: {} },
       indicatorStyle: config.indicatorStyle || "prefixed",
       compactMode: config.compactMode || "hover",
-      showOpenApps: config.showOpenApps !== false
+      showOpenApps: config.showOpenApps !== false,
+      heldOutputs: Array.isArray(config.heldOutputs) ? config.heldOutputs : []
     }))
   }
   // What the user sees: the mode, the numbers each monitor gets in both per-monitor
   // modes, and the bar options. Layout entries that change nothing do not count.
   function effective(values) {
+    var holding = outputs.filter(function(name) { return (values.heldOutputs || []).indexOf(name) !== -1 })
     return JSON.stringify([values.workspaceMode, values.direction, values.indicatorStyle, values.compactMode, values.showOpenApps,
+      holding,
       Grid.assigned("repetitive", outputs, values.workspaceLayout),
       Grid.assigned("nonrepetitive", outputs, values.workspaceLayout)])
   }
@@ -46,6 +49,9 @@ Column {
   readonly property string savedKey: JSON.stringify(savedValues())
   readonly property string mode: draft.workspaceMode
   readonly property var assigned: Grid.assigned(mode, outputs, draft.workspaceLayout)
+  // Station mode only: a held monitor keeps its workspace while the others switch.
+  readonly property bool holdable: mode === "station" && !singleOutput
+  readonly property var held: holdable ? Grid.held({ outputs: outputs }, draft.heldOutputs) : []
   onSavedKeyChanged: if (!dirty) reset()
   onModeChanged: notice = ""
 
@@ -96,6 +102,12 @@ Column {
       else lists.forEach(function(row) { var at = row.indexOf(total); if (at !== -1) row.splice(at, 1) })
     }
     edit({ workspaceLayout: layoutWith(mode, lists) })
+  }
+  function toggleHeld(output) {
+    if (!holdable || outputs.indexOf(output) === -1) return
+    var list = (draft.heldOutputs || []).filter(function(name) { return name !== output })
+    if (held.indexOf(output) === -1) list.push(output)
+    edit({ heldOutputs: list })
   }
   // Non-repetitive only: give a number to another monitor. Each monitor keeps at
   // least one and holds at most ten.
@@ -168,6 +180,9 @@ Column {
         assigned: root.assigned
         mode: root.mode
         steps: root.outputs.map(function(output) { return root.stepState(output) })
+        holdable: root.holdable
+        held: root.held
+        onHoldToggled: function(output) { root.toggleHeld(output) }
         onCountChangeRequested: function(output, delta) { root.changeCount(output, delta) }
         onWorkspaceMoved: function(number, output) { root.moveWorkspace(number, output) }
       }
@@ -224,7 +239,8 @@ Column {
             RowMessage {
               objectName: "workspaceModeNote"
               text: root.singleOutput ? "Works only on multiple monitors"
-                : root.mode === "nonrepetitive" ? "Drag workspaces onto a monitor to assign them" : ""
+                : root.mode === "nonrepetitive" ? "Drag workspaces onto a monitor to assign them"
+                : root.held.length ? "Held monitors switch only when focused" : ""
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }

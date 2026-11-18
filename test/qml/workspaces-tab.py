@@ -137,12 +137,24 @@ ShellRoot {
         if (!selector.enabled || findObject(tab, "workspaceModeNote").text !== "") { fail("selector on two monitors"); return }
         if (Math.abs(selector.y + selector.height / 2 - row.height / 2) > 1) { fail("selector centered"); return }
         if (actions.visible) { fail("actions before an edit"); return }
+        // Station mode: every managed monitor has a Hold toggle, a disabled one has none.
+        var hold = findObject(layout, "workspaceHold-HDMI-A-2")
+        if (!hold || !hold.visible || !findObject(layout, "workspaceHold-eDP-1").visible
+            || findObject(layout, "workspaceHold-DP-3").visible) { fail("hold toggles"); return }
+        if (!inside(hold, card)) { fail("hold inside card"); return }
+        layout.holdToggled("HDMI-A-2")
+        if (findObject(layout, "workspaceHoldLabel-HDMI-A-2").text !== "Held" || findObject(tab, "workspaceModeNote").text !== "Held monitors switch only when focused"
+            || !actions.visible || JSON.stringify(tab.held) !== JSON.stringify(["HDMI-A-2"])) { fail("hold edit"); return }
+        if (fakeService.calls.length) { fail("hold applied before Apply"); return }
         phase = -1
         save("station", function() { phase = 1 })
         return
       }
       if (phase === 1) {
+        findObject(tab, "workspacesCancel").clicked()
+        if (findObject(layout, "workspaceHoldLabel-HDMI-A-2").text !== "Hold" || actions.visible) { fail("hold cancel"); return }
         findObject(tab, "workspaceModeSelector").changed("nonrepetitive")
+        if (findObject(layout, "workspaceHold-HDMI-A-2").visible) { fail("hold outside Station mode"); return }
         if (fakeService.calls.length || fakeService.config.workspaceMode !== "station") { fail("mode applied before Apply"); return }
         if (!actions.visible) { fail("actions after an edit"); return }
         if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "6,7,8,9,10") { fail("non-repetitive default"); return }

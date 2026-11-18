@@ -18,7 +18,7 @@ function harness() {
   };
   c.root = c;
   adaptOwners(c);
-  for (const name of ['begin', 'finish', 'clearQueued', 'showStation', 'stationFocusStatements'])
+  for (const name of ['heldOutputs', 'isHeld', 'begin', 'finish', 'clearQueued', 'showStation', 'stationFocusStatements'])
     c[name] = qmlFunction(source, name, c);
   return { c, batches };
 }

@@ -179,6 +179,23 @@ Only Station mode switches every output together. In the other modes follow focu
 a moved window does not switch the other outputs, and Move across steps the window's own
 number at an outer edge.
 
+### Held outputs
+
+`config.heldOutputs` lists connectors that keep their workspace when the station changes.
+The Workspaces tab sets it with each monitor's Hold toggle, shown in Station mode with two
+or more managed outputs. It applies only in Station mode and only to managed outputs; the
+other modes and unknown names ignore it. It changes no workspace ID and no map, so it
+applies in any state and runs no migration.
+
+- A switch from an output that is not held shows the station on every output that is not
+  held. Held outputs keep what they show.
+- A switch pressed on a held output (a numbered key, arrows or the bar) shows that number
+  on the held output alone. `currentStation` and the saved station do not change.
+- Follow focus ignores a focused held output, and a window that moves and follows onto a
+  held output switches nothing else and does not change `currentStation`.
+- Window bookkeeping is unchanged: a held output's windows keep their station-encoded
+  workspace IDs, so migrations, sends and Move across treat them as before.
+
 ### Which stations exist
 
 `existing = {1..3} ∪ {stations with a grid client} ∪ {stations displayed}`. Keys still
@@ -216,7 +233,8 @@ station step on one axis and returns no step on the other axis.
 ### Switch
 
 Apply rules for the map, focus each output's workspace, and finish on the previously
-focused output. One eval batch does all of this.
+focused output. One eval batch does all of this. In Station mode held outputs are skipped,
+or switch alone when the switch comes from one (see [Held outputs](#held-outputs)).
 
 Numbered requests during a switch keep the latest target and return `queued`. That
 target runs after the batch if the map is still ready. A topology operation drops it.
@@ -290,7 +308,7 @@ migration between two Repetitive maps moves no window. Leaving Repetitive arms i
 Station mode only. When enabled (the default), a focused workspace change on a managed output switches
 the whole station, after a 100 ms debounce. It acts only in `idle`, with no topology
 change in the last 500 ms, and re-reads state first. Station-generated events never
-trigger it.
+trigger it. A focused held output never triggers it.
 
 ## Events
 
