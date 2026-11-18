@@ -193,6 +193,9 @@ applies in any state and runs no migration.
   on the held output alone. `currentStation` and the saved station do not change.
 - Follow focus ignores a focused held output, and a window that moves and follows onto a
   held output switches nothing else and does not change `currentStation`.
+- While any output is held, a switch first returns each workspace it shows to its own
+  output (`placeWorkspace`, a no-op when it is already there). Otherwise a workspace left
+  on the wrong output, the held one included, would pull that output along when focused.
 - Window bookkeeping is unchanged: a held output's windows keep their station-encoded
   workspace IDs, so migrations, sends and Move across treat them as before.
 

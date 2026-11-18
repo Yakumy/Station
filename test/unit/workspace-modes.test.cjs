@@ -369,8 +369,10 @@ test('a held output keeps its workspace when the station changes, and switches a
   let { c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'B');
   c.config = { heldOutputs: ['C'] };
   assert.equal(c.showStation(2), 'started');
-  // Station 2 is 4 on A and 5 on B; C keeps showing its own workspace.
-  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(4) + '; ' + H.focusWorkspace(5)));
+  // Station 2 is 4 on A and 5 on B; C keeps showing its own workspace. Each shown
+  // workspace is returned to its own output first, so a misplaced one cannot move C.
+  assert.ok(batches[0].lua.endsWith([H.placeWorkspace(4, 'A'), H.focusWorkspace(4),
+    H.placeWorkspace(5, 'B'), H.focusWorkspace(5)].join('; ')));
   assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "6" \}\)/);
   batches[0].done(0, 'ok');
   assert.equal(c.currentStation, 2);
@@ -378,7 +380,7 @@ test('a held output keeps its workspace when the station changes, and switches a
   c.config = { heldOutputs: ['C'] };
   c.showStation(3);
   // Station 3 on C is workspace 9, and nothing else moves.
-  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(9)));
+  assert.ok(batches[0].lua.endsWith(H.placeWorkspace(9, 'C') + '; ' + H.focusWorkspace(9)));
   assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "[78]" \}\)/);
   batches[0].done(0, 'ok');
   assert.equal(c.currentStation, 1, 'the station the other outputs show is unchanged');
@@ -387,8 +389,13 @@ test('a held output keeps its workspace when the station changes, and switches a
   ({ c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'A'));
   c.config = { heldOutputs: ['C'] };
   c.showWorkspace(2, 'C');
-  assert.ok(batches[0].lua.endsWith(H.focusWorkspace(6)));
+  assert.ok(batches[0].lua.endsWith(H.placeWorkspace(6, 'C') + '; ' + H.focusWorkspace(6)));
   assert.doesNotMatch(batches[0].lua, /focus\(\{ workspace = "[45]" \}\)/);
+  // With nothing held a switch is the plain focus batch it always was.
+  ({ c, batches } = switcher({ outputs: ['A', 'B', 'C'] }, 'B'));
+  c.config = { heldOutputs: [] };
+  c.showStation(2);
+  assert.doesNotMatch(batches[0].lua, /hl\.get_workspace/);
   // Repetitive ignores the held list.
   ({ c, batches } = switcher(map(['A', 'B'], 'repetitive', [3, 3]), 'B'));
   c.config = { heldOutputs: ['B'] };

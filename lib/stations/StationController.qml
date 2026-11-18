@@ -156,7 +156,17 @@ Item {
     if (mode === "nonrepetitive")
       return [Hypr.placeWorkspace(station, Grid.home(station, finalOutput, workspaceMap)), Hypr.focusWorkspace(station)]
     var outputs = Grid.switchedOutputs(workspaceMap, config ? config.heldOutputs : [], finalOutput)
-    return outputs.map(function(output) { return Hypr.focusWorkspace(workspaceFor(station, output)) })
+    // With an output held, a workspace left on the wrong output would pull that
+    // output along when it is focused, the held one included. Return each one home
+    // first; placeWorkspace does nothing when it is already there.
+    var placing = heldOutputs().length > 0
+    var statements = []
+    outputs.forEach(function(output) {
+      var id = workspaceFor(station, output)
+      if (placing) statements.push(Hypr.placeWorkspace(id, output))
+      statements.push(Hypr.focusWorkspace(id))
+    })
+    return statements
   }
 
   // After a migration: Station mode shows the station again. Non-repetitive and
