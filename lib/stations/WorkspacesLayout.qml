@@ -8,7 +8,9 @@ import "../displays/Model.js" as Model
 // Monitor layout for the Workspaces tab. Positions follow Displays and cannot be
 // dragged or selected here. Each managed output shows its role and the workspaces
 // the draft gives it. Repetitive has − and + on every monitor, Non-repetitive on
-// the last one, and Non-repetitive badges drag onto another monitor.
+// the last one, and Non-repetitive badges drag onto another monitor. In Station mode
+// each monitor has an on/off switch: a monitor switched off keeps its workspace when
+// the others switch.
 Ui.BorderSurface {
   id: canvas
   objectName: "workspacesLayout"
@@ -20,7 +22,11 @@ Ui.BorderSurface {
   property string mode: "station"
   // `steps[i]` is `{ shown, down, up }` for output i's − and + buttons.
   property var steps: []
+  // Station mode: whether a monitor can be held, and the held connectors.
+  property bool holdable: false
+  property var held: []
   signal countChangeRequested(string output, int delta)
+  signal holdToggled(string output)
   signal workspaceMoved(int number, string output)
   readonly property bool draggable: mode === "nonrepetitive"
   // The badge being dragged, its pointer position in the canvas, and the monitor under it.
@@ -129,6 +135,7 @@ Ui.BorderSurface {
       readonly property var step: outputIndex !== -1 && canvas.steps[outputIndex] ? canvas.steps[outputIndex]
         : ({ shown: false, down: false, up: false })
       readonly property bool dropTarget: canvas.dragNumber !== -1 && canvas.dropOutput === modelData.name
+      readonly property bool isHeld: canvas.held.indexOf(modelData.name) !== -1
       x: canvas.originX + canvas.panX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
         + canvas.monitorGap / 2
       y: canvas.originY + canvas.panY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
@@ -142,38 +149,57 @@ Ui.BorderSurface {
       radius: 0
       opacity: outputIndex !== -1 || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
 
-      Row {
+      // The name and role, and in Station mode the switch that keeps this monitor in
+      // station switches, as the Bar tab shows its bar switch.
+      Column {
         id: monitorIdentity
         objectName: "workspaceMonitorIdentity-" + monitorCard.modelData.name
         anchors.centerIn: parent
         // Cards sit at zoomed, fractional geometry, so pixel snapping only offsets the row.
         anchors.alignWhenCentered: false
-        spacing: Style.spacing.sm
+        spacing: Style.spacing.xs
         z: 2
 
-        PanelUi.MonitorName {
-          id: monitorName
-          centerInParent: false
-          name: monitorCard.modelData.name
-          anchors.verticalCenter: parent.verticalCenter
+        Row {
+          id: identityRow
+          spacing: Style.spacing.sm
+          x: (parent.width - width) / 2
+
+          PanelUi.MonitorName {
+            id: monitorName
+            centerInParent: false
+            name: monitorCard.modelData.name
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Text {
+            objectName: "workspaceMonitorSeparator-" + monitorCard.modelData.name
+            text: "|"
+            textFormat: Text.PlainText
+            color: monitorName.foreground
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Text {
+            objectName: "workspaceMonitorRole-" + monitorCard.modelData.name
+            text: monitorCard.outputIndex === -1 ? "Off" : String(monitorCard.outputIndex + 1)
+            textFormat: Text.PlainText
+            color: monitorName.foreground
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            anchors.verticalCenter: parent.verticalCenter
+          }
         }
-        Text {
-          objectName: "workspaceMonitorSeparator-" + monitorCard.modelData.name
-          text: "|"
-          textFormat: Text.PlainText
-          color: monitorName.foreground
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-          anchors.verticalCenter: parent.verticalCenter
-        }
-        Text {
-          objectName: "workspaceMonitorRole-" + monitorCard.modelData.name
-          text: monitorCard.outputIndex === -1 ? "Off" : String(monitorCard.outputIndex + 1)
-          textFormat: Text.PlainText
-          color: monitorName.foreground
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-          anchors.verticalCenter: parent.verticalCenter
+
+        PanelUi.ToggleSwitch {
+          objectName: "workspaceSwitch-" + monitorCard.modelData.name
+          visible: canvas.holdable && monitorCard.outputIndex !== -1
+          trackWidth: Style.space(32)
+          trackHeight: Style.space(18)
+          knobSize: Style.space(14)
+          x: (parent.width - width) / 2
+          checked: !monitorCard.isHeld
+          onToggled: canvas.holdToggled(monitorCard.modelData.name)
         }
       }
 
@@ -191,7 +217,7 @@ Ui.BorderSurface {
             id: badge
             required property int modelData
             objectName: "workspaceBadge-" + monitorCard.modelData.name + "-" + modelData
-            opacity: canvas.dragNumber === modelData ? 0.4 : 1
+            opacity: canvas.dragNumber === modelData ? 0.4 : monitorCard.isHeld && canvas.tokens ? canvas.tokens.disabledOpacity : 1
             width: Math.max(Style.space(20), badgeLabel.implicitWidth + Style.space(8))
             height: Style.space(20)
             color: Commons.Color.menu.selectedBackground

@@ -51,7 +51,7 @@ function harness({ monitors = vertical, monitor = 0, workspace = 1, workspaceNam
   context.root = context;
   adaptOwners(context);
   context.workspaceFor = (s, o) => Grid.workspace(s, o, context.workspaceMap);
-  for (const name of ['finishWindowAction', 'windowActionCurrent', 'readActiveWindow', 'stationFocusStatements',
+  for (const name of ['heldOutputs', 'isHeld', 'finishWindowAction', 'windowActionCurrent', 'readActiveWindow', 'stationFocusStatements',
     'syncWindowStation', 'moveActionWindow', 'sendWindow', 'shiftWindow', 'afterNativeMove']) context[name] = action(context, name);
   return { c: context, calls, requests, get live() { return live; }, close() { live = null; },
     settle() { const t = context.nativeMoveSettle; context.afterNativeMove(t.before, t.direction, t.generation); } };

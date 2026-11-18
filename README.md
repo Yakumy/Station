@@ -97,6 +97,11 @@ Choose how workspaces are numbered in the Workspaces tab:
 | **Repetitive** | Every monitor numbers its own workspaces from 1, as Omarchy 4.5 does. |
 | **Non-repetitive** | Each number belongs to one monitor, as in Omarchy 4.0. |
 
+In Station mode, each monitor in the Workspaces layout has an on/off switch, like the
+Bar tab's. Switch a monitor off to keep it out of station switches: it stays on its
+workspace while the others switch, and switches on its own when it has focus. Use it for a screen that should keep showing one thing, such as a
+video or a dashboard.
+
 ---
 
 ## Workspaces

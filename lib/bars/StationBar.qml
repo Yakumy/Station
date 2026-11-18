@@ -22,6 +22,9 @@ Item {
   property var workspaceMap: null
   property var workspaceApps: ({})
   property string indicatorStyle: "prefixed"
+  // Station mode: connectors that keep their workspace while the others switch. A
+  // held output's bar shows the station its own workspace belongs to.
+  property var heldOutputs: []
   readonly property var hyprMonitor: {
     var window = root.QsWindow.window
     var screen = window ? window.screen : null
@@ -33,8 +36,10 @@ Item {
   readonly property bool perOutput: Grid.mode(workspaceMap) !== "station" && outputIndex !== -1
   readonly property var ownNumbers: perOutput ? Grid.numbers(workspaceMap, outputIndex) : []
   readonly property int activeWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : -1
+  readonly property bool heldHere: Grid.held(workspaceMap, heldOutputs).indexOf(screenName) !== -1
   readonly property int shownNumber: perOutput
-    ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
+    ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1)
+    : heldHere ? (Grid.station(activeWorkspaceId, workspaceMap) || stationNumber) : stationNumber
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)
