@@ -1,8 +1,9 @@
-# Unreleased
+# 4.3.2 — Omarchy's gap without open apps
 
 - Keep the bar's workspace numbers at Omarchy's own gap when Show open apps is off. The
   hidden app column no longer leaves its gap behind, so Off and On hover read like
-  Omarchy's workspace indicator instead of spreading the numbers apart.
+  Omarchy's workspace indicator instead of spreading the numbers apart. Contributed by
+  @tahadx in #17.
 
 # 4.3.1 — The bar number keeps up with the workspace
 
