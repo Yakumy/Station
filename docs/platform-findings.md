@@ -1351,9 +1351,10 @@ lcms2, and judged on screen by the maintainer.
 - **[QTTEST]** `grid.test.cjs` covers the live station, the out-of-map fallback, a
   Repetitive map and a missing map. `panel-composition` still covers the confirmed
   scalar fallback on the bridge and direct paths.
-- **[INFER]** The label now repaints on the compositor event rather than after follow
-  focus. Rendering still depends on the frame loop; not measured with a physical
-  keypress.
+- **[LIVE]** After installing this change, the collapsed bar changed 一 to 二 in the
+  first screenshot, 23 ms after a native relative workspace switch. The service's
+  confirmed station followed at 157 ms. The switch was a synthetic Hyprland dispatch,
+  so this measures the indicator path, not a physical key press.
 
 ## Theme switching with a chosen background (2026-11-16)
 
