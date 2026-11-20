@@ -20,12 +20,16 @@ Column {
   readonly property bool idle: !!service && service.state === "idle"
   // The modes differ only across monitors, so one monitor locks the selector.
   readonly property bool singleOutput: outputs.length <= 1
-  readonly property int rowCount: 5
+  readonly property int rowCount: 6
+  // Six rows need 64 units each; the extra step keeps both frames equal and the
+  // notes clear without growing the tab's fixed height.
+  readonly property real frameHeight: geometry.frameHeight + Style.spacing.xxxl
 
   function savedValues() {
     return JSON.parse(JSON.stringify({
       direction: config.direction || "ltr",
       workspaceMode: Grid.MODES.indexOf(config.workspaceMode) !== -1 ? config.workspaceMode : "station",
+      stationCount: Grid.stationCount(config.stationCount),
       workspaceLayout: config.workspaceLayout || { repetitive: {}, nonrepetitive: {} },
       indicatorStyle: config.indicatorStyle || "prefixed",
       compactMode: config.compactMode || "hover",
@@ -35,7 +39,7 @@ Column {
   // What the user sees: the mode, the numbers each monitor gets in both per-monitor
   // modes, and the bar options. Layout entries that change nothing do not count.
   function effective(values) {
-    return JSON.stringify([values.workspaceMode, values.direction, values.indicatorStyle, values.compactMode, values.showOpenApps,
+    return JSON.stringify([values.workspaceMode, values.direction, values.stationCount, values.indicatorStyle, values.compactMode, values.showOpenApps,
       Grid.assigned("repetitive", outputs, values.workspaceLayout),
       Grid.assigned("nonrepetitive", outputs, values.workspaceLayout)])
   }
@@ -45,7 +49,7 @@ Column {
   readonly property bool dirty: effective(draft) !== effective(base)
   readonly property string savedKey: JSON.stringify(savedValues())
   readonly property string mode: draft.workspaceMode
-  readonly property var assigned: Grid.assigned(mode, outputs, draft.workspaceLayout)
+  readonly property var assigned: Grid.assigned(mode, outputs, draft.workspaceLayout, draft.stationCount)
   onSavedKeyChanged: if (!dirty) reset()
   onModeChanged: notice = ""
 
@@ -63,6 +67,12 @@ Column {
     if (name === "repetitive") outputs.forEach(function(output, index) { layout.repetitive[output] = lists[index].length })
     else outputs.forEach(function(output, index) { layout.nonrepetitive[output] = lists[index] })
     return layout
+  }
+  function stationOptions() {
+    var rows = []
+    for (var number = 1; number <= Grid.MAX_STATIONS; number++)
+      rows.push({ value: String(number), label: String(number) })
+    return rows
   }
 
   // Repetitive: every monitor has its own count, 1 to 10. Non-repetitive: only the
@@ -127,11 +137,17 @@ Column {
   component RowMessage: Caption {
     anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
     anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
-    anchors.bottom: parent.bottom; anchors.bottomMargin: root.tokens.space1
+    // Six rows are shorter than the old five, so the note needs the smaller inset
+    // to stay under the dropdown.
+    anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(1)
     visible: text !== ""
     elide: Text.ElideRight
   }
-  component RowLabel: PanelUi.ControlLabel {}
+  // Six rows are shorter than the old five, so the title sits higher and still
+  // clears the centered dropdown.
+  component RowLabel: PanelUi.ControlLabel {
+    anchors.topMargin: Style.space(2)
+  }
   component RowDropdown: PanelUi.ControlDropdown {
     showLabel: false
     foreground: root.tokens.textPrimary
@@ -161,7 +177,7 @@ Column {
       }
       Stations.WorkspacesLayout {
         objectName: "workspacesLayout"
-        x: root.pad; width: parent.width - root.pad * 2; height: geometry.frameHeight
+        x: root.pad; width: parent.width - root.pad * 2; height: root.frameHeight
         service: root.service
         tokens: root.tokens
         outputs: root.outputs
@@ -174,7 +190,7 @@ Column {
     }
     Item {
       x: root.narrow ? 0 : left.width
-      y: root.narrow ? geometry.headingHeight + geometry.frameHeight : 0
+      y: root.narrow ? geometry.headingHeight + root.frameHeight : 0
       width: root.narrow ? workspaceColumns.width : Math.max(1, Style.normalBorderWidth)
       height: root.narrow ? geometry.separatorSlot : Style.space(428)
       Rectangle {
@@ -188,7 +204,7 @@ Column {
     }
     Column {
       x: root.narrow ? 0 : left.width + Math.max(1, Style.normalBorderWidth)
-      y: root.narrow ? geometry.headingHeight + geometry.frameHeight + geometry.separatorSlot : 0
+      y: root.narrow ? geometry.headingHeight + root.frameHeight + geometry.separatorSlot : 0
       width: root.narrow ? workspaceColumns.width
         : workspaceColumns.width - left.width - Math.max(1, Style.normalBorderWidth)
       spacing: 0
@@ -204,7 +220,7 @@ Column {
         objectName: "featureControlFrame"
         narrow: root.narrow
         id: controlFrame
-        height: geometry.frameHeight
+        height: root.frameHeight
         Column {
           anchors.fill: parent
           spacing: 0
@@ -288,6 +304,26 @@ Column {
               onChanged: function(value) { root.edit({ direction: value }) }
             }
             RowMessage { text: parent.usable ? "" : "only work with Station mode" }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
+          }
+          Item {
+            id: countRow
+            objectName: "stationCountRow"
+            width: parent.width; height: controlFrame.height / root.rowCount
+            readonly property bool usable: root.mode === "station"
+            opacity: usable ? 1 : root.tokens.disabledOpacity
+            RowLabel { text: "Stations shown" }
+            RowMessage {
+              objectName: "stationCountNote"
+              text: countRow.usable ? "1 to 10, default " + Grid.STATION_COUNT : "only work with Station mode"
+            }
+            RowDropdown {
+              objectName: "stationCountDropdown"
+              enabled: parent.usable
+              value: String(root.draft.stationCount)
+              options: root.stationOptions()
+              onChanged: function(value) { root.edit({ stationCount: Number(value) }) }
+            }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {

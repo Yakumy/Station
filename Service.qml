@@ -389,7 +389,7 @@ Item {
     active: root.config.compactMode !== "on"
     mapping: root.workspaceMap
     pending: root.workspaceData.pending
-    minimum: Grid.STATION_COUNT
+    minimum: Grid.stationCount(root.config.stationCount)
     current: root.currentStation
   }
 
@@ -543,6 +543,11 @@ Item {
       if (value.direction !== undefined) {
         if (["ltr", "rtl", "ttb", "btt"].indexOf(value.direction) === -1) return "invalid"
         next.direction = value.direction
+      }
+      if (value.stationCount !== undefined) {
+        var stations = Number(value.stationCount)
+        if (!Number.isInteger(stations) || stations < 1 || stations > Grid.MAX_STATIONS) return "invalid"
+        next.stationCount = stations
       }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {

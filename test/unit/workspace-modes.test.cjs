@@ -30,8 +30,14 @@ const apply = (plan, clients) => clients.map(c => {
 });
 
 test('each mode assigns the workspaces each monitor gets, as the Workspaces tab shows them', () => {
-  // Sync offers three stations: 1, 3 and 5 on the first monitor, 2, 4 and 6 on the second.
+  // Station mode lists three stations by default: 1, 3 and 5 on the first monitor,
+  // 2, 4 and 6 on the second.
   assert.deepEqual(G.assigned('station', ['A', 'B']), [[1, 3, 5], [2, 4, 6]]);
+  assert.deepEqual(G.assigned('station', ['A', 'B'], null, 6), [[1, 3, 5, 7, 9, 11], [2, 4, 6, 8, 10, 12]]);
+  assert.deepEqual(G.assigned('station', ['A'], null, 10), [range(1, 10)]);
+  assert.deepEqual(G.assigned('station', ['A'], null, 0), [[1, 2, 3]]);
+  assert.deepEqual([G.stationCount(1), G.stationCount(10), G.stationCount(11), G.stationCount(undefined)],
+    [1, 10, 3, 3]);
   // Repetitive and Non-repetitive start with five on each monitor.
   assert.deepEqual(G.assigned('repetitive', ['A', 'B']), [range(1, 5), range(1, 5)]);
   assert.deepEqual(G.assigned('nonrepetitive', ['A', 'B', 'C']), [range(1, 5), range(6, 10), range(11, 15)]);
@@ -176,11 +182,16 @@ test('navigation steps per output in Repetitive and globally in Non-repetitive',
   const non = map(['A', 'B'], 'nonrepetitive', [[1, 2], [3, 4]]);
   assert.deepEqual(G.existing([win('0x1', 7, 'B')], monitors, 3, non, 'A'), [1, 2, 3, 4, 7, 20]);
   assert.deepEqual(G.existing([], [], 3, { outputs: ['A', 'B'] }), [1, 2, 3]);
+  assert.deepEqual(G.existing([], [], 10, { outputs: ['A'] }), range(1, 10));
 });
 
 test('preferences load the workspace mode, per-monitor layout, indicator style and compact mode', () => {
   const fresh = Store.loadConfig({});
   assert.equal(fresh.workspaceMode, 'station');
+  assert.equal(fresh.stationCount, 3);
+  assert.equal(Store.loadConfig({ stationCount: 10 }).stationCount, 10);
+  assert.equal(Store.loadConfig({ stationCount: 11 }).stationCount, 3);
+  assert.equal(Store.loadConfig({ stationCount: 0 }).stationCount, 3);
   assert.deepEqual(fresh.workspaceLayout, { repetitive: {}, nonrepetitive: {} });
   assert.equal(fresh.indicatorStyle, 'prefixed');
   assert.deepEqual([fresh.compactMode, fresh.showOpenApps], ['hover', true]);
@@ -291,12 +302,17 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   c.targetMapping = () => G.mapping([{ name: 'A' }, { name: 'B' }], { A: 1, B: 2 }, {},
     { mode: c.config.workspaceMode, layout: c.config.workspaceLayout });
   c.setWorkspaceSetting = qmlFunction(source, 'setWorkspaceSetting', c);
-  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number', direction: 'btt' }), 'ok');
+  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number',
+    direction: 'btt', stationCount: 10 }), 'ok');
   assert.equal(c.config.direction, 'btt');
   assert.deepEqual([c.config.compactMode, c.config.showOpenApps, c.config.indicatorStyle], ['off', false, 'number']);
+  assert.equal(c.config.stationCount, 10);
   assert.equal(reconciled, 0, 'bar options do not renumber');
-  for (const bad of [{ direction: 'sideways' }, { workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, null])
+  for (const bad of [{ direction: 'sideways' }, { workspaceMode: 'grid' }, { compactMode: 'always' },
+    { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, { stationCount: 0 }, { stationCount: 11 },
+    { stationCount: 4.5 }, null])
     assert.equal(c.setWorkspaceSetting('workspaces', bad), 'invalid');
+  assert.equal(c.config.stationCount, 10);
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'nonrepetitive',
     workspaceLayout: { repetitive: {}, nonrepetitive: { A: [1], B: [2, 3, 4, 5, 6] } } }), 'ok');
   assert.equal(reconciled, 1);
@@ -306,8 +322,8 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'repetitive' }), 'busy');
   assert.equal(c.config.workspaceMode, 'nonrepetitive');
   // Bar options still apply while a migration runs.
-  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'on' }), 'ok');
-  assert.equal(c.config.compactMode, 'on');
+  assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'on', stationCount: 5 }), 'ok');
+  assert.deepEqual([c.config.compactMode, c.config.stationCount], ['on', 5]);
 });
 
 test('a first start adopts the workspace rules the user already wrote', () => {

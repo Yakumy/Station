@@ -44,7 +44,7 @@ ShellRoot {
       {name: "eDP-1", width: 1920, height: 1080, x: 0, y: 1080, scale: 1, transform: 0, enabled: true},
       {name: "HDMI-A-2", width: 1920, height: 1200, x: 0, y: -120, scale: 1, transform: 0, enabled: true},
       {name: "DP-3", width: 2560, height: 1440, x: 1920, y: 0, scale: 1, transform: 0, enabled: false}]
-    property var config: ({workspaceMode: "station", workspaceLayout: {repetitive: {}, nonrepetitive: {}},
+    property var config: ({workspaceMode: "station", stationCount: 3, workspaceLayout: {repetitive: {}, nonrepetitive: {}},
       direction: "ltr", indicatorStyle: "prefixed", compactMode: "hover", showOpenApps: true})
     property var workspaceTarget: ({outputs: ["eDP-1", "HDMI-A-2"]})
     property string state: "idle"
@@ -136,6 +136,18 @@ ShellRoot {
         var row = selector.parent
         if (!selector.enabled || findObject(tab, "workspaceModeNote").text !== "") { fail("selector on two monitors"); return }
         if (Math.abs(selector.y + selector.height / 2 - row.height / 2) > 1) { fail("selector centered"); return }
+        var stationCount = findObject(tab, "stationCountDropdown")
+        if (!stationCount || stationCount.value !== "3" || stationCount.options.length !== 10
+            || findObject(tab, "stationCountNote").text !== "1 to 10, default 3") {
+          fail("station count default"); return
+        }
+        stationCount.changed("6")
+        if (badges("eDP-1") !== "1,3,5,7,9,11" || badges("HDMI-A-2") !== "2,4,6,8,10,12"
+            || !actions.visible) { fail("station count 6"); return }
+        findObject(tab, "workspacesCancel").clicked()
+        if (badges("eDP-1") !== "1,3,5" || badges("HDMI-A-2") !== "2,4,6" || actions.visible) {
+          fail("station count cancel"); return
+        }
         if (actions.visible) { fail("actions before an edit"); return }
         phase = -1
         save("station", function() { phase = 1 })
@@ -147,6 +159,10 @@ ShellRoot {
         if (!actions.visible) { fail("actions after an edit"); return }
         if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "6,7,8,9,10") { fail("non-repetitive default"); return }
         if (findObject(tab, "workspaceModeNote").text !== "Drag workspaces onto a monitor to assign them") { fail("drag note"); return }
+        if (findObject(tab, "stationCountDropdown").enabled
+            || findObject(tab, "stationCountNote").text !== "only work with Station mode") {
+          fail("station count outside station mode"); return
+        }
         // − and + only on the last monitor.
         if (findObject(layout, "workspaceStep-eDP-1-up") || !findObject(layout, "workspaceStep-HDMI-A-2-up")) { fail("last monitor steps"); return }
         layout.countChangeRequested("HDMI-A-2", 1)

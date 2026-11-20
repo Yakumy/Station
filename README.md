@@ -105,7 +105,8 @@ Use **−** and **+** on a monitor in the layout to change its workspaces, up to
 monitor. In Non-repetitive, drag a workspace number onto the monitor you want.
 
 Pick the bar indicator style (S1 S2 S3, 1 2 3 or I II III), a compact mode (Off,
-On hover or On), and whether open apps show next to each workspace.
+On hover or On), and whether open apps show next to each workspace. Stations shown sets
+how many station numbers the bar lists in Station mode (1 to 10, default 3).
 
 ---
 

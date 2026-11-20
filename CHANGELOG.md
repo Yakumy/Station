@@ -1,3 +1,9 @@
+# Unreleased
+
+- Add a Stations shown setting to the Workspaces tab, 1 to 10. It sets how many station
+  numbers the bar lists in Station mode, defaulting to the current three. A station with
+  a window still appears when it is above the count.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
