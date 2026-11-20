@@ -714,7 +714,9 @@ stays reactive, with no polling. A retired publisher returns no station number.
 The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
 `indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number` or `roman`.
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
-`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
+`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. With open
+apps off, the numbers use Omarchy's own workspace gap: one spacing step between columns
+and two between rows, with no gap left behind for the hidden app column. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
 In Station mode every bar shows the station. In Repetitive and Non-repetitive each bar

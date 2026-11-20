@@ -1,3 +1,9 @@
+# Unreleased
+
+- Keep the bar's workspace numbers at Omarchy's own gap when Show open apps is off. The
+  hidden app column no longer leaves its gap behind, so Off and On hover read like
+  Omarchy's workspace indicator instead of spreading the numbers apart.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
