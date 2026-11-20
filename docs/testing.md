@@ -135,7 +135,7 @@ fail or not run. Missing hardware means not run, never an inferred pass.
 | H8 | With Omarchy's internal Off flag set, turn the output on. Revert, then time out, then Keep. Reload. | Only On + Keep clears the exact flag. Autoreload returns to its old value. Config errors stay empty. |
 | H9 | With separate permission, kill the shell process during a preview. | The watchdog reloads current configuration. The new service resumes the journal with no duplicate binds. |
 | H10 | Restart the shell once. With separate permission, disable the plugin, then remove and reinstall it. | A restart causes no cleanup and opens no panel. Removal restores only leased widgets, neutralizes rules and keeps preferences. Real number keys work. |
-| H11 | With hardware, repeat H1 to H7 on three outputs and attach a fourth. Test dock, lid, suspend and cold login separately. | Three outputs keep station identity. The fourth stays untouched. Record actual behavior. |
+| H11 | With hardware, repeat H1 to H7 on four outputs and attach a fifth. Test dock, lid, suspend and cold login separately. A Hyprland headless output (`hyprctl output create headless`) stands in for a missing monitor; remove it afterward. | Four outputs keep station identity. The fifth stays untouched. Record actual behavior. |
 
 Compute each expected destination from the committed map:
 `(recordedStation - 1) * outputCount + outputIndex + 1`. Exclude pinned, special and

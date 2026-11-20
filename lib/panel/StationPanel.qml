@@ -299,7 +299,7 @@ Ui.Panel {
   function roleName(display) {
     if (!display || !display.enabled || !service) return "Off"
     var role = service.roleOf(display.name)
-    return ["Primary", "Secondary", "Third"][role] || "Lane " + display.lane
+    return ["Primary", "Secondary", "Third", "Fourth"][role] || "Lane " + display.lane
   }
 
   function selectDisplay(name) {

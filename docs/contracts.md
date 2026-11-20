@@ -62,7 +62,7 @@ Consequences:
 | Concept | Meaning | Stored |
 | --- | --- | --- |
 | Identity | Key from `description`. If two connected monitors share it, append `@<connector>`. | `config.json` |
-| Lane (1 to 3) | Preferred order of an output | `config.json` |
+| Lane (1 to 4) | Preferred order of an output | `config.json` |
 | Slot | Current dense index in the committed map | `workspace-map.json` |
 | Role | Displayed ordinal of a lane among those present | Never |
 
@@ -199,9 +199,13 @@ Each window keeps its station and physical output, and its workspace ID changes.
 Mirror, the role selects the source: a swap applies the new source and sink before
 migrating, so no destination is still a sink.
 
-### More than three outputs
+### More than four outputs
 
-Station manages at most three enabled, non-mirrored outputs. A fourth is **unmanaged**.
+Station manages at most four enabled, non-mirrored outputs. `Model.MAX_MONITORS`,
+`Grid.MAX_OUTPUTS` and `MonitorsLua.MAX_LANE` hold the limit and must agree. With four
+outputs, Sync writes workspace rules 1 to 40, Repetitive uses Omarchy blocks 0 to 3, and
+Non-repetitive starts at five workspaces each, which fills its 20-workspace total. A
+fifth output is **unmanaged**.
 Station excludes it from follow focus, lane lookup, window actions and reconciliation,
 never touches its windows, and never disables anything by itself. The `status` IPC
 reports it.

@@ -1,3 +1,14 @@
+# 4.2.0 — Four displays
+
+- Manage four displays. A fourth output used to stay unmanaged, with no lane, no
+  station workspaces and no Station bar. It now gets lane 4, its own workspaces in
+  every mode and its bar, and the Displays tab offers it role 4. Sync writes workspace
+  rules 1 to 40, Repetitive uses Omarchy's blocks 0 to 3, and Non-repetitive starts at
+  five workspaces each. A fifth output stays unmanaged. Reported with a working patch
+  by @J-eremy in #14.
+- The README now warns against running Station next to another monitor manager or a
+  personal `workspaces.lua` that binds `SUPER + 1…0`.
+
 # 4.1.2 — Private configuration stays out of the process list
 
 - Keep the contents of `monitors.lua` and `looknfeel.lua` out of process arguments.

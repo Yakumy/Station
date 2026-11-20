@@ -110,7 +110,7 @@ The original specification asked for these two. The maintainer declined them on
 2026-11-05, so they are not gaps.
 
 - The panel does not open when a monitor connects.
-- A fourth output is reported only through `status`. The panel shows no message.
+- A fifth output is reported only through `status`. The panel shows no message.
 
 A `removeStationBlock` method that no control called was deleted for the same reason.
 Plugin removal has its own cleanup.

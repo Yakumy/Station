@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../../lib/displays/Model.js');
 
-test('lane assignment is stable, reuses absent preferences, and caps at three', () => {
+test('lane assignment is stable, reuses absent preferences, and caps at four', () => {
   const first = M.assignLanes([
     { name: 'eDP-1', model: 'Panel' }, { name: 'HDMI-A-1', description: 'Dock A', serial: 'AA' },
   ], { 'Panel@eDP-1': 2, 'Dock A': 1 }, {});
@@ -10,11 +10,13 @@ test('lane assignment is stable, reuses absent preferences, and caps at three', 
   const next = M.assignLanes([
     { name: 'eDP-1', model: 'Panel' }, { name: 'DP-1', description: 'Dock B', serial: 'BB' },
     { name: 'DP-2', description: 'Dock C', serial: 'CC' }, { name: 'DP-3', description: 'Dock D', serial: 'DD' },
+    { name: 'DP-4', description: 'Dock E', serial: 'EE' },
   ], { ...first.preferences, 'Dock B': 1 }, { 'eDP-1': 2 });
   assert.equal(next.lanes['eDP-1'], 2);
   assert.equal(next.lanes['DP-1'], 1);
   assert.equal(next.lanes['DP-2'], 3);
-  assert.deepEqual(next.unmanaged, ['DP-3']);
+  assert.equal(next.lanes['DP-3'], 4);
+  assert.deepEqual(next.unmanaged, ['DP-4']);
 });
 
 test('identical descriptions are disambiguated by connector', () => {

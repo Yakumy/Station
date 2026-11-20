@@ -176,9 +176,8 @@ Ui.BorderSurface {
             if (!monitorCard.outputEnabled)
               return [{ value: "off", label: "Off" }, { value: "on", label: "Enable" }]
             var count = canvas.displays.filter(function(display) { return canvas.service.displayEnabled(display.name) }).length
-            var roles = [1, 2, 3].slice(0, count).map(function(role, index) {
-              return { value: String(index), label: String(role) }
-            })
+            var roles = []
+            for (var index = 0; index < count; index++) roles.push({ value: String(index), label: String(index + 1) })
             if (canvas.service.state !== "idle") roles = roles.filter(function(role) { return role.value === roleMenu.value })
             if (count > 1) roles.push({ value: "off", label: "Turn off" })
             return roles
