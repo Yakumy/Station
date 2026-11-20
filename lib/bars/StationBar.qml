@@ -85,7 +85,10 @@ Item {
   // with zero spacing between slots in both orientations.
   readonly property real primarySlot: Style.bar.iconSlot
   readonly property real mainGap: 0
-  readonly property real stationGap: Style.spacing.xl
+  // With open apps off, only numbers remain, so use Omarchy's own workspace gap:
+  // one step between columns and two between rows.
+  readonly property real stationGap: showApps ? Style.spacing.xl
+    : (vertical ? Style.space(2) : Style.space(1))
   readonly property real labelGap: Style.spacing.xxs
   readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
@@ -193,7 +196,8 @@ Item {
             required property int modelData
             readonly property var apps: root.groupApps[modelData] || []
             columns: root.vertical ? 1 : 2
-            spacing: root.labelGap
+            // The hidden apps column must not leave its label gap behind.
+            spacing: root.showApps ? root.labelGap : 0
             Ui.WidgetButton {
               id: stationButton
               objectName: "stationLabel-" + group.modelData

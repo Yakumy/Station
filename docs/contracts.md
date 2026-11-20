@@ -748,7 +748,9 @@ The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator styl
 `kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
 font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
-`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
+`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. With open
+apps off, the numbers use Omarchy's own workspace gap: one spacing step between columns
+and two between rows, with no gap left behind for the hidden app column. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
 In Station mode every bar shows the focused output's station. In Repetitive and

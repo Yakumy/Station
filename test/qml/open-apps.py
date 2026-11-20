@@ -128,6 +128,21 @@ ShellRoot {
         compare(findChild(bar, "stationLabel-2"), current)
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        // With open apps off, the hidden apps column contributes no gap, and the
+        // remaining numbers keep Omarchy's own one-step workspace gap.
+        bar.showOpenApps = false
+        bar.compactMode = "off"
+        wait(100)
+        compare(bar.stationGap, Style.space(1))
+        var tightGroup = findChild(bar, "stationGroup-1")
+        var tightNext = findChild(bar, "stationGroup-2")
+        compare(tightGroup.width, bar.primarySlot)
+        compare(Math.round(tightNext.x - tightGroup.x - tightGroup.width), Math.round(bar.stationGap))
+        bar.showOpenApps = true
+        bar.compactMode = "hover"
+        tryVerify(function() { return bar.revealProgress === 0 }, 1000)
+        compare(bar.width, collapsed)
+        compare(bar.stationGap, Style.spacing.xl)
         host.vertical = true
         wait(50)
         compare(bar.mainGap, 0)
@@ -190,6 +205,9 @@ ShellRoot {
         wait(50)
         verify(!findChild(bar, "stationApp-a").parent.visible)
         verify(findChild(bar, "stationLabel-1").interactive)
+        // A vertical bar keeps Omarchy's two-step row gap.
+        compare(bar.stationGap, Style.space(2))
+        compare(findChild(bar, "stationGroup-1").height, bar.primarySlot)
         bar.showOpenApps = true
         bar.compactMode = "hover"
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
