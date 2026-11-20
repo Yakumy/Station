@@ -546,7 +546,7 @@ Item {
       }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {
-        if (["prefixed", "number", "roman"].indexOf(value.indicatorStyle) === -1) return "invalid"
+        if (["prefixed", "number", "roman", "kanji"].indexOf(value.indicatorStyle) === -1) return "invalid"
         next.indicatorStyle = value.indicatorStyle
       }
       if (value.compactMode !== undefined) {
@@ -587,7 +587,7 @@ Item {
       config.panelPosition = value
     }
     else if (name === "indicatorStyle") {
-      if (["prefixed", "number", "roman"].indexOf(value) === -1) return "invalid"
+      if (["prefixed", "number", "roman", "kanji"].indexOf(value) === -1) return "invalid"
       config.indicatorStyle = value
     }
     else if (name === "graceMs") {

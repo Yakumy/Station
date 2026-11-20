@@ -191,6 +191,7 @@ test('preferences load the workspace mode, per-monitor layout, indicator style a
     workspaceLayout: { repetitive: { A: 7, B: 11, 'bad name': 3 }, nonrepetitive: { A: [3, 1], B: [2, 2], C: [21] } } });
   assert.deepEqual([saved.workspaceMode, saved.indicatorStyle, saved.compactMode, saved.showOpenApps],
     ['nonrepetitive', 'roman', 'off', false]);
+  assert.equal(Store.loadConfig({ indicatorStyle: 'kanji' }).indicatorStyle, 'kanji');
   assert.deepEqual(saved.workspaceLayout, { repetitive: { A: 7 }, nonrepetitive: { A: [1, 3] } });
   assert.equal('minStations' in saved, false);
   const bad = Store.loadConfig({ workspaceMode: 'grid', workspaceLayout: [], indicatorStyle: 'emoji', compactMode: 'x' });
@@ -294,13 +295,15 @@ test('the Workspaces draft applies in one call; map changes are idle-only and st
   assert.equal(c.setWorkspaceSetting('workspaces', { compactMode: 'off', showOpenApps: false, indicatorStyle: 'number', direction: 'btt' }), 'ok');
   assert.equal(c.config.direction, 'btt');
   assert.deepEqual([c.config.compactMode, c.config.showOpenApps, c.config.indicatorStyle], ['off', false, 'number']);
+  assert.equal(c.setWorkspaceSetting('workspaces', { indicatorStyle: 'kanji' }), 'ok');
+  assert.equal(c.config.indicatorStyle, 'kanji');
   assert.equal(reconciled, 0, 'bar options do not renumber');
   for (const bad of [{ direction: 'sideways' }, { workspaceMode: 'grid' }, { compactMode: 'always' }, { indicatorStyle: 'emoji' }, { indicatorStyle: 'dots' }, null])
     assert.equal(c.setWorkspaceSetting('workspaces', bad), 'invalid');
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'nonrepetitive',
     workspaceLayout: { repetitive: {}, nonrepetitive: { A: [1], B: [2, 3, 4, 5, 6] } } }), 'ok');
   assert.equal(reconciled, 1);
-  assert.equal(saves, 2, 'one save per apply');
+  assert.equal(saves, 3, 'one save per apply');
   assert.deepEqual(c.targetMapping().owned, [[1], [2, 3, 4, 5, 6]]);
   c.state = 'migrating';
   assert.equal(c.setWorkspaceSetting('workspaces', { workspaceMode: 'repetitive' }), 'busy');

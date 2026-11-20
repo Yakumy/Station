@@ -202,6 +202,38 @@ ShellRoot {
         var currentAfterDisable = findChild(bar, "stationLabel-2")
         compare(currentAfterDisable.opacity, 1)
         compare(currentAfterDisable.mapToItem(drawer, 0, 0).y, 0)
+        host.vertical = false
+        wait(50)
+        // The label's ink centers on the Station mark, not on the bar font's
+        // ascent; a CJK fallback's taller ascent shifts kanji down.
+        var prefixedNumeral = findChild(bar, "stationNumeral-2")
+        verify(Math.abs(prefixedNumeral.mapToItem(bar, 0, 0).y + prefixedNumeral.baselineOffset
+          + bar.indicatorInk.y + bar.indicatorInk.height / 2 - bar.inkCenter) < 0.01)
+        // Kanji numerals follow bjarneo's kanji-workspaces table. Their own ink
+        // height varies (一 is one stroke), so a fixed 十 guide keeps app icons
+        // steady while the station changes.
+        bar.indicatorStyle = "kanji"
+        wait(50)
+        compare(findChild(bar, "stationLabel-1").text, "一")
+        compare(findChild(bar, "stationLabel-2").text, "二")
+        compare(findChild(bar, "stationLabel-3").text, "三")
+        var kanjiNumeral = findChild(bar, "stationNumeral-2")
+        verify(Math.abs(kanjiNumeral.mapToItem(bar, 0, 0).y + kanjiNumeral.baselineOffset
+          + bar.kanjiInk.y + bar.kanjiInk.height / 2 - bar.inkCenter) < 0.01)
+        compare(bar.labelFor(10), "十")
+        compare(bar.labelFor(11), "11")
+        compare(bar.appSize, bar.indicatorInk.height)
+        var kanjiAppSize = bar.appSize
+        bar.stationNumber = 1
+        wait(50)
+        compare(findChild(bar, "stationLabel-1").text, "一")
+        compare(bar.appSize, kanjiAppSize)
+        bar.stationNumber = 10
+        wait(50)
+        compare(findChild(bar, "stationLabel-10").text, "十")
+        compare(bar.appSize, kanjiAppSize)
+        bar.stationNumber = 2
+        bar.indicatorStyle = "prefixed"
         bar.stationApps = ({})
         wait(50)
         verify(findChild(bar, "stationLabel-2") !== null)

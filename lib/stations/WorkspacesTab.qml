@@ -241,7 +241,8 @@ Column {
               options: [
                 { value: "prefixed", label: root.mode === "station" ? "S1 S2 S3" : "W1 W2 W3" },
                 { value: "number", label: "1 2 3" },
-                { value: "roman", label: "I II III" }
+                { value: "roman", label: "I II III" },
+                { value: "kanji", label: "一 二 三" }
               ]
               foreground: root.tokens.textPrimary
               onChanged: function(value) { root.edit({ indicatorStyle: value }) }

@@ -736,7 +736,9 @@ stays reactive, with no polling. A retired publisher returns no station number.
 ### Open apps
 
 The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
-`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number` or `roman`.
+`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
+`kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
+font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
 `showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
