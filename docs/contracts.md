@@ -671,6 +671,20 @@ to the outer edges of the center box inserts into the corresponding flanking
 section. The tray drawer accepts widgets and cannot contain its own hosting tray.
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 
+A click on a widget's slot goes to the topmost registered click target under the
+pointer, by the same hit test as Omarchy's bar: the target's own shape, every
+ancestor visible, opaque and enabled, and every clipping ancestor containing the
+point. The slot's overlay takes the left button only and has no wheel handler, so
+the wheel reaches the widget directly. Station never forwards it.
+
+A third-party widget gets its `bar.shell` from Omarchy's `pluginShellForBarEntry()`.
+That facade has no service lookup, so `bar.shell.serviceFor()` returns null under
+Station's bar, even for the widget's own id. Omarchy builds it that way for every
+replacement bar, and only Omarchy's own bar can request a facade with a service.
+A widget that needs its service, such as a clone of `omarchy.audio`, shows but
+cannot act. Station cannot reach another plugin's service and does not start a
+second copy of one. The fix has to come from Omarchy.
+
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |

@@ -1422,3 +1422,24 @@ lcms2, and judged on screen by the maintainer.
   starts no compositor and changes no output.
 - **[INFER]** The maintainer has no 10-bit monitor. Whether a real output stays at 10
   bits through a Keep and a reload is unverified. GitHub issue #14 reported the drop.
+
+## Third-party widget services (2026-11-21)
+
+- **[SRC]** GitHub issue #23. In the installed `/usr/share/omarchy/shell/shell.qml`
+  and in upstream `omacom/omarchy` `shell/shell.qml`, `pluginShellForBarEntry()`
+  creates its `PluginShellApi` without `_serviceLookup`, so `serviceFor()` returns
+  null. A full-bar plugin's own facade has no `pluginShellForId()`, and its
+  `serviceFor()` answers only for its own id. Station has no way to hand a hosted
+  widget that widget's service.
+- **[SRC]** The reporter's `ssupt.audio-control` disables its sliders, mute and wheel
+  when its service is null. The same widget works under Omarchy's bar, which calls
+  `pluginShellForId()` on the shell root.
+- **[SRC]** Omarchy's bar finds click targets with `Util.itemContainsPoint`, which
+  honours clipping and ancestor visibility. Station compared the target's rectangle
+  only, so a collapsed tray drawer's icons, laid out past its clipped edge, could take
+  a click meant for a visible icon. `bar-click-target.test.cjs` covers the port.
+- **[QTTEST]** A `qmltestrunner` probe on Qt 6.12: an inner `MouseArea` with `onWheel`
+  under a full-size left-button `MouseArea` with no wheel handler, as in Station's
+  slot, received the wheel. Forwarding the wheel as well would deliver every step
+  twice, so Station does not. This was a probe of Qt's delivery, not of the production
+  bar.

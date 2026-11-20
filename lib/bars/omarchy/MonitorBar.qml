@@ -1188,17 +1188,7 @@ Item {
       var target = clickTargets[i]
       if (!moduleTargetClickable(target)) continue
 
-      var targetPoint = { x: localX, y: localY }
-      try {
-        targetPoint = slot.mapToItem(target, localX, localY)
-      } catch (e) {
-        continue
-      }
-
-      if (targetPoint.x >= 0 && targetPoint.x <= target.width &&
-          targetPoint.y >= 0 && targetPoint.y <= target.height) {
-        return target
-      }
+      if (BarModel.itemContainsPoint(target, slot, localX, localY)) return target
     }
 
     if (moduleTargetClickable(slot.activeItem)) return slot.activeItem

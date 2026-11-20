@@ -1,3 +1,14 @@
+# 4.2.2 — Clicks in the tray reach the visible icon
+
+- Send a bar click only to a widget that is actually visible under the pointer. A
+  collapsed tray drawer keeps its icons laid out past its clipped edge, and Station's
+  bar let them take clicks meant for the icons beside them. It now uses the same hit
+  test as Omarchy's bar. Reported in #23.
+- Document that a third-party widget cannot reach its own service under Station's
+  bar. Omarchy gives replacement bars no service for their widgets, so a widget such as
+  an `omarchy.audio` clone shows its panel but its sliders and wheel do nothing. This
+  needs a change in Omarchy. Reported in #23.
+
 # 4.2.1 — Ten-bit displays stay ten-bit
 
 - Keep a monitor's 10-bit colour when Station saves a layout. Station rewrote each
