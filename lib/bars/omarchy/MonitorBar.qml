@@ -1921,7 +1921,9 @@ Item {
     readonly property real dragThreshold: Style.space(4)
 
     acceptedButtons: Qt.LeftButton
-    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+    // Match Omarchy's bar: the normal arrow at rest, the closed hand only
+    // while the bar is actually being moved.
+    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.ArrowCursor
     pressAndHoldInterval: 200
 
     function startDrag(x, y) {

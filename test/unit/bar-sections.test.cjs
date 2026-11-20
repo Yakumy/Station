@@ -112,3 +112,8 @@ test('the open drawer accepts an empty-section drop, then routes insertion to it
   assert.equal(drop({ x: 20, y: 20 }, source).slot, inside);
   assert.equal(drop({ x: 120, y: 20 }, source), null, 'closed/off-drawer widgets are not bar targets');
 });
+
+test('the idle bar uses the default arrow cursor', () => {
+  assert.match(bar, /component CenterGestureArea: MouseArea \{[\s\S]*?cursorShape: dragging \? Qt\.ClosedHandCursor : Qt\.ArrowCursor/);
+  assert.doesNotMatch(bar, /Qt\.OpenHandCursor/);
+});
