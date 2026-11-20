@@ -27,6 +27,7 @@ Item {
   // after the panel closes.
   property var stationBars: ({})
   property var stationBarMaximumHeights: ({})
+  property bool hoverOmarchyIndicators: false
   property string stationBarsKey: ""
 
   readonly property string focusedScreenName: Hyprland.focusedMonitor
@@ -82,7 +83,26 @@ Item {
     copy.contentSize = Number(entry.contentSize) > 0 ? Math.round(Number(entry.contentSize)) : 0
     copy.transparent = copy.background === "transparent"
     copy.maximumHeight = Number(stationBarMaximumHeights[screen ? screen.name : ""]) || 0
-    return copy
+    copy.hoverOmarchyIndicators = root.hoverOmarchyIndicators
+    return applyOmarchyIndicatorHover(copy)
+  }
+
+  // Omarchy's Indicators widget hides every inactive icon until the pointer
+  // hovers it. Keep that hover-only shape in Station's bar copy even when the
+  // host layout saved alwaysShow; the per-monitor setting chooses whether the
+  // group is shown at all. Omarchy's shell.json is never rewritten.
+  function applyOmarchyIndicatorHover(config) {
+    if (!config || typeof config !== "object"
+        || !config.layout || typeof config.layout !== "object") return config
+    BarModel.sections.forEach(function(section) {
+      var entries = config.layout[section]
+      if (!Array.isArray(entries)) return
+      for (var i = 0; i < entries.length; i++) {
+        if (BarModel.entryId(entries[i]) === "omarchy.indicators")
+          entries[i].alwaysShow = false
+      }
+    })
+    return config
   }
 
   function reportMinimumWidth(instance) {
@@ -104,6 +124,8 @@ Item {
     var snapshot = api && typeof api.snapshot === "function" ? api.snapshot() : null
     var bars = snapshot && snapshot.config && snapshot.config.bars
     if (!bars || typeof bars !== "object") bars = ({})
+    var hoverIndicators = !!(snapshot && snapshot.config
+      && snapshot.config.hoverOmarchyIndicators === true)
     var maximumHeights = ({})
     var displays = snapshot && Array.isArray(snapshot.displayDraft) ? snapshot.displayDraft : []
     for (var i = 0; i < displays.length; i++) {
@@ -111,9 +133,10 @@ Item {
       maximumHeights[String(display.name || "")] = Math.max(1,
         Math.floor(Math.min(Number(display.width) || 0, Number(display.height) || 0) * 0.05))
     }
-    var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights })
+    var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights, hoverIndicators: hoverIndicators })
     if (key === stationBarsKey) return
     stationBarsKey = key
+    hoverOmarchyIndicators = hoverIndicators
     stationBars = JSON.parse(JSON.stringify(bars))
     stationBarMaximumHeights = JSON.parse(JSON.stringify(maximumHeights))
   }

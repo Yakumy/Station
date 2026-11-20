@@ -85,6 +85,23 @@ Column {
     foreground: Color.popups.text
   }
 
+  // Off removes the Omarchy indicator group entirely; on shows the active
+  // indicators and lets the inactive ones reveal on hover.
+  PlainToggleRow {
+    objectName: "omarchyIndicatorsToggle"
+    label: "Show Omarchy indicators"
+    checked: !!settingsTab.service
+      && settingsTab.service.config.hoverOmarchyIndicators === true
+    onClicked: if (settingsTab.service)
+      settingsTab.service.setSetting("hoverOmarchyIndicators", !checked)
+  }
+  Item { width: 1; height: settingsTab.tokens.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Color.popups.text
+  }
+
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset

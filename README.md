@@ -128,6 +128,12 @@ style. You can also drag a bar's free area toward another edge.
 **Background:** Solid color, Transparent or Blur. **Style:** Omarchy's default bar or
 separate Pills.
 
+**Settings → Show Omarchy indicators** controls Omarchy's indicator group in every
+Station bar. It is off by default, so no indicator icons appear. Turn it on to show the
+indicators that are currently active and reveal the inactive ones — Stay Awake, Night
+Light, Do Not Disturb, Screen Recording, Passwordless sudo and Reminder — when you hover
+the indicator area.
+
 ![Pill bar with solid color background](docs/assets/readme/pill-bar-solid-color.png)
 
 ![Pill bar with blur background](docs/assets/readme/pill-bar-blur.png)

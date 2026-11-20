@@ -1,3 +1,12 @@
+# Unreleased
+
+- Add a Show Omarchy indicators switch to Settings, off by default. Off removes the
+  indicator group from Station's bar, including active icons such as Stay Awake. On
+  shows the active indicators and reveals the inactive ones on hover. Station applies it
+  to its own bar copy, so Omarchy's `shell.json` layout is never changed.
+- Keep the Omarchy indicator hover target outside the clipped module slot, so the
+  inactive icons can actually appear.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no

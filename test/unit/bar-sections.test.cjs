@@ -112,3 +112,61 @@ test('the open drawer accepts an empty-section drop, then routes insertion to it
   assert.equal(drop({ x: 20, y: 20 }, source).slot, inside);
   assert.equal(drop({ x: 120, y: 20 }, source), null, 'closed/off-drawer widgets are not bar targets');
 });
+
+test('Station keeps Omarchy indicators in hover-only shape without rewriting the host layout', () => {
+  const entry = readFileSync('Bar.qml', 'utf8');
+  const apply = qmlFunction(entry, 'applyOmarchyIndicatorHover', { BarModel });
+  const input = { layout: layout() };
+  input.layout.centerBegin = [{ id: 'omarchy.indicators', items: ['StayAwake'], alwaysShow: true }];
+  input.layout.right = [{ id: 'omarchy.indicators' }, { id: 'omarchy.audio' }];
+  assert.equal(apply(input), input);
+  for (const section of ['centerBegin', 'right'])
+    assert.equal(input.layout[section][0].alwaysShow, false, section);
+  assert.deepEqual(input.layout.centerBegin[0].items, ['StayAwake']);
+  assert.deepEqual(input.layout.right[1], { id: 'omarchy.audio' });
+  assert.deepEqual(input.layout.left, []);
+
+  // The inline-settings path patches the running widget instead of rebuilding
+  // the bar, so a host alwaysShow is cleared without remounting every module.
+  const widget = { settings: { alwaysShow: true } };
+  const context = {
+    layoutConfig: { centerBegin: [{ id: 'omarchy.indicators' }] },
+    entrySettings: BarModel.entrySettings, entryId: BarModel.entryId,
+    moduleSlots: [{ region: 'centerBegin', moduleName: 'omarchy.indicators', activeItem: widget }],
+  };
+  qmlFunction(bar, 'applySettingsDelta', context)([
+    { region: 'centerBegin', index: 0, entry: { id: 'omarchy.indicators', alwaysShow: false } },
+  ]);
+  assert.equal(context.layoutConfig.centerBegin[0].alwaysShow, false);
+  assert.equal(widget.settings.alwaysShow, false);
+});
+
+test('the bar follows Show Omarchy indicators from the service snapshot', () => {
+  const entry = readFileSync('Bar.qml', 'utf8');
+  const snapshot = value => ({
+    config: { hoverOmarchyIndicators: value, bars: {} }, displayDraft: [] });
+  const context = {
+    stationBarsKey: '', stationBars: {}, stationBarMaximumHeights: {},
+    hoverOmarchyIndicators: false,
+    BarBridge: { current: () => ({ snapshot: () => snapshot(true) }) },
+  };
+  context.root = context;
+  const refresh = qmlFunction(entry, 'refreshStationBars', context);
+  refresh();
+  assert.equal(context.hoverOmarchyIndicators, true);
+  context.BarBridge = { current: () => ({ snapshot: () => snapshot(false) }) };
+  refresh();
+  assert.equal(context.hoverOmarchyIndicators, false);
+  context.BarBridge = { current: () => ({ snapshot: () => snapshot(undefined) }) };
+  refresh();
+  assert.equal(context.hoverOmarchyIndicators, false, 'an absent setting means hover off');
+});
+
+test('the bar hides the whole indicator group when the setting is off', () => {
+  assert.match(bar, /indicatorHidden: moduleName === "omarchy\.indicators"[\s\S]*?!root\.hoverOmarchyIndicators/);
+  assert.match(bar, /visible: !slot\.indicatorHidden/);
+  assert.match(bar, /clip: slot\.trayFlowInset > 0 \|\| slot\.dragSource/);
+  assert.match(bar, /hoverOmarchyIndicators = config\.hoverOmarchyIndicators === true/);
+  assert.doesNotMatch(bar, /clip: true\s*\n\s*z: modulePointer/,
+    'a slot that clips its whole subtree hides Omarchy\u2019s out-of-slot hover target');
+});

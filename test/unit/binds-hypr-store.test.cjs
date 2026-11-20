@@ -109,6 +109,11 @@ test('store defaults and migrations constrain public values', () => {
   assert.equal(config.hideDisplay, true);
   assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideDisplay, false);
   assert.equal(S.loadConfig({ hideNative: false, hideDisplay: false }).hideNative, false);
+  // The hover reveal is opt-in; only active indicators show by default.
+  assert.equal(config.hoverOmarchyIndicators, false);
+  assert.equal(S.loadConfig({ hoverOmarchyIndicators: true }).hoverOmarchyIndicators, true);
+  assert.equal(S.loadConfig({ hoverOmarchyIndicators: 'on' }).hoverOmarchyIndicators, false);
+  assert.equal('showOmarchyIndicators' in S.loadConfig({ showOmarchyIndicators: true }), false);
   assert.equal(S.loadConfig({ graceMs: 0 }).graceMs, 0);
   assert.equal(S.loadConfig({}).graceMs, 0);
   const state = S.loadState({ lastStation: 99 });

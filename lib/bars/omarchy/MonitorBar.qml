@@ -63,6 +63,7 @@ Item {
   property bool requestedTransparent: false
   property string backgroundMode: "solid"
   property string barStyle: "default"
+  property bool hoverOmarchyIndicators: false
   property bool useTransparentForeground: false
   property bool transparent: false
   property bool centerSectionHovered: false
@@ -748,6 +749,7 @@ Item {
     backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
       ? config.background : (config.transparent === true ? "transparent" : "solid")
     barStyle = ["default", "pill"].indexOf(config.style) !== -1 ? config.style : "default"
+    hoverOmarchyIndicators = config.hoverOmarchyIndicators === true
     setRequestedTransparency(backgroundMode !== "solid")
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -2117,6 +2119,11 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
+    // Off removes the whole Indicators group, including an active Stay Awake
+    // or Night Light icon. The slot stays instantiated so toggling is live and
+    // does not rebuild the bar.
+    readonly property bool indicatorHidden: moduleName === "omarchy.indicators"
+      && !root.hoverOmarchyIndicators
     property var imageSourceBaselines: new Map()
     property var textRenderBaselines: new Map()
     property var layerTextureBaselines: new Map()
@@ -2166,7 +2173,10 @@ Item {
       ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize / inheritedScale) : 0
     width: implicitWidth
     height: implicitHeight
-    clip: true
+    visible: !slot.indicatorHidden
+    // Clip only what overflows a slot on purpose: the old tray's reserved
+    // drawer is shifted out of view, and a dragged widget lifts out.
+    clip: slot.trayFlowInset > 0 || slot.dragSource
     z: modulePointer.dragging ? 100 : 0
 
     Component.onCompleted: root.registerModuleSlot(slot)
