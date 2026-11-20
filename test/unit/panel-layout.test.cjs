@@ -21,6 +21,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
   assert.match(panel, /component TabKey: Rectangle \{[\s\S]*?Border\.controlSpec/);
   assert.match(panel, /label: String\(tab\.index \+ 1\)/);
+  assert.match(panel, /onTextKey: function\(text, modifiers\)[\s\S]*?text === "q"[\s\S]*?root\.close\(\)/);
   assert.match(panel, /onTextKey: function\(text, modifiers\)[\s\S]*?Tabs\.validIndex\(index\)/);
   assert.match(panel, /value: tabScroll\.contentHeight > tabScroll\.height/);
   assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Color\.popups\.text/);

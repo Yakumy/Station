@@ -422,6 +422,7 @@ Ui.Panel {
       // The numbered keycaps are real shortcuts while the panel has focus.
       onTextKey: function(text, modifiers) {
         if (modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
+        if (text === "q" || text === "Q") { root.close(); return }
         if (!/^[1-9]$/.test(text)) return
         var index = Number(text) - 1
         if (Tabs.validIndex(index)) root.selectedTab = index

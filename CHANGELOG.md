@@ -2,7 +2,7 @@
 
 - Number the panel's tabs 1 to 8 with a keycap beside each label. Pressing a digit
   while the panel has focus jumps to that tab; the active keycap follows the accent
-  and selected fill.
+  and selected fill. `q` closes the panel, as Escape does.
 
 # 4.1.1 — Bar compatibility fixes
 

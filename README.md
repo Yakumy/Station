@@ -61,7 +61,7 @@ enables its shortcuts on its own. There is nothing else to install or set up.
 Start with **Displays** to arrange your screens, then **Workspaces** to choose how
 workspaces are assigned. **Bar**, **Windows**, **Color Match** and **Wallpaper**
 customize the look. **Keybindings** lets you change any shortcut. While the panel is
-open, press **1–8** to jump to a tab.
+open, press **1–8** to jump to a tab, and **q** or **Escape** to close it.
 
 ---
 
