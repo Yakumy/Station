@@ -114,7 +114,7 @@ Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step)
 
 Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button` [V, `Panel.qml`]. Keybinding entry uses `BindingKeyPicker` (buttons and key events), never an editable text control: native text inputs can retrieve clipboard payloads even while hidden.
 
-**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box. In Bar portrait a hairline separates the Station header from the same rail; a vertical mouse-wheel or touchpad gesture moves it horizontally, its scrollbar stays hidden, and labels never shrink or wrap.
+**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box. Each label carries a 16-unit numbered keycap (`1`–`8`) with a caption digit: `Color.background` fill, neutral `Border.controlSpec` outline, and `Color.menu.selectedBackground` plus an accent outline on the active tab. Digits switch tabs while the panel has focus. No shadow or glow. In Bar portrait a hairline separates the Station header from the same rail; a vertical mouse-wheel or touchpad gesture moves it horizontally, its scrollbar stays hidden, and labels never shrink or wrap.
 
 **Choice chip** (the 4 modifier-key toggles): see §1. Displays uses sliders and compact text menus instead.
 

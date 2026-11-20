@@ -78,6 +78,29 @@ Ui.Panel {
     readonly property real controlHeight: Style.spacing.controlHeight
 
   }
+  // A numbered keycap beside each tab label, flat like the rest of the panel:
+  // no shadow, glow or private color.
+  component TabKey: Rectangle {
+    id: tabKey
+    property bool active: false
+    property string label: ""
+    width: Math.max(panelTokens.space4, keyText.implicitWidth + panelTokens.space1 * 2)
+    height: panelTokens.space4
+    radius: Style.cornerRadius
+    color: tabKey.active ? Color.menu.selectedBackground : Color.background
+    border.width: Math.max(1, Style.normalBorderWidth)
+    border.color: tabKey.active ? Color.accent
+      : Border.controlSpec("normal", Color.popups.text, Color.accent).color
+    Text {
+      id: keyText
+      anchors.centerIn: parent
+      text: tabKey.label
+      color: tabKey.active ? panelTokens.textPrimary : panelTokens.textDim
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+      font.weight: Font.DemiBold
+    }
+  }
   readonly property int conflictCount: service
     ? service.bindStatuses.filter(function(item) { return item.status === "conflict" }).length : 0
   readonly property var selectedDisplay: {
@@ -396,6 +419,13 @@ Ui.Panel {
       onTabRequested: function(direction) {
         root.selectedTab = Tabs.next(root.selectedTab, direction)
       }
+      // The numbered keycaps are real shortcuts while the panel has focus.
+      onTextKey: function(text, modifiers) {
+        if (modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
+        if (!/^[1-9]$/.test(text)) return
+        var index = Number(text) - 1
+        if (Tabs.validIndex(index)) root.selectedTab = index
+      }
 
       Column {
         id: content
@@ -471,39 +501,45 @@ Ui.Panel {
                 height: tabs.height
                 // 28px between tabs; the row's left margin carries the 24px
                 // region inset so the first tab still aligns with the logo.
-                width: tabLabel.implicitWidth + panelTokens.space4 + panelTokens.space3
-                  + (conflicted ? badge.width + panelTokens.space1 : 0)
-                Text {
-                  id: tabLabel
+                width: tabContentRow.implicitWidth + panelTokens.space4 + panelTokens.space3
+                Row {
+                  id: tabContentRow
                   anchors.centerIn: parent
-                  anchors.horizontalCenterOffset: tab.conflicted
-                    ? -(badge.width + panelTokens.space1) / 2 : 0
-                  text: tab.modelData
-                  // Selection is carried by the accent rule underneath, so the
-                  // label only steps between the dim and full text panelTokens.
-                  color: tab.conflicted ? Color.urgent
-                    : (root.selectedTab === tab.index ? panelTokens.textPrimary : panelTokens.textDim)
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.body
-                }
-                Rectangle {
-                  id: badge
-                  visible: tab.conflicted
-                  anchors.left: tabLabel.right
-                  anchors.leftMargin: panelTokens.space1
-                  anchors.verticalCenter: tabLabel.verticalCenter
-                  width: Math.max(panelTokens.space4, badgeText.implicitWidth + panelTokens.space2)
-                  height: panelTokens.space4
-                  color: Color.urgent
-                  radius: Style.cornerRadius
+                  spacing: panelTokens.space1
                   Text {
-                    id: badgeText
-                    anchors.centerIn: parent
-                    text: root.conflictCount
-                    color: Color.popups.background
+                    id: tabLabel
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: tab.modelData
+                    // Selection is carried by the accent rule underneath, so the
+                    // label only steps between the dim and full text panelTokens.
+                    color: tab.conflicted ? Color.urgent
+                      : (root.selectedTab === tab.index ? panelTokens.textPrimary : panelTokens.textDim)
                     font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    font.weight: Font.DemiBold
+                    font.pixelSize: Style.font.body
+                  }
+                  Rectangle {
+                    id: badge
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: tab.conflicted
+                    width: Math.max(panelTokens.space4, badgeText.implicitWidth + panelTokens.space2)
+                    height: panelTokens.space4
+                    color: Color.urgent
+                    radius: Style.cornerRadius
+                    Text {
+                      id: badgeText
+                      anchors.centerIn: parent
+                      text: root.conflictCount
+                      color: Color.popups.background
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.weight: Font.DemiBold
+                    }
+                  }
+                  TabKey {
+                    objectName: "tabKey-" + tab.index
+                    anchors.verticalCenter: parent.verticalCenter
+                    label: String(tab.index + 1)
+                    active: root.selectedTab === tab.index
                   }
                 }
                 Rectangle {

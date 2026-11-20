@@ -1,3 +1,9 @@
+# Unreleased
+
+- Number the panel's tabs 1 to 8 with a keycap beside each label. Pressing a digit
+  while the panel has focus jumps to that tab; the active keycap follows the accent
+  and selected fill.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
