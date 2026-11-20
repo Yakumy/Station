@@ -70,7 +70,8 @@ Item {
       acknowledgeCandidates(data.reverse)
       var args=proc("sh").command
       compare(args.length,12);compare(args[4],session.candidatePath);compare(args[7],session.plainPath)
-      compare(args[9],"-- personal Lua\n");compare(args[11],"")
+      compare(args[9],"16");compare(args[11],"0");compare(proc("sh").written,"-- personal Lua\n")
+      verify(!proc("sh").stdinEnabled)
       session.settleKeep(0,"")
       compare(session.state,"idle");compare(session.previewBaseline,null)
       compare(session.config.mode,"single");compare(session.config.singleTarget,"A")
@@ -98,7 +99,8 @@ Item {
       // HDMI stays on, so Omarchy's recover has no reason to touch the flag.
       preview("extend");compare(owner().parkedToggleSource,"");compare(session.keepDisableToggle,"")
       compare(session.keepPreview(),"started");compare(session.keepDisableToggle,flag)
-      acknowledgeCandidates(false);compare(proc("sh").command[11],flag)
+      acknowledgeCandidates(false);compare(proc("sh").command[11],String(flag.length))
+      verify(proc("sh").written.endsWith(flag))
       session.settleKeep(0,"");compare(session.state,"idle")
       compare(session.applyDisplaySetting("eDP-1","scale",2),"started")
       compare(session.keepDisableToggle,"")

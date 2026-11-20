@@ -276,6 +276,11 @@ targets. Final live rendering and bar-rebuild behavior await user acceptance.
 - Monitor `description`, `make`, `model`, `serial` come from EDID and are untrusted: matching and display only, never interpolated into Lua, argv or file text without a proper serialiser. Connector names (`^[A-Za-z0-9_.:-]{1,64}$`) are kernel-generated and may be used once validated.
 - Omarchy has itself shipped a fix for USB device names being executed as Hyprland Lua.
 - `execDetached` and `Process` use argv arrays; shell templates take positional arguments only.
+- Process arguments are visible to other local accounts, so file text goes on stdin. [TESTED]
+  on Quickshell 0.3.2: with `stdinEnabled` set before the start, `write()` in `onStarted`
+  delivers the text as UTF-8, and `stdinEnabled = false` closes stdin, so `head -c` reads
+  exact byte counts and later reads see end of input. A child that exits without
+  reading stdin leaves the shell unharmed, and the next `Process` runs normally.
 - The cleanup and Keep scripts refuse symlinked targets, write temp files then `mv`, and keep timestamped backups (last five).
 
 ## 11. Known traps (consolidated)

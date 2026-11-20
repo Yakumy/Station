@@ -37,7 +37,8 @@ esac
   const sleep = join(bin,'sleep');
   writeFileSync(sleep,'#!/bin/sh\nexit 99\n'); chmodSync(sleep,0o755);
   return {file,log,run(extra={}) {
-    return spawnSync('sh',['-c',T.windowSetting,'sh',file,'before\n','after\n','explicit setting'], {
+    const parts = T.stdinParts(['before\n','after\n']);
+    return spawnSync('sh',['-c',T.windowSetting,'sh',file,...parts.sizes,'explicit setting'], { input: parts.input,
       env:{...process.env,PATH:bin+':'+process.env.PATH,TEST_FILE:file,TEST_LOG:log,...extra},encoding:'utf8',timeout:3000,
     });
   }};

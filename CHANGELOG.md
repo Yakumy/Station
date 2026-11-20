@@ -1,3 +1,12 @@
+# 4.1.2 — Private configuration stays out of the process list
+
+- Keep the contents of `monitors.lua` and `looknfeel.lua` out of process arguments.
+  Saving display or window settings passed the whole file in a subprocess command line,
+  where another local account could read it from the process list while the save ran.
+  The save, Keep, the laptop Off hand-off and Color Match now send file text on stdin,
+  and the command line carries only each part's size. A short or overlong input stops
+  the save before the file changes. Reported in the marketplace review of 4.1.1.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no

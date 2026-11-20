@@ -239,7 +239,7 @@ Item {
     appliedSettings: root.config.windows
     operationState: root.state
     configGeneration: root.configGeneration
-    enqueue: function(command, done, generation) { compositor.enqueue(command, done, generation) }
+    enqueue: function(command, done, generation, input) { compositor.enqueue(command, done, generation, input) }
     publishObserved: function(observed) {
       root.config = Object.assign({}, root.config, { windows: observed })
     }
@@ -256,7 +256,7 @@ Item {
     operationState: root.state
     togglePath: root.colorTogglePath
     profileDir: root.stateDir + "/color"
-    enqueue: function(command, done) { compositor.enqueue(command, done) }
+    enqueue: function(command, done, input) { compositor.enqueue(command, done, undefined, input) }
     publishSettings: function(value) {
       root.config = Object.assign({}, root.config, { colorMatch: value })
     }
@@ -330,7 +330,7 @@ Item {
     invalidatePreviewOperation: function() { root.gen += 1; root.configGeneration += 1 }
     refresh: function(includeClients, done) { compositor.refresh(includeClients, done) }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
-    enqueue: function(command, done) { compositor.enqueue(command, done) }
+    enqueue: function(command, done, input) { compositor.enqueue(command, done, undefined, input) }
     recordExpectedEvents: function(value) { root.expect = value }
     monitorSignature: function() { return root.monitorSignature() }
     reconcileWorkspace: function() { workspace.reconcile() }

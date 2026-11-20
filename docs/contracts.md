@@ -981,6 +981,15 @@ Preferences, state, backups and wallpaper copies remain.
 
 - Use argv arrays or fixed scripts with validated positional arguments. Never interpolate
   device text into shell or Lua.
+- Never put file text in argv, where another local account can read it from the process
+  list. A transaction that compares or writes `monitors.lua`, `looknfeel.lua`, the
+  Omarchy Off flag or the Color Match file reads the text from stdin.
+  `Transactions.stdinParts` sends the parts in order and argv carries only each part's
+  UTF-8 byte length. The script reads each part with `read_part` and then requires
+  end of input with `end_input`. A short, overlong or malformed input exits 2 before
+  the target changes. `CompositorLane.enqueue` takes the text as its fourth argument,
+  writes it once the process starts and then closes stdin. Keep writes its own
+  `Process` stdin the same way.
 - **Connector:** must match `^[A-Za-z0-9_.:-]{1,64}$`, then may reach Lua (escaped) or argv.
 - **EDID-derived fields** (`description`, `make`, `model`, `serial`) are untrusted: use
   them for matching and display only.

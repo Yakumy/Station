@@ -77,7 +77,8 @@ test('settings transaction preserves intervening edits and rolls back only its o
   writeFileSync(helper, '#!/bin/sh\n[ "$1" != configerrors ] || printf "%s" "${TEST_ERRORS:-}"\n'); chmodSync(helper, 0o755);
   const file = join(dir, 'looknfeel.lua');
   const env = {...process.env,PATH:bin+':'+process.env.PATH};
-  const run = (before,after,extra={}) => spawnSync('sh',['-c',T.settings,'sh',file,before,after],{env:{...env,...extra},encoding:'utf8'});
+  const run = (before,after,extra={}) => { const p = T.stdinParts([before,after]);
+    return spawnSync('sh',['-c',T.settings,'sh',file,...p.sizes],{input:p.input,env:{...env,...extra},encoding:'utf8'}); };
   writeFileSync(file,'external\n');
   assert.equal(run('stale\n','bad replacement\n').status,4);
   assert.equal(readFileSync(file,'utf8'),'external\n');
@@ -96,8 +97,9 @@ test('settings writes keep only the newest five Station backups of the file', ()
     writeFileSync(old, 'x'); utimesSync(old, 1000 + i, 1000 + i);
   }
   writeFileSync(join(dir, 'monitors.lua.bak.station.1'), 'other file');
-  const result = spawnSync('sh', ['-c', T.settings, 'sh', file, 'one\n', 'two\n'],
-    { env: { ...process.env, PATH: bin + ':' + process.env.PATH }, encoding: 'utf8' });
+  const parts = T.stdinParts(['one\n', 'two\n']);
+  const result = spawnSync('sh', ['-c', T.settings, 'sh', file, ...parts.sizes],
+    { input: parts.input, env: { ...process.env, PATH: bin + ':' + process.env.PATH }, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   const left = readdirSync(dir).filter(name => name.startsWith('looknfeel.lua.bak.station.')).sort();
   assert.equal(left.length, 5);
@@ -154,13 +156,14 @@ test('window edits stay busy through read-back and always settle after observati
       config:{windows:W.clean(null)}, windowSettingsBusy:false, state:'idle',
       appearanceLoaded:true, appearanceSource:'', appearancePath:'/isolated/looknfeel.lua',
       appearanceFile:{reload(){}}, layoutError:'', console:{warn(){}},
-      enqueue(command, done, generation) { queue.push({command,done,generation}); }};
+      enqueue(command, done, generation, input) { queue.push({command,done,generation,input}); }};
     c.root = c;
     c.refreshWindowSettings = fn('refreshWindowSettings',c);
     const set = fn('setWindowSetting',c);
     assert.equal(set('split',65),'ok');
     assert.equal(queue[0].generation,1);
     assert.equal(queue[0].command[2],T.windowSetting);
+    assert.deepEqual([...queue[0].command.slice(5,7)],['0',String(Buffer.byteLength(queue[0].input))],'file text goes on stdin');
     assert.match(queue[0].command.at(-1), /assert\(loadfile\(/);
     assert.match(queue[0].command.at(-1), /default_split_ratio=0\.7/);
     assert.doesNotMatch(queue[0].command.at(-1), /gaps_in|rounding|hl\.monitor/);

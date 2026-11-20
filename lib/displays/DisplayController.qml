@@ -471,7 +471,8 @@ Item {
       })
     }
     if (!parkToggle) { activateSurvivor(); return }
-    enqueue(["sh", "-c", Transactions.parkToggle, "sh", internalDisablePath, parkedTogglePath, parkToggle], function(code) {
+    var parkParts = Transactions.stdinParts([parkToggle])
+    enqueue(["sh", "-c", Transactions.parkToggle, "sh", internalDisablePath, parkedTogglePath, parkParts.sizes[0]], function(code) {
       if (root.operationState !== "previewing") return
       if (code !== 0) {
         root.failPreviewApply("Could not hand off the laptop display Off setting; preview was not applied.")
@@ -479,7 +480,7 @@ Item {
       }
       root.parkedToggleSource = parkToggle
       activateSurvivor()
-    })
+    }, parkParts.input)
   }
 
   // hl.monitor returns before a re-enabled output exists. A focus sent straight
@@ -725,6 +726,7 @@ Item {
   function maybeStartKeep() {
     if (!keepFilesPending || !candidateReady || !plainCandidateReady) return
     keepFilesPending = false
+    keepTransaction.stdinEnabled = true
     keepTransaction.running = true
   }
 
@@ -819,12 +821,13 @@ Item {
     try {
       var next = MonitorsLua.migrateBlock(monitorsSource)
       if (next === monitorsSource) { finishAuthorityMigration(done, true); return }
-      enqueue(["sh", "-c", Transactions.settings, "sh", monitorsPath, monitorsSource, next], function(code) {
+      var parts = Transactions.stdinParts([monitorsSource, next])
+      enqueue(["sh", "-c", Transactions.settings, "sh", monitorsPath, parts.sizes[0], parts.sizes[1]], function(code) {
         if (code !== 0) reportError("Could not migrate monitor rule precedence; personal configuration was preserved.")
         monitorsFile.reload()
         if (code === 0) root.finishAuthorityMigration(done, false)
         else done()
-      })
+      }, parts.input)
     } catch (error) { reportError(String(error)); done() }
   }
 
@@ -884,11 +887,17 @@ Item {
 
   Process {
     id: keepTransaction
+    // The baseline and toggle text go on stdin; argv carries only their sizes.
+    readonly property var parts: Transactions.stdinParts([root.keepSourceBaseline, root.keepDisableToggle])
     command: ["sh", "-c", Transactions.keep, "sh", root.candidatePath, root.monitorsPath,
-      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", root.keepSourceBaseline, root.internalDisablePath, root.keepDisableToggle]
+      root.plainCandidatePath, root.plainPath, root.stateDir + "/preview.token", parts.sizes[0], root.internalDisablePath, parts.sizes[1]]
     property string errors: ""
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: keepTransaction.errors = text }
     onRunningChanged: if (running) errors = ""
+    onStarted: {
+      write(parts.input)
+      stdinEnabled = false
+    }
     onExited: function(code) { root.finishKeep(code, errors) }
   }
 

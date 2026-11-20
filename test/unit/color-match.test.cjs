@@ -180,7 +180,8 @@ esac
 `);
   chmodSync(join(bin, 'hyprctl'), 0o755);
   return { file, profiles, log, run(before, after, action, lua, pairs = [], extra = {}) {
-    return spawnSync('sh', ['-c', T.colorMatch, 'sh', file, profiles, before, after, action, lua, ...pairs], {
+    const parts = T.stdinParts([before, after]);
+    return spawnSync('sh', ['-c', T.colorMatch, 'sh', file, profiles, ...parts.sizes, action, lua, ...pairs], { input: parts.input,
       env: { ...process.env, PATH: bin + ':' + process.env.PATH, TEST_LOG: log, ...extra }, encoding: 'utf8', timeout: 5000 });
   } };
 }
