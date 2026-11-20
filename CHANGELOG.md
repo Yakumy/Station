@@ -1,3 +1,9 @@
+# Unreleased
+
+- Show Omarchy's tiling square for the current workspace whenever every number is
+  visible: compact Off, or On hover while the drawer is open. It now replaces the
+  indicator label too.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no

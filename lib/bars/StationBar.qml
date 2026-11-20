@@ -62,6 +62,8 @@ Item {
   readonly property bool listed: compactMode !== "on"
   readonly property bool showApps: showOpenApps && listed
   readonly property bool alwaysOpen: compactMode === "off"
+  // Every number is visible when Off lists them or On hover opens the drawer.
+  readonly property bool allShown: alwaysOpen || expanded
   readonly property bool showExpander: compactMode === "hover"
   readonly property real barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real contentFontSize: Style.font.body
@@ -180,9 +182,10 @@ Item {
               id: stationButton
               objectName: "stationLabel-" + group.modelData
               bar: root.bar
-              // With every number listed, Omarchy's tiling square stands for the
-              // current one, drawn by the button at Omarchy's icon size.
-              readonly property bool square: root.alwaysOpen && group.modelData === root.shownNumber
+              // Whenever every number is visible, Omarchy's tiling square stands
+              // for the current one, whatever the indicator style, drawn by the
+              // button at Omarchy's icon size.
+              readonly property bool square: root.allShown && group.modelData === root.shownNumber
               readonly property bool current: group.modelData === root.shownNumber
               text: square ? "\udb85\udcfb" : root.labelFor(group.modelData)
               // As in Omarchy's indicator, an empty workspace that is not shown is
