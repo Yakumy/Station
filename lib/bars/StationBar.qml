@@ -33,8 +33,19 @@ Item {
   readonly property bool perOutput: Grid.mode(workspaceMap) !== "station" && outputIndex !== -1
   readonly property var ownNumbers: perOutput ? Grid.numbers(workspaceMap, outputIndex) : []
   readonly property int activeWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : -1
-  readonly property int shownNumber: perOutput
-    ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
+  // Station mode shows the focused output, so every bar agrees while the station
+  // focuses its outputs. A native workspace change then updates the number with
+  // the compositor event instead of waiting for follow focus and the station
+  // batch to confirm it. An unmanaged output or an out-of-map workspace keeps the
+  // confirmed station.
+  readonly property var focusedHyprMonitor: Hyprland.focusedMonitor || null
+  readonly property int focusedOutputIndex: workspaceMap && Array.isArray(workspaceMap.outputs)
+    && focusedHyprMonitor ? workspaceMap.outputs.indexOf(String(focusedHyprMonitor.name || "")) : -1
+  readonly property int liveWorkspaceId: perOutput ? activeWorkspaceId
+    : (focusedOutputIndex !== -1 && focusedHyprMonitor.activeWorkspace
+      ? focusedHyprMonitor.activeWorkspace.id : -1)
+  readonly property int shownNumber: Grid.shownStation(liveWorkspaceId, workspaceMap,
+    perOutput ? (ownNumbers[0] || 1) : stationNumber)
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)

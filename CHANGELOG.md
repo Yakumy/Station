@@ -1,3 +1,11 @@
+# Unreleased
+
+- Update the bar's workspace number from the workspace the compositor shows, instead
+  of waiting for follow focus to confirm the station. A native change (`SUPER+Tab`,
+  scroll, or another indicator) now repaints with the compositor event; a special or
+  out-of-map workspace keeps the confirmed number. The saved station still changes only
+  after a switch completes.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no
