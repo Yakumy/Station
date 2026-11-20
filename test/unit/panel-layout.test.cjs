@@ -20,7 +20,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
   assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
   assert.match(panel, /value: tabScroll\.contentHeight > tabScroll\.height/);
-  assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Color\.popups\.text/);
+  assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Commons\.Color\.popups\.text/);
   assert.doesNotMatch(panel, /prefix: "Mode: "/);
   assert.match(displays, /prefix: "Mode: "/);
   assert.doesNotMatch(panel, /prefix: "Direction: "/);
@@ -54,7 +54,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.doesNotMatch(wallpaper, /prefix: "Mode: "/);
   assert.doesNotMatch(wallpaper, /Drag the monitor group|Updates with Omarchy theme|Keeps these images/);
   assert.doesNotMatch(wallpaper, /text: "(?:−|\+|Fit)"/);
-  assert.match(wallpaper, /noticeError \? Color\.urgent : root\.tokens\.textDim/);
+  assert.match(wallpaper, /noticeError \? Commons\.Color\.urgent : root\.tokens\.textDim/);
   assert.match(wallpaper, /if \(owner\.choose\(target\)\) root\.dismiss\(\)/);
 });
 

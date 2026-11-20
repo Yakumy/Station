@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.Commons
+import qs.Commons as Commons
 
 Item {
   id: stationMark
-  property color tint: Color.popups.text
+  property color tint: Commons.Color.popups.text
   implicitWidth: Style.space(22)
   implicitHeight: Style.space(22)
 

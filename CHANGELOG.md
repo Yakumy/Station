@@ -1,3 +1,10 @@
+# 4.2.3 — Theme colors on Qt 6.12
+
+- Keep the panel's theme colors on Qt 6.12. Qt 6.12 adds its own `Color` type, which
+  hid Omarchy's theme colors in 13 of Station's files, so their text, borders and
+  surfaces lost their colors. Station now always names Omarchy's colors in full.
+  Reported with the fix by @Omai4x in #24.
+
 # 4.2.2 — Clicks in the tray reach the visible icon
 
 - Send a bar click only to a widget that is actually visible under the pointer. A

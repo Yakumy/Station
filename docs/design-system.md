@@ -55,6 +55,8 @@ token even when `colorization` is 1.0.
 
 No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `platform-findings.md` §8.6]:
 
+In QML, write every token as `Commons.Color.…` with `import qs.Commons as Commons`. The tables below shorten it to `Color.…`. Qt 6.12 adds its own `Color` singleton to `QtQuick`, and a bare `Color` can resolve to it, so every theme color reads as `undefined` [V, issue #24]. `test/unit/qt-color-shadow.test.cjs` rejects a bare `Color.` in Station's QML.
+
 | Token | Role |
 |---|---|
 | `Color.popups.background` | Panel background |

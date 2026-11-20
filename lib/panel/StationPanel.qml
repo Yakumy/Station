@@ -3,6 +3,7 @@ import QtQuick.Controls
 import Quickshell
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "../displays/Model.js" as Model
 import "Tabs.js" as Tabs
 import "PanelPosition.js" as PanelPosition
@@ -70,8 +71,8 @@ Ui.Panel {
     readonly property real regionPadH: space6
     readonly property real regionPadV: space5
 
-    readonly property color textPrimary: Color.popups.text
-    readonly property color textDim: Qt.darker(Color.popups.text, 1.4)
+    readonly property color textPrimary: Commons.Color.popups.text
+    readonly property color textDim: Qt.darker(Commons.Color.popups.text, 1.4)
 
     readonly property real disabledOpacity: 0.6
     readonly property real tabUnderline: Style.space(2)
@@ -411,7 +412,7 @@ Ui.Panel {
             id: logo
             width: Style.space(34)
             height: Style.space(34)
-            tint: root.bar ? root.bar.foreground : Color.bar.text
+            tint: root.bar ? root.bar.foreground : Commons.Color.bar.text
             anchors.left: parent.left
             anchors.leftMargin: panelTokens.regionPadH
             anchors.verticalCenter: parent.verticalCenter
@@ -431,7 +432,7 @@ Ui.Panel {
         Ui.PanelSeparator {
           visible: root.portraitPanel
           width: parent.width
-          foreground: Color.popups.text
+          foreground: Commons.Color.popups.text
         }
 
         Flickable {
@@ -481,7 +482,7 @@ Ui.Panel {
                   text: tab.modelData
                   // Selection is carried by the accent rule underneath, so the
                   // label only steps between the dim and full text panelTokens.
-                  color: tab.conflicted ? Color.urgent
+                  color: tab.conflicted ? Commons.Color.urgent
                     : (root.selectedTab === tab.index ? panelTokens.textPrimary : panelTokens.textDim)
                   font.family: Style.font.family
                   font.pixelSize: Style.font.body
@@ -494,13 +495,13 @@ Ui.Panel {
                   anchors.verticalCenter: tabLabel.verticalCenter
                   width: Math.max(panelTokens.space4, badgeText.implicitWidth + panelTokens.space2)
                   height: panelTokens.space4
-                  color: Color.urgent
+                  color: Commons.Color.urgent
                   radius: Style.cornerRadius
                   Text {
                     id: badgeText
                     anchors.centerIn: parent
                     text: root.conflictCount
-                    color: Color.popups.background
+                    color: Commons.Color.popups.background
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     font.weight: Font.DemiBold
@@ -511,7 +512,7 @@ Ui.Panel {
                   anchors.right: parent.right
                   anchors.bottom: parent.bottom
                   height: panelTokens.tabUnderline
-                  color: tab.conflicted ? Color.urgent : Color.accent
+                  color: tab.conflicted ? Commons.Color.urgent : Commons.Color.accent
                   visible: root.selectedTab === tab.index
                 }
                 MouseArea {
@@ -524,7 +525,7 @@ Ui.Panel {
           }
         }
 
-        Ui.PanelSeparator { width: parent.width; foreground: Color.popups.text }
+        Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }
         ScrollView {
           id: tabScroll
           objectName: "stationTabScroll"
