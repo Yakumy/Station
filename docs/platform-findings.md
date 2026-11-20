@@ -1341,6 +1341,26 @@ lcms2, and judged on screen by the maintainer.
   compositor execution and frame scheduling; the isolated timer result does not
   measure those paths.
 
+## Station indicator live workspace (2026-11-20)
+
+- **[LIVE]** A standalone Quickshell probe on the installed session received
+  `workspacev2` with `Hyprland.focusedMonitor.activeWorkspace.id` already at the new
+  workspace in the same delivery. The older `workspace` event still carried the
+  previous workspace. This is the source the bar label now reads in Station mode.
+- **[LIVE]** Screenshots of the installed bar changed the number between 121 and
+  178 ms after a native relative workspace switch (the follow-focus path), and within
+  86 ms after an IPC station switch.
+- **[SRC]** `StationBar` derives the number from the focused output's live workspace,
+  so the display no longer waits for the 100 ms follow-focus debounce, the snapshot or
+  the station batch. `currentStation` still waits for the compositor batch.
+- **[QTTEST]** `grid.test.cjs` covers the live station, the out-of-map fallback, a
+  Repetitive map and a missing map. `panel-composition` still covers the confirmed
+  scalar fallback on the bridge and direct paths.
+- **[LIVE]** After installing this change, the collapsed bar changed 一 to 二 in the
+  first screenshot, 23 ms after a native relative workspace switch. The service's
+  confirmed station followed at 157 ms. The switch was a synthetic Hyprland dispatch,
+  so this measures the indicator path, not a physical key press.
+
 ## Theme switching with a chosen background (2026-11-16)
 
 - **[SRC]** `omarchy-theme-set` (omarchy-dev on 2026-11-16) chooses a new theme's

@@ -726,12 +726,20 @@ file or to `state.json`.
 
 ### Station indicator freshness
 
-A replacement-bar widget samples the service's confirmed station number every 50 ms
-through a detached scalar bridge read. This applies with the panel closed in every
-compact mode. It does not copy the app lists or panel snapshot at that rate, does not
-predict a switch, and never changes the saved station. Full snapshots retain their
-150 ms open/listed and 1 s closed Compact On cadence. The trusted direct-service path
-stays reactive, with no polling. A retired publisher returns no station number.
+The bar reads the station from the workspace Quickshell reports for the compositor,
+not from the service's last confirmed switch: Station mode follows the focused output,
+and Repetitive and Non-repetitive follow their own output. A native workspace change
+(`SUPER+Tab`, scroll, or another indicator) then repaints with the compositor event
+instead of waiting for follow focus and the station batch. A special, named or
+out-of-map workspace keeps the confirmed station. The service still changes
+`currentStation` only after its compositor batch succeeds, so the saved station never
+predicts a switch.
+
+A replacement-bar widget also samples the confirmed scalar every 50 ms through a
+detached bridge read, as the fallback above. It does not copy the app lists or panel
+snapshot at that rate. Full snapshots retain their 150 ms open/listed and 1 s closed
+Compact On cadence. The trusted direct-service path stays reactive, with no polling. A
+retired publisher returns no station number.
 
 ### Open apps
 
@@ -743,11 +751,11 @@ A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. 
 `showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
-In Station mode every bar shows the station. In Repetitive and Non-repetitive each bar
-shows its own output: its own numbers, the one it shows and the apps on them, and a
-click shows that number on that output. It reads the shown workspace from Quickshell's
-monitor and refreshes it on workspace events, because Omarchy's indicator, which would
-otherwise refresh it, is usually hidden.
+In Station mode every bar shows the focused output's station. In Repetitive and
+Non-repetitive each bar shows its own output: its own numbers, the one it shows and the
+apps on them, and a click shows that number on that output. It reads the shown
+workspace from Quickshell's monitor and refreshes it on workspace events, because
+Omarchy's indicator, which would otherwise refresh it, is usually hidden.
 
 - Off lists every available number with no chevron. Omarchy's tiling square glyph
   (U+F14FB), drawn by `WidgetButton` at Omarchy's icon size, stands for the current one,
