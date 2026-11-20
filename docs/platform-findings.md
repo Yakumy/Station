@@ -1391,3 +1391,22 @@ lcms2, and judged on screen by the maintainer.
   both tray shapes, horizontal and vertical, collapsed to fully revealed.
 - **[INFER]** The tray on the maintainer's 4.5.0-3 desktop is expected to show again
   after the update; the installed bar is the check.
+
+## Four outputs (2026-11-21)
+
+- **[UNIT]** GitHub issue #14. `four-outputs.test.cjs` runs the reporter's four
+  monitors through lane assignment, all three workspace modes, the window plan and the
+  monitor block. The `layout` harness renders their geometry, two outputs rotated
+  around an ultrawide, and checks that the role menu offers 1 to 4.
+- **[LIVE]** A Hyprland headless output stands in for a fourth monitor:
+  `hyprctl output create headless STATIONTEST`, then `hyprctl output remove STATIONTEST`.
+  On the maintainer's three-monitor desktop in Sync mode, it got lane 4, its bar and
+  workspace rules 4, 8 … 40, and `configerrors` stayed empty. The six windows kept
+  their output and station: workspace 8 moved to 10 and 6 to 7. `switchStation 2`
+  showed 5 to 8 on all four outputs. Removal returned every window to its original
+  workspace and left `monitors.lua` unchanged.
+- **[LIVE]** Removal leaves two things behind. Runtime workspace rules 31 to 40 stay
+  until a reload, because Hyprland cannot delete one runtime rule. Any shrink does the
+  same, for example 21 to 30 when three outputs become two. The lane preference
+  `display@STATIONTEST` also stays in `config.json`, as for any absent monitor. After a
+  test, run `hyprctl reload`, remove that key and restart the shell.
