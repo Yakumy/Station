@@ -409,6 +409,12 @@ The block sits at the **beginning** of `monitors.lua`, so later personal rules w
   briefly enable a disabled output.
 - The service never enforces the mode afterward.
 - `mode` must be an exact element of that monitor's `availableModes`.
+- A rule that carries geometry also carries `bitdepth = 10` when Hyprland reports the
+  output's `currentFormat` as a `…2101010` format. Station keeps that depth but never
+  sets it. Without the field Hyprland drives the output at 8 bits, so rewriting the
+  rule without it would drop a 10-bit monitor. Rules without geometry merge into the
+  existing rule and leave the depth alone. Blocks written before 4.2.1 have no field
+  and still parse.
 
 An older block at the end of the file migrates once, with a backup and a source
 comparison. That upgrade applies the current Lua, which clears old runtime appearance

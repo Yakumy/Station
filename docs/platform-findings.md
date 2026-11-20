@@ -1410,3 +1410,15 @@ lcms2, and judged on screen by the maintainer.
   same, for example 21 to 30 when three outputs become two. The lane preference
   `display@STATIONTEST` also stays in `config.json`, as for any absent monitor. After a
   test, run `hyprctl reload`, remove that key and restart the shell.
+
+## Ten-bit outputs (2026-11-21)
+
+- **[SRC]** `hl.monitor` takes `bitdepth` (`/usr/share/hypr/stubs/hl.meta.lua`), and
+  Omarchy's example is `bitdepth = 10`. `hyprctl monitors -j` reports the result as
+  `currentFormat`: `XRGB8888` at 8 bits, a `…2101010` format at 10.
+- **[LIVE]** `Hyprland --verify-config -c` on Hyprland 0.57.2 answers `config ok` for
+  Station's Extend, Mirror and Single blocks with `bitdepth = 10`. It rejects an unknown
+  field (`hl.monitor: unknown field 'bitdepthx'`), so the check reads the field. It
+  starts no compositor and changes no output.
+- **[INFER]** The maintainer has no 10-bit monitor. Whether a real output stays at 10
+  bits through a Keep and a reload is unverified. GitHub issue #14 reported the drop.

@@ -1,3 +1,10 @@
+# 4.2.1 — Ten-bit displays stay ten-bit
+
+- Keep a monitor's 10-bit colour when Station saves a layout. Station rewrote each
+  monitor's rule without `bitdepth`, so Hyprland put a 10-bit display back to 8 bits.
+  Station now reads the depth Hyprland reports and keeps `bitdepth = 10` in the rules
+  it writes. It never changes the depth itself. Reported in #14.
+
 # 4.2.0 — Four displays
 
 - Manage four displays. A fourth output used to stay unmanaged, with no lane, no

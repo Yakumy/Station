@@ -123,6 +123,7 @@ Item {
         x: geometry ? geometry.x : Number(m.x) || 0, y: geometry ? geometry.y : Number(m.y) || 0,
         scale: geometry ? geometry.scale : Number(m.scale) || 1,
         transform: geometry ? geometry.transform : Number(m.transform) || 0,
+        bitdepth: geometry ? geometry.bitdepth || 8 : Model.bitDepth(m),
         enabled: enabled.indexOf(m.name) !== -1, lane: lanes[m.name] }
     })
     draftMode = preferences.mode
