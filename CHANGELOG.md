@@ -1,10 +1,10 @@
-# Unreleased
+# 4.3.1 — The bar number keeps up with the workspace
 
 - Update the bar's workspace number from the workspace the compositor shows, instead
   of waiting for follow focus to confirm the station. A native change (`SUPER+Tab`,
   scroll, or another indicator) now repaints with the compositor event; a special or
   out-of-map workspace keeps the confirmed number. The saved station still changes only
-  after a switch completes.
+  after a switch completes. Contributed by @tahadx in #16.
 
 # 4.3.0 — Kanji workspace labels
 
