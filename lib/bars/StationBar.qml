@@ -22,6 +22,8 @@ Item {
   property var workspaceMap: null
   property var workspaceApps: ({})
   property string indicatorStyle: "prefixed"
+  // The numerals bjarneo's kanji-workspaces widget paints, in workspace order.
+  readonly property var kanjiNumerals: ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
   readonly property var hyprMonitor: {
     var window = root.QsWindow.window
     var screen = window ? window.screen : null
@@ -39,6 +41,7 @@ Item {
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)
     if (indicatorStyle === "roman") return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][number - 1] || String(number)
+    if (indicatorStyle === "kanji") return kanjiNumerals[number - 1] || String(number)
     return (perOutput ? "W" : "S") + number
   }
   // Nothing else refreshes per-monitor workspaces while Omarchy's indicator is
@@ -77,9 +80,13 @@ Item {
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   readonly property real logoSize: menuInk.height
   readonly property real inkCenter: menuReference.y + menuReference.baselineOffset + menuInk.y + logoSize / 2
-  readonly property rect indicatorInk: indicatorMetrics.tightBoundingRect("S" + stationNumber)
   // Follow the painted station-label guide: its height limits horizontal bars,
-  // and its width limits vertical bars.
+  // and its width limits vertical bars. Kanji ink varies by numeral (一 is one
+  // stroke, 十 fills the figure box), so a fixed full-height numeral keeps app
+  // icons and the label baseline steady as the station changes.
+  readonly property rect kanjiInk: indicatorMetrics.tightBoundingRect(kanjiNumerals[9])
+  readonly property rect indicatorInk: indicatorStyle === "kanji"
+    ? kanjiInk : indicatorMetrics.tightBoundingRect("S" + stationNumber)
   readonly property real appSize: vertical ? indicatorInk.width : indicatorInk.height
   readonly property var stations: {
     var numbers = Object.keys(groupApps || {}).map(Number)
@@ -201,11 +208,17 @@ Item {
               onPressed: root.stationSelected(group.modelData)
               Text {
                 id: stationLabel
+                objectName: "stationNumeral-" + group.modelData
                 visible: !stationButton.square
                 text: stationButton.text; font: indicatorMetrics.font; color: stationButton.foreground
-                x: (parent.width - indicatorMetrics.tightBoundingRect(text).width) / 2
-                  - indicatorMetrics.tightBoundingRect(text).x
-                y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
+                readonly property rect ink: indicatorMetrics.tightBoundingRect(text)
+                // Kanji numerals keep a common baseline and vertical center;
+                // their own ink (一 especially) is not a stable vertical guide.
+                readonly property rect guide: root.indicatorStyle === "kanji" ? root.kanjiInk : ink
+                x: (parent.width - ink.width) / 2 - ink.x
+                // The CJK fallback font is taller than the bar font, so use the
+                // rendered line's baseline rather than the bar font's ascent.
+                y: root.inkCenter - guide.height / 2 - stationLabel.baselineOffset - guide.y
               }
             }
             Grid {

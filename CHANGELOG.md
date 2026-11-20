@@ -1,3 +1,11 @@
+# Unreleased
+
+- Add a Kanji indicator style to the Workspaces tab, using bjarneo's
+  kanji-workspaces plugin for the 一 to 十 labels. The first ten read 一 to 十 in both
+  Station and per-monitor modes. A workspace above ten keeps its number, and app icons
+  keep their size because the labels use 十 as their ink guide. The numerals draw in the
+  bar font through fontconfig's CJK fallback.
+
 # 4.1.1 — Bar compatibility fixes
 
 - Keep third-party bar widgets clickable on Omarchy builds whose plugin bar api no

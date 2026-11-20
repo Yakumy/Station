@@ -104,8 +104,10 @@ Choose how workspaces are numbered in the Workspaces tab:
 Use **−** and **+** on a monitor in the layout to change its workspaces, up to 10 per
 monitor. In Non-repetitive, drag a workspace number onto the monitor you want.
 
-Pick the bar indicator style (S1 S2 S3, 1 2 3 or I II III), a compact mode (Off,
-On hover or On), and whether open apps show next to each workspace.
+Pick the bar indicator style (S1 S2 S3, 1 2 3, I II III or 一 二 三), a compact mode
+(Off, On hover or On), and whether open apps show next to each workspace. Kanji
+numerals use the bar font with fontconfig's CJK fallback; install `noto-fonts-cjk` if
+they show as boxes.
 
 ---
 

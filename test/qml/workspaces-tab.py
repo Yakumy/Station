@@ -136,6 +136,10 @@ ShellRoot {
         var row = selector.parent
         if (!selector.enabled || findObject(tab, "workspaceModeNote").text !== "") { fail("selector on two monitors"); return }
         if (Math.abs(selector.y + selector.height / 2 - row.height / 2) > 1) { fail("selector centered"); return }
+        var style = findObject(tab, "indicatorStyleDropdown")
+        if (!style || !style.options.some(function(option) { return option.value === "kanji" })) {
+          fail("kanji indicator style option"); return
+        }
         if (actions.visible) { fail("actions before an edit"); return }
         phase = -1
         save("station", function() { phase = 1 })
