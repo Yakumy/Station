@@ -8,6 +8,9 @@
     <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=flat-square&color=A6B465" alt="GitHub stars"></a>
   </p>
   <p>
+    <a href="https://contest.omarchy.org/plugins-2026-autumn/station"><img src="docs/assets/readme/contest-vote-banner.svg" width="100%" alt="Station is in the Top 100 of the Omarchy plugin contest. Your vote can take it to the Top 10. Vote before 27 Nov 2026, 16:00 UTC."></a>
+  </p>
+  <p>
     <a href="#install-update-uninstall">Install</a> ·
     <a href="#displays">Displays</a> ·
     <a href="#station--workspaces">Workspaces</a> ·
