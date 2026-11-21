@@ -42,7 +42,7 @@ are explicitly zero. Workspace and Wallpaper mode selectors use dropdowns.
 
 This matches `Style.cornerRadius`'s own flat language and is already the rule for the rest of the panel [V, STATION-V2-SPEC.md §11].
 
-**App indicator treatment:** All icons display their original artwork in full color and at full opacity, regardless of focus. App slots are 102% of station-label ink height. Images preserve aspect ratio and render directly, with oversampled physical-pixel decoding and mipmaps; no focus-based grayscale, opacity, scaling, or effect layer is applied. The drawer's shared reveal animation still fades its contents during opening and closing.
+**App indicator treatment:** All icons display their original artwork in full color and at full opacity, regardless of focus. App slots are 102% of station-label ink height. In the kanji indicator style the guide is 十, so icon size stays steady while the numerals' own ink height changes. Images preserve aspect ratio and render directly, with oversampled physical-pixel decoding and mipmaps; no focus-based grayscale, opacity, scaling, or effect layer is applied. The drawer's shared reveal animation still fades its contents during opening and closing.
 
 **One narrow, named exception [V, host-precedented, RESOLVED].** The ban in this section is on *elevation effects* specifically — not on the `QtQuick.Effects` import as a whole. A `MultiEffect` whose only properties set are `colorization`-related (tinting a monochrome icon, such as the Station logo, to match a theme token) is icon theming, not depth, and is allowed; Omarchy's own Tray widget does exactly this. A `MultiEffect` is still banned the moment it also sets any shadow/blur/glow-family property (`shadowEnabled`, `blurEnabled`, etc.) alongside colorization — **the exception covers a colorization-only instance, not any instance that merely includes colorization among other properties.** `DropShadow`, `Glow`, `Blur` and any gradient property remain banned outright, on any element, not just inside an `Effects` import.
 
@@ -54,6 +54,8 @@ token even when `colorization` is 1.0.
 ## 4. Color tokens
 
 No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `platform-findings.md` §8.6]:
+
+In QML, write every token as `Commons.Color.…` with `import qs.Commons as Commons`. The tables below shorten it to `Color.…`. Qt 6.12 adds its own `Color` singleton to `QtQuick`, and a bare `Color` can resolve to it, so every theme color reads as `undefined` [V, issue #24]. `test/unit/qt-color-shadow.test.cjs` rejects a bare `Color.` in Station's QML.
 
 | Token | Role |
 |---|---|

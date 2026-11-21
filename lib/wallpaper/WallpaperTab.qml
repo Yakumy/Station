@@ -2,6 +2,7 @@ import QtQuick
 import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "Wallpaper.js" as Wallpaper
 import "." as WallpaperUi
 
@@ -100,7 +101,7 @@ Column {
           text: root.picker === "theme" ? "THEME"
             : root.picker === "background" ? (root.individual ? "BACKGROUND · " + root.selectedDisplay.name : "BACKGROUND")
             : "LAYOUT"
-          foreground: Color.popups.text
+          foreground: Commons.Color.popups.text
         }
         Caption {
           anchors.right: parent.right; anchors.rightMargin: root.pad
@@ -168,7 +169,7 @@ Column {
         y: root.narrow ? geometry.halfGap - height / 2 : 0
         width: root.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: root.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
-        color: Color.popups.text; opacity: 0.12
+        color: Commons.Color.popups.text; opacity: 0.12
       }
     }
     Column {
@@ -187,7 +188,7 @@ Column {
           objectName: "wallpaperSelectedMonitor"
           text: root.scene.mode === "individual" && root.selectedDisplay
             ? "Selected: " + root.selectedDisplay.name : ""
-          foreground: Color.popups.text
+          foreground: Commons.Color.popups.text
         }
       }
       PanelUi.ControlFrame {
@@ -209,7 +210,7 @@ Column {
               onChanged: function(value) { root.controller.change("mode", value) }
             }
             Binding { target: modeDropdown; property: "value"; value: root.scene.mode }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
             id: followRow
@@ -222,7 +223,7 @@ Column {
               onChanged: function(value) { root.controller.change("followTheme", value === "yes") }
             }
             Binding { target: followDropdown; property: "value"; value: root.scene.followTheme ? "yes" : "no" }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
             id: imageRow
@@ -239,7 +240,7 @@ Column {
               }
             }
             RowHint { objectName: "wallpaperImageHint"; text: root.fileName(root.imagePath) }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
@@ -255,7 +256,7 @@ Column {
                 : root.controller.pendingBackground ? root.fileName(root.controller.pendingBackground) + " · on Apply"
                 : root.fileName(root.controller.themePath)
             }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Color.popups.text }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
             width: parent.width; height: controlFrame.height / 5
@@ -285,7 +286,7 @@ Column {
     // While a chooser is open its keys take the message line, like other tabs' hints.
     message: root.picker ? "Press Enter to select · Esc to go back"
       : root.controller ? root.controller.notice : ""
-    messageColor: !root.picker && root.controller && root.controller.noticeError ? Color.urgent : root.tokens.textDim
+    messageColor: !root.picker && root.controller && root.controller.noticeError ? Commons.Color.urgent : root.tokens.textDim
     PanelUi.ActionButton {
       widthFactor: 0.6
       text: "Cancel"; bordered: true
@@ -296,9 +297,9 @@ Column {
       widthFactor: 0.6
       text: root.controller && root.controller.importBusy ? "Preparing…"
         : root.controller && root.controller.busy ? "Applying…" : "Apply"
-      accent: Color.accent
-      background: Color.accent
-      foreground: Color.popups.background
+      accent: Commons.Color.accent
+      background: Commons.Color.accent
+      foreground: Commons.Color.popups.background
       enabled: root.controller && root.controller.dirty && !root.controller.busy
         && !root.controller.importBusy && root.controller.layout.displays.length > 0
       onClicked: root.controller.apply()

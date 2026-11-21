@@ -83,7 +83,9 @@ ShellRoot {
         if(!host.transaction.running)return
         host.check(host.owner.candidateReady && host.owner.plainCandidateReady,"both real save barriers")
         host.check(host.candidateSaves===1 && host.plainSaves===1,"one real saved per candidate")
-        host.check(host.transaction.command[9]==="-- newer personal source\n","watched source captured")
+        host.check(host.transaction.written==="-- newer personal source\n","watched source captured on stdin")
+        host.check(host.transaction.command[9]===String(host.transaction.written.length),"argv carries only its size")
+        host.check(!host.transaction.stdinEnabled,"stdin closed after the write")
         host.transaction.stderr.text=" stderr fixture ";host.transaction.stderr.streamFinished()
         host.transaction.finish(4);host.stage=3
       } else if(host.stage===3) {

@@ -1,8 +1,88 @@
 # Unreleased
 
-- Number the panel's tabs 1 to 8 with a keycap beside each label. Pressing a digit
-  while the panel has focus jumps to that tab; the active keycap follows the accent
-  and selected fill. `q` closes the panel, as Escape does.
+- Press `q` or Escape while the panel has focus to close it. Modified `q` is ignored,
+  and the tab row stays label-only with no keycaps or digit shortcuts.
+
+# 4.3.4 — Omarchy's indicators reveal on hover
+
+- Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.
+  The widget hovers from past its own edges, and Station clipped every widget slot, so
+  the hover never arrived. A slot now clips only while it is dragged or holds the old
+  tray's drawer, as Omarchy's bar does. Found and fixed by @tahadx in #21.
+
+# 4.3.3 — The current square in the open drawer
+
+- Show Omarchy's tiling square for the current workspace whenever every number is
+  visible: compact Off, or On hover while the drawer is open. It now replaces the
+  indicator label too. Contributed by @tahadx in #19.
+
+# 4.3.2 — Omarchy's gap without open apps
+
+- Keep the bar's workspace numbers at Omarchy's own gap when Show open apps is off. The
+  hidden app column no longer leaves its gap behind, so Off and On hover read like
+  Omarchy's workspace indicator instead of spreading the numbers apart. Contributed by
+  @tahadx in #17.
+
+# 4.3.1 — The bar number keeps up with the workspace
+
+- Update the bar's workspace number from the workspace the compositor shows, instead
+  of waiting for follow focus to confirm the station. A native change (`SUPER+Tab`,
+  scroll, or another indicator) now repaints with the compositor event; a special or
+  out-of-map workspace keeps the confirmed number. The saved station still changes only
+  after a switch completes. Contributed by @tahadx in #16.
+
+# 4.3.0 — Kanji workspace labels
+
+- Add a Kanji indicator style to the Workspaces tab, using bjarneo's
+  kanji-workspaces plugin for the 一 to 十 labels. The first ten read 一 to 十 in both
+  Station and per-monitor modes. A workspace above ten keeps its number, and app icons
+  keep their size because the labels use 十 as their ink guide. The numerals draw in the
+  bar font through fontconfig's CJK fallback. Contributed by @tahadx in #15.
+
+# 4.2.3 — Theme colors on Qt 6.12
+
+- Keep the panel's theme colors on Qt 6.12. Qt 6.12 adds its own `Color` type, which
+  hid Omarchy's theme colors in 13 of Station's files, so their text, borders and
+  surfaces lost their colors. Station now always names Omarchy's colors in full.
+  Reported with the fix by @Omai4x in #24.
+
+# 4.2.2 — Clicks in the tray reach the visible icon
+
+- Send a bar click only to a widget that is actually visible under the pointer. A
+  collapsed tray drawer keeps its icons laid out past its clipped edge, and Station's
+  bar let them take clicks meant for the icons beside them. It now uses the same hit
+  test as Omarchy's bar. Reported in #23.
+- Document that a third-party widget cannot reach its own service under Station's
+  bar. Omarchy gives replacement bars no service for their widgets, so a widget such as
+  an `omarchy.audio` clone shows its panel but its sliders and wheel do nothing. This
+  needs a change in Omarchy. Reported in #23.
+
+# 4.2.1 — Ten-bit displays stay ten-bit
+
+- Keep a monitor's 10-bit colour when Station saves a layout. Station rewrote each
+  monitor's rule without `bitdepth`, so Hyprland put a 10-bit display back to 8 bits.
+  Station now reads the depth Hyprland reports and keeps `bitdepth = 10` in the rules
+  it writes. It never changes the depth itself. Reported in #14.
+
+# 4.2.0 — Four displays
+
+- Manage four displays. A fourth output used to stay unmanaged, with no lane, no
+  station workspaces and no Station bar. It now gets lane 4, its own workspaces in
+  every mode and its bar, and the Displays tab offers it role 4. Sync writes workspace
+  rules 1 to 40, Repetitive uses Omarchy's blocks 0 to 3, and Non-repetitive starts at
+  five workspaces each. A fifth output stays unmanaged. Reported with a working patch
+  by @J-eremy in #14.
+- The README now warns against running Station next to another monitor manager or a
+  personal `workspaces.lua` that binds `SUPER + 1…0`.
+
+# 4.1.2 — Private configuration stays out of the process list
+
+- Keep the contents of `monitors.lua` and `looknfeel.lua` out of process arguments.
+  Saving display or window settings passed the whole file in a subprocess command line,
+  where another local account could read it from the process list while the save ran.
+  The save, Keep, the laptop Off hand-off and Color Match now send file text on stdin,
+  and the command line carries only each part's size. A short or overlong input stops
+  the save before the file changes. Reported in the marketplace review of 4.1.1.
 
 # 4.1.1 — Bar compatibility fixes
 

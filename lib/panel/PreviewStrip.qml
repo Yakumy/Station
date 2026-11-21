@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import "." as PanelUi
 
 // The display preview's countdown for the tabs that do not carry their own. A preview
@@ -18,7 +19,7 @@ PanelUi.ActionDrawer {
     text: "Revert"
     enabled: !root.service.previewBusy
     bordered: true
-    foreground: Color.popups.text
+    foreground: Commons.Color.popups.text
     onClicked: root.service.revertPreview("")
   }
   PanelUi.ActionButton {
@@ -26,9 +27,9 @@ PanelUi.ActionDrawer {
     objectName: "previewKeep"
     text: "Keep"
     enabled: !root.service.previewBusy
-    accent: Color.accent
-    background: Color.accent
-    foreground: Color.popups.background
+    accent: Commons.Color.accent
+    background: Commons.Color.accent
+    foreground: Commons.Color.popups.background
     onClicked: root.service.keepPreview()
   }
 }

@@ -67,6 +67,7 @@ ShellRoot {
         var hiddenApp = findChild(bar, "stationApp-a")
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        verify(!current.square)
         verify(current.interactive)
         verify(!hiddenPrevious.interactive)
         verify(!hiddenApp.interactive)
@@ -91,6 +92,10 @@ ShellRoot {
         verify(current.mapToItem(drawer, 0, 0).x > 0)
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         verify(Math.abs(current.mapToItem(drawer, 0, 0).x - bar.currentOffset) < 0.001)
+        // Revealing every number replaces the current indicator with Omarchy's
+        // tiling square, whatever the indicator style.
+        verify(current.square)
+        compare(current.text, "\\udb85\\udcfb")
         verify(hiddenPrevious.interactive)
         verify(hiddenApp.interactive)
         verify(bar.width > collapsed)
@@ -109,6 +114,12 @@ ShellRoot {
         compare(bar.appSize, bar.indicatorInk.height)
         verify(bar.appSize <= bar.indicatorInk.height)
         verify(Math.abs(app.width - bar.appSize) < 0.001)
+        bar.indicatorStyle = "roman"
+        wait(50)
+        verify(current.square)
+        compare(current.text, "\\udb85\\udcfb")
+        bar.indicatorStyle = "prefixed"
+        wait(50)
         var captured = false
         bar.grabToImage(function(result) {
           result.saveToFile("/tmp/station-drawer-preview.png")
@@ -128,6 +139,22 @@ ShellRoot {
         compare(findChild(bar, "stationLabel-2"), current)
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        verify(!current.square)
+        // With open apps off, the hidden apps column contributes no gap, and the
+        // remaining numbers keep Omarchy's own one-step workspace gap.
+        bar.showOpenApps = false
+        bar.compactMode = "off"
+        wait(100)
+        compare(bar.stationGap, Style.space(1))
+        var tightGroup = findChild(bar, "stationGroup-1")
+        var tightNext = findChild(bar, "stationGroup-2")
+        compare(tightGroup.width, bar.primarySlot)
+        compare(Math.round(tightNext.x - tightGroup.x - tightGroup.width), Math.round(bar.stationGap))
+        bar.showOpenApps = true
+        bar.compactMode = "hover"
+        tryVerify(function() { return bar.revealProgress === 0 }, 1000)
+        compare(bar.width, collapsed)
+        compare(bar.stationGap, Style.spacing.xl)
         host.vertical = true
         wait(50)
         compare(bar.mainGap, 0)
@@ -190,6 +217,9 @@ ShellRoot {
         wait(50)
         verify(!findChild(bar, "stationApp-a").parent.visible)
         verify(findChild(bar, "stationLabel-1").interactive)
+        // A vertical bar keeps Omarchy's two-step row gap.
+        compare(bar.stationGap, Style.space(2))
+        compare(findChild(bar, "stationGroup-1").height, bar.primarySlot)
         bar.showOpenApps = true
         bar.compactMode = "hover"
         tryVerify(function() { return bar.revealProgress === 0 }, 1000)
@@ -202,6 +232,38 @@ ShellRoot {
         var currentAfterDisable = findChild(bar, "stationLabel-2")
         compare(currentAfterDisable.opacity, 1)
         compare(currentAfterDisable.mapToItem(drawer, 0, 0).y, 0)
+        host.vertical = false
+        wait(50)
+        // The label's ink centers on the Station mark, not on the bar font's
+        // ascent; a CJK fallback's taller ascent shifts kanji down.
+        var prefixedNumeral = findChild(bar, "stationNumeral-2")
+        verify(Math.abs(prefixedNumeral.mapToItem(bar, 0, 0).y + prefixedNumeral.baselineOffset
+          + bar.indicatorInk.y + bar.indicatorInk.height / 2 - bar.inkCenter) < 0.01)
+        // Kanji numerals follow bjarneo's kanji-workspaces table. Their own ink
+        // height varies (一 is one stroke), so a fixed 十 guide keeps app icons
+        // steady while the station changes.
+        bar.indicatorStyle = "kanji"
+        wait(50)
+        compare(findChild(bar, "stationLabel-1").text, "一")
+        compare(findChild(bar, "stationLabel-2").text, "二")
+        compare(findChild(bar, "stationLabel-3").text, "三")
+        var kanjiNumeral = findChild(bar, "stationNumeral-2")
+        verify(Math.abs(kanjiNumeral.mapToItem(bar, 0, 0).y + kanjiNumeral.baselineOffset
+          + bar.kanjiInk.y + bar.kanjiInk.height / 2 - bar.inkCenter) < 0.01)
+        compare(bar.labelFor(10), "十")
+        compare(bar.labelFor(11), "11")
+        compare(bar.appSize, bar.indicatorInk.height)
+        var kanjiAppSize = bar.appSize
+        bar.stationNumber = 1
+        wait(50)
+        compare(findChild(bar, "stationLabel-1").text, "一")
+        compare(bar.appSize, kanjiAppSize)
+        bar.stationNumber = 10
+        wait(50)
+        compare(findChild(bar, "stationLabel-10").text, "十")
+        compare(bar.appSize, kanjiAppSize)
+        bar.stationNumber = 2
+        bar.indicatorStyle = "prefixed"
         bar.stationApps = ({})
         wait(50)
         verify(findChild(bar, "stationLabel-2") !== null)

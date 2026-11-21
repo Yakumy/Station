@@ -6,6 +6,8 @@ import "../displays/Model.js" as Model
 // configuration generation is retired after a reload, while a running command
 // always completes. Snapshots run FIFO and keep each caller's client-read intent.
 // Owns the observed monitor and client lists; failure policy stays with the arbiter.
+// A command's optional input goes to its stdin, which then closes. Private file
+// text travels there, never in argv.
 Item {
   id: root
   property int configGeneration: 0
@@ -24,8 +26,9 @@ Item {
     try { return JSON.parse(String(raw || "")) } catch (error) { return fallback }
   }
 
-  function enqueue(command, done, expectedGeneration) {
-    actionQueue = actionQueue.concat([{ command: command, done: done || null, generation: expectedGeneration }])
+  function enqueue(command, done, expectedGeneration, input) {
+    actionQueue = actionQueue.concat([{ command: command, done: done || null, generation: expectedGeneration,
+      input: input === undefined || input === null ? null : String(input) }])
     runNext()
   }
 
@@ -41,6 +44,8 @@ Item {
       return
     }
     action.command = currentAction.command
+    action.input = currentAction.input
+    action.stdinEnabled = currentAction.input !== null
     action.running = true
   }
 
@@ -100,10 +105,18 @@ Item {
   Process {
     id: action
     property string captured: ""
+    property var input: null
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: action.captured = text }
     stderr: StdioCollector { waitForEnd: true }
     onRunningChanged: if (running) captured = ""
+    onStarted: {
+      if (input === null) return
+      write(input)
+      input = null
+      stdinEnabled = false
+    }
     onExited: function(code) {
+      input = null
       var job = root.currentAction
       root.currentAction = null
       if (job && job.done) job.done(code, action.captured)

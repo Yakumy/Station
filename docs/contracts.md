@@ -62,7 +62,7 @@ Consequences:
 | Concept | Meaning | Stored |
 | --- | --- | --- |
 | Identity | Key from `description`. If two connected monitors share it, append `@<connector>`. | `config.json` |
-| Lane (1 to 3) | Preferred order of an output | `config.json` |
+| Lane (1 to 4) | Preferred order of an output | `config.json` |
 | Slot | Current dense index in the committed map | `workspace-map.json` |
 | Role | Displayed ordinal of a lane among those present | Never |
 
@@ -199,9 +199,13 @@ Each window keeps its station and physical output, and its workspace ID changes.
 Mirror, the role selects the source: a swap applies the new source and sink before
 migrating, so no destination is still a sink.
 
-### More than three outputs
+### More than four outputs
 
-Station manages at most three enabled, non-mirrored outputs. A fourth is **unmanaged**.
+Station manages at most four enabled, non-mirrored outputs. `Model.MAX_MONITORS`,
+`Grid.MAX_OUTPUTS` and `MonitorsLua.MAX_LANE` hold the limit and must agree. With four
+outputs, Sync writes workspace rules 1 to 40, Repetitive uses Omarchy blocks 0 to 3, and
+Non-repetitive starts at five workspaces each, which fills its 20-workspace total. A
+fifth output is **unmanaged**.
 Station excludes it from follow focus, lane lookup, window actions and reconciliation,
 never touches its windows, and never disables anything by itself. The `status` IPC
 reports it.
@@ -405,6 +409,12 @@ The block sits at the **beginning** of `monitors.lua`, so later personal rules w
   briefly enable a disabled output.
 - The service never enforces the mode afterward.
 - `mode` must be an exact element of that monitor's `availableModes`.
+- A rule that carries geometry also carries `bitdepth = 10` when Hyprland reports the
+  output's `currentFormat` as a `…2101010` format. Station keeps that depth but never
+  sets it. Without the field Hyprland drives the output at 8 bits, so rewriting the
+  rule without it would drop a 10-bit monitor. Rules without geometry merge into the
+  existing rule and leave the depth alone. Blocks written before 4.2.1 have no field
+  and still parse.
 
 An older block at the end of the file migrates once, with a backup and a source
 comparison. That upgrade applies the current Lua, which clears old runtime appearance
@@ -661,6 +671,25 @@ to the outer edges of the center box inserts into the corresponding flanking
 section. The tray drawer accepts widgets and cannot contain its own hosting tray.
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 
+A click on a widget's slot goes to the topmost registered click target under the
+pointer, by the same hit test as Omarchy's bar: the target's own shape, every
+ancestor visible, opaque and enabled, and every clipping ancestor containing the
+point. The slot's overlay takes the left button only and has no wheel handler, so
+the wheel reaches the widget directly. Station never forwards it.
+
+A widget slot clips only while it is dragged or holds the old tray's reserved drawer,
+as Omarchy's bar clips only while dragging or removing. Omarchy's Indicators widget
+hovers from past its own edges to reveal its inactive icons, and a clipping slot would
+never deliver that hover.
+
+A third-party widget gets its `bar.shell` from Omarchy's `pluginShellForBarEntry()`.
+That facade has no service lookup, so `bar.shell.serviceFor()` returns null under
+Station's bar, even for the widget's own id. Omarchy builds it that way for every
+replacement bar, and only Omarchy's own bar can request a facade with a service.
+A widget that needs its service, such as a clone of `omarchy.audio`, shows but
+cannot act. Station cannot reach another plugin's service and does not start a
+second copy of one. The fix has to come from Omarchy.
+
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |
@@ -702,30 +731,43 @@ file or to `state.json`.
 
 ### Station indicator freshness
 
-A replacement-bar widget samples the service's confirmed station number every 50 ms
-through a detached scalar bridge read. This applies with the panel closed in every
-compact mode. It does not copy the app lists or panel snapshot at that rate, does not
-predict a switch, and never changes the saved station. Full snapshots retain their
-150 ms open/listed and 1 s closed Compact On cadence. The trusted direct-service path
-stays reactive, with no polling. A retired publisher returns no station number.
+The bar reads the station from the workspace Quickshell reports for the compositor,
+not from the service's last confirmed switch: Station mode follows the focused output,
+and Repetitive and Non-repetitive follow their own output. A native workspace change
+(`SUPER+Tab`, scroll, or another indicator) then repaints with the compositor event
+instead of waiting for follow focus and the station batch. A special, named or
+out-of-map workspace keeps the confirmed station. The service still changes
+`currentStation` only after its compositor batch succeeds, so the saved station never
+predicts a switch.
+
+A replacement-bar widget also samples the confirmed scalar every 50 ms through a
+detached bridge read, as the fallback above. It does not copy the app lists or panel
+snapshot at that rate. Full snapshots retain their 150 ms open/listed and 1 s closed
+Compact On cadence. The trusted direct-service path stays reactive, with no polling. A
+retired publisher returns no station number.
 
 ### Open apps
 
 The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
-`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number` or `roman`.
+`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
+`kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
+font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
-`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
+`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. With open
+apps off, the numbers use Omarchy's own workspace gap: one spacing step between columns
+and two between rows, with no gap left behind for the hidden app column. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
-In Station mode every bar shows the station. In Repetitive and Non-repetitive each bar
-shows its own output: its own numbers, the one it shows and the apps on them, and a
-click shows that number on that output. It reads the shown workspace from Quickshell's
-monitor and refreshes it on workspace events, because Omarchy's indicator, which would
-otherwise refresh it, is usually hidden.
+In Station mode every bar shows the focused output's station. In Repetitive and
+Non-repetitive each bar shows its own output: its own numbers, the one it shows and the
+apps on them, and a click shows that number on that output. It reads the shown
+workspace from Quickshell's monitor and refreshes it on workspace events, because
+Omarchy's indicator, which would otherwise refresh it, is usually hidden.
 
-- Off lists every available number with no chevron. Omarchy's tiling square glyph
-  (U+F14FB), drawn by `WidgetButton` at Omarchy's icon size, stands for the current one,
-  as in Omarchy's indicator.
+- Off lists every available number with no chevron. Whenever every number is visible —
+  Off, or On hover while the drawer is open — Omarchy's tiling square glyph (U+F14FB),
+  drawn by `WidgetButton` at Omarchy's icon size, stands for the current one, whatever
+  the indicator style, as in Omarchy's indicator.
 - As in Omarchy's indicator, a number that is not shown and has no window is drawn at
   half opacity, so the current one reads as active.
 - On hover shows the current number and a chevron, and reveals the rest, with one icon
@@ -880,10 +922,9 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   the same preview and panel-evacuation path as the former toolbar menu.
 - The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
-- Each tab label carries a numbered keycap, 1 to 8. While the panel has focus, that
-  digit selects the tab and `q` or Escape closes the panel; Shift, Control, Alt and Meta
-  leave the key to other actions. Tab and arrow navigation still work. The active
-  keycap uses the accent border and the selected fill.
+- The tabs stay label-only, with no numbered keycaps or digit shortcuts. While the panel
+  has focus, plain `q` or Escape closes it; Shift, Control, Alt and Meta leave the key to
+  other actions. Tab and arrow navigation still work.
 - Panel style is Bar landscape (at the bar icon, the default), Bar portrait, or Center landscape.
   Bar portrait uses the stock control-panel width (`Style.space(380)`), stacks each layout
   above its controls with equal 370-unit frame heights. The 72-unit gap between visible frames
@@ -985,6 +1026,15 @@ Preferences, state, backups and wallpaper copies remain.
 
 - Use argv arrays or fixed scripts with validated positional arguments. Never interpolate
   device text into shell or Lua.
+- Never put file text in argv, where another local account can read it from the process
+  list. A transaction that compares or writes `monitors.lua`, `looknfeel.lua`, the
+  Omarchy Off flag or the Color Match file reads the text from stdin.
+  `Transactions.stdinParts` sends the parts in order and argv carries only each part's
+  UTF-8 byte length. The script reads each part with `read_part` and then requires
+  end of input with `end_input`. A short, overlong or malformed input exits 2 before
+  the target changes. `CompositorLane.enqueue` takes the text as its fourth argument,
+  writes it once the process starts and then closes stdin. Keep writes its own
+  `Process` stdin the same way.
 - **Connector:** must match `^[A-Za-z0-9_.:-]{1,64}$`, then may reach Lua (escaped) or argv.
 - **EDID-derived fields** (`description`, `make`, `model`, `serial`) are untrusted: use
   them for matching and display only.
