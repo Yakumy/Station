@@ -1,8 +1,8 @@
-# Unreleased
+# 4.3.3 — The current square in the open drawer
 
 - Show Omarchy's tiling square for the current workspace whenever every number is
   visible: compact Off, or On hover while the drawer is open. It now replaces the
-  indicator label too.
+  indicator label too. Contributed by @tahadx in #19.
 
 # 4.3.2 — Omarchy's gap without open apps
 
