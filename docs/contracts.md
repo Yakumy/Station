@@ -931,7 +931,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
   drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Portrait drawers are 72 scaled units high (the sum of both divider gaps). Buttons are horizontally centered. A message sits under them in caption type, at most two lines, and the buttons and message are vertically centered together. `lib/panel/ActionDrawer.qml` owns every feature drawer and the preview strip, and positions its children with `x`/`y` only: switching anchors at runtime once left Keep unpainted in a live portrait preview. Keybindings rows keep the label on the left and right-align the combo; a conflict is shown in the combo color, the conflict card's choices stack centered, and Cancel/Apply sit centered under the editor. Center landscape
   uses the output's full-screen card and stays clear of the bar on small screens.
-- Settings holds the two Show switches, panel style,
+- Settings holds the three Show switches, panel style,
   and the installed version. Compact mode and open apps are on the Workspaces tab.
 - The Workspaces tab's monitor positions are fixed: no monitor drag and no selection,
   only zoom and pan. Each output centers its name; managed workspaces and count
@@ -984,6 +984,10 @@ A bar rebuild destroys the widget and its popout. The service keeps the intent:
   monitor in blocks of ten, so it matches Repetitive; in Sync and Non-repetitive it
   shows Omarchy's numbering, not Station's.
 - Settings' Show Omarchy Display Icon is `hideDisplay` inverted and defaults to Off.
+- Settings' Show Omarchy indicators is `showOmarchyIndicators` and defaults to On.
+  Off hides every `omarchy.indicators` slot, including active icons such as Stay Awake;
+  On shows exactly what Omarchy's layout configures. Station never rewrites the host
+  `shell.json`: `alwaysShow` and the other widget options stay as the user set them.
 - The grace-delay control is removed. New configurations use no delay; an existing
   saved `graceMs` remains honored.
 - With Show off (the default for both widgets; a saved `hideDisplay: false` stays),

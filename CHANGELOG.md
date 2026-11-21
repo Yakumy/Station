@@ -1,3 +1,10 @@
+# Unreleased
+
+- Add a Show Omarchy indicators switch to Settings, on by default so Station matches
+  Omarchy's own bar. Off is opt-in and removes the whole indicator group, including
+  active icons such as Stay Awake. Station leaves Omarchy's `alwaysShow` and other
+  indicator options as the user set them, and never rewrites `shell.json`.
+
 # 4.3.4 — Omarchy's indicators reveal on hover
 
 - Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.

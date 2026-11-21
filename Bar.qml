@@ -27,6 +27,7 @@ Item {
   // after the panel closes.
   property var stationBars: ({})
   property var stationBarMaximumHeights: ({})
+  property bool showOmarchyIndicators: true
   property string stationBarsKey: ""
 
   readonly property string focusedScreenName: Hyprland.focusedMonitor
@@ -82,6 +83,9 @@ Item {
     copy.contentSize = Number(entry.contentSize) > 0 ? Math.round(Number(entry.contentSize)) : 0
     copy.transparent = copy.background === "transparent"
     copy.maximumHeight = Number(stationBarMaximumHeights[screen ? screen.name : ""]) || 0
+    // Only the slot visibility follows Station's setting; the widget keeps
+    // whatever alwaysShow and other options Omarchy's own layout configured.
+    copy.showOmarchyIndicators = root.showOmarchyIndicators
     return copy
   }
 
@@ -104,6 +108,8 @@ Item {
     var snapshot = api && typeof api.snapshot === "function" ? api.snapshot() : null
     var bars = snapshot && snapshot.config && snapshot.config.bars
     if (!bars || typeof bars !== "object") bars = ({})
+    var showIndicators = !snapshot || !snapshot.config
+      || snapshot.config.showOmarchyIndicators !== false
     var maximumHeights = ({})
     var displays = snapshot && Array.isArray(snapshot.displayDraft) ? snapshot.displayDraft : []
     for (var i = 0; i < displays.length; i++) {
@@ -111,9 +117,10 @@ Item {
       maximumHeights[String(display.name || "")] = Math.max(1,
         Math.floor(Math.min(Number(display.width) || 0, Number(display.height) || 0) * 0.05))
     }
-    var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights })
+    var key = JSON.stringify({ bars: bars, maximumHeights: maximumHeights, showIndicators: showIndicators })
     if (key === stationBarsKey) return
     stationBarsKey = key
+    showOmarchyIndicators = showIndicators
     stationBars = JSON.parse(JSON.stringify(bars))
     stationBarMaximumHeights = JSON.parse(JSON.stringify(maximumHeights))
   }

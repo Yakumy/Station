@@ -86,6 +86,22 @@ Column {
     foreground: Commons.Color.popups.text
   }
 
+  // On by default, matching Omarchy. Off is opt-in and hides the group.
+  PlainToggleRow {
+    objectName: "omarchyIndicatorsToggle"
+    label: "Show Omarchy indicators"
+    checked: !!settingsTab.service
+      && settingsTab.service.config.showOmarchyIndicators !== false
+    onClicked: if (settingsTab.service)
+      settingsTab.service.setSetting("showOmarchyIndicators", !checked)
+  }
+  Item { width: 1; height: settingsTab.tokens.space2 }
+  Ui.PanelSeparator {
+    width: settingsTab.width - settingsTab.inset * 2
+    x: settingsTab.inset
+    foreground: Commons.Color.popups.text
+  }
+
   Item {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset

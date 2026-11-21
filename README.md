@@ -138,6 +138,12 @@ style. You can also drag a bar's free area toward another edge.
 **Background:** Solid color, Transparent or Blur. **Style:** Omarchy's default bar or
 separate Pills.
 
+**Settings → Show Omarchy indicators** is on by default, matching Omarchy's bar. Turn it
+off only if you want the whole indicator group hidden — that includes Stay Awake, Night
+Light, Do Not Disturb, Screen Recording, passwordless sudo and Reminder. On, Station
+leaves Omarchy's own indicator options alone, so if you set "always show" in Omarchy,
+those icons stay always visible.
+
 Widgets from other plugins work on Station's bars, except those that need their own
 background service, such as a copy of Omarchy's volume widget. Omarchy gives that
 service only to its own bar, so on Station's bar such a widget shows but does nothing.

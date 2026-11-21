@@ -582,6 +582,13 @@ Item {
       leases.displayVisibilityChanged(config.hideDisplay)
       return "ok"
     }
+    if (name === "showOmarchyIndicators") {
+      if (typeof value !== "boolean") return "invalid"
+      config.showOmarchyIndicators = value
+      config = Object.assign({}, config)
+      store.saveConfig()
+      return "ok"
+    }
     if (name === "panelPosition") {
       if (["bar-landscape", "bar-portrait", "center-landscape"].indexOf(value) === -1) return "invalid"
       config.panelPosition = value

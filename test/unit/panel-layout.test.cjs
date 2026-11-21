@@ -40,6 +40,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /label: "Show Omarchy default workspace indicator"[\s\S]*?!settingsTab\.service\.config\.hideNative[\s\S]*?workspaceWidgetEnabled !== false[\s\S]*?setSetting\("hideNative", checked\)/);
   assert.match(settings, /displayWidgetEnabled !== false/);
   assert.match(settings, /setSetting\("hideDisplay", checked\)/);
+  assert.match(settings, /objectName: "omarchyIndicatorsToggle"[\s\S]*?label: "Show Omarchy indicators"[\s\S]*?setSetting\("showOmarchyIndicators", !checked\)/);
   assert.match(settings, /Installed version/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);

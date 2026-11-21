@@ -63,6 +63,7 @@ Item {
   property bool requestedTransparent: false
   property string backgroundMode: "solid"
   property string barStyle: "default"
+  property bool showOmarchyIndicators: true
   property bool useTransparentForeground: false
   property bool transparent: false
   property bool centerSectionHovered: false
@@ -748,6 +749,7 @@ Item {
     backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
       ? config.background : (config.transparent === true ? "transparent" : "solid")
     barStyle = ["default", "pill"].indexOf(config.style) !== -1 ? config.style : "default"
+    showOmarchyIndicators = config.showOmarchyIndicators !== false
     setRequestedTransparency(backgroundMode !== "solid")
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -2107,6 +2109,10 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
+    // Off hides the whole Indicators slot, including an active Stay Awake or
+    // Night Light icon. The widget stays instantiated so toggling is live.
+    readonly property bool indicatorHidden: moduleName === "omarchy.indicators"
+      && !root.showOmarchyIndicators
     property var imageSourceBaselines: new Map()
     property var textRenderBaselines: new Map()
     property var layerTextureBaselines: new Map()
@@ -2156,6 +2162,7 @@ Item {
       ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize / inheritedScale) : 0
     width: implicitWidth
     height: implicitHeight
+    visible: !slot.indicatorHidden
     // Clip only what overflows a slot on purpose: the old tray's reserved
     // drawer is shifted out of view, and a dragged widget lifts out. Omarchy's
     // bar clips only while dragging too, and its Indicators widget hovers from

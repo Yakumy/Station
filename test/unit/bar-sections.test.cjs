@@ -112,3 +112,36 @@ test('the open drawer accepts an empty-section drop, then routes insertion to it
   assert.equal(drop({ x: 20, y: 20 }, source).slot, inside);
   assert.equal(drop({ x: 120, y: 20 }, source), null, 'closed/off-drawer widgets are not bar targets');
 });
+
+test('the bar follows Show Omarchy indicators from the service snapshot', () => {
+  const entry = readFileSync('Bar.qml', 'utf8');
+  const snapshot = value => ({
+    config: { showOmarchyIndicators: value, bars: {} }, displayDraft: [] });
+  const context = {
+    stationBarsKey: '', stationBars: {}, stationBarMaximumHeights: {},
+    showOmarchyIndicators: false,
+    BarBridge: { current: () => ({ snapshot: () => snapshot(true) }) },
+  };
+  context.root = context;
+  const refresh = qmlFunction(entry, 'refreshStationBars', context);
+  refresh();
+  assert.equal(context.showOmarchyIndicators, true);
+  context.BarBridge = { current: () => ({ snapshot: () => snapshot(false) }) };
+  refresh();
+  assert.equal(context.showOmarchyIndicators, false);
+  context.BarBridge = { current: () => ({ snapshot: () => snapshot(undefined) }) };
+  refresh();
+  assert.equal(context.showOmarchyIndicators, true, 'an absent setting means default on');
+});
+
+test('the bar hides the whole indicator group when the setting is off', () => {
+  assert.match(bar, /indicatorHidden: moduleName === "omarchy\.indicators"[\s\S]*?!root\.showOmarchyIndicators/);
+  assert.match(bar, /visible: !slot\.indicatorHidden/);
+  assert.match(bar, /showOmarchyIndicators = config\.showOmarchyIndicators !== false/);
+});
+
+test("Station leaves Omarchy's own alwaysShow setting alone", () => {
+  const entry = readFileSync('Bar.qml', 'utf8');
+  assert.doesNotMatch(entry, /alwaysShow\s*=/);
+  assert.doesNotMatch(entry, /mutateShellConfig\([\s\S]{0,300}alwaysShow/);
+});
