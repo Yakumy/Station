@@ -3,9 +3,12 @@
   <h1>All Displays, One flow.</h1>
   <p>
     <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4.5-A6B465?style=flat-square" alt="Omarchy 4.5"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-4.1.1-A6B465?style=flat-square" alt="Station 4.1.1"></a>
+    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-4.3.4-A6B465?style=flat-square" alt="Station 4.3.4"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
     <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=flat-square&color=A6B465" alt="GitHub stars"></a>
+  </p>
+  <p>
+    <a href="https://contest.omarchy.org/plugins-2026-autumn/station"><img src="docs/assets/readme/contest-vote-banner.svg" width="100%" alt="Station is in the Top 100 of the Omarchy plugin contest. Your vote can take it to the Top 10. Vote before 27 Nov 2026, 16:00 UTC."></a>
   </p>
   <p>
     <a href="#install-update-uninstall">Install</a> ·
@@ -58,6 +61,11 @@ omarchy plugin remove yakumy.station
 Click the Station logo in the bar to open the panel. Station finds your displays and
 enables its shortcuts on its own. There is nothing else to install or set up.
 
+Station arranges your displays and numbers your workspaces itself. Don't run it next to
+another monitor manager, such as hyprmoncfg, or a personal `workspaces.lua` that binds
+`SUPER + 1…0`. Their monitor rules override Station's layout, and Station leaves
+shortcuts that are already taken unbound.
+
 Start with **Displays** to arrange your screens, then **Workspaces** to choose how
 workspaces are assigned. **Bar**, **Windows**, **Color Match** and **Wallpaper**
 customize the look. **Keybindings** lets you change any shortcut.
@@ -68,8 +76,8 @@ customize the look. **Keybindings** lets you change any shortcut.
 
 ![Displays tab](docs/assets/readme/display-tab.png)
 
-Drag monitors to where they sit on your desk, rotate a screen, and choose **Extend**,
-**Mirror** or **Single**. Select a monitor to set its brightness, scale, resolution
+Station manages up to four displays. Drag monitors to where they sit on your desk,
+rotate a screen, and choose **Extend**, **Mirror** or **Single**. Select a monitor to set its brightness, scale, resolution
 and refresh rate. Text size changes text across Omarchy.
 
 Layout changes open a 12-second **Keep / Revert** preview, so a wrong layout puts
@@ -104,8 +112,10 @@ Choose how workspaces are numbered in the Workspaces tab:
 Use **−** and **+** on a monitor in the layout to change its workspaces, up to 10 per
 monitor. In Non-repetitive, drag a workspace number onto the monitor you want.
 
-Pick the bar indicator style (S1 S2 S3, 1 2 3 or I II III), a compact mode (Off,
-On hover or On), and whether open apps show next to each workspace.
+Pick the bar indicator style (S1 S2 S3, 1 2 3, I II III or 一 二 三), a compact mode
+(Off, On hover or On), and whether open apps show next to each workspace. Kanji
+numerals use the bar font with fontconfig's CJK fallback; install `noto-fonts-cjk` if
+they show as boxes.
 
 ---
 
@@ -128,11 +138,15 @@ style. You can also drag a bar's free area toward another edge.
 **Background:** Solid color, Transparent or Blur. **Style:** Omarchy's default bar or
 separate Pills.
 
-**Settings → Show Omarchy indicators** controls Omarchy's indicator group in every
-Station bar. It is off by default, so no indicator icons appear. Turn it on to show the
-indicators that are currently active and reveal the inactive ones — Stay Awake, Night
-Light, Do Not Disturb, Screen Recording, Passwordless sudo and Reminder — when you hover
-the indicator area.
+**Settings → Show Omarchy indicators** is on by default, matching Omarchy's bar. Turn it
+off only if you want the whole indicator group hidden — that includes Stay Awake, Night
+Light, Do Not Disturb, Screen Recording, passwordless sudo and Reminder. On, Station
+leaves Omarchy's own indicator options alone, so if you set "always show" in Omarchy,
+those icons stay always visible.
+
+Widgets from other plugins work on Station's bars, except those that need their own
+background service, such as a copy of Omarchy's volume widget. Omarchy gives that
+service only to its own bar, so on Station's bar such a widget shows but does nothing.
 
 ![Pill bar with solid color background](docs/assets/readme/pill-bar-solid-color.png)
 

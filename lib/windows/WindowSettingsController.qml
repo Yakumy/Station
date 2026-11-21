@@ -37,7 +37,9 @@ Item {
     try { source = WindowConfig.setWindow(appearanceSource, key, lua) }
     catch (error) { reportError(String(error)); return "invalid" }
     windowSettingsBusy = true
-    enqueue(["sh", "-c", Transactions.windowSetting, "sh", appearancePath, appearanceSource, source,
+    // File text goes on stdin; argv shows only its sizes and the edited setting.
+    var parts = Transactions.stdinParts([appearanceSource, source])
+    enqueue(["sh", "-c", Transactions.windowSetting, "sh", appearancePath, parts.sizes[0], parts.sizes[1],
       "assert(loadfile(" + Hypr.luaString(appearancePath) + ")); " + lua], function(code, output) {
       appearanceFile.reload()
       if (code === 0) refreshStyle()
@@ -48,7 +50,7 @@ Item {
         if (code === 0 && observed && Math.abs(Number(root.appliedSettings[key]) - next[key]) > 0.02)
           reportError("A personal Hyprland rule overrides this setting. Station shows the applied value.")
       }, true)
-    }, configGeneration)
+    }, configGeneration, parts.input)
     return "ok"
   }
 

@@ -63,7 +63,7 @@ Item {
   property bool requestedTransparent: false
   property string backgroundMode: "solid"
   property string barStyle: "default"
-  property bool hoverOmarchyIndicators: false
+  property bool showOmarchyIndicators: true
   property bool useTransparentForeground: false
   property bool transparent: false
   property bool centerSectionHovered: false
@@ -749,7 +749,7 @@ Item {
     backgroundMode = ["solid", "transparent", "blur"].indexOf(config.background) !== -1
       ? config.background : (config.transparent === true ? "transparent" : "solid")
     barStyle = ["default", "pill"].indexOf(config.style) !== -1 ? config.style : "default"
-    hoverOmarchyIndicators = config.hoverOmarchyIndicators === true
+    showOmarchyIndicators = config.showOmarchyIndicators !== false
     setRequestedTransparency(backgroundMode !== "solid")
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
 
@@ -1190,17 +1190,7 @@ Item {
       var target = clickTargets[i]
       if (!moduleTargetClickable(target)) continue
 
-      var targetPoint = { x: localX, y: localY }
-      try {
-        targetPoint = slot.mapToItem(target, localX, localY)
-      } catch (e) {
-        continue
-      }
-
-      if (targetPoint.x >= 0 && targetPoint.x <= target.width &&
-          targetPoint.y >= 0 && targetPoint.y <= target.height) {
-        return target
-      }
+      if (BarModel.itemContainsPoint(target, slot, localX, localY)) return target
     }
 
     if (moduleTargetClickable(slot.activeItem)) return slot.activeItem
@@ -2119,11 +2109,10 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
-    // Off removes the whole Indicators group, including an active Stay Awake
-    // or Night Light icon. The slot stays instantiated so toggling is live and
-    // does not rebuild the bar.
+    // Off hides the whole Indicators slot, including an active Stay Awake or
+    // Night Light icon. The widget stays instantiated so toggling is live.
     readonly property bool indicatorHidden: moduleName === "omarchy.indicators"
-      && !root.hoverOmarchyIndicators
+      && !root.showOmarchyIndicators
     property var imageSourceBaselines: new Map()
     property var textRenderBaselines: new Map()
     property var layerTextureBaselines: new Map()
@@ -2175,7 +2164,9 @@ Item {
     height: implicitHeight
     visible: !slot.indicatorHidden
     // Clip only what overflows a slot on purpose: the old tray's reserved
-    // drawer is shifted out of view, and a dragged widget lifts out.
+    // drawer is shifted out of view, and a dragged widget lifts out. Omarchy's
+    // bar clips only while dragging too, and its Indicators widget hovers from
+    // past its own edges, which a clipped slot would never deliver.
     clip: slot.trayFlowInset > 0 || slot.dragSource
     z: modulePointer.dragging ? 100 : 0
 

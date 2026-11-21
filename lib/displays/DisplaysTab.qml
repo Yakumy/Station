@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "Model.js" as Model
 import "." as Displays
 import "../panel" as PanelUi
@@ -143,7 +144,7 @@ Column {
         x: displayTab.pad
         topPadding: displayTab.gutter
         text: displayTab.service ? displayTab.service.layoutError : ""
-        color: Color.urgent
+        color: Commons.Color.urgent
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         wrapMode: Text.WordWrap
@@ -161,7 +162,7 @@ Column {
         y: displayTab.narrow ? geometry.halfGap - height / 2 : 0
         width: displayTab.narrow ? parent.width : Math.max(1, Style.normalBorderWidth)
         height: displayTab.narrow ? Math.max(1, Style.normalBorderWidth) : parent.height
-        color: Color.popups.text
+        color: Commons.Color.popups.text
         opacity: 0.12
       }
     }
@@ -428,7 +429,7 @@ Column {
       text: "Revert"
       enabled: displayTab.service && !displayTab.service.previewBusy
       bordered: true
-      foreground: Color.popups.text
+      foreground: Commons.Color.popups.text
       onClicked: displayTab.service.revertPreview("")
     }
     PanelUi.ActionButton {
@@ -436,9 +437,9 @@ Column {
       objectName: "displayKeep"
       text: "Keep"
       enabled: displayTab.service && !displayTab.service.previewBusy
-      accent: Color.accent
-      background: Color.accent
-      foreground: Color.popups.background
+      accent: Commons.Color.accent
+      background: Commons.Color.accent
+      foreground: Commons.Color.popups.background
       onClicked: displayTab.service.keepPreview()
     }
   }

@@ -14,8 +14,8 @@ Ui.BorderSurface {
   signal displaySelected(string name)
   height: Style.space(370)
   clip: true
-  color: Color.popups.background
-  borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+  color: Commons.Color.popups.background
+  borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
   radius: Style.cornerRadius
   // The dotted grid and the drag snap are the same 16px step, so what you see
   // is what you land on.
@@ -23,7 +23,7 @@ Ui.BorderSurface {
   readonly property real monitorGap: Style.spacing.sm
   readonly property real horizontalInset: width * 0.1
   readonly property real verticalInset: Math.max(height * 0.1, Style.font.caption + Style.spacing.sm * 2)
-  readonly property color cardBackground: Color.popups.background
+  readonly property color cardBackground: Commons.Color.popups.background
   readonly property var displays: service ? service.displayDraft : []
   readonly property var bounds: {
     if (!displays.length) return { x: 0, y: 0, width: 1, height: 1 }
@@ -77,7 +77,7 @@ Ui.BorderSurface {
     id: dotGrid
     anchors.fill: parent
     opacity: 0.22
-    property color dotColor: Color.popups.text
+    property color dotColor: Commons.Color.popups.text
     onDotColorChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
@@ -133,10 +133,10 @@ Ui.BorderSurface {
       width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
       height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
       z: pointer.pressed ? 2 : (isSelected ? 1 : 0)
-      color: monitorCard.isSelected ? Color.menu.selectedBackground : canvas.cardBackground
+      color: monitorCard.isSelected ? Commons.Color.menu.selectedBackground : canvas.cardBackground
       borderSpec: Border.flat(isSelected
-        ? Color.accent
-        : Border.controlSpec("normal", Color.popups.text, Color.accent).color,
+        ? Commons.Color.accent
+        : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
         isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
       radius: 0
       opacity: outputEnabled || !canvas.tokens ? 1 : canvas.tokens.disabledOpacity
@@ -176,9 +176,8 @@ Ui.BorderSurface {
             if (!monitorCard.outputEnabled)
               return [{ value: "off", label: "Off" }, { value: "on", label: "Enable" }]
             var count = canvas.displays.filter(function(display) { return canvas.service.displayEnabled(display.name) }).length
-            var roles = [1, 2, 3].slice(0, count).map(function(role, index) {
-              return { value: String(index), label: String(role) }
-            })
+            var roles = []
+            for (var index = 0; index < count; index++) roles.push({ value: String(index), label: String(index + 1) })
             if (canvas.service.state !== "idle") roles = roles.filter(function(role) { return role.value === roleMenu.value })
             if (count > 1) roles.push({ value: "off", label: "Turn off" })
             return roles
@@ -281,7 +280,7 @@ Ui.BorderSurface {
           width: rotationTools.handleSize
           height: rotationTools.handleSize
           visible: rotationPointer.containsMouse
-          property color iconColor: Color.popups.text
+          property color iconColor: Commons.Color.popups.text
           readonly property real artworkScale: 0.7
           onIconColorChanged: requestPaint()
           onPaint: {
@@ -353,7 +352,7 @@ Ui.BorderSurface {
         Text {
           anchors.centerIn: parent
           text: modelData.glyph
-          color: Qt.darker(Color.popups.text, 1.4)
+          color: Qt.darker(Commons.Color.popups.text, 1.4)
           font.family: Style.font.family
           font.pixelSize: Style.font.title
         }

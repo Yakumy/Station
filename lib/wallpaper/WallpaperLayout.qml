@@ -2,6 +2,7 @@ import QtQuick
 import "../panel" as PanelUi
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "Wallpaper.js" as Wallpaper
 import "." as WallpaperUi
 
@@ -41,8 +42,8 @@ Ui.BorderSurface {
   readonly property real groupX: spanning ? background.x + crop.x * imageFit : (width - layout.width * fit) / 2
   readonly property real groupY: spanning ? background.y + crop.y * imageFit : (height - layout.height * fit) / 2
   readonly property size sourceSize: readySourceSize
-  color: Color.popups.background
-  borderSpec: Border.controlSpec("normal", Color.popups.text, Color.accent)
+  color: Commons.Color.popups.background
+  borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
   radius: Style.cornerRadius
   clip: true
   activeFocusOnTab: true
@@ -116,7 +117,7 @@ Ui.BorderSurface {
   Canvas {
     anchors.fill: parent
     opacity: 0.22
-    property color dotColor: Color.popups.text
+    property color dotColor: Commons.Color.popups.text
     onDotColorChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
@@ -184,8 +185,8 @@ Ui.BorderSurface {
         anchors.fill: parent
         color: "transparent"
         borderSpec: root.spanning || root.selectedName === monitor.modelData.name
-          ? Border.flat(Color.accent, Style.normalBorderWidth * 2)
-          : Border.controlSpec("normal", Color.popups.text, Color.accent)
+          ? Border.flat(Commons.Color.accent, Style.normalBorderWidth * 2)
+          : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
         radius: 0
       }
 
@@ -248,7 +249,7 @@ Ui.BorderSurface {
     visible: !root.layout.displays.length && root.contentVisible
     anchors.centerIn: parent
     text: "No active displays"
-    color: Color.popups.text
+    color: Commons.Color.popups.text
     font.family: Style.font.family
     font.pixelSize: Style.font.body
   }

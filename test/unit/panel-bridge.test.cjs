@@ -83,28 +83,29 @@ test('compact mode and open apps are Workspaces tab rows applied with the draft'
   assert.equal(setSetting('minStations', 4), 'invalid');
 });
 
-test('Show Omarchy indicators is a Station setting applied to its own bar copy', () => {
+test('Show Omarchy indicators is a boolean Station setting applied to its own bar copy', () => {
   const context = { config: {}, store: { saves: 0, saveConfig() { this.saves++ } } };
   const setSetting = qmlFunction(service, 'setSetting', context);
-  assert.equal(setSetting('hoverOmarchyIndicators', false), 'ok');
-  assert.equal(context.config.hoverOmarchyIndicators, false);
-  assert.equal(setSetting('hoverOmarchyIndicators', true), 'ok');
-  assert.equal(context.config.hoverOmarchyIndicators, true);
+  assert.equal(setSetting('showOmarchyIndicators', false), 'ok');
+  assert.equal(context.config.showOmarchyIndicators, false);
+  assert.equal(setSetting('showOmarchyIndicators', true), 'ok');
+  assert.equal(context.config.showOmarchyIndicators, true);
+  assert.equal(setSetting('showOmarchyIndicators', 'off'), 'invalid');
+  assert.equal(context.config.showOmarchyIndicators, true);
   assert.equal(context.store.saves, 2);
 
   const entry = read('Bar.qml');
-  assert.match(entry, /hoverOmarchyIndicators: false/);
-  assert.match(entry, /function refreshStationBars\(\)[\s\S]*?hoverOmarchyIndicators === true[\s\S]*?hoverOmarchyIndicators = hoverIndicators/);
-  assert.match(entry, /copy\.hoverOmarchyIndicators = root\.hoverOmarchyIndicators/);
-  assert.match(entry, /applyOmarchyIndicatorHover\(copy\)/);
-  assert.match(entry, /alwaysShow = false/);
-  assert.doesNotMatch(entry, /alwaysShow = root\./);
+  assert.match(entry, /showOmarchyIndicators: true/);
+  assert.match(entry, /function refreshStationBars\(\)[\s\S]*?showOmarchyIndicators !== false[\s\S]*?showOmarchyIndicators = showIndicators/);
+  assert.match(entry, /copy\.showOmarchyIndicators = root\.showOmarchyIndicators/);
+  assert.doesNotMatch(entry, /alwaysShow\s*=/,
+    "Station leaves Omarchy's alwaysShow as the user set it");
   assert.doesNotMatch(entry, /mutateShellConfig\([\s\S]{0,300}alwaysShow/,
     'Station never rewrites Omarchy\u2019s shell.json indicator entry');
 
   const monitorBar = read('lib/bars/omarchy/MonitorBar.qml');
-  assert.match(monitorBar, /hoverOmarchyIndicators = config\.hoverOmarchyIndicators === true/);
-  assert.match(monitorBar, /indicatorHidden[\s\S]*?!root\.hoverOmarchyIndicators/);
+  assert.match(monitorBar, /showOmarchyIndicators = config\.showOmarchyIndicators !== false/);
+  assert.match(monitorBar, /indicatorHidden[\s\S]*?!root\.showOmarchyIndicators/);
   assert.match(monitorBar, /visible: !slot\.indicatorHidden/);
 });
 

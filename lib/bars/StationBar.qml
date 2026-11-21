@@ -22,6 +22,8 @@ Item {
   property var workspaceMap: null
   property var workspaceApps: ({})
   property string indicatorStyle: "prefixed"
+  // The numerals bjarneo's kanji-workspaces widget paints, in workspace order.
+  readonly property var kanjiNumerals: ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
   readonly property var hyprMonitor: {
     var window = root.QsWindow.window
     var screen = window ? window.screen : null
@@ -33,12 +35,24 @@ Item {
   readonly property bool perOutput: Grid.mode(workspaceMap) !== "station" && outputIndex !== -1
   readonly property var ownNumbers: perOutput ? Grid.numbers(workspaceMap, outputIndex) : []
   readonly property int activeWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : -1
-  readonly property int shownNumber: perOutput
-    ? (Grid.station(activeWorkspaceId, workspaceMap) || ownNumbers[0] || 1) : stationNumber
+  // Station mode shows the focused output, so every bar agrees while the station
+  // focuses its outputs. A native workspace change then updates the number with
+  // the compositor event instead of waiting for follow focus and the station
+  // batch to confirm it. An unmanaged output or an out-of-map workspace keeps the
+  // confirmed station.
+  readonly property var focusedHyprMonitor: Hyprland.focusedMonitor || null
+  readonly property int focusedOutputIndex: workspaceMap && Array.isArray(workspaceMap.outputs)
+    && focusedHyprMonitor ? workspaceMap.outputs.indexOf(String(focusedHyprMonitor.name || "")) : -1
+  readonly property int liveWorkspaceId: perOutput ? activeWorkspaceId
+    : (focusedOutputIndex !== -1 && focusedHyprMonitor.activeWorkspace
+      ? focusedHyprMonitor.activeWorkspace.id : -1)
+  readonly property int shownNumber: Grid.shownStation(liveWorkspaceId, workspaceMap,
+    perOutput ? (ownNumbers[0] || 1) : stationNumber)
   readonly property var groupApps: perOutput ? (workspaceApps[screenName] || ({})) : stationApps
   function labelFor(number) {
     if (indicatorStyle === "number") return String(number)
     if (indicatorStyle === "roman") return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][number - 1] || String(number)
+    if (indicatorStyle === "kanji") return kanjiNumerals[number - 1] || String(number)
     return (perOutput ? "W" : "S") + number
   }
   // Nothing else refreshes per-monitor workspaces while Omarchy's indicator is
@@ -62,6 +76,8 @@ Item {
   readonly property bool listed: compactMode !== "on"
   readonly property bool showApps: showOpenApps && listed
   readonly property bool alwaysOpen: compactMode === "off"
+  // Every number is visible when Off lists them or On hover opens the drawer.
+  readonly property bool allShown: alwaysOpen || expanded
   readonly property bool showExpander: compactMode === "hover"
   readonly property real barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real contentFontSize: Style.font.body
@@ -71,15 +87,22 @@ Item {
   // with zero spacing between slots in both orientations.
   readonly property real primarySlot: Style.bar.iconSlot
   readonly property real mainGap: 0
-  readonly property real stationGap: Style.spacing.xl
+  // With open apps off, only numbers remain, so use Omarchy's own workspace gap:
+  // one step between columns and two between rows.
+  readonly property real stationGap: showApps ? Style.spacing.xl
+    : (vertical ? Style.space(2) : Style.space(1))
   readonly property real labelGap: Style.spacing.xxs
   readonly property real appGap: Style.spacing.sm
   readonly property rect menuInk: menuTextMetrics.tightBoundingRect
   readonly property real logoSize: menuInk.height
   readonly property real inkCenter: menuReference.y + menuReference.baselineOffset + menuInk.y + logoSize / 2
-  readonly property rect indicatorInk: indicatorMetrics.tightBoundingRect("S" + stationNumber)
   // Follow the painted station-label guide: its height limits horizontal bars,
-  // and its width limits vertical bars.
+  // and its width limits vertical bars. Kanji ink varies by numeral (一 is one
+  // stroke, 十 fills the figure box), so a fixed full-height numeral keeps app
+  // icons and the label baseline steady as the station changes.
+  readonly property rect kanjiInk: indicatorMetrics.tightBoundingRect(kanjiNumerals[9])
+  readonly property rect indicatorInk: indicatorStyle === "kanji"
+    ? kanjiInk : indicatorMetrics.tightBoundingRect("S" + stationNumber)
   readonly property real appSize: vertical ? indicatorInk.width : indicatorInk.height
   readonly property var stations: {
     var numbers = Object.keys(groupApps || {}).map(Number)
@@ -175,14 +198,16 @@ Item {
             required property int modelData
             readonly property var apps: root.groupApps[modelData] || []
             columns: root.vertical ? 1 : 2
-            spacing: root.labelGap
+            // The hidden apps column must not leave its label gap behind.
+            spacing: root.showApps ? root.labelGap : 0
             Ui.WidgetButton {
               id: stationButton
               objectName: "stationLabel-" + group.modelData
               bar: root.bar
-              // With every number listed, Omarchy's tiling square stands for the
-              // current one, drawn by the button at Omarchy's icon size.
-              readonly property bool square: root.alwaysOpen && group.modelData === root.shownNumber
+              // Whenever every number is visible, Omarchy's tiling square stands
+              // for the current one, whatever the indicator style, drawn by the
+              // button at Omarchy's icon size.
+              readonly property bool square: root.allShown && group.modelData === root.shownNumber
               readonly property bool current: group.modelData === root.shownNumber
               text: square ? "\udb85\udcfb" : root.labelFor(group.modelData)
               // As in Omarchy's indicator, an empty workspace that is not shown is
@@ -201,11 +226,17 @@ Item {
               onPressed: root.stationSelected(group.modelData)
               Text {
                 id: stationLabel
+                objectName: "stationNumeral-" + group.modelData
                 visible: !stationButton.square
                 text: stationButton.text; font: indicatorMetrics.font; color: stationButton.foreground
-                x: (parent.width - indicatorMetrics.tightBoundingRect(text).width) / 2
-                  - indicatorMetrics.tightBoundingRect(text).x
-                y: root.inkCenter - indicatorMetrics.tightBoundingRect(text).height / 2 - indicatorMetrics.ascent - indicatorMetrics.tightBoundingRect(text).y
+                readonly property rect ink: indicatorMetrics.tightBoundingRect(text)
+                // Kanji numerals keep a common baseline and vertical center;
+                // their own ink (一 especially) is not a stable vertical guide.
+                readonly property rect guide: root.indicatorStyle === "kanji" ? root.kanjiInk : ink
+                x: (parent.width - ink.width) / 2 - ink.x
+                // The CJK fallback font is taller than the bar font, so use the
+                // rendered line's baseline rather than the bar font's ascent.
+                y: root.inkCenter - guide.height / 2 - stationLabel.baselineOffset - guide.y
               }
             }
             Grid {

@@ -95,7 +95,8 @@ Item {
     if (text === fileSource) { if (done) done(true); return true }
     var plan = ColorMatch.change(before, after, displays.map(function(display) { return display.name }))
     var lua = plan.rows.map(function(row) { return ColorMatch.rule(row.name, profileDir, row.file) }).join("; ")
-    var argv = ["sh", "-c", Transactions.colorMatch, "sh", togglePath, profileDir, fileSource, text, plan.action, lua]
+    var parts = Transactions.stdinParts([fileSource, text])
+    var argv = ["sh", "-c", Transactions.colorMatch, "sh", togglePath, profileDir, parts.sizes[0], parts.sizes[1], plan.action, lua]
     displays.forEach(function(display) {
       var row = ColorMatch.plan(values, [display])[0]
       if (row) argv.push(row.file, row.base64)
@@ -110,7 +111,7 @@ Item {
       root.error = code === 0 ? "" : code === 4 ? "The color file changed while saving; try again."
         : "Could not apply the color profile: " + String(output || "").trim()
       if (done) done(code === 0)
-    })
+    }, parts.input)
     return true
   }
 

@@ -2,6 +2,7 @@ import QtQuick
 import qs.Ui as Ui
 import "." as PanelUi
 import qs.Commons
+import qs.Commons as Commons
 
 Column {
   id: settingsTab
@@ -68,7 +69,7 @@ Column {
   Ui.PanelSeparator {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    foreground: Color.popups.text
+    foreground: Commons.Color.popups.text
   }
 
   PlainToggleRow {
@@ -82,24 +83,23 @@ Column {
   Ui.PanelSeparator {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    foreground: Color.popups.text
+    foreground: Commons.Color.popups.text
   }
 
-  // Off removes the Omarchy indicator group entirely; on shows the active
-  // indicators and lets the inactive ones reveal on hover.
+  // On by default, matching Omarchy. Off is opt-in and hides the group.
   PlainToggleRow {
     objectName: "omarchyIndicatorsToggle"
     label: "Show Omarchy indicators"
     checked: !!settingsTab.service
-      && settingsTab.service.config.hoverOmarchyIndicators === true
+      && settingsTab.service.config.showOmarchyIndicators !== false
     onClicked: if (settingsTab.service)
-      settingsTab.service.setSetting("hoverOmarchyIndicators", !checked)
+      settingsTab.service.setSetting("showOmarchyIndicators", !checked)
   }
   Item { width: 1; height: settingsTab.tokens.space2 }
   Ui.PanelSeparator {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    foreground: Color.popups.text
+    foreground: Commons.Color.popups.text
   }
 
   Item {
@@ -149,7 +149,7 @@ Column {
   Ui.PanelSeparator {
     width: settingsTab.width - settingsTab.inset * 2
     x: settingsTab.inset
-    foreground: Color.popups.text
+    foreground: Commons.Color.popups.text
   }
 
   Item {

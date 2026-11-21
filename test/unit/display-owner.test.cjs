@@ -81,8 +81,12 @@ for(const [name,run] of Object.entries(scenarios)) test('display scenario conver
 });
 
 test('Keep uses the fixed transaction with its eight positional arguments',()=>{
-  const keep=source.match(/command: \["sh", "-c", Transactions.keep[^]*?keepDisableToggle\]/)[0];
+  const keep=source.match(/command: \["sh", "-c", Transactions.keep[^]*?parts.sizes\[1\]\]/)[0];
   assert.equal(keep.split(',').length,4+8);
+  assert.doesNotMatch(keep,/keepSourceBaseline|keepDisableToggle/,'file text stays out of argv');
+  assert.match(source,/stdinParts\(\[root.keepSourceBaseline, root.keepDisableToggle\]\)/);
+  assert.match(source,/onStarted: \{\s*write\(parts.input\)\s*stdinEnabled = false/);
+  assert.match(source,/keepTransaction.stdinEnabled = true\s*keepTransaction.running = true/);
   assert.match(current,/restorePreviewBaseline: function\(value\) \{ displayController.restorePreviewBaseline\(value\) \}/);
   assert.match(current,/displayController.failPreview\("Could not read the display state/);
   assert.match(current,/launchWatchdog: function\(\) \{\s*Quickshell.execDetached\(\["sh", "-c", Transactions.watchdog, "sh", "20"/);

@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 
 // A chooser floating over the layout canvas, which stays visible behind it. Left and
 // Right browse, Return or a click on the centered card chooses, Escape closes.
@@ -120,8 +121,8 @@ Item {
         Ui.BorderSurface {
           anchors.fill: parent
           color: "transparent"
-          borderSpec: slot.active ? Border.flat(Color.accent, Style.normalBorderWidth * 2)
-            : Border.controlSpec("normal", Color.popups.text, Color.accent)
+          borderSpec: slot.active ? Border.flat(Commons.Color.accent, Style.normalBorderWidth * 2)
+            : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
           radius: Style.cornerRadius
         }
         MouseArea {
@@ -160,7 +161,7 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       width: Math.min(parent.width, label.implicitWidth + root.tokens.space3 * 2)
       height: label.implicitHeight + root.tokens.space1 * 2
-      color: Color.popups.background
+      color: Commons.Color.popups.background
       radius: Style.cornerRadius
       Text {
         id: label
@@ -170,7 +171,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         textFormat: Text.PlainText
         elide: Text.ElideMiddle
-        color: Color.popups.text
+        color: Commons.Color.popups.text
         font.family: Style.font.family
         font.pixelSize: Style.font.title
         font.weight: Font.DemiBold
