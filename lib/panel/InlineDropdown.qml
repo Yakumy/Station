@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 
 // Compact, borderless trigger for the layout card and top toolbar. The menu
 // itself uses the host's popup/selection tokens, like Ui.Dropdown.
@@ -9,7 +10,7 @@ Item {
   property string prefix: ""
   property string value: ""
   property var options: []
-  property color foreground: Color.popups.text
+  property color foreground: Commons.Color.popups.text
   property int fontSize: Style.font.body
   property real popupMinWidth: Style.space(100)
   property bool popupAlignRight: false
@@ -63,8 +64,8 @@ Item {
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     background: Rectangle {
-      color: Color.menu.background
-      border.color: Color.menu.border
+      color: Commons.Color.menu.background
+      border.color: Commons.Color.menu.border
       border.width: Style.normalBorderWidth
       radius: Style.cornerRadius
     }
@@ -92,7 +93,7 @@ Item {
         required property int index
         width: choices.width
         height: Style.spacing.popupRowHeight
-        color: index === choices.currentIndex ? Color.menu.selectedBackground : Color.menu.background
+        color: index === choices.currentIndex ? Commons.Color.menu.selectedBackground : Commons.Color.menu.background
         Text {
           anchors.left: parent.left
           anchors.leftMargin: Style.spacing.controlPaddingX
@@ -100,7 +101,7 @@ Item {
           anchors.rightMargin: Style.spacing.controlPaddingX
           anchors.verticalCenter: parent.verticalCenter
           text: root.optionLabel(modelData)
-          color: index === choices.currentIndex ? Color.menu.selectedText : Color.menu.text
+          color: index === choices.currentIndex ? Commons.Color.menu.selectedText : Commons.Color.menu.text
           font.family: Style.font.family
           font.pixelSize: root.fontSize
           elide: Text.ElideRight

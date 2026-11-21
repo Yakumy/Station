@@ -17,6 +17,17 @@ function apply(plan, clients, limit = Infinity) {
   });
 }
 
+test('bar label follows the live workspace and falls back to the confirmed station', () => {
+  const one = { outputs: ['A'] }, two = { outputs: ['A', 'B'] };
+  assert.equal(G.shownStation(1, one, 3), 1);
+  assert.equal(G.shownStation(5, two, 1), 3);
+  assert.equal(G.shownStation(-99, one, 3), 3);
+  assert.equal(G.shownStation(99, one, 3), 3);
+  assert.equal(G.shownStation(NaN, one, 2), 2);
+  assert.equal(G.shownStation(undefined, null, undefined), 1);
+  assert.equal(G.shownStation(2, { outputs: ['A'], mode: 'repetitive', counts: [5], blocks: [0] }, 4), 2);
+});
+
 test('compact IDs cover every slot for one, two and three outputs', () => {
   for (const map of maps) for (let s = 1; s <= 10; s++) for (const output of map.outputs) {
     const id = G.workspace(s, output, map);

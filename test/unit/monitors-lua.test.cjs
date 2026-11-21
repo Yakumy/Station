@@ -210,3 +210,39 @@ test('rules for managed outputs outside the block are reported', () => {
   const source = 'hl.monitor({ output = "eDP-1", scale = 2 })\n';
   assert.deepEqual(L.externalRuleConflicts(source, ['eDP-1', 'HDMI-A-2']), ['eDP-1']);
 });
+
+test('a 10-bit output keeps bitdepth in every rule that carries its geometry', () => {
+  const Model = require('../../lib/displays/Model.js');
+  assert.equal(Model.bitDepth({ currentFormat: 'XRGB2101010' }), 10);
+  assert.equal(Model.bitDepth({ currentFormat: 'XBGR2101010' }), 10);
+  assert.equal(Model.bitDepth({ currentFormat: 'XRGB8888' }), 8);
+  assert.equal(Model.bitDepth({}), 8);
+
+  const deep = displays();
+  deep[1].bitdepth = 10;
+  const generated = L.generate(deep, { mode: 'extend', enabled: ['eDP-1', 'HDMI-A-2'] });
+  const hdmi = generated.block.split('\n').filter(line => line.includes('"HDMI-A-2", mode'));
+  assert.ok(hdmi.length >= 2);
+  hdmi.forEach(line => assert.match(line, /transform = 0, bitdepth = 10, disabled/));
+  assert.ok(!/bitdepth/.test(generated.block.split('\n').filter(line => line.includes('"eDP-1", mode')).join('\n')));
+  assert.match(generated.plain, /"HDMI-A-2".*bitdepth = 10/);
+  assert.ok(!/"eDP-1".*bitdepth/.test(generated.plain));
+
+  // A position-only edit rewrites the full rule, so it must keep the field too.
+  const moved = deep.map(display => ({ ...display }));
+  moved[1].x = 1930;
+  assert.deepEqual(L.positionOnlyRules(deep, moved, 'extend', 'extend'),
+    ['hl.monitor({ output = "HDMI-A-2", mode = "1920x1080@60.00Hz", position = "1930x0", scale = 1.25, transform = 0, bitdepth = 10 })']);
+
+  // The saved block round-trips the field, and files written before it still parse.
+  const geometry = L.managedGeometry(generated.block);
+  assert.equal(geometry['HDMI-A-2'].bitdepth, 10);
+  assert.equal('bitdepth' in geometry['eDP-1'], false);
+  const old = L.generate(displays(), { mode: 'extend' }).block;
+  assert.equal(Object.keys(L.managedGeometry(old)).length, 2);
+
+  // Only 10 is written. Anything else falls back to Hyprland's 8-bit default.
+  ['8', 12, 'x', null].forEach(value => {
+    assert.equal('bitdepth' in L.validateDisplay({ ...displays()[0], bitdepth: value }), false);
+  });
+});

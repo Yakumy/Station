@@ -239,7 +239,7 @@ Item {
     appliedSettings: root.config.windows
     operationState: root.state
     configGeneration: root.configGeneration
-    enqueue: function(command, done, generation) { compositor.enqueue(command, done, generation) }
+    enqueue: function(command, done, generation, input) { compositor.enqueue(command, done, generation, input) }
     publishObserved: function(observed) {
       root.config = Object.assign({}, root.config, { windows: observed })
     }
@@ -256,7 +256,7 @@ Item {
     operationState: root.state
     togglePath: root.colorTogglePath
     profileDir: root.stateDir + "/color"
-    enqueue: function(command, done) { compositor.enqueue(command, done) }
+    enqueue: function(command, done, input) { compositor.enqueue(command, done, undefined, input) }
     publishSettings: function(value) {
       root.config = Object.assign({}, root.config, { colorMatch: value })
     }
@@ -330,7 +330,7 @@ Item {
     invalidatePreviewOperation: function() { root.gen += 1; root.configGeneration += 1 }
     refresh: function(includeClients, done) { compositor.refresh(includeClients, done) }
     evalLua: function(lua, done) { compositor.evalLua(lua, done) }
-    enqueue: function(command, done) { compositor.enqueue(command, done) }
+    enqueue: function(command, done, input) { compositor.enqueue(command, done, undefined, input) }
     recordExpectedEvents: function(value) { root.expect = value }
     monitorSignature: function() { return root.monitorSignature() }
     reconcileWorkspace: function() { workspace.reconcile() }
@@ -436,7 +436,7 @@ Item {
   function targetMapping() {
     var options = state === "previewing" && previewApplied ? previewApplied.options : config
     return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, layout: config.workspaceLayout,
-      blocks: omarchyBlocks })
+      count: config.stationCount, blocks: omarchyBlocks })
   }
 
   function monitorSignature() {
@@ -551,7 +551,7 @@ Item {
       }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {
-        if (["prefixed", "number", "roman"].indexOf(value.indicatorStyle) === -1) return "invalid"
+        if (["prefixed", "number", "roman", "kanji"].indexOf(value.indicatorStyle) === -1) return "invalid"
         next.indicatorStyle = value.indicatorStyle
       }
       if (value.compactMode !== undefined) {
@@ -592,7 +592,7 @@ Item {
       config.panelPosition = value
     }
     else if (name === "indicatorStyle") {
-      if (["prefixed", "number", "roman"].indexOf(value) === -1) return "invalid"
+      if (["prefixed", "number", "roman", "kanji"].indexOf(value) === -1) return "invalid"
       config.indicatorStyle = value
     }
     else if (name === "graceMs") {
@@ -663,7 +663,7 @@ Item {
       return !m.disabled && (m.mirrorOf === undefined || m.mirrorOf === null || m.mirrorOf === ""
         || m.mirrorOf === "none" || String(m.mirrorOf) === "-1")
     }).map(function(m) { return String(m.name) })
-    var adopted = Grid.adopt(rules, outputs)
+    var adopted = Grid.adopt(rules, outputs, config.stationCount)
     if (adopted) {
       config = Object.assign({}, config, { workspaceMode: adopted.mode,
         workspaceLayout: Store.workspaceLayout(adopted.layout) })

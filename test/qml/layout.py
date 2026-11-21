@@ -339,6 +339,28 @@ Item {
         verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
       }
     }
+    function test_four_reported_displays_fit_and_offer_four_roles() {
+      // Issue #14: the reporter's monitors, two of them rotated, around an ultrawide.
+      service.displayDraft = [
+        {name:"HDMI-A-1", x:3713, y:1440, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},
+        {name:"DP-1", x:6440, y:-355, width:1920, height:1080, scale:1, transform:3, enabled:true, lane:2},
+        {name:"DP-2", x:1920, y:-233, width:1920, height:1080, scale:1, transform:1, enabled:true, lane:3},
+        {name:"DP-3", x:3000, y:0, width:3440, height:1440, scale:1, transform:0, enabled:true, lane:4}
+      ]
+      wait(10)
+      var names = ["HDMI-A-1", "DP-1", "DP-2", "DP-3"]
+      for (var i=0;i<names.length;i++) {
+        var target=card(names[i])
+        verify(target !== null, names[i])
+        verify(target.x >= layout.horizontalInset - 0.01)
+        verify(target.x + target.width <= layout.width - layout.horizontalInset + 0.01)
+        verify(target.y >= layout.verticalInset - 0.01)
+        verify(target.y + target.height <= layout.height - layout.verticalInset + 0.01)
+      }
+      var menu = findChild(card("DP-3"), "monitorRoleMenu")
+      compare(menu.value, "3")
+      compare(menu.options.map(function(option) { return option.label }).join(), "1,2,3,4,Turn off")
+    }
     function test_adjacent_displays_have_the_compact_visual_gap() {
       service.displayDraft = [
         {name:"eDP-1", x:0, y:0, width:1920, height:1080, scale:1, transform:0, enabled:true, lane:1},

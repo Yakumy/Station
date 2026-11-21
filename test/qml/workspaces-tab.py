@@ -136,6 +136,10 @@ ShellRoot {
         var row = selector.parent
         if (!selector.enabled || findObject(tab, "workspaceModeNote").text !== "") { fail("selector on two monitors"); return }
         if (Math.abs(selector.y + selector.height / 2 - row.height / 2) > 1) { fail("selector centered"); return }
+        var style = findObject(tab, "indicatorStyleDropdown")
+        if (!style || !style.options.some(function(option) { return option.value === "kanji" })) {
+          fail("kanji indicator style option"); return
+        }
         var stationCount = findObject(tab, "stationCountDropdown")
         if (!stationCount || stationCount.value !== "3" || stationCount.options.length !== 10
             || findObject(tab, "stationCountNote").text !== "1 to 10, default 3") {
@@ -157,30 +161,30 @@ ShellRoot {
         findObject(tab, "workspaceModeSelector").changed("nonrepetitive")
         if (fakeService.calls.length || fakeService.config.workspaceMode !== "station") { fail("mode applied before Apply"); return }
         if (!actions.visible) { fail("actions after an edit"); return }
-        if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "6,7,8,9,10") { fail("non-repetitive default"); return }
+        if (badges("eDP-1") !== "1,2,3" || badges("HDMI-A-2") !== "4,5,6") { fail("non-repetitive default"); return }
         if (findObject(tab, "workspaceModeNote").text !== "Drag workspaces onto a monitor to assign them") { fail("drag note"); return }
-        if (findObject(tab, "stationCountDropdown").enabled
-            || findObject(tab, "stationCountNote").text !== "only work with Station mode") {
-          fail("station count outside station mode"); return
+        if (!findObject(tab, "stationCountDropdown").enabled
+            || findObject(tab, "stationCountNote").text !== "1 to 10, default 3") {
+          fail("indicator count outside station mode"); return
         }
         // − and + only on the last monitor.
         if (findObject(layout, "workspaceStep-eDP-1-up") || !findObject(layout, "workspaceStep-HDMI-A-2-up")) { fail("last monitor steps"); return }
         layout.countChangeRequested("HDMI-A-2", 1)
-        if (badges("HDMI-A-2") !== "6,7,8,9,10,11") { fail("plus " + badges("HDMI-A-2")); return }
+        if (badges("HDMI-A-2") !== "4,5,6,7") { fail("plus " + badges("HDMI-A-2")); return }
         layout.countChangeRequested("HDMI-A-2", -1)
         layout.countChangeRequested("HDMI-A-2", -1)
-        if (badges("HDMI-A-2") !== "6,7,8,9") { fail("minus"); return }
+        if (badges("HDMI-A-2") !== "4,5") { fail("minus"); return }
         // Dropping onto a monitor finds it, and moving 1 and 3 hands them over.
         var target = findObject(layout, "workspaceMonitor-HDMI-A-2")
         if (layout.outputAt(target.x + target.width / 2, target.y + target.height / 2) !== "HDMI-A-2"
             || layout.outputAt(-50, -50) !== "") { fail("drop target"); return }
         layout.workspaceMoved(1, "HDMI-A-2")
         layout.workspaceMoved(3, "HDMI-A-2")
-        if (badges("eDP-1") !== "2,4,5" || badges("HDMI-A-2") !== "1,3,6,7,8,9") { fail("drag " + badges("eDP-1")); return }
+        if (badges("eDP-1") !== "2" || badges("HDMI-A-2") !== "1,3,4,5") { fail("drag " + badges("eDP-1")); return }
         // − removes the highest number even when another monitor holds it.
         layout.workspaceMoved(9, "eDP-1")
         layout.countChangeRequested("HDMI-A-2", -1)
-        if (badges("eDP-1") !== "2,4,5" || badges("HDMI-A-2") !== "1,3,6,7,8") { fail("minus elsewhere"); return }
+        if (badges("eDP-1") !== "2" || badges("HDMI-A-2") !== "1,3,4") { fail("minus elsewhere"); return }
         findObject(tab, "workspacesCancel").clicked()
         if (actions.visible || tab.mode !== "station" || badges("eDP-1") !== "1,3,5") { fail("cancel"); return }
         findObject(tab, "workspaceModeSelector").changed("nonrepetitive")
@@ -193,14 +197,14 @@ ShellRoot {
         findObject(tab, "workspacesApply").clicked()
         if (fakeService.calls.length !== 1 || fakeService.config.workspaceMode !== "nonrepetitive"
             || JSON.stringify(fakeService.config.workspaceLayout.nonrepetitive)
-              !== JSON.stringify({"eDP-1": [2, 3, 4, 5], "HDMI-A-2": [1, 6, 7, 8, 9, 10]})) {
+              !== JSON.stringify({"eDP-1": [2, 3], "HDMI-A-2": [1, 4, 5, 6]})) {
           fail("apply " + JSON.stringify(fakeService.calls)); return
         }
         if (actions.visible) { fail("actions after apply"); return }
         findObject(tab, "workspaceModeSelector").changed("repetitive")
-        if (badges("eDP-1") !== "1,2,3,4,5" || badges("HDMI-A-2") !== "1,2,3,4,5") { fail("repetitive default"); return }
+        if (badges("eDP-1") !== "1,2,3" || badges("HDMI-A-2") !== "1,2,3") { fail("repetitive default"); return }
         for (var i = 0; i < 7; i++) layout.countChangeRequested("eDP-1", 1)
-        for (var j = 0; j < 6; j++) layout.countChangeRequested("HDMI-A-2", -1)
+        for (var j = 0; j < 2; j++) layout.countChangeRequested("HDMI-A-2", -1)
         if (badges("eDP-1") !== "1,2,3,4,5,6,7,8,9,10" || badges("HDMI-A-2") !== "1") { fail("repetitive limits"); return }
         if (findObject(layout, "workspaceStep-eDP-1-up").opacity === 1 || findObject(layout, "workspaceStep-HDMI-A-2-down").opacity === 1) {
           fail("repetitive limit buttons"); return

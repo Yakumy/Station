@@ -20,10 +20,10 @@ Column {
   readonly property bool idle: !!service && service.state === "idle"
   // The modes differ only across monitors, so one monitor locks the selector.
   readonly property bool singleOutput: outputs.length <= 1
-  readonly property int rowCount: 6
-  // Six rows need 64 units each; the extra step keeps both frames equal and the
-  // notes clear without growing the tab's fixed height.
-  readonly property real frameHeight: geometry.frameHeight + Style.spacing.xxxl
+  readonly property int rowCount: 5
+  // Five rows stay visible at the reference size; the rest scroll inside the
+  // control frame so the portrait panel keeps its bottom padding.
+  readonly property real frameHeight: geometry.frameHeight
 
   function savedValues() {
     return JSON.parse(JSON.stringify({
@@ -221,9 +221,17 @@ Column {
         narrow: root.narrow
         id: controlFrame
         height: root.frameHeight
-        Column {
+        Flickable {
           anchors.fill: parent
-          spacing: 0
+          clip: true
+          interactive: contentHeight > height
+          boundsBehavior: Flickable.StopAtBounds
+          contentWidth: width
+          contentHeight: controlRows.height
+          Column {
+            id: controlRows
+            width: parent.width
+            spacing: 0
           Item {
             width: parent.width; height: controlFrame.height / root.rowCount
             PanelUi.ControlLabel { text: "Mode" }
@@ -257,10 +265,28 @@ Column {
               options: [
                 { value: "prefixed", label: root.mode === "station" ? "S1 S2 S3" : "W1 W2 W3" },
                 { value: "number", label: "1 2 3" },
-                { value: "roman", label: "I II III" }
+                { value: "roman", label: "I II III" },
+                { value: "kanji", label: "一 二 三" }
               ]
               foreground: root.tokens.textPrimary
               onChanged: function(value) { root.edit({ indicatorStyle: value }) }
+            }
+            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
+          }
+          Item {
+            id: countRow
+            objectName: "stationCountRow"
+            width: parent.width; height: controlFrame.height / root.rowCount
+            RowLabel { text: "Indicator shown" }
+            RowMessage {
+              objectName: "stationCountNote"
+              text: "1 to 10, default " + Grid.STATION_COUNT
+            }
+            RowDropdown {
+              objectName: "stationCountDropdown"
+              value: String(root.draft.stationCount)
+              options: root.stationOptions()
+              onChanged: function(value) { root.edit({ stationCount: Number(value) }) }
             }
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
@@ -307,26 +333,6 @@ Column {
             Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
           }
           Item {
-            id: countRow
-            objectName: "stationCountRow"
-            width: parent.width; height: controlFrame.height / root.rowCount
-            readonly property bool usable: root.mode === "station"
-            opacity: usable ? 1 : root.tokens.disabledOpacity
-            RowLabel { text: "Stations shown" }
-            RowMessage {
-              objectName: "stationCountNote"
-              text: countRow.usable ? "1 to 10, default " + Grid.STATION_COUNT : "only work with Station mode"
-            }
-            RowDropdown {
-              objectName: "stationCountDropdown"
-              enabled: parent.usable
-              value: String(root.draft.stationCount)
-              options: root.stationOptions()
-              onChanged: function(value) { root.edit({ stationCount: Number(value) }) }
-            }
-            Ui.PanelSeparator { anchors.bottom: parent.bottom; width: parent.width; foreground: Commons.Color.popups.text }
-          }
-          Item {
             id: appsRow
             objectName: "showOpenAppsRow"
             width: parent.width; height: controlFrame.height / root.rowCount
@@ -346,6 +352,7 @@ Column {
               onChanged: function(value) { root.edit({ showOpenApps: value === "on" }) }
             }
           }
+        }
         }
       }
     }

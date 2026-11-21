@@ -75,9 +75,9 @@ Item {
     appliedSettings: host.config.windows
     operationState: host.operation
     configGeneration: host.generation
-    enqueue: function(command, done, generation) {
+    enqueue: function(command, done, generation, input) {
       host.trace.push(command[0] === "sh" ? "save" : "read")
-      host.queue.push({command:command,done:done,generation:generation})
+      host.queue.push({command:command,done:done,generation:generation,input:input})
     }
     publishObserved: function(windows) {
       host.trace.push("publish")
@@ -119,8 +119,11 @@ Item {
       verify(host.windowSettingsBusy); verify(proxy.windowSettingsBusy)
       compare(host.queue.length,1); compare(host.queue[0].generation,1)
       compare(host.queue[0].command[4],"/isolated/.config/hypr/looknfeel.lua")
-      compare(host.queue[0].command[5],"-- personal Lua\\n")
-      verify(host.queue[0].command[6].endsWith("-- personal Lua\\n"))
+      var input = host.queue[0].input
+      compare(host.queue[0].command[5],"16")
+      verify(input.startsWith("-- personal Lua\\n") && input.endsWith("-- personal Lua\\n"))
+      compare(host.queue[0].command[6],String(input.length-16))
+      verify(host.queue[0].command.join("\\n").indexOf("personal") === -1)
       var reloads = Quickshell.reloads
       host.queue.shift().done(0,"")
       compare(Quickshell.reloads,reloads+1)

@@ -2,6 +2,7 @@ import QtQuick
 import "Binds.js" as Binds
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "." as Keys
 import "../panel" as PanelUi
 
@@ -128,7 +129,7 @@ Column {
           wrapMode: keybindingsTab.narrow ? Text.WordWrap : Text.NoWrap
           maximumLineCount: keybindingsTab.narrow ? 2 : 1
           elide: Text.ElideRight
-          color: Color.popups.text
+          color: Commons.Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
         }
@@ -158,7 +159,7 @@ Column {
           maximumLineCount: keybindingsTab.narrow ? 2 : 1
           elide: Text.ElideRight
           // The combo is this row's value, so it carries the emphasis weight.
-          color: keybindingsTab.narrow && parent.conflicted ? Color.urgent : Color.popups.text
+          color: keybindingsTab.narrow && parent.conflicted ? Commons.Color.urgent : Commons.Color.popups.text
           font.family: Style.font.family
           font.pixelSize: Style.font.body
           font.weight: Font.DemiBold
@@ -171,8 +172,8 @@ Column {
           widthFactor: 0.8
           text: "Resolve"
           bordered: true
-          accent: Color.urgent
-          foreground: Color.urgent
+          accent: Commons.Color.urgent
+          foreground: Commons.Color.urgent
           onClicked: {
             var conflicts = keybindingsTab.conflictsFor(bindingGroup.modelData.ids)
             if (conflicts.length) keybindingsTab.beginBindingEdit(conflicts[0])
@@ -187,8 +188,8 @@ Column {
           required property var modelData
           width: bindingGroup.width
           height: conflictContent.implicitHeight + keybindingsTab.tokens.space3 * 2
-          color: Color.menu.selectedBackground
-          borderSpec: Border.flat(Color.urgent, Style.normalBorderWidth)
+          color: Commons.Color.menu.selectedBackground
+          borderSpec: Border.flat(Commons.Color.urgent, Style.normalBorderWidth)
           radius: Style.cornerRadius
           Column {
             id: conflictContent
@@ -202,7 +203,7 @@ Column {
               width: parent.width
               text: conflictRow.modelData.combo + " is used by " + conflictRow.modelData.owners.join(", ")
               wrapMode: Text.WordWrap
-              color: Color.urgent
+              color: Commons.Color.urgent
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
             }
@@ -216,14 +217,14 @@ Column {
               PanelUi.ActionButton {
                 text: "Pick another key"
                 bordered: true
-                foreground: Color.popups.text
+                foreground: Commons.Color.popups.text
                 onClicked: keybindingsTab.beginBindingEdit(conflictRow.modelData)
               }
               PanelUi.ActionButton {
                 text: "Replace and unbind it"
-                accent: Color.urgent
-                background: Color.urgent
-                foreground: Color.popups.background
+                accent: Commons.Color.urgent
+                background: Commons.Color.urgent
+                foreground: Commons.Color.popups.background
                 onClicked: keybindingsTab.service.approveBinding(conflictRow.modelData.combo)
               }
             }
@@ -255,15 +256,15 @@ Column {
                 widthFactor: 0.6
                 text: "Cancel"
                 bordered: true
-                foreground: Color.popups.text
+                foreground: Commons.Color.popups.text
                 onClicked: keybindingsTab.editingBindingId = ""
               }
               PanelUi.ActionButton {
                 widthFactor: 0.6
                 text: "Apply"
-                accent: Color.accent
-                background: Color.accent
-                foreground: Color.popups.background
+                accent: Commons.Color.accent
+                background: Commons.Color.accent
+                foreground: Commons.Color.popups.background
                 onClicked: keybindingsTab.applyBindingEdit()
               }
             }
@@ -279,7 +280,7 @@ Column {
       Ui.PanelSeparator {
         visible: bindingGroup.hasSeparator
         width: parent.width
-        foreground: Color.popups.text
+        foreground: Commons.Color.popups.text
       }
     }
   }

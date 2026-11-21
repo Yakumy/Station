@@ -76,9 +76,11 @@ test('stations, compact mode and open apps are Workspaces tab rows applied with 
   assert.match(tab, /service\.setSetting\("workspaces", JSON\.parse\(JSON\.stringify\(draft\)\)\)/);
   assert.doesNotMatch(settings, /stationAppsMode|minStations|stationCount|compactMode|showOpenApps/,
     'Settings no longer duplicates Workspaces rows');
-  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') > tab.indexOf('objectName: "stationsDirectionDropdown"'));
-  assert.ok(tab.indexOf('objectName: "showOpenAppsDropdown"') > tab.indexOf('objectName: "stationCountDropdown"'));
-  assert.ok(tab.indexOf('objectName: "compactModeDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
+  assert.match(tab, /text: "Indicator shown"/);
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') < tab.indexOf('objectName: "compactModeDropdown"'));
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') < tab.indexOf('objectName: "stationsDirectionDropdown"'));
+  assert.ok(tab.indexOf('objectName: "showOpenAppsDropdown"') > tab.indexOf('objectName: "stationsDirectionDropdown"'));
 
   const context = { config: { compactMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);

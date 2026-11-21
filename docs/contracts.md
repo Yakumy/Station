@@ -126,12 +126,13 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 | Mode | Map | Numbered key `n` | Workspaces |
 | --- | --- | --- | --- |
 | `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `config.stationCount`, 1 to 10, default 3; more appear while they hold a window |
-| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default 5 |
-| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default five each |
+| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default `stationCount` |
+| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default `stationCount` each |
 
-The tab labels `station` as Station. `config.stationCount` lists 1 to 10 stations, default
-3; others appear while they hold a window or are shown. With two outputs the first shows
-the odd numbers 1, 3, 5 and so on.
+The tab labels `station` as Station. `config.stationCount` lists 1 to 10 indicators,
+default 3, in every mode. In Station mode others appear while they hold a window or are
+shown; with two outputs the first shows the odd numbers 1, 3, 5 and so on. In the
+per-monitor modes it is the default count until a connector has its own saved count.
 
 Repetitive counts belong to each connector, so every monitor keeps its own.
 
@@ -703,31 +704,44 @@ file or to `state.json`.
 
 ### Station indicator freshness
 
-A replacement-bar widget samples the service's confirmed station number every 50 ms
-through a detached scalar bridge read. This applies with the panel closed in every
-compact mode. It does not copy the app lists or panel snapshot at that rate, does not
-predict a switch, and never changes the saved station. Full snapshots retain their
-150 ms open/listed and 1 s closed Compact On cadence. The trusted direct-service path
-stays reactive, with no polling. A retired publisher returns no station number.
+The bar reads the station from the workspace Quickshell reports for the compositor,
+not from the service's last confirmed switch: Station mode follows the focused output,
+and Repetitive and Non-repetitive follow their own output. A native workspace change
+(`SUPER+Tab`, scroll, or another indicator) then repaints with the compositor event
+instead of waiting for follow focus and the station batch. A special, named or
+out-of-map workspace keeps the confirmed station. The service still changes
+`currentStation` only after its compositor batch succeeds, so the saved station never
+predicts a switch.
+
+A replacement-bar widget also samples the confirmed scalar every 50 ms through a
+detached bridge read, as the fallback above. It does not copy the app lists or panel
+snapshot at that rate. Full snapshots retain their 150 ms open/listed and 1 s closed
+Compact On cadence. The trusted direct-service path stays reactive, with no polling. A
+retired publisher returns no station number.
 
 ### Open apps
 
-The Workspaces tab sets Station's count (`stationCount`, 1 to 10, default 3),
+The Workspaces tab sets the indicator count (`stationCount`, 1 to 10, default 3),
 `compactMode` and `showOpenApps`, and the indicator style as `indicatorStyle`:
-`prefixed` (S1, or W1 outside Station mode), `number` or `roman`.
+`prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
+`kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
+font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
-`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. The old
+`showOpenApps` (default on) adds app icons in Off and On hover; On shows none. With open
+apps off, the numbers use Omarchy's own workspace gap: one spacing step between columns
+and two between rows, with no gap left behind for the hidden app column. The old
 `stationAppsMode` loads as Always on → Off, On hover → On hover, Off → On without apps.
 
-In Station mode every bar shows the station. In Repetitive and Non-repetitive each bar
-shows its own output: its own numbers, the one it shows and the apps on them, and a
-click shows that number on that output. It reads the shown workspace from Quickshell's
-monitor and refreshes it on workspace events, because Omarchy's indicator, which would
-otherwise refresh it, is usually hidden.
+In Station mode every bar shows the focused output's station. In Repetitive and
+Non-repetitive each bar shows its own output: its own numbers, the one it shows and the
+apps on them, and a click shows that number on that output. It reads the shown
+workspace from Quickshell's monitor and refreshes it on workspace events, because
+Omarchy's indicator, which would otherwise refresh it, is usually hidden.
 
-- Off lists every available number with no chevron. Omarchy's tiling square glyph
-  (U+F14FB), drawn by `WidgetButton` at Omarchy's icon size, stands for the current one,
-  as in Omarchy's indicator.
+- Off lists every available number with no chevron. Whenever every number is visible —
+  Off, or On hover while the drawer is open — Omarchy's tiling square glyph (U+F14FB),
+  drawn by `WidgetButton` at Omarchy's icon size, stands for the current one, whatever
+  the indicator style, as in Omarchy's indicator.
 - As in Omarchy's indicator, a number that is not shown and has no window is drawn at
   half opacity, so the current one reads as active.
 - On hover shows the current number and a chevron, and reveals the rest, with one icon
@@ -891,8 +905,8 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
   drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Portrait drawers are 72 scaled units high (the sum of both divider gaps). Buttons are horizontally centered. A message sits under them in caption type, at most two lines, and the buttons and message are vertically centered together. `lib/panel/ActionDrawer.qml` owns every feature drawer and the preview strip, and positions its children with `x`/`y` only: switching anchors at runtime once left Keep unpainted in a live portrait preview. Keybindings rows keep the label on the left and right-align the combo; a conflict is shown in the combo color, the conflict card's choices stack centered, and Cancel/Apply sit centered under the editor. Center landscape
   uses the output's full-screen card and stays clear of the bar on small screens.
-- Settings holds the two Show switches, panel style,
-  and the installed version. Compact mode, Stations shown and open apps are on the
+- Settings holds the three Show switches, panel style,
+  and the installed version. Compact mode, Indicator shown and open apps are on the
   Workspaces tab.
 - The Workspaces tab's monitor positions are fixed: no monitor drag and no selection,
   only zoom and pan. Each output centers its name; managed workspaces and count
@@ -904,16 +918,16 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   only the last monitor has them: + adds the next number to it, − removes the highest
   number, wherever it is, while its monitor keeps one. Non-repetitive badges drag onto
   another monitor, which then owns that number; each monitor keeps 1 to 10.
-- The Workspaces frame has six equal-height dropdown rows: Mode, Indicator style,
-  Compact mode, Stations Direction, Stations shown and Show open apps. Titles sit at
-  the top left, dropdowns use the shared inset width, and hints sit at the bottom left.
-  Mode defaults to Station; Compact mode defaults to On hover. Direction moves from
-  Displays to this draft and retains LTR, RTL, TTB and BTT. It is disabled outside
-  Station mode with "only work with Station mode". Stations shown offers 1 to 10 and
-  defaults to 3, the previous fixed count; it is disabled outside Station mode with the
-  same note. Show open apps offers Off and On and is disabled with Compact mode On,
-  retaining its saved preference. Mode retains the single-output restriction and the
-  Non-repetitive drag hint.
+- The Workspaces frame shows five equal-height dropdown rows at a time: Mode,
+  Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
+  scroll inside the frame. Titles sit at the top left, dropdowns use the shared inset
+  width, and hints sit at the bottom left. Mode defaults to Station; Compact mode
+  defaults to On hover. Direction moves from Displays to this draft and retains LTR,
+  RTL, TTB and BTT; it is disabled outside Station mode with "only work with Station
+  mode". Indicator shown offers 1 to 10, defaults to 3, and applies in every mode. Show
+  open apps offers Off and On and is disabled with Compact mode On, retaining its saved
+  preference. Mode retains the single-output restriction and the Non-repetitive drag
+  hint.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.

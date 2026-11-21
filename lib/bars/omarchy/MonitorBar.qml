@@ -1188,17 +1188,7 @@ Item {
       var target = clickTargets[i]
       if (!moduleTargetClickable(target)) continue
 
-      var targetPoint = { x: localX, y: localY }
-      try {
-        targetPoint = slot.mapToItem(target, localX, localY)
-      } catch (e) {
-        continue
-      }
-
-      if (targetPoint.x >= 0 && targetPoint.x <= target.width &&
-          targetPoint.y >= 0 && targetPoint.y <= target.height) {
-        return target
-      }
+      if (BarModel.itemContainsPoint(target, slot, localX, localY)) return target
     }
 
     if (moduleTargetClickable(slot.activeItem)) return slot.activeItem
@@ -2166,7 +2156,11 @@ Item {
       ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize / inheritedScale) : 0
     width: implicitWidth
     height: implicitHeight
-    clip: true
+    // Clip only what overflows a slot on purpose: the old tray's reserved
+    // drawer is shifted out of view, and a dragged widget lifts out. Omarchy's
+    // bar clips only while dragging too, and its Indicators widget hovers from
+    // past its own edges, which a clipped slot would never deliver.
+    clip: slot.trayFlowInset > 0 || slot.dragSource
     z: modulePointer.dragging ? 100 : 0
 
     Component.onCompleted: root.registerModuleSlot(slot)

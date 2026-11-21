@@ -35,7 +35,7 @@ esac
   fs.writeFileSync(toggle,flag); fs.writeFileSync(monitors,'before\n');
   fs.writeFileSync(candidate,'after\n'); fs.writeFileSync(plain,'old plain\n'); fs.writeFileSync(token,'');
   return {dir,bin,toggle,monitors,candidate,plain,token,log,env,command,
-    run(extra={},expected=flag) { return spawnSync('sh',['-c',T.keep,'sh',candidate,monitors,candidate,plain,token,'before\n',toggle,expected],{env:{...env,...extra},encoding:'utf8'}); }};
+    run(extra={},expected=flag) { const p=T.stdinParts(['before\n',expected]); return spawnSync('sh',['-c',T.keep,'sh',candidate,monitors,candidate,plain,token,p.sizes[0],toggle,p.sizes[1]],{input:p.input,env:{...env,...extra},encoding:'utf8'}); }};
 }
 test('only the exact Omarchy internal Off flag is cleared when its output is explicitly enabled',()=>{
   assert.equal(L.disableToggleToClear(flag,displays,options),flag);
@@ -127,7 +127,8 @@ test('the Off flag is parked only when a preview leaves no external output enabl
     assert.equal(park(source,{mode:'single',singleTarget:'eDP-1',enabled:['eDP-1','HDMI-A-2']}),'');
 });
 function parkRun(f,expected=flag,extra={}) {
-  return spawnSync('sh',['-c',T.parkToggle,'sh',f.toggle,join(f.dir,'parked'),expected],{env:{...f.env,...extra},encoding:'utf8'});
+  const p=T.stdinParts([expected]);
+  return spawnSync('sh',['-c',T.parkToggle,'sh',f.toggle,join(f.dir,'parked'),p.sizes[0]],{input:p.input,env:{...f.env,...extra},encoding:'utf8'});
 }
 test('parking moves the exact flag with watches suspended and restores autoreload',t=>{
   const f=fixture(t),r=parkRun(f); assert.equal(r.status,0,r.stderr);

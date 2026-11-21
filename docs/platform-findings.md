@@ -276,6 +276,11 @@ targets. Final live rendering and bar-rebuild behavior await user acceptance.
 - Monitor `description`, `make`, `model`, `serial` come from EDID and are untrusted: matching and display only, never interpolated into Lua, argv or file text without a proper serialiser. Connector names (`^[A-Za-z0-9_.:-]{1,64}$`) are kernel-generated and may be used once validated.
 - Omarchy has itself shipped a fix for USB device names being executed as Hyprland Lua.
 - `execDetached` and `Process` use argv arrays; shell templates take positional arguments only.
+- Process arguments are visible to other local accounts, so file text goes on stdin. [TESTED]
+  on Quickshell 0.3.2: with `stdinEnabled` set before the start, `write()` in `onStarted`
+  delivers the text as UTF-8, and `stdinEnabled = false` closes stdin, so `head -c` reads
+  exact byte counts and later reads see end of input. A child that exits without
+  reading stdin leaves the shell unharmed, and the next `Process` runs normally.
 - The cleanup and Keep scripts refuse symlinked targets, write temp files then `mv`, and keep timestamped backups (last five).
 
 ## 11. Known traps (consolidated)
@@ -1336,6 +1341,26 @@ lcms2, and judged on screen by the maintainer.
   compositor execution and frame scheduling; the isolated timer result does not
   measure those paths.
 
+## Station indicator live workspace (2026-11-20)
+
+- **[LIVE]** A standalone Quickshell probe on the installed session received
+  `workspacev2` with `Hyprland.focusedMonitor.activeWorkspace.id` already at the new
+  workspace in the same delivery. The older `workspace` event still carried the
+  previous workspace. This is the source the bar label now reads in Station mode.
+- **[LIVE]** Screenshots of the installed bar changed the number between 121 and
+  178 ms after a native relative workspace switch (the follow-focus path), and within
+  86 ms after an IPC station switch.
+- **[SRC]** `StationBar` derives the number from the focused output's live workspace,
+  so the display no longer waits for the 100 ms follow-focus debounce, the snapshot or
+  the station batch. `currentStation` still waits for the compositor batch.
+- **[QTTEST]** `grid.test.cjs` covers the live station, the out-of-map fallback, a
+  Repetitive map and a missing map. `panel-composition` still covers the confirmed
+  scalar fallback on the bridge and direct paths.
+- **[LIVE]** After installing this change, the collapsed bar changed 一 to 二 in the
+  first screenshot, 23 ms after a native relative workspace switch. The service's
+  confirmed station followed at 157 ms. The switch was a synthetic Hyprland dispatch,
+  so this measures the indicator path, not a physical key press.
+
 ## Theme switching with a chosen background (2026-11-16)
 
 - **[SRC]** `omarchy-theme-set` (omarchy-dev on 2026-11-16) chooses a new theme's
@@ -1386,3 +1411,88 @@ lcms2, and judged on screen by the maintainer.
   both tray shapes, horizontal and vertical, collapsed to fully revealed.
 - **[INFER]** The tray on the maintainer's 4.5.0-3 desktop is expected to show again
   after the update; the installed bar is the check.
+
+## Four outputs (2026-11-21)
+
+- **[UNIT]** GitHub issue #14. `four-outputs.test.cjs` runs the reporter's four
+  monitors through lane assignment, all three workspace modes, the window plan and the
+  monitor block. The `layout` harness renders their geometry, two outputs rotated
+  around an ultrawide, and checks that the role menu offers 1 to 4.
+- **[LIVE]** A Hyprland headless output stands in for a fourth monitor:
+  `hyprctl output create headless STATIONTEST`, then `hyprctl output remove STATIONTEST`.
+  On the maintainer's three-monitor desktop in Sync mode, it got lane 4, its bar and
+  workspace rules 4, 8 … 40, and `configerrors` stayed empty. The six windows kept
+  their output and station: workspace 8 moved to 10 and 6 to 7. `switchStation 2`
+  showed 5 to 8 on all four outputs. Removal returned every window to its original
+  workspace and left `monitors.lua` unchanged.
+- **[LIVE]** Removal leaves two things behind. Runtime workspace rules 31 to 40 stay
+  until a reload, because Hyprland cannot delete one runtime rule. Any shrink does the
+  same, for example 21 to 30 when three outputs become two. The lane preference
+  `display@STATIONTEST` also stays in `config.json`, as for any absent monitor. After a
+  test, run `hyprctl reload`, remove that key and restart the shell.
+
+## Ten-bit outputs (2026-11-21)
+
+- **[SRC]** `hl.monitor` takes `bitdepth` (`/usr/share/hypr/stubs/hl.meta.lua`), and
+  Omarchy's example is `bitdepth = 10`. `hyprctl monitors -j` reports the result as
+  `currentFormat`: `XRGB8888` at 8 bits, a `…2101010` format at 10.
+- **[LIVE]** `Hyprland --verify-config -c` on Hyprland 0.57.2 answers `config ok` for
+  Station's Extend, Mirror and Single blocks with `bitdepth = 10`. It rejects an unknown
+  field (`hl.monitor: unknown field 'bitdepthx'`), so the check reads the field. It
+  starts no compositor and changes no output.
+- **[INFER]** The maintainer has no 10-bit monitor. Whether a real output stays at 10
+  bits through a Keep and a reload is unverified. GitHub issue #14 reported the drop.
+
+## Third-party widget services (2026-11-21)
+
+- **[SRC]** GitHub issue #23. In the installed `/usr/share/omarchy/shell/shell.qml`
+  and in upstream `omacom/omarchy` `shell/shell.qml`, `pluginShellForBarEntry()`
+  creates its `PluginShellApi` without `_serviceLookup`, so `serviceFor()` returns
+  null. A full-bar plugin's own facade has no `pluginShellForId()`, and its
+  `serviceFor()` answers only for its own id. Station has no way to hand a hosted
+  widget that widget's service.
+- **[SRC]** The reporter's `ssupt.audio-control` disables its sliders, mute and wheel
+  when its service is null. The same widget works under Omarchy's bar, which calls
+  `pluginShellForId()` on the shell root.
+- **[SRC]** Omarchy's bar finds click targets with `Util.itemContainsPoint`, which
+  honours clipping and ancestor visibility. Station compared the target's rectangle
+  only, so a collapsed tray drawer's icons, laid out past its clipped edge, could take
+  a click meant for a visible icon. `bar-click-target.test.cjs` covers the port.
+- **[QTTEST]** A `qmltestrunner` probe on Qt 6.12: an inner `MouseArea` with `onWheel`
+  under a full-size left-button `MouseArea` with no wheel handler, as in Station's
+  slot, received the wheel. Forwarding the wheel as well would deliver every step
+  twice, so Station does not. This was a probe of Qt's delivery, not of the production
+  bar.
+- **[SRC]** Upstream already tracks the facade: omacom/omarchy#13289 (with #11051,
+  #11796 and #12648) and the open fix omacom/omarchy#13471, which gives
+  `pluginShellForBarEntry()` an own-service-only `_serviceLookup`. Upstream `master`
+  `shell/shell.qml` (last changed 2026-11-16) still lacks it. Station issue #23 stays
+  open until that lands; Station needs no change for it.
+
+## Indicator hover past a clipped slot (2026-11-21)
+
+- **[SRC]** GitHub PR #21. Omarchy's `Indicators.qml` puts its `hiddenBlockZone`
+  `HoverHandler` past the widget's own edge, by the length of the inactive icons. With
+  no active indicator the widget is 0 px wide, so that zone is the only hover target.
+  Omarchy's `Bar.qml` clips a slot's widget area only while dragging or removing.
+- **[QTTEST]** A `qmltestrunner` probe on Qt 6.12: a `HoverHandler` on a child reaching
+  past a 0-wide parent never reported `hovered` when the parent clipped, and did when
+  it did not. Station's slot clipped always, so the inactive indicators never revealed.
+  This was a probe of Qt's delivery, not of the production bar.
+- **[SRC]** Station's slot now clips only while dragged or while it holds the old
+  tray's reserved drawer, so the #23 drawer case keeps its clip.
+
+## Qt 6.12 `Color` singleton (2026-11-21)
+
+- **[SRC]** GitHub issue #24. qt6-declarative 6.12.0 exports `QtQuick/Color 6.12` in
+  `QtQuick/plugins.qmltypes`. Of the names in `qs.Commons`, only `Color` collides.
+- **[LIVE]** On this machine (qt6-declarative 6.12.0-4, quickshell 0.3.2),
+  `omarchy agent look plugin` on Station 4.2.2 logged 20 errors such as
+  `DisplayLayout.qml[17:-1]: TypeError: Cannot read property 'background' of undefined`
+  and `Unable to assign [undefined] to QColor`, from 13 files that used a bare `Color`.
+  With every use written as `Commons.Color` it logs none.
+- **[QTTEST]** The QML harnesses did not catch it. `panel-composition` fails on any
+  `TypeError` or `Unable to assign`, yet passed on 4.2.2 with none logged: the harnesses
+  load stand-in `qs.Commons` modules, where the collision did not appear. Why the stand-in
+  resolves differently is unexplained [INFER: module resolution order]. Only the
+  real shell shows the bug. `qt-color-shadow.test.cjs` now rejects a bare `Color.`.

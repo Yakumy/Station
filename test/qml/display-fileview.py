@@ -28,8 +28,13 @@ with tempfile.TemporaryDirectory(prefix="station-display-files-") as folder:
 Item {
   property var command: []
   property bool running: false
+  property bool stdinEnabled: false
+  property string written: ""
   property var stderr: null
+  signal started()
   signal exited(int code)
+  onRunningChanged: if (running) { written = ""; started() }
+  function write(data) { if (stdinEnabled) written += data }
   function finish(code) { running=false; exited(code) }
 }
 ''')

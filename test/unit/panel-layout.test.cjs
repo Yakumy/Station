@@ -9,6 +9,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   const displays = read('lib/displays/DisplaysTab.qml');
   const bindings = read('lib/keybindings/KeybindingsTab.qml');
   const settings = read('lib/panel/SettingsTab.qml');
+  const workspaces = read('lib/stations/WorkspacesTab.qml');
   const wallpaper = read('lib/wallpaper/WallpaperTab.qml');
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
@@ -20,7 +21,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
   assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
   assert.match(panel, /value: tabScroll\.contentHeight > tabScroll\.height/);
-  assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Color\.popups\.text/);
+  assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Commons\.Color\.popups\.text/);
   assert.doesNotMatch(panel, /prefix: "Mode: "/);
   assert.match(displays, /prefix: "Mode: "/);
   assert.doesNotMatch(panel, /prefix: "Direction: "/);
@@ -41,6 +42,9 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /displayWidgetEnabled !== false/);
   assert.match(settings, /setSetting\("hideDisplay", checked\)/);
   assert.match(settings, /Installed version/);
+  assert.match(workspaces, /readonly property int rowCount: 5/);
+  assert.match(workspaces, /readonly property real frameHeight: geometry\.frameHeight/);
+  assert.match(workspaces, /Flickable \{[\s\S]*?contentHeight: controlRows\.height/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
   assert.match(wallpaper, /anchors\.horizontalCenter: parent\.horizontalCenter[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
@@ -54,7 +58,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.doesNotMatch(wallpaper, /prefix: "Mode: "/);
   assert.doesNotMatch(wallpaper, /Drag the monitor group|Updates with Omarchy theme|Keeps these images/);
   assert.doesNotMatch(wallpaper, /text: "(?:−|\+|Fit)"/);
-  assert.match(wallpaper, /noticeError \? Color\.urgent : root\.tokens\.textDim/);
+  assert.match(wallpaper, /noticeError \? Commons\.Color\.urgent : root\.tokens\.textDim/);
   assert.match(wallpaper, /if \(owner\.choose\(target\)\) root\.dismiss\(\)/);
 });
 

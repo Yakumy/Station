@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Ui as Ui
 import qs.Commons
+import qs.Commons as Commons
 import "../panel" as PanelUi
 
 // Deliberately contains no editable text control: Qt text inputs can retrieve
@@ -52,7 +53,7 @@ FocusScope {
       objectName: "captureKey"
       text: root.capturing ? "Press a key…" : (root.value || "Choose key")
       tooltipText: root.notice || "Press the key alone; choose modifiers with the chips. Escape cancels."
-      foreground: Color.popups.text
+      foreground: Commons.Color.popups.text
       bordered: true
       focusable: true
       enabled: root.available

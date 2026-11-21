@@ -40,7 +40,7 @@ Item {
       var display = MonitorsLua.validateDisplay({ name: target, mode: Model.currentMode(monitor),
         availableModes: monitor.availableModes, x: Math.round(Number(monitor.x) || 0),
         y: Math.round(Number(monitor.y) || 0), scale: Number(monitor.scale),
-        transform: Number(monitor.transform), enabled: true, lane: lanes[target] || 1 })
+        transform: Number(monitor.transform), bitdepth: Model.bitDepth(monitor), enabled: true, lane: lanes[target] || 1 })
       screenRecoveryRule = MonitorsLua.monitorRule(display, { disabled: false, mirror: "" })
       screenRecoveryTarget = target
       screenRecoveryActive = true
