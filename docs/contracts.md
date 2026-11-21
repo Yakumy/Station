@@ -759,9 +759,10 @@ apps on them, and a click shows that number on that output. It reads the shown
 workspace from Quickshell's monitor and refreshes it on workspace events, because
 Omarchy's indicator, which would otherwise refresh it, is usually hidden.
 
-- Off lists every available number with no chevron. Omarchy's tiling square glyph
-  (U+F14FB), drawn by `WidgetButton` at Omarchy's icon size, stands for the current one,
-  as in Omarchy's indicator.
+- Off lists every available number with no chevron. Whenever every number is visible —
+  Off, or On hover while the drawer is open — Omarchy's tiling square glyph (U+F14FB),
+  drawn by `WidgetButton` at Omarchy's icon size, stands for the current one, whatever
+  the indicator style, as in Omarchy's indicator.
 - As in Omarchy's indicator, a number that is not shown and has no window is drawn at
   half opacity, so the current one reads as active.
 - On hover shows the current number and a chevron, and reveals the rest, with one icon

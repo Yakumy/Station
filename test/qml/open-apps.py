@@ -67,6 +67,7 @@ ShellRoot {
         var hiddenApp = findChild(bar, "stationApp-a")
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        verify(!current.square)
         verify(current.interactive)
         verify(!hiddenPrevious.interactive)
         verify(!hiddenApp.interactive)
@@ -91,6 +92,10 @@ ShellRoot {
         verify(current.mapToItem(drawer, 0, 0).x > 0)
         tryVerify(function() { return bar.revealProgress === 1 }, 1000)
         verify(Math.abs(current.mapToItem(drawer, 0, 0).x - bar.currentOffset) < 0.001)
+        // Revealing every number replaces the current indicator with Omarchy's
+        // tiling square, whatever the indicator style.
+        verify(current.square)
+        compare(current.text, "\\udb85\\udcfb")
         verify(hiddenPrevious.interactive)
         verify(hiddenApp.interactive)
         verify(bar.width > collapsed)
@@ -109,6 +114,12 @@ ShellRoot {
         compare(bar.appSize, bar.indicatorInk.height)
         verify(bar.appSize <= bar.indicatorInk.height)
         verify(Math.abs(app.width - bar.appSize) < 0.001)
+        bar.indicatorStyle = "roman"
+        wait(50)
+        verify(current.square)
+        compare(current.text, "\\udb85\\udcfb")
+        bar.indicatorStyle = "prefixed"
+        wait(50)
         var captured = false
         bar.grabToImage(function(result) {
           result.saveToFile("/tmp/station-drawer-preview.png")
@@ -128,6 +139,7 @@ ShellRoot {
         compare(findChild(bar, "stationLabel-2"), current)
         compare(current.opacity, 1)
         compare(current.mapToItem(drawer, 0, 0).x, 0)
+        verify(!current.square)
         // With open apps off, the hidden apps column contributes no gap, and the
         // remaining numbers keep Omarchy's own one-step workspace gap.
         bar.showOpenApps = false

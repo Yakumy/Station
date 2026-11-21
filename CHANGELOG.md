@@ -1,3 +1,9 @@
+# Unreleased
+
+- Show Omarchy's tiling square for the current workspace whenever every number is
+  visible: compact Off, or On hover while the drawer is open. It now replaces the
+  indicator label too.
+
 # 4.3.2 — Omarchy's gap without open apps
 
 - Keep the bar's workspace numbers at Omarchy's own gap when Show open apps is off. The
