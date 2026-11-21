@@ -389,7 +389,7 @@ Item {
     active: root.config.compactMode !== "on"
     mapping: root.workspaceMap
     pending: root.workspaceData.pending
-    minimum: Grid.STATION_COUNT
+    minimum: Grid.stationCount(root.config.stationCount)
     current: root.currentStation
   }
 
@@ -436,7 +436,7 @@ Item {
   function targetMapping() {
     var options = state === "previewing" && previewApplied ? previewApplied.options : config
     return Grid.mapping(monitors, lanes, options, { mode: config.workspaceMode, layout: config.workspaceLayout,
-      blocks: omarchyBlocks })
+      count: config.stationCount, blocks: omarchyBlocks })
   }
 
   function monitorSignature() {
@@ -543,6 +543,11 @@ Item {
       if (value.direction !== undefined) {
         if (["ltr", "rtl", "ttb", "btt"].indexOf(value.direction) === -1) return "invalid"
         next.direction = value.direction
+      }
+      if (value.stationCount !== undefined) {
+        var stations = Number(value.stationCount)
+        if (!Number.isInteger(stations) || stations < 1 || stations > Grid.MAX_STATIONS) return "invalid"
+        next.stationCount = stations
       }
       if (value.workspaceLayout !== undefined) next.workspaceLayout = Store.workspaceLayout(value.workspaceLayout)
       if (value.indicatorStyle !== undefined) {
@@ -658,7 +663,7 @@ Item {
       return !m.disabled && (m.mirrorOf === undefined || m.mirrorOf === null || m.mirrorOf === ""
         || m.mirrorOf === "none" || String(m.mirrorOf) === "-1")
     }).map(function(m) { return String(m.name) })
-    var adopted = Grid.adopt(rules, outputs)
+    var adopted = Grid.adopt(rules, outputs, config.stationCount)
     if (adopted) {
       config = Object.assign({}, config, { workspaceMode: adopted.mode,
         workspaceLayout: Store.workspaceLayout(adopted.layout) })

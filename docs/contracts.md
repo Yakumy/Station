@@ -62,7 +62,7 @@ Consequences:
 | Concept | Meaning | Stored |
 | --- | --- | --- |
 | Identity | Key from `description`. If two connected monitors share it, append `@<connector>`. | `config.json` |
-| Lane (1 to 4) | Preferred order of an output | `config.json` |
+| Lane (1 to 3) | Preferred order of an output | `config.json` |
 | Slot | Current dense index in the committed map | `workspace-map.json` |
 | Role | Displayed ordinal of a lane among those present | Never |
 
@@ -125,12 +125,14 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 
 | Mode | Map | Numbered key `n` | Workspaces |
 | --- | --- | --- | --- |
-| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | Three stations, fixed |
-| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default 5 |
-| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default five each |
+| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `config.stationCount`, 1 to 10, default 3; more appear while they hold a window |
+| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default `stationCount` |
+| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default `stationCount` each |
 
-The tab labels `station` as Station. Station offers stations 1 to 3; others appear while
-they hold a window or are shown. With two outputs the first shows 1, 3 and 5.
+The tab labels `station` as Station. `config.stationCount` lists 1 to 10 indicators,
+default 3, in every mode. In Station mode others appear while they hold a window or are
+shown; with two outputs the first shows the odd numbers 1, 3, 5 and so on. In the
+per-monitor modes it is the default count until a connector has its own saved count.
 
 Repetitive counts belong to each connector, so every monitor keeps its own.
 
@@ -181,8 +183,8 @@ number at an outer edge.
 
 ### Which stations exist
 
-`existing = {1..3} ∪ {stations with a grid client} ∪ {stations displayed}`. Keys still
-reach stations 4 to 10. Repetitive steps through the focused
+`existing = {1..stationCount} ∪ {stations with a grid client} ∪ {stations displayed}`.
+Keys still reach stations 4 to 10. Repetitive steps through the focused
 output's own count, its occupied numbers and the one it shows. Non-repetitive steps
 through 1 to the total, every occupied number and every shown number. The bar lists the
 same numbers.
@@ -199,13 +201,9 @@ Each window keeps its station and physical output, and its workspace ID changes.
 Mirror, the role selects the source: a swap applies the new source and sink before
 migrating, so no destination is still a sink.
 
-### More than four outputs
+### More than three outputs
 
-Station manages at most four enabled, non-mirrored outputs. `Model.MAX_MONITORS`,
-`Grid.MAX_OUTPUTS` and `MonitorsLua.MAX_LANE` hold the limit and must agree. With four
-outputs, Sync writes workspace rules 1 to 40, Repetitive uses Omarchy blocks 0 to 3, and
-Non-repetitive starts at five workspaces each, which fills its 20-workspace total. A
-fifth output is **unmanaged**.
+Station manages at most three enabled, non-mirrored outputs. A fourth is **unmanaged**.
 Station excludes it from follow focus, lane lookup, window actions and reconciliation,
 never touches its windows, and never disables anything by itself. The `status` IPC
 reports it.
@@ -409,12 +407,6 @@ The block sits at the **beginning** of `monitors.lua`, so later personal rules w
   briefly enable a disabled output.
 - The service never enforces the mode afterward.
 - `mode` must be an exact element of that monitor's `availableModes`.
-- A rule that carries geometry also carries `bitdepth = 10` when Hyprland reports the
-  output's `currentFormat` as a `…2101010` format. Station keeps that depth but never
-  sets it. Without the field Hyprland drives the output at 8 bits, so rewriting the
-  rule without it would drop a 10-bit monitor. Rules without geometry merge into the
-  existing rule and leave the depth alone. Blocks written before 4.2.1 have no field
-  and still parse.
 
 An older block at the end of the file migrates once, with a backup and a source
 comparison. That upgrade applies the current Lua, which clears old runtime appearance
@@ -671,25 +663,6 @@ to the outer edges of the center box inserts into the corresponding flanking
 section. The tray drawer accepts widgets and cannot contain its own hosting tray.
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 
-A click on a widget's slot goes to the topmost registered click target under the
-pointer, by the same hit test as Omarchy's bar: the target's own shape, every
-ancestor visible, opaque and enabled, and every clipping ancestor containing the
-point. The slot's overlay takes the left button only and has no wheel handler, so
-the wheel reaches the widget directly. Station never forwards it.
-
-A widget slot clips only while it is dragged or holds the old tray's reserved drawer,
-as Omarchy's bar clips only while dragging or removing. Omarchy's Indicators widget
-hovers from past its own edges to reveal its inactive icons, and a clipping slot would
-never deliver that hover.
-
-A third-party widget gets its `bar.shell` from Omarchy's `pluginShellForBarEntry()`.
-That facade has no service lookup, so `bar.shell.serviceFor()` returns null under
-Station's bar, even for the widget's own id. Omarchy builds it that way for every
-replacement bar, and only Omarchy's own bar can request a facade with a service.
-A widget that needs its service, such as a clone of `omarchy.audio`, shows but
-cannot act. Station cannot reach another plugin's service and does not start a
-second copy of one. The fix has to come from Omarchy.
-
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |
@@ -748,8 +721,9 @@ retired publisher returns no station number.
 
 ### Open apps
 
-The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
-`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
+The Workspaces tab sets the indicator count (`stationCount`, 1 to 10, default 3),
+`compactMode` and `showOpenApps`, and the indicator style as `indicatorStyle`:
+`prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
 `kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
 font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
@@ -931,8 +905,9 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   Station header from its wheel-scrollable tab rail; no scrollbar is visible. Its action
   drawer alone adds card height while Keep/Revert or Cancel/Apply is needed. Portrait drawers are 72 scaled units high (the sum of both divider gaps). Buttons are horizontally centered. A message sits under them in caption type, at most two lines, and the buttons and message are vertically centered together. `lib/panel/ActionDrawer.qml` owns every feature drawer and the preview strip, and positions its children with `x`/`y` only: switching anchors at runtime once left Keep unpainted in a live portrait preview. Keybindings rows keep the label on the left and right-align the combo; a conflict is shown in the combo color, the conflict card's choices stack centered, and Cancel/Apply sit centered under the editor. Center landscape
   uses the output's full-screen card and stays clear of the bar on small screens.
-- Settings holds the two Show switches, panel style,
-  and the installed version. Compact mode and open apps are on the Workspaces tab.
+- Settings holds the three Show switches, panel style,
+  and the installed version. Compact mode, Indicator shown and open apps are on the
+  Workspaces tab.
 - The Workspaces tab's monitor positions are fixed: no monitor drag and no selection,
   only zoom and pan. Each output centers its name; managed workspaces and count
   controls occupy the upper half.
@@ -943,14 +918,16 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   only the last monitor has them: + adds the next number to it, − removes the highest
   number, wherever it is, while its monitor keeps one. Non-repetitive badges drag onto
   another monitor, which then owns that number; each monitor keeps 1 to 10.
-- The Workspaces frame has five equal-height dropdown rows: Mode, Indicator style,
-  Compact mode, Stations Direction and Show open apps. Titles sit at the top left,
-  dropdowns use the shared inset width, and hints sit at the bottom left.
-  Mode defaults to Station; Compact mode defaults to On hover. Direction moves from
-  Displays to this draft and retains LTR, RTL, TTB and BTT. It is disabled outside
-  Station mode with "only work with Station mode". Show open apps offers Off and On
-  and is disabled with Compact mode On, retaining its saved preference.
-  Mode retains the single-output restriction and the Non-repetitive drag hint.
+- The Workspaces frame shows five equal-height dropdown rows at a time: Mode,
+  Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
+  scroll inside the frame. Titles sit at the top left, dropdowns use the shared inset
+  width, and hints sit at the bottom left. Mode defaults to Station; Compact mode
+  defaults to On hover. Direction moves from Displays to this draft and retains LTR,
+  RTL, TTB and BTT; it is disabled outside Station mode with "only work with Station
+  mode". Indicator shown offers 1 to 10, defaults to 3, and applies in every mode. Show
+  open apps offers Off and On and is disabled with Compact mode On, retaining its saved
+  preference. Mode retains the single-output restriction and the Non-repetitive drag
+  hint.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.
@@ -1023,15 +1000,6 @@ Preferences, state, backups and wallpaper copies remain.
 
 - Use argv arrays or fixed scripts with validated positional arguments. Never interpolate
   device text into shell or Lua.
-- Never put file text in argv, where another local account can read it from the process
-  list. A transaction that compares or writes `monitors.lua`, `looknfeel.lua`, the
-  Omarchy Off flag or the Color Match file reads the text from stdin.
-  `Transactions.stdinParts` sends the parts in order and argv carries only each part's
-  UTF-8 byte length. The script reads each part with `read_part` and then requires
-  end of input with `end_input`. A short, overlong or malformed input exits 2 before
-  the target changes. `CompositorLane.enqueue` takes the text as its fourth argument,
-  writes it once the process starts and then closes stdin. Keep writes its own
-  `Process` stdin the same way.
 - **Connector:** must match `^[A-Za-z0-9_.:-]{1,64}$`, then may reach Lua (escaped) or argv.
 - **EDID-derived fields** (`description`, `make`, `model`, `serial`) are untrusted: use
   them for matching and display only.

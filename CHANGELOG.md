@@ -1,3 +1,10 @@
+# Unreleased
+
+- Add an Indicator shown setting to the Workspaces tab, 1 to 10, defaulting to three.
+  It sets how many indicators the bar lists in every mode; more appear while they hold
+  a window. The row sits next to Indicator style, and the controls scroll after five
+  visible rows so the portrait panel keeps its padding.
+
 # 4.3.4 — Omarchy's indicators reveal on hover
 
 - Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.

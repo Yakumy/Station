@@ -351,5 +351,5 @@ test('the service reads the rules once, before its first start, only on a fresh 
   assert.ok(start.indexOf('store.fresh && !workspaceRulesRead') < start.indexOf('started = true'));
   assert.ok(start.indexOf('started = true') < start.indexOf('workspaceAuthority.claim()'));
   assert.match(service, /command: \["hyprctl", "workspacerules", "-j"\]/);
-  assert.match(service, /Grid\.adopt\(rules, outputs\)/);
+  assert.match(service, /Grid\.adopt\(rules, outputs, config\.stationCount\)/);
 });

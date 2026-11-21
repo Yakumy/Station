@@ -9,6 +9,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   const displays = read('lib/displays/DisplaysTab.qml');
   const bindings = read('lib/keybindings/KeybindingsTab.qml');
   const settings = read('lib/panel/SettingsTab.qml');
+  const workspaces = read('lib/stations/WorkspacesTab.qml');
   const wallpaper = read('lib/wallpaper/WallpaperTab.qml');
 
   assert.doesNotMatch([displays, bindings, settings].join('\n'), /\b(?:ScrollView|Flickable|ListView)\s*\{/);
@@ -41,6 +42,9 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(settings, /displayWidgetEnabled !== false/);
   assert.match(settings, /setSetting\("hideDisplay", checked\)/);
   assert.match(settings, /Installed version/);
+  assert.match(workspaces, /readonly property int rowCount: 5/);
+  assert.match(workspaces, /readonly property real frameHeight: geometry\.frameHeight/);
+  assert.match(workspaces, /Flickable \{[\s\S]*?contentHeight: controlRows\.height/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
   assert.match(wallpaper, /anchors\.horizontalCenter: parent\.horizontalCenter[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
