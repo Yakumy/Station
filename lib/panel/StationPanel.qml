@@ -397,6 +397,11 @@ Ui.Panel {
       onTabRequested: function(direction) {
         root.selectedTab = Tabs.next(root.selectedTab, direction)
       }
+      // Plain q closes the panel while it has focus.
+      onTextKey: function(text, modifiers) {
+        if (modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
+        if (text === "q" || text === "Q") root.close()
+      }
 
       Column {
         id: content

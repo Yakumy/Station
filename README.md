@@ -59,7 +59,8 @@ omarchy plugin remove yakumy.station
 ## Startup
 
 Click the Station logo in the bar to open the panel. Station finds your displays and
-enables its shortcuts on its own. There is nothing else to install or set up.
+enables its shortcuts on its own. There is nothing else to install or set up. While the
+panel is open, press **q** or **Escape** to close it.
 
 Station arranges your displays and numbers your workspaces itself. Don't run it next to
 another monitor manager, such as hyprmoncfg, or a personal `workspaces.lua` that binds

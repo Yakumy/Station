@@ -1,3 +1,8 @@
+# Unreleased
+
+- Press `q` or Escape while the panel has focus to close it. Modified `q` is ignored,
+  and the tab row stays label-only with no keycaps or digit shortcuts.
+
 # 4.3.4 — Omarchy's indicators reveal on hover
 
 - Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.

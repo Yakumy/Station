@@ -922,6 +922,9 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   the same preview and panel-evacuation path as the former toolbar menu.
 - The tabs are Displays, Workspaces, Bar, Windows, Color Match, Wallpaper, Keybindings and Settings. Service
   setters keep numeric tab indices, and `Tabs.js` names them for feature code.
+- The tabs stay label-only, with no numbered keycaps or digit shortcuts. While the panel
+  has focus, plain `q` or Escape closes it; Shift, Control, Alt and Meta leave the key to
+  other actions. Tab and arrow navigation still work.
 - Panel style is Bar landscape (at the bar icon, the default), Bar portrait, or Center landscape.
   Bar portrait uses the stock control-panel width (`Style.space(380)`), stacks each layout
   above its controls with equal 370-unit frame heights. The 72-unit gap between visible frames
