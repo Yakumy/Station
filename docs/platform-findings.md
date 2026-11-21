@@ -1463,6 +1463,11 @@ lcms2, and judged on screen by the maintainer.
   slot, received the wheel. Forwarding the wheel as well would deliver every step
   twice, so Station does not. This was a probe of Qt's delivery, not of the production
   bar.
+- **[SRC]** Upstream already tracks the facade: omacom/omarchy#13289 (with #11051,
+  #11796 and #12648) and the open fix omacom/omarchy#13471, which gives
+  `pluginShellForBarEntry()` an own-service-only `_serviceLookup`. Upstream `master`
+  `shell/shell.qml` (last changed 2026-11-16) still lacks it. Station issue #23 stays
+  open until that lands; Station needs no change for it.
 
 ## Indicator hover past a clipped slot (2026-11-21)
 
