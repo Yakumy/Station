@@ -2156,7 +2156,11 @@ Item {
       ? (root.vertical ? Math.ceil(visibleBaseContentHeight * contentZoom) : root.barSize / inheritedScale) : 0
     width: implicitWidth
     height: implicitHeight
-    clip: true
+    // Clip only what overflows a slot on purpose: the old tray's reserved
+    // drawer is shifted out of view, and a dragged widget lifts out. Omarchy's
+    // bar clips only while dragging too, and its Indicators widget hovers from
+    // past its own edges, which a clipped slot would never deliver.
+    clip: slot.trayFlowInset > 0 || slot.dragSource
     z: modulePointer.dragging ? 100 : 0
 
     Component.onCompleted: root.registerModuleSlot(slot)

@@ -1,3 +1,10 @@
+# 4.3.4 — Omarchy's indicators reveal on hover
+
+- Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.
+  The widget hovers from past its own edges, and Station clipped every widget slot, so
+  the hover never arrived. A slot now clips only while it is dragged or holds the old
+  tray's drawer, as Omarchy's bar does. Found and fixed by @tahadx in #21.
+
 # 4.3.3 — The current square in the open drawer
 
 - Show Omarchy's tiling square for the current workspace whenever every number is

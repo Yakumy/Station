@@ -677,6 +677,11 @@ ancestor visible, opaque and enabled, and every clipping ancestor containing the
 point. The slot's overlay takes the left button only and has no wheel handler, so
 the wheel reaches the widget directly. Station never forwards it.
 
+A widget slot clips only while it is dragged or holds the old tray's reserved drawer,
+as Omarchy's bar clips only while dragging or removing. Omarchy's Indicators widget
+hovers from past its own edges to reveal its inactive icons, and a clipping slot would
+never deliver that hover.
+
 A third-party widget gets its `bar.shell` from Omarchy's `pluginShellForBarEntry()`.
 That facade has no service lookup, so `bar.shell.serviceFor()` returns null under
 Station's bar, even for the widget's own id. Omarchy builds it that way for every

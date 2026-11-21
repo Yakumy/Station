@@ -43,3 +43,14 @@ test('a point outside the target, a missing target or a mapping error is no hit'
   target.mapFromItem = () => { throw new Error('destroyed'); };
   assert.equal(itemContainsPoint(target, slot, 15, 10), false);
 });
+
+// PR #21: Omarchy's Indicators widget hovers from past its own edges, so a slot
+// that always clips never reveals the inactive indicators.
+test('a widget slot clips only while dragged or holding the tray drawer', () => {
+  const source = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '../../lib/bars/omarchy/MonitorBar.qml'), 'utf8');
+  const slot = source.slice(source.indexOf('readonly property real trayFlowInset'));
+  const clip = slot.match(/^    clip: (.+)$/m);
+  assert.ok(clip, 'slot clip');
+  assert.equal(clip[1].trim(), 'slot.trayFlowInset > 0 || slot.dragSource');
+});

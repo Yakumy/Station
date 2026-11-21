@@ -1464,6 +1464,19 @@ lcms2, and judged on screen by the maintainer.
   twice, so Station does not. This was a probe of Qt's delivery, not of the production
   bar.
 
+## Indicator hover past a clipped slot (2026-11-21)
+
+- **[SRC]** GitHub PR #21. Omarchy's `Indicators.qml` puts its `hiddenBlockZone`
+  `HoverHandler` past the widget's own edge, by the length of the inactive icons. With
+  no active indicator the widget is 0 px wide, so that zone is the only hover target.
+  Omarchy's `Bar.qml` clips a slot's widget area only while dragging or removing.
+- **[QTTEST]** A `qmltestrunner` probe on Qt 6.12: a `HoverHandler` on a child reaching
+  past a 0-wide parent never reported `hovered` when the parent clipped, and did when
+  it did not. Station's slot clipped always, so the inactive indicators never revealed.
+  This was a probe of Qt's delivery, not of the production bar.
+- **[SRC]** Station's slot now clips only while dragged or while it holds the old
+  tray's reserved drawer, so the #23 drawer case keeps its clip.
+
 ## Qt 6.12 `Color` singleton (2026-11-21)
 
 - **[SRC]** GitHub issue #24. qt6-declarative 6.12.0 exports `QtQuick/Color 6.12` in
