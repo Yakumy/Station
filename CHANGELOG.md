@@ -19,6 +19,10 @@
 - Press `q` or Escape while the panel has focus to close it. Modified `q` is ignored,
   and the tab row stays label-only with no keycaps or digit shortcuts. Contributed by
   @tahadx in #20.
+- Keep slider knobs clear of the row title at small font sizes. With a font base size
+  of 11, a hovered knob at the left end crossed the title's edge, because centering
+  rounded the slider a pixel to the left while Omarchy holds the knob at 14 px. Sliders,
+  dropdowns and row buttons now share a whole-pixel inset at each end and still line up.
 
 # 4.3.5 — Display edits stick again
 

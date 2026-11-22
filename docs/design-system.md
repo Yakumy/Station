@@ -205,9 +205,13 @@ Five-row control frames divide their height equally.
 commit `ea956ed` narrowed it on 2026-11-12. The column split stays fixed and the
 frame is centered and capped to the column with a `Style.space(8)` inset on each
 side when the previous formula would overflow. Sliders, dropdowns and row buttons
-use 99% of the row width after the shared `Style.space(8)` inset at each end.
-Sliders retain the host's half-knob track inset, keeping both endpoint knobs and their hover enlargement
-inside the frame. `ControlButton.qml` provides the neutral row action style.
+share one inset at each end: `Style.space(8)` plus 0.5% of the remaining row width,
+rounded up to a whole pixel. They are placed by `x`, not centered, because centering
+rounds to a pixel and could pull a control up to a pixel left. Call sites never
+re-center them. Sliders retain the host's half-knob track inset, keeping both endpoint
+knobs and their hover enlargement inside the frame and clear of the row title, even at
+a small font size, where the host holds the knob at 14 px while spacing shrinks.
+`ControlButton.qml` provides the neutral row action style.
 
 `ActionButton.qml` keeps the host control height and uses 99% of the original action
 width. Apply, Cancel, Keep and Revert retain their additional 60% width factor.

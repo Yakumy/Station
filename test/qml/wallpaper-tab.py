@@ -125,7 +125,8 @@ ShellRoot {
         if (mode.value !== "same" || follow.value !== "yes") { fail("initial values"); return }
         var frame = mode.parent.parent.parent
         var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
-        var expectedControlWidth = (frame.width - Style.space(8) * 2) * 0.99
+        var rowInset = Style.space(8) + Math.ceil((frame.width - Style.space(8) * 2) * 0.005)
+        var expectedControlWidth = frame.width - rowInset * 2
         if (Math.abs(frame.controlWidth - originalWidth * 1.2 * 0.96) > 0.1
             || Math.abs(mode.width - expectedControlWidth) > 0.1) { fail("restored frame and inset controls"); return }
         if (frame.x < 0 || mode.x < 0 || mode.x + mode.width > mode.parent.width) { fail("control overflow"); return }

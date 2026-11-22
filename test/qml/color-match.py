@@ -145,9 +145,10 @@ ShellRoot {
         if (findObject(tab, "colorReset") || findObject(tab, "colorNotice")) { fail("removed reset row"); return }
         var frame = slider.parent.parent.parent
         var originalWidth = frame.parent.width - Style.space(28) * 2 - Style.space(24) * 2
-        var expectedControlWidth = (frame.width - Style.space(8) * 2) * 0.99
+        var rowInset = Style.space(8) + Math.ceil((frame.width - Style.space(8) * 2) * 0.005)
+        var expectedControlWidth = frame.width - rowInset * 2
         if (Math.abs(frame.controlWidth - originalWidth * 1.2 * 0.96) > 0.1
-            || Math.abs(slider.width - expectedControlWidth) > 0.1 || frame.x < 0) {
+            || Math.abs(slider.width - expectedControlWidth) > 0.1 || slider.x !== rowInset || frame.x < 0) {
           fail("restored frame and inset slider"); return
         }
         var title = findObject(slider.parent, "controlRowTitle")

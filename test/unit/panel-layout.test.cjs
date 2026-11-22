@@ -195,3 +195,17 @@ test('overflowing lists hint that they scroll once per session per key', () => {
   for (const path of ['lib/panel/ControlDropdown.qml', 'lib/stations/WorkspacesTab.qml'])
     assert.doesNotMatch(read(path), /ScrollHint\.js/);
 });
+
+test('row controls share one whole-pixel inset that call sites keep', () => {
+  // Rounded up and placed by x: centering rounds to a pixel and could pull a slider
+  // left, so its hovered end knob crossed the row title at a small font size.
+  const inset = 'readonly property real rowInset: Style.space(8) + Math.ceil((parent.width - Style.space(8) * 2) * 0.005)';
+  for (const path of ['lib/panel/ControlSlider.qml', 'lib/panel/ControlDropdown.qml', 'lib/panel/ControlButton.qml']) {
+    const source = read(path);
+    assert.ok(source.includes(inset), path);
+    assert.match(source, /x: rowInset\s+width: parent\.width - rowInset \* 2/, path);
+    assert.doesNotMatch(source, /anchors\.centerIn/, path);
+  }
+  for (const path of ['lib/bars/BarTab.qml', 'lib/displays/DisplaysTab.qml', 'lib/windows/WindowsTab.qml', 'lib/color/ColorMatchTab.qml'])
+    assert.doesNotMatch(read(path), /PanelUi\.Control(Slider|Dropdown|Button) \{[^}]*anchors\.centerIn/, path);
+});

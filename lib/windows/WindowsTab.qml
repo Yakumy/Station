@@ -90,7 +90,6 @@ Column {
               Caption { anchors.right: parent.right; anchors.rightMargin: root.tokens.space2; anchors.top: parent.top; anchors.topMargin: root.tokens.space2; text: root.values[row.modelData.key] + (row.index === 2 ? "%" : row.index === 4 ? "×" : " px") }
               PanelUi.ControlSlider {
                 id: slider
-                anchors.centerIn: parent
                 bar: root.bar
                 minimum: row.index === 4 ? 0 : Windows.limits[row.modelData.key][0]
                 maximum: row.index === 4 ? Windows.speeds.length - 1 : Windows.limits[row.modelData.key][1]

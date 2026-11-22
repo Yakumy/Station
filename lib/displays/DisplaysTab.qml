@@ -218,7 +218,6 @@ Column {
               font.pixelSize: Style.font.caption
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 1
               maximum: 100
@@ -254,7 +253,6 @@ Column {
               font.pixelSize: Style.font.caption
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
               maximum: displayTab.controls.textSizeStops.length - 1
@@ -289,7 +287,6 @@ Column {
               font.pixelSize: Style.font.caption
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
               maximum: displayTab.scaleOptions.length - 1
@@ -332,7 +329,6 @@ Column {
               font.pixelSize: Style.font.caption
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
               maximum: Math.max(0, displayTab.resolutionOptions.length - 1)
@@ -381,7 +377,6 @@ Column {
               font.pixelSize: Style.font.caption
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: displayTab.bar
               minimum: 0
               maximum: Math.max(0, displayTab.refreshOptions.length - 1)

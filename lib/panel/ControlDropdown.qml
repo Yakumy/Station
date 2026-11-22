@@ -46,8 +46,11 @@ Item {
     return value
   }
 
-  width: (parent.width - Style.space(8) * 2) * 0.99
-  anchors.centerIn: parent
+  // The shared row inset; see ControlSlider.qml.
+  readonly property real rowInset: Style.space(8) + Math.ceil((parent.width - Style.space(8) * 2) * 0.005)
+  x: rowInset
+  width: parent.width - rowInset * 2
+  anchors.verticalCenter: parent.verticalCenter
   implicitWidth: Style.spacing.dropdownWidth
   implicitHeight: showLabel && label !== "" ? rowHeight + Style.spacing.huge : rowHeight
 

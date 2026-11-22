@@ -148,7 +148,6 @@ Column {
               text: root.selectedContentSize + " px"
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: root.bar
               minimum: root.selectedMinimumContentSize
               maximum: root.selectedMaximumContentSize
@@ -192,7 +191,6 @@ Column {
               text: root.selectedHeight + " px"
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: root.bar
               minimum: root.selectedMinimumHeight
               maximum: root.selectedMaximumHeight
@@ -225,7 +223,6 @@ Column {
               text: root.selectedBar.width + "%"
             }
             PanelUi.ControlSlider {
-              anchors.centerIn: parent
               bar: root.bar
               minimum: 1
               maximum: 100
