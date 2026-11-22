@@ -1496,3 +1496,32 @@ lcms2, and judged on screen by the maintainer.
   load stand-in `qs.Commons` modules, where the collision did not appear. Why the stand-in
   resolves differently is unexplained [INFER: module resolution order]. Only the
   real shell shows the bug. `qt-color-shadow.test.cjs` now rejects a bare `Color.`.
+
+## Bar panel hotkeys under a replacement bar (2026-11-22)
+
+- **[SRC]** Omarchy's `default/hypr/bindings/utilities.lua` binds SUPER + CTRL +
+  `code:10` to `code:18` ("Bar panel 1" to 9) to
+  `omarchy-shell -q shell togglePanelAt right N`. `shell.qml` `togglePanelAt` calls
+  `shell.bar.panelWidgetIdAt(section, index)` and returns `unknown` when the active
+  bar lacks it. `shell.bar` is the full-bar plugin's root, Station's `Bar.qml`, not
+  the per-monitor `MonitorBar.qml` that held the function.
+- **[LIVE]** With Station's bar active, `omarchy-shell shell togglePanelAt right 1`
+  answered `unknown` and the hotkeys opened nothing. `Bar.qml` now forwards the call
+  to the focused monitor's bar.
+
+## Omarchy's display panel choices win over monitors.lua (2026-11-22)
+
+- **[SRC]** Omarchy's `default/hypr/monitor-settings.lua` reads
+  `$XDG_STATE_HOME/omarchy/monitors/settings`, one line per physical monitor (mode,
+  position, scale, transform, identity), and applies it with `hl.monitor` after
+  `hypr/monitors.lua` on every config load and on `monitor.added`. A choice saved there
+  wins over Station's marked block. `omarchy-hyprland-monitor-persist OUTPUT SCALE
+  [MODE] [POSITION] [TRANSFORM]` is the only writer. It accepts a mode without the `Hz`
+  suffix, never moves a monitor, and updates `GDK_SCALE`.
+- **[LIVE]** Omarchy's file held `scale 1` and a position for each monitor. After a
+  Scale change, Station's block held `scale = 1.25` for eDP-1, the output ran at 1, and
+  Station showed "Personal Hyprland rules override part of this layout". Keep now saves
+  Station's values there first.
+- **[INFER]** The tests missed it because every display harness doubles Hyprland and
+  models only Station's own block. None loads Omarchy's config, so none could see a
+  rule applied after it.
