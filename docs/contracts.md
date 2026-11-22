@@ -482,12 +482,18 @@ Keep is a transaction:
 2. Wait for both candidate save acknowledgments, not a fixed delay.
 3. Compare the source with the text read before.
 4. Back up as `monitors.lua.bak.<timestamp>`, keeping the last 5.
-5. Replace the file atomically. Refuse symlinks, and change only the marked block.
-6. Let Hyprland's file watcher apply it, then check `hyprctl configerrors`.
+5. Save each shown output's mode, position, scale and transform as Omarchy's display
+   panel choice with `omarchy-hyprland-monitor-persist`, after backing up Omarchy's
+   settings file. Omarchy applies those choices after `monitors.lua` on every load, so
+   a stale one undoes the edit. Mirrored and disabled outputs are skipped, as Omarchy
+   skips them. An Omarchy without the command is left alone.
+6. Replace the file atomically. Refuse symlinks, and change only the marked block.
+7. Let Hyprland's file watcher apply it, then check `hyprctl configerrors`.
 
 Events during Keep must not reset the draft or apply the previous mode. On success,
 commit the options and take a fresh snapshot before reconciling. On failure, restore
-only if the file still matches Station's candidate, then reload. Newer external edits
+Omarchy's panel settings file, and `monitors.lua` only if it still matches Station's
+candidate, then reload. Newer external edits
 survive. External editors share no lock with Station, so this is optimistic detection.
 
 Scale (1, 1.25, 1.6, 2, 3, 4), Resolution and Refresh use the same file transaction
