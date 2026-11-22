@@ -125,12 +125,16 @@ the old fixed three-slot grid (state version 1) receives one conversion.
 
 | Mode | Map | Numbered key `n` | Workspaces |
 | --- | --- | --- | --- |
-| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | Three stations, fixed |
-| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default 5 |
-| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default five each |
+| `station` (default) | `{ outputs }`, the formula above | Shows station `n` on every output | `config.stationCount`, 1 to 10, default 3; more appear while they hold a window |
+| `repetitive` | `{ outputs, mode, counts, blocks }`, Omarchy's IDs: block·10 + n | Shows the output's own workspace `n` on the focused output only, as Omarchy's `o.workspaces.focus` does | `workspaceLayout.repetitive[connector]`, 1 to 10, default `stationCount` |
+| `nonrepetitive` | `{ outputs, mode, owned, counts }`, IDs 1 to 20 | Shows workspace `n` on the output that owns it | `workspaceLayout.nonrepetitive[connector]`, the numbers it owns, default `stationCount` each |
 
-The tab labels `station` as Station. Station offers stations 1 to 3; others appear while
-they hold a window or are shown. With two outputs the first shows 1, 3 and 5.
+The tab labels `station` as Station. `config.stationCount`, 1 to 10 with default 3, is
+the number of indicators the bar lists in every mode. In Station mode others appear
+while they hold a window or are shown; with two outputs the first shows the odd numbers
+1, 3 and 5. In the per-monitor modes it is the starting count for a connector that has
+no saved count of its own. This is a behavior change: that starting count used to be
+five, and a connector with a saved count still keeps it.
 
 Repetitive counts belong to each connector, so every monitor keeps its own.
 
@@ -181,7 +185,8 @@ number at an outer edge.
 
 ### Which stations exist
 
-`existing = {1..3} ∪ {stations with a grid client} ∪ {stations displayed}`. Keys still
+`existing = {1..stationCount} ∪ {stations with a grid client} ∪ {stations displayed}`.
+Keys still
 reach stations 4 to 10. Repetitive steps through the focused
 output's own count, its occupied numbers and the one it shows. Non-repetitive steps
 through 1 to the total, every occupied number and every shown number. The bar lists the
@@ -204,8 +209,8 @@ migrating, so no destination is still a sink.
 Station manages at most four enabled, non-mirrored outputs. `Model.MAX_MONITORS`,
 `Grid.MAX_OUTPUTS` and `MonitorsLua.MAX_LANE` hold the limit and must agree. With four
 outputs, Sync writes workspace rules 1 to 40, Repetitive uses Omarchy blocks 0 to 3, and
-Non-repetitive starts at five workspaces each, which fills its 20-workspace total. A
-fifth output is **unmanaged**.
+Non-repetitive starts at `stationCount` workspaces each, clamped so the total stays
+within its 20-workspace limit. A fifth output is **unmanaged**.
 Station excludes it from follow focus, lane lookup, window actions and reconciliation,
 never touches its windows, and never disables anything by itself. The `status` IPC
 reports it.
@@ -757,8 +762,8 @@ retired publisher returns no station number.
 
 ### Open apps
 
-The Workspaces tab sets `compactMode` and `showOpenApps`, and the indicator style as
-`indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
+The Workspaces tab sets the indicator count (`stationCount`, 1 to 10, default 3),
+`compactMode` and `showOpenApps`, and the indicator style as `indicatorStyle`: `prefixed` (S1, or W1 outside Station mode), `number`, `roman`, or
 `kanji` (the 一 to 十 numerals bjarneo's kanji-workspaces widget uses, drawn in the bar
 font through fontconfig's CJK fallback; a workspace above ten keeps its number).
 A saved `dots` style, which did not fit the compact modes, loads as `prefixed`. `compactMode` is Off (`off`), On hover (`hover`, the default) or On (`on`).
@@ -952,14 +957,18 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   only the last monitor has them: + adds the next number to it, − removes the highest
   number, wherever it is, while its monitor keeps one. Non-repetitive badges drag onto
   another monitor, which then owns that number; each monitor keeps 1 to 10.
-- The Workspaces frame has five equal-height dropdown rows: Mode, Indicator style,
-  Compact mode, Stations Direction and Show open apps. Titles sit at the top left,
-  dropdowns use the shared inset width, and hints sit at the bottom left.
-  Mode defaults to Station; Compact mode defaults to On hover. Direction moves from
-  Displays to this draft and retains LTR, RTL, TTB and BTT. It is disabled outside
-  Station mode with "only work with Station mode". Show open apps offers Off and On
-  and is disabled with Compact mode On, retaining its saved preference.
-  Mode retains the single-output restriction and the Non-repetitive drag hint.
+- The Workspaces frame keeps five equal-height dropdown rows visible at a time; the
+  rest scroll inside the frame, so the portrait panel keeps its bottom padding. Mode,
+  Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
+  share the list. Titles sit at the top left, dropdowns use the shared inset width, and
+  hints sit at the bottom left. A dropdown menu whose options overflow shows a thin
+  accent-colored thumb inside the popup only while the pointer hovers the menu; frame
+  and page lists keep their silent scrolling. Mode defaults to Station; Compact mode
+  defaults to On hover. Direction moves from Displays to this draft and retains LTR,
+  RTL, TTB and BTT; it is disabled outside Station mode with "only work with Station mode". Indicator
+  shown offers 1 to 10, defaults to 3, and applies in every mode. Show open apps offers
+  Off and On and is disabled with Compact mode On, retaining its saved preference. Mode
+  retains the single-output restriction and the Non-repetitive drag hint.
 - Text size offers 9, 10, 11, 12, 13, 14, 16 and 20px. It runs
   `omarchy-display-text-size` and changes shell, GTK and terminal text globally.
   The per-monitor control is Scale.

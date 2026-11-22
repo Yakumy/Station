@@ -64,23 +64,30 @@ test('fallback polls only without the trusted service and removes all direct wri
   sync();
 });
 
-test('compact mode and open apps are Workspaces tab rows applied with the draft', () => {
+test('stations, compact mode and open apps are Workspaces tab rows applied with the draft', () => {
   const tab = read('lib/stations/WorkspacesTab.qml');
   const settings = read('lib/panel/SettingsTab.qml');
+  assert.match(tab, /objectName: "stationCountDropdown"/);
   assert.match(tab, /objectName: "compactModeDropdown"/);
   for (const value of ['off', 'hover', 'on'])
     assert.match(tab, new RegExp('value: "' + value + '"'));
   assert.match(tab, /objectName: "showOpenAppsDropdown"/);
   assert.doesNotMatch(tab, /stationAppsMode|workspaceCountIncrease|setSetting\("(?!workspaces")/);
   assert.match(tab, /service\.setSetting\("workspaces", JSON\.parse\(JSON\.stringify\(draft\)\)\)/);
-  assert.doesNotMatch(settings, /stationAppsMode|minStations|compactMode|showOpenApps/, 'Settings no longer duplicates Workspaces rows');
-  assert.ok(tab.indexOf('objectName: "compactModeDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
-  assert.ok(tab.indexOf('objectName: "showOpenAppsDropdown"') > tab.indexOf('objectName: "compactModeDropdown"'));
+  assert.doesNotMatch(settings, /stationAppsMode|minStations|stationCount|compactMode|showOpenApps/,
+    'Settings no longer duplicates Workspaces rows');
+  assert.match(tab, /text: "Indicator shown"/);
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') > tab.indexOf('objectName: "indicatorStyleDropdown"'));
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') < tab.indexOf('objectName: "compactModeDropdown"'));
+  assert.ok(tab.indexOf('objectName: "stationCountDropdown"') < tab.indexOf('objectName: "stationsDirectionDropdown"'));
+  assert.ok(tab.indexOf('objectName: "showOpenAppsDropdown"') > tab.indexOf('objectName: "stationsDirectionDropdown"'));
 
   const context = { config: { compactMode: 'hover' }, store: { saveConfig() {} } };
   const setSetting = qmlFunction(service, 'setSetting', context);
   assert.equal(setSetting('stationAppsMode', 'always'), 'invalid');
   assert.equal(setSetting('minStations', 4), 'invalid');
+  assert.match(service, /minimum: Grid\.stationCount\(root\.config\.stationCount\)/);
+  assert.match(service, /Grid\.stationCount\(config\.stationCount\)/);
 });
 
 test('snapshot is detached, including wallpaper, with no controller back-reference or manifest source', () => {

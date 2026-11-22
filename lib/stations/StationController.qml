@@ -252,7 +252,7 @@ Item {
       var focused = focusedMonitor()
       var station = focused ? Grid.station(Number(focused.activeWorkspace.id), workspaceMap) : currentStation
       var output = focused && workspaceMap.outputs.indexOf(focused.name) !== -1 ? focused.name : workspaceMap.outputs[0]
-      var existing = Grid.existing(clients, monitors, Grid.STATION_COUNT, workspaceMap, output)
+      var existing = Grid.existing(clients, monitors, Grid.stationCount(config.stationCount), workspaceMap, output)
       var target = Model.nextExisting(station || currentStation, delta, existing)
       if (target !== null) showStation(target, output)
     })

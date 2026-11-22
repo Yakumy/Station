@@ -4,6 +4,12 @@ const { rows } = require('../../lib/stations/OpenApps.js');
 const Store = require('../../lib/platform/Store.js');
 const map = { outputs: ['A', 'B'] };
 const client = (address, workspace, extra = {}) => ({ address, workspace: { id: workspace }, mapped: true, class: 'app', ...extra });
+test('the bar feed fills every configured station slot, up to ten', () => {
+  const result = rows(map, [], {}, null, 10, 1);
+  assert.deepEqual(Object.keys(result).map(Number).sort((a, b) => a - b),
+    Array.from({ length: 10 }, (_, index) => index + 1));
+  assert.deepEqual(result[10], []);
+});
 test('compact mode defaults to hover with open apps, and the old app modes migrate', () => {
   const fresh = Store.loadConfig({});
   assert.deepEqual([fresh.compactMode, fresh.showOpenApps], ['hover', true]);

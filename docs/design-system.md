@@ -107,7 +107,7 @@ orientation. Do not derive a separate gap from `iconSlot` and `iconCanvas`.
 Blurred bars use a nearly clear 1% mask derived from `Color.bar.background`
 through `Util.alpha`; it activates compositor blur without adding a visible
 dark glass tint or a separate palette. Bar appearance
-choices use the host `Ui.Dropdown` at full row width and
+choices use `ControlDropdown.qml`, Station's themed dropdown, at full row width and
 `Style.spacing.controlHeight`.
 
 Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. Feature control panels share this rhythm. Settings and Keybindings use compact list rows.
@@ -129,6 +129,7 @@ Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarI
 **List row** (Keybindings action rows, Settings rows): **[DECISION] default = no border, no individual box.** Rows are separated only by `Ui.PanelSeparator` (a hairline), with shared left/right padding, the way `Ui.PanelSectionHeader` already separates sections. A row gets a `Color.urgent` border **only** while it is an unresolved conflict — that is the one state worth decorating, and decorating every row equally erases it. A row never gets an accent border just for existing; accent belongs to the interactive control inside the row (a focused dropdown, an open menu), not the row container.
 
 **Select / dropdown** (Mode, Direction, monitor role): the approved render puts compact borderless triggers in the top tab row and inside the monitor cards. `Station/InlineDropdown.qml` keeps the text and chevron content-sized, uses host menu tokens for the popup, and right-aligns Mode's wider menu so named Single-output choices stay readable within the panel.
+`ControlDropdown.qml` mirrors the host dropdown for the feature rows, but owns its popup so an overflowing menu can carry a thin `Color.accent` thumb on hover, sized from the list's visible area. Page and frame lists keep their own scrolling and get no such thumb.
 
 **Slider** (Brightness, Text size, Scale, Resolution, Refresh, Bar content size, Bar width, the five Color Match controls): host-owned `Ui.PanelSlider` paints the track and knob. Color Match tracks stay plain: a warm-to-cool or green-to-magenta track would be a gradient and a private palette, so each row says in dim caption text which way warms, greens or darkens. The display controls after Brightness use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Bar content size starts at `Style.font.body`; its maximum preserves `Style.spacing.sm` on both cross-axis edges and prevents overlap among the scaled bar regions along the other axis. It reports when a saved request is clamped after the bar geometry shrinks. Bar width uses integer percentages and reports its measured non-overlap minimum below the track when the request is too small. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
 

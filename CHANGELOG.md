@@ -1,3 +1,14 @@
+# Unreleased
+
+- Add an Indicator shown setting to the Workspaces tab, 1 to 10, defaulting to three.
+  It sets how many indicators the bar lists in every mode; more appear while they hold
+  a window. This changes the starting count in Repetitive and Non-repetitive from five
+  to the chosen value, clamped so the total stays within 20; a monitor with its own
+  saved count still keeps it. The row sits next to Indicator style, and the controls
+  scroll after five visible rows so the portrait panel keeps its padding. Dropdown menus
+  with more options than fit now show a thin accent scrollbar while hovered, so the full
+  1-to-10 number menu stays reachable in Bar portrait.
+
 # 4.3.5 — Display edits stick again
 
 - Make Display edits stick under Omarchy's new display panel settings. Omarchy now
