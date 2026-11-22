@@ -961,9 +961,11 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   rest scroll inside the frame, so the portrait panel keeps its bottom padding. Mode,
   Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
   share the list. Titles sit at the top left, dropdowns use the shared inset width, and
-  hints sit at the bottom left. Mode defaults to Station; Compact mode defaults to On
-  hover. Direction moves from Displays to this draft and retains LTR, RTL, TTB and BTT;
-  it is disabled outside Station mode with "only work with Station mode". Indicator
+  hints sit at the bottom left. A dropdown menu whose options overflow shows a thin
+  accent-colored thumb inside the popup only while the pointer hovers the menu; frame
+  and page lists keep their silent scrolling. Mode defaults to Station; Compact mode
+  defaults to On hover. Direction moves from Displays to this draft and retains LTR,
+  RTL, TTB and BTT; it is disabled outside Station mode with "only work with Station mode". Indicator
   shown offers 1 to 10, defaults to 3, and applies in every mode. Show open apps offers
   Off and On and is disabled with Compact mode On, retaining its saved preference. Mode
   retains the single-output restriction and the Non-repetitive drag hint.
