@@ -21,6 +21,9 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
   assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
   assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
+  assert.match(panel, /onTextKey: function\(text, modifiers\)[\s\S]*?text === "q"[\s\S]*?root\.close\(\)/);
+  assert.doesNotMatch(panel, /component TabKey: Rectangle/);
+  assert.doesNotMatch(panel, /Tabs\.validIndex\(index\)/);
   assert.match(panel, /value: tabScroll\.contentHeight > tabScroll\.height/);
   assert.match(panel, /visible: root\.portraitPanel\s*\n\s*width: parent\.width\s*\n\s*foreground: Commons\.Color\.popups\.text/);
   assert.doesNotMatch(panel, /prefix: "Mode: "/);

@@ -16,6 +16,9 @@
   scrollable dropdown menu opens, and the first time the Workspaces controls appear,
   in each session, the list scrolls down a little and back to show that it scrolls.
   Turning Hyprland's animations off skips it.
+- Press `q` or Escape while the panel has focus to close it. Modified `q` is ignored,
+  and the tab row stays label-only with no keycaps or digit shortcuts. Contributed by
+  @tahadx in #20.
 
 # 4.3.5 — Display edits stick again
 
