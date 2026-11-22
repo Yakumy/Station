@@ -1,4 +1,4 @@
-# Unreleased
+# 4.4.0 — Indicator count, q to close, and the Quake console
 
 - Add an Indicator shown setting to the Workspaces tab, 1 to 10, defaulting to three.
   It sets how many indicators the bar lists in every mode; more appear while they hold
