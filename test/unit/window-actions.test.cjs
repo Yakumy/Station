@@ -225,11 +225,12 @@ test('numbered send uses the same active window, follows on all displays, and si
   assert.equal(silent.c.lastWindowAction.result, 'moved-silently');
 });
 
-test('numbered sends retrieve scratchpad windows on their current display with and without follow', () => {
+test('numbered sends retrieve scratchpad and Quake console windows on their current display with and without follow', () => {
+  for (const workspaceName of ['special:scratchpad', 'special:qconsole'])
   for (const monitors of [vertical, vertical.slice(0, 1)]) {
     for (const monitor of monitors) {
       for (const follow of [true, false]) {
-        const h = harness({ monitors, monitor: monitor.id, workspace: -98, workspaceName: 'special:scratchpad' });
+        const h = harness({ monitors, monitor: monitor.id, workspace: -98, workspaceName });
         assert.equal(h.c.sendWindow('3', follow), 'started');
         assert.equal(h.live.workspace.id, 2 * monitors.length + monitor.id + 1);
         assert.equal(h.live.monitor, monitor.id);
@@ -244,13 +245,17 @@ test('numbered sends retrieve scratchpad windows on their current display with a
   }
 });
 
-test('scratchpad retrieval preserves exclusions for pinned, unmanaged, named and other special windows', () => {
+test('scratchpad and console retrieval preserves exclusions for pinned, unmanaged, named and other special windows', () => {
   const scratchpad = { workspace: -98, workspaceName: 'special:scratchpad' };
+  const console = { workspace: -97, workspaceName: 'special:qconsole' };
   for (const options of [
     { ...scratchpad, pinned: true },
     { ...scratchpad, monitor: 99 },
+    { ...console, pinned: true },
+    { ...console, monitor: 99 },
     { workspace: -99, workspaceName: 'special:other' },
     { workspace: 1, workspaceName: 'special:scratchpad' },
+    { workspace: 1, workspaceName: 'special:qconsole' },
     { workspace: 1, workspaceName: 'named' },
     { workspace: 99 },
   ]) {
@@ -262,8 +267,10 @@ test('scratchpad retrieval preserves exclusions for pinned, unmanaged, named and
       assert.equal(h.c.state, 'idle');
     }
   }
-  const h = harness(scratchpad);
-  h.c.shiftWindow('right');
-  assert.equal(h.calls.length, 0);
-  assert.equal(h.c.lastWindowAction.result, 'unmanaged');
+  for (const options of [scratchpad, console]) {
+    const h = harness(options);
+    h.c.shiftWindow('right');
+    assert.equal(h.calls.length, 0);
+    assert.equal(h.c.lastWindowAction.result, 'unmanaged');
+  }
 });

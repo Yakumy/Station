@@ -236,9 +236,11 @@ the saved station, even if the process exits successfully.
 
 `SUPER + SHIFT + n` sends to the same output on station n and follows.
 `SUPER + SHIFT + ALT + n` sends without following. Numbered sends also accept an
-unpinned active window in Omarchy's `special:scratchpad` on a managed output. Other
-special, named, pinned and unmanaged windows stay excluded, and automatic migrations
-never take scratchpad windows.
+unpinned active window in Omarchy's `special:scratchpad` (`SUPER + S`) or its Quake
+console, `special:qconsole` (`SUPER + grave`), on a managed output, as Omarchy's own
+numbered move does. Other special, named, pinned and unmanaged windows stay excluded,
+and automatic migrations and directional moves never take scratchpad or console
+windows.
 
 ### Move across
 

@@ -23,6 +23,10 @@
   of 11, a hovered knob at the left end crossed the title's edge, because centering
   rounded the slider a pixel to the left while Omarchy holds the knob at 14 px. Sliders,
   dropdowns and row buttons now share a whole-pixel inset at each end and still line up.
+- Send windows out of Omarchy's Quake console with `SUPER + SHIFT + n` and
+  `SUPER + SHIFT + ALT + n`, the same way as from the scratchpad. Omarchy 4.5's console
+  lives on its own special workspace, `special:qconsole`, which Station's numbered send
+  refused, so the key did nothing there. Reported by @iiAmVonney in #27.
 
 # 4.3.5 — Display edits stick again
 

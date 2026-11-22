@@ -111,7 +111,7 @@ Item {
       && Grid.equal(workspaceMap, targetMapping()) && !removalGraceRunning
   }
 
-  function readActiveWindow(generation, done, allowScratchpad) {
+  function readActiveWindow(generation, done, allowSpecial) {
     refresh(true, function() {
       if (!windowActionCurrent(generation)) { finishWindowAction(generation, "cancelled"); return }
       enqueue(["hyprctl", "activewindow", "-j"], function(code, output) {
@@ -119,13 +119,14 @@ Item {
         var raw = parseJson(output, null)
         if (code !== 0 || !raw || !raw.address) { finishWindowAction(generation, "no-window"); return }
         var client = Model.normalizeClients([raw], monitors)[0]
-        // Explicit numbered sends can retrieve Omarchy's scratchpad windows.
-        // Grid eligibility remains strict for migrations and directional moves.
-        var scratchpad = allowScratchpad && !client.pinned
+        // Explicit numbered sends can retrieve windows from Omarchy's scratchpad
+        // (Super+S) and its Quake console (Super+`), as Omarchy's own numbered move
+        // does. Grid eligibility remains strict for migrations and directional moves.
+        var retrievable = allowSpecial && !client.pinned
           && Number(client.workspace && client.workspace.id) < 0
-          && client.workspace.name === "special:scratchpad"
+          && ["special:scratchpad", "special:qconsole"].indexOf(client.workspace.name) !== -1
         if (workspaceMap.outputs.indexOf(client.monitor) === -1
-          || (!Grid.eligible(client, workspaceMap) && !scratchpad)) {
+          || (!Grid.eligible(client, workspaceMap) && !retrievable)) {
           finishWindowAction(generation, "unmanaged"); return
         }
         lastWindowAction = Object.assign({}, lastWindowAction, { address: client.address,
