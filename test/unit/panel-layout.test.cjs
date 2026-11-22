@@ -46,6 +46,9 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(workspaces, /readonly property int rowCount: 5/);
   assert.match(workspaces, /readonly property real frameHeight: geometry\.frameHeight/);
   assert.match(workspaces, /Flickable \{[\s\S]*?contentHeight: controlRows\.height/);
+  // The frame uses the shared thumb; test/qml/scroll-thumb.py drives its behavior.
+  assert.match(workspaces, /PanelUi\.ScrollThumb \{[\s\S]*?objectName: "controlScrollThumb"[\s\S]*?flickable: controlScroll[\s\S]*?color: Commons\.Color\.accent/);
+  assert.doesNotMatch(workspaces, /target: controlScroll/);
   assert.match(workspaces, /function effective\(values\)[\s\S]*?Grid\.assigned\("repetitive", outputs, values\.workspaceLayout, values\.stationCount\)[\s\S]*?Grid\.assigned\("nonrepetitive", outputs, values\.workspaceLayout, values\.stationCount\)/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
@@ -159,10 +162,33 @@ test('all six layouts render shared centered monitor names', () => {
   }
 });
 
-test('overflowing control menus carry a thin accent scroll thumb on hover', () => {
-  assert.match(dropdown, /objectName: "dropdownScrollThumb"/);
-  assert.match(dropdown, /width: Style\.space\(1\)/);
-  assert.match(dropdown, /color: root\.accent/);
-  assert.match(dropdown, /contentHeight > optionList\.height && menuHover\.hovered/);
-  assert.match(dropdown, /visibleArea\.heightRatio/);
+test('overflowing control menus use the shared grabbable scroll thumb', () => {
+  assert.match(dropdown, /PanelUi\.ScrollThumb \{[\s\S]*?objectName: "dropdownScrollThumb"[\s\S]*?flickable: optionList[\s\S]*?color: root\.accent/);
+  // Hovering the menu alone does not reveal it.
+  assert.doesNotMatch(dropdown, /menuHover/);
+});
+
+test('the scroll thumb is a thin accent line on a grab strip inside an 80% track', () => {
+  const thumb = read('lib/panel/ScrollThumb.qml');
+  assert.match(thumb, /readonly property real track: flickable\.height \* 0\.8/);
+  assert.match(thumb, /readonly property real trackTop: flickable\.y \+ flickable\.height \* 0\.1/);
+  assert.match(thumb, /visible: flickable\.contentHeight > flickable\.height/);
+  assert.match(thumb, /MouseArea \{[\s\S]*?hoverEnabled: true[\s\S]*?preventStealing: true/);
+  assert.match(thumb, /readonly property bool shown: grab\.containsMouse \|\| grab\.pressed/);
+  assert.match(thumb, /width: Style\.space\(1\)[\s\S]*?radius: Style\.cornerRadius[\s\S]*?opacity: root\.shown \? 0\.9 : 0/);
+  assert.match(thumb, /property color color: Commons\.Color\.accent/);
+});
+
+test('overflowing lists hint that they scroll once per session per key', () => {
+  const thumb = read('lib/panel/ScrollThumb.qml');
+  const hint = read('lib/panel/ScrollHint.js');
+  assert.match(hint, /^\.pragma library/);
+  assert.match(thumb, /import "ScrollHint\.js" as ScrollHint/);
+  assert.match(thumb, /property bool reduceMotion: Style\.reduceMotion/);
+  assert.match(thumb, /if \(!onScreen \|\| reduceMotion \|\|[\s\S]*?ScrollHint\.claim\(hintKey\)/);
+  assert.match(dropdown, /flickable: optionList\s+hintKey: "dropdown"/);
+  assert.match(read('lib/stations/WorkspacesTab.qml'), /flickable: controlScroll\s+hintKey: "workspacesRows"/);
+  // One library copy: only ScrollThumb imports it.
+  for (const path of ['lib/panel/ControlDropdown.qml', 'lib/stations/WorkspacesTab.qml'])
+    assert.doesNotMatch(read(path), /ScrollHint\.js/);
 });

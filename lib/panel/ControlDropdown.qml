@@ -3,6 +3,7 @@ import QtQuick.Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui as Ui
+import "." as PanelUi
 
 // Station's control-sized dropdown. It mirrors Omarchy's Ui.Dropdown, but the
 // popup list carries a thin accent scroll thumb that appears on hover: the
@@ -225,24 +226,12 @@ Item {
             }
           }
 
-          HoverHandler {
-            id: menuHover
-            target: optionList
-          }
-
-          // Thin accent thumb, inside the popup and only while it is hovered.
-          Rectangle {
+          // Thin accent thumb inside the popup, shown and grabbed on the thumb itself.
+          PanelUi.ScrollThumb {
             objectName: "dropdownScrollThumb"
-            z: 2
-            anchors.right: parent.right
-            anchors.rightMargin: Style.spacing.hairline
-            width: Style.space(1)
-            height: Math.max(Style.space(2), optionList.height * optionList.visibleArea.heightRatio)
-            y: optionList.height * optionList.visibleArea.yPosition
-            radius: Style.cornerRadius
+            flickable: optionList
+            hintKey: "dropdown"
             color: root.accent
-            opacity: optionList.contentHeight > optionList.height && menuHover.hovered ? 0.9 : 0
-            Behavior on opacity { NumberAnimation { duration: 100 } }
           }
         }
       }

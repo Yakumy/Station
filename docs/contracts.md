@@ -961,9 +961,22 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   rest scroll inside the frame, so the portrait panel keeps its bottom padding. Mode,
   Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
   share the list. Titles sit at the top left, dropdowns use the shared inset width, and
-  hints sit at the bottom left. A dropdown menu whose options overflow shows a thin
-  accent-colored thumb inside the popup only while the pointer hovers the menu; frame
-  and page lists keep their silent scrolling. Mode defaults to Station; Compact mode
+  hints sit at the bottom left. A dropdown menu whose options overflow carries a thin
+  accent-colored thumb inside the popup, and the Workspaces control frame carries the
+  same thumb while its rows overflow. Both are the shared `ScrollThumb`: sized from the
+  list's visible area, it travels the middle 80% of the list so its rounded ends stay
+  inside the container's corners. It shows only while the pointer is on the thumb or
+  drags it, through a grab strip wider than the line; hovering the rest of the menu or
+  frame shows nothing. Holding the left button on the strip and dragging moves the list
+  with the pointer, and the strip takes that press away from the rows under it. Once
+  per shell session, the first overflowing dropdown menu to open and the Workspaces
+  control rows the first time they appear scroll a little and back, with the thumb
+  shown, so the user sees that they scroll. Dropdown menus share one hint; the session
+  record lives in `ScrollHint.js`, imported only by `ScrollThumb.qml`, and persists
+  nothing. The hint waits 300 ms for the popup or tab to arrive, starts from where the
+  list rests (upward when it already rests at the end), stops when the user drags or
+  grabs, and is skipped under reduced motion without using up its key. Page lists keep
+  their silent scrolling. Mode defaults to Station; Compact mode
   defaults to On hover. Direction moves from Displays to this draft and retains LTR,
   RTL, TTB and BTT; it is disabled outside Station mode with "only work with Station mode". Indicator
   shown offers 1 to 10, defaults to 3, and applies in every mode. Show open apps offers

@@ -355,6 +355,14 @@ Column {
           }
         }
         }
+        // Six rows overflow the five-row frame. The same thumb as the dropdown
+        // menus', shown and grabbed on the thumb itself.
+        PanelUi.ScrollThumb {
+          objectName: "controlScrollThumb"
+          flickable: controlScroll
+          hintKey: "workspacesRows"
+          color: Commons.Color.accent
+        }
       }
     }
   }

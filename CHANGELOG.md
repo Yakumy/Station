@@ -7,7 +7,15 @@
   saved count still keeps it. The row sits next to Indicator style, and the controls
   scroll after five visible rows so the portrait panel keeps its padding. Dropdown menus
   with more options than fit now show a thin accent scrollbar while hovered, so the full
-  1-to-10 number menu stays reachable in Bar portrait.
+  1-to-10 number menu stays reachable in Bar portrait. Contributed by @tahadx in #18.
+- Show the same thin accent scrollbar on the Workspaces control rows, so the sixth row
+  below the fold is discoverable. Both scrollbars now appear only while the pointer is
+  on the scrollbar itself, not anywhere over the menu or the rows, and can be grabbed
+  and dragged with the left button. They run along the middle 80% of the list, so their
+  rounded ends stay inside the menu's and the panel's corners. The first time a
+  scrollable dropdown menu opens, and the first time the Workspaces controls appear,
+  in each session, the list scrolls down a little and back to show that it scrolls.
+  Turning Hyprland's animations off skips it.
 
 # 4.3.5 — Display edits stick again
 
