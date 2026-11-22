@@ -355,25 +355,6 @@ Column {
           }
         }
         }
-        // The frame keeps its clean look until the pointer enters it; only then
-        // does a thin, theme-colored thumb show that more controls scroll below.
-        HoverHandler {
-          id: controlScrollHover
-          target: controlScroll
-        }
-        Rectangle {
-          objectName: "controlScrollThumb"
-          z: 2
-          anchors.right: parent.right
-          anchors.rightMargin: root.tokens.space1
-          width: Style.space(1)
-          height: controlScroll.height * controlScroll.visibleArea.heightRatio
-          y: controlScroll.height * controlScroll.visibleArea.yPosition
-          radius: Style.cornerRadius
-          color: Commons.Color.popups.text
-          opacity: controlScroll.contentHeight > controlScroll.height && controlScrollHover.hovered ? 0.45 : 0
-          Behavior on opacity { NumberAnimation { duration: 120 } }
-        }
       }
     }
   }

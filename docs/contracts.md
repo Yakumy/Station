@@ -961,9 +961,7 @@ kind, which does not inject the `anchorItem` and `bar` that `KeyboardPanel` requ
   rest scroll inside the frame, so the portrait panel keeps its bottom padding. Mode,
   Indicator style, Indicator shown, Compact mode, Stations Direction and Show open apps
   share the list. Titles sit at the top left, dropdowns use the shared inset width, and
-  hints sit at the bottom left. A thin scroll thumb, painted with the theme's popup text
-  color and corner token and sized from the Flickable's visible area, appears only while
-  the pointer hovers the frame. Mode defaults to Station; Compact mode defaults to On
+  hints sit at the bottom left. Mode defaults to Station; Compact mode defaults to On
   hover. Direction moves from Displays to this draft and retains LTR, RTL, TTB and BTT;
   it is disabled outside Station mode with "only work with Station mode". Indicator
   shown offers 1 to 10, defaults to 3, and applies in every mode. Show open apps offers

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 
 const read = name => readFileSync(name, 'utf8');
+const dropdown = read('lib/panel/ControlDropdown.qml');
 
 test('panel keeps the reference layout inside a fixed viewport', () => {
   const panel = read('lib/panel/StationPanel.qml');
@@ -46,8 +47,6 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(workspaces, /readonly property real frameHeight: geometry\.frameHeight/);
   assert.match(workspaces, /Flickable \{[\s\S]*?contentHeight: controlRows\.height/);
   assert.match(workspaces, /function effective\(values\)[\s\S]*?Grid\.assigned\("repetitive", outputs, values\.workspaceLayout, values\.stationCount\)[\s\S]*?Grid\.assigned\("nonrepetitive", outputs, values\.workspaceLayout, values\.stationCount\)/);
-  assert.match(workspaces, /HoverHandler \{[\s\S]*?target: controlScroll/);
-  assert.match(workspaces, /visibleArea\.heightRatio/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
   assert.match(wallpaper, /anchors\.horizontalCenter: parent\.horizontalCenter[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);
@@ -158,4 +157,12 @@ test('all six layouts render shared centered monitor names', () => {
     'lib/stations/WorkspacesLayout.qml', 'lib/color/ColorLayout.qml', 'lib/wallpaper/WallpaperLayout.qml']) {
     assert.match(read(path), /PanelUi\.MonitorName \{/);
   }
+});
+
+test('overflowing control menus carry a thin accent scroll thumb on hover', () => {
+  assert.match(dropdown, /objectName: "dropdownScrollThumb"/);
+  assert.match(dropdown, /width: Style\.space\(1\)/);
+  assert.match(dropdown, /color: root\.accent/);
+  assert.match(dropdown, /contentHeight > optionList\.height && menuHover\.hovered/);
+  assert.match(dropdown, /visibleArea\.heightRatio/);
 });
