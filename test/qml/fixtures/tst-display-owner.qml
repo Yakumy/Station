@@ -69,7 +69,7 @@ Item {
       preview();compare(session.keepPreview(),"started");verify(!proc("sh").running)
       acknowledgeCandidates(data.reverse)
       var args=proc("sh").command
-      compare(args.length,12);compare(args[4],session.candidatePath);compare(args[7],session.plainPath)
+      compare(args.length,17);compare(JSON.stringify(args.slice(12)),JSON.stringify(["A","1","1920x1080@60.00","0x0","0"]));compare(args[4],session.candidatePath);compare(args[7],session.plainPath)
       compare(args[9],"16");compare(args[11],"0");compare(proc("sh").written,"-- personal Lua\n")
       verify(!proc("sh").stdinEnabled)
       session.settleKeep(0,"")

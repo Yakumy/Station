@@ -47,7 +47,8 @@ test('only the exact Omarchy internal Off flag is cleared when its output is exp
 });
 test('service requests toggle handoff only at Keep, never a side-control save',()=>{
   const {source,ownerFunction}=require('../helpers/display-owner.cjs');
-  const c={monitorsSource:'before',internalDisableSource:flag,pendingDisplayConfig:{displays},keepOptions:options,
+  const full=displays.map((d,i)=>({...d,mode:'1920x1080@60.00Hz',x:i*1920,y:0,scale:1,transform:0}));
+  const c={monitorsSource:'before',internalDisableSource:flag,pendingDisplayConfig:{displays:full},keepOptions:options,
     MonitorsLua:L,candidateFile:{text:()=> 'candidate'},plainCandidateFile:{text:()=> 'plain'},maybeStartKeep(){}};
   const save=ownerFunction('startKeepFiles',c);
   save('candidate','plain','preview'); assert.equal(c.keepDisableToggle,flag);

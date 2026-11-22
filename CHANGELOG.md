@@ -8,6 +8,17 @@
   scroll after five visible rows so the portrait panel keeps its padding. A thin scroll
   thumb appears only while the pointer hovers the frame.
 
+# 4.3.5 — Display edits stick again
+
+- Make Display edits stick under Omarchy's new display panel settings. Omarchy now
+  re-applies the scale and position saved for each monitor after `monitors.lua` on
+  every reload, so a Scale change, and a moved or resized layout, snapped back. Keep
+  now saves the same values as Omarchy's choice for each shown display, and restores
+  Omarchy's file if Keep fails.
+- Make Omarchy's Bar panel hotkeys, SUPER + CTRL + 1 to 9, open the Nth panel in the
+  bar's right section under Station's bar. Omarchy asks the active bar for that panel,
+  and Station's bar did not answer, so the keys did nothing.
+
 # 4.3.4 — Omarchy's indicators reveal on hover
 
 - Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.

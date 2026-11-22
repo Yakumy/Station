@@ -22,7 +22,7 @@ function qmlFunction(source, name, context = {}) {
 
 test('4.0 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '4.3.4');
+  assert.equal(manifest.version, '4.3.5');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });
@@ -694,4 +694,17 @@ test('plugin bar api binding skips properties the host api does not declare', ()
   assert.equal(older.centerSectionRevealHeld, true);
   assert.equal(older._centerHoverRevealSuppressed, true);
   assert.deepEqual(older.clickTargets, ['target:third.party']);
+});
+
+test('the full bar answers Omarchy panel hotkeys from the focused monitor', () => {
+  const bar = read('Bar.qml');
+  const monitor = (name, id) => ({ targetScreenName: name, targetScreen: {},
+    panelWidgetIdAt: (region, index) => region + ':' + index + ':' + id });
+  const context = { instances: [monitor('DP-1', 'a'), monitor('HDMI-A-2', 'b')],
+    Hyprland: { focusedMonitor: { name: 'HDMI-A-2' } } };
+  context.preferredInstance = qmlFunction(bar, 'preferredInstance', context);
+  const panelWidgetIdAt = qmlFunction(bar, 'panelWidgetIdAt', context);
+  assert.equal(panelWidgetIdAt('right', '2'), 'right:2:b');
+  context.instances = [];
+  assert.equal(panelWidgetIdAt('right', '1'), '');
 });
