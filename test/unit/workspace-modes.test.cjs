@@ -29,6 +29,18 @@ const apply = (plan, clients) => clients.map(c => {
   return row ? { ...c, monitor: row.output, workspace: { id: row.to, name: String(row.to) } } : c;
 });
 
+test('the indicator count seeds per-monitor defaults consistently', () => {
+  // The Workspaces tab passes the same count to the preview and the dirty check.
+  assert.deepEqual(G.assigned('repetitive', ['A', 'B'], {}, 3), [range(1, 3), range(1, 3)]);
+  assert.deepEqual(G.assigned('nonrepetitive', ['A', 'B'], {}, 3), [range(1, 3), range(4, 6)]);
+  // A large count is clamped so the global total still fits in 1 to 20.
+  assert.deepEqual(G.assigned('nonrepetitive', ['A', 'B', 'C', 'D'], {}, 10),
+    [range(1, 5), range(6, 10), range(11, 15), range(16, 20)]);
+  // A saved per-connector count still wins over the global default.
+  assert.deepEqual(G.assigned('repetitive', ['A', 'B'], { repetitive: { A: 7 } }, 3),
+    [range(1, 7), range(1, 3)]);
+});
+
 test('each mode assigns the workspaces each monitor gets, as the Workspaces tab shows them', () => {
   // Sync offers three stations: 1, 3 and 5 on the first monitor, 2, 4 and 6 on the second.
   assert.deepEqual(G.assigned('station', ['A', 'B']), [[1, 3, 5], [2, 4, 6]]);

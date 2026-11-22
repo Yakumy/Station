@@ -45,6 +45,9 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(workspaces, /readonly property int rowCount: 5/);
   assert.match(workspaces, /readonly property real frameHeight: geometry\.frameHeight/);
   assert.match(workspaces, /Flickable \{[\s\S]*?contentHeight: controlRows\.height/);
+  assert.match(workspaces, /function effective\(values\)[\s\S]*?Grid\.assigned\("repetitive", outputs, values\.workspaceLayout, values\.stationCount\)[\s\S]*?Grid\.assigned\("nonrepetitive", outputs, values\.workspaceLayout, values\.stationCount\)/);
+  assert.match(workspaces, /HoverHandler \{[\s\S]*?target: controlScroll/);
+  assert.match(workspaces, /visibleArea\.heightRatio/);
   assert.match(wallpaper, /height: geometry\.frameHeight/);
   assert.match(wallpaper, /height: root\.narrow \? geometry\.separatorSlot : Style\.space\(428\)/);
   assert.match(wallpaper, /anchors\.horizontalCenter: parent\.horizontalCenter[\s\S]*?width: root\.narrow \? parent\.width[\s\S]*?height: root\.narrow \? Math\.max\(1, Style\.normalBorderWidth\) : parent\.height/);

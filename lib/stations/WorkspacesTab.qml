@@ -40,8 +40,8 @@ Column {
   // modes, and the bar options. Layout entries that change nothing do not count.
   function effective(values) {
     return JSON.stringify([values.workspaceMode, values.direction, values.stationCount, values.indicatorStyle, values.compactMode, values.showOpenApps,
-      Grid.assigned("repetitive", outputs, values.workspaceLayout),
-      Grid.assigned("nonrepetitive", outputs, values.workspaceLayout)])
+      Grid.assigned("repetitive", outputs, values.workspaceLayout, values.stationCount),
+      Grid.assigned("nonrepetitive", outputs, values.workspaceLayout, values.stationCount)])
   }
   property var base: savedValues()
   property var draft: savedValues()
@@ -137,14 +137,14 @@ Column {
   component RowMessage: Caption {
     anchors.left: parent.left; anchors.leftMargin: root.tokens.space2
     anchors.right: parent.right; anchors.rightMargin: root.tokens.space2
-    // Six rows are shorter than the old five, so the note needs the smaller inset
-    // to stay under the dropdown.
+    // Five rows stay visible and the rest scroll, so the note needs the smaller
+    // inset to stay under the dropdown.
     anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(1)
     visible: text !== ""
     elide: Text.ElideRight
   }
-  // Six rows are shorter than the old five, so the title sits higher and still
-  // clears the centered dropdown.
+  // Five rows stay visible and the rest scroll, so the title sits higher and
+  // still clears the centered dropdown.
   component RowLabel: PanelUi.ControlLabel {
     anchors.topMargin: Style.space(2)
   }
@@ -222,6 +222,7 @@ Column {
         id: controlFrame
         height: root.frameHeight
         Flickable {
+          id: controlScroll
           anchors.fill: parent
           clip: true
           interactive: contentHeight > height
@@ -353,6 +354,25 @@ Column {
             }
           }
         }
+        }
+        // The frame keeps its clean look until the pointer enters it; only then
+        // does a thin, theme-colored thumb show that more controls scroll below.
+        HoverHandler {
+          id: controlScrollHover
+          target: controlScroll
+        }
+        Rectangle {
+          objectName: "controlScrollThumb"
+          z: 2
+          anchors.right: parent.right
+          anchors.rightMargin: root.tokens.space1
+          width: Style.space(1)
+          height: controlScroll.height * controlScroll.visibleArea.heightRatio
+          y: controlScroll.height * controlScroll.visibleArea.yPosition
+          radius: Style.cornerRadius
+          color: Commons.Color.popups.text
+          opacity: controlScroll.contentHeight > controlScroll.height && controlScrollHover.hovered ? 0.45 : 0
+          Behavior on opacity { NumberAnimation { duration: 120 } }
         }
       }
     }
