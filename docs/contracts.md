@@ -670,6 +670,9 @@ Inline settings updates and widget placement lookup cover every section. Draggin
 to the outer edges of the center box inserts into the corresponding flanking
 section. The tray drawer accepts widgets and cannot contain its own hosting tray.
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
+The full bar answers Omarchy's `panelWidgetIdAt(section, index)` from the focused
+monitor's bar, so Omarchy's Bar panel hotkeys (SUPER + CTRL + 1 to 9) open the Nth
+visible panel in that section.
 
 A click on a widget's slot goes to the topmost registered click target under the
 pointer, by the same hit test as Omarchy's bar: the target's own shape, every

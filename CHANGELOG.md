@@ -1,3 +1,9 @@
+# Unreleased
+
+- Make Omarchy's Bar panel hotkeys, SUPER + CTRL + 1 to 9, open the Nth panel in the
+  bar's right section under Station's bar. Omarchy asks the active bar for that panel,
+  and Station's bar did not answer, so the keys did nothing.
+
 # 4.3.4 — Omarchy's indicators reveal on hover
 
 - Let Omarchy's indicator group reveal its inactive icons on hover under Station's bar.

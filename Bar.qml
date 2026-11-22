@@ -188,6 +188,14 @@ Item {
     return instance ? instance.summonBarWidget(pluginId) : false
   }
 
+  // Omarchy's `togglePanelAt` hotkeys (SUPER + CTRL + 1 to 9) ask the active bar
+  // for the Nth panel in a section. Count it on the focused monitor's bar, which
+  // is the one the user is looking at.
+  function panelWidgetIdAt(region, index) {
+    var instance = preferredInstance()
+    return instance ? instance.panelWidgetIdAt(region, index) : ""
+  }
+
   function hideBarWidget(pluginId) {
     var hidden = false
     for (var i = 0; i < instances.length; i++)

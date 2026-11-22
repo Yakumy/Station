@@ -1496,3 +1496,15 @@ lcms2, and judged on screen by the maintainer.
   load stand-in `qs.Commons` modules, where the collision did not appear. Why the stand-in
   resolves differently is unexplained [INFER: module resolution order]. Only the
   real shell shows the bug. `qt-color-shadow.test.cjs` now rejects a bare `Color.`.
+
+## Bar panel hotkeys under a replacement bar (2026-11-22)
+
+- **[SRC]** Omarchy's `default/hypr/bindings/utilities.lua` binds SUPER + CTRL +
+  `code:10` to `code:18` ("Bar panel 1" to 9) to
+  `omarchy-shell -q shell togglePanelAt right N`. `shell.qml` `togglePanelAt` calls
+  `shell.bar.panelWidgetIdAt(section, index)` and returns `unknown` when the active
+  bar lacks it. `shell.bar` is the full-bar plugin's root, Station's `Bar.qml`, not
+  the per-monitor `MonitorBar.qml` that held the function.
+- **[LIVE]** With Station's bar active, `omarchy-shell shell togglePanelAt right 1`
+  answered `unknown` and the hotkeys opened nothing. `Bar.qml` now forwards the call
+  to the focused monitor's bar.
