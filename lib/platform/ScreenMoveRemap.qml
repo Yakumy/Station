@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell.Io
+import "HyprlandVersion.js" as HyprlandVersion
 
 // Station's copy of the host's former Ui.ScreenMoveRemap. Omarchy removed that
 // type from qs.Ui on 2026-11-01 (basecamp/omarchy#17229), so importing it from
@@ -10,6 +12,11 @@ import QtQuick
 // are unmapped and remapped. Watch the screen's origin and pulse `remapping`
 // when it moves; the owning window folds that into its `visible` binding so the
 // compositor re-places the surface at the monitor's new origin.
+//
+// Hyprland 0.57 moves the mapped surface itself, so there the guard never pulses.
+// A remap rebuilds the window under its content, and a hosted widget that binds an
+// item's `parent` to its window's contentItem is then reparented while Qt is still
+// attaching that content, which crashes the whole shell.
 Item {
   id: root
 
@@ -18,6 +25,8 @@ Item {
 
   // Fold into the window's binding: visible: <shown> && !guard.remapping
   property bool remapping: false
+  // Unknown until hyprctl answers, and no remap runs before that.
+  property bool needed: false
 
   visible: false
 
@@ -26,7 +35,7 @@ Item {
   Timer {
     id: settleTimer
     interval: 200
-    onTriggered: root.remapping = true
+    onTriggered: if (root.needed) root.remapping = true
   }
 
   // Hold the surface unmapped for a beat so the compositor processes the
@@ -35,6 +44,15 @@ Item {
     interval: 50
     running: root.remapping
     onTriggered: root.remapping = false
+  }
+
+  Process {
+    command: ["hyprctl", "version", "-j"]
+    running: true
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.needed = HyprlandVersion.strandsLayers(text)
+    }
   }
 
   Connections {

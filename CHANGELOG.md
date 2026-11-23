@@ -1,3 +1,11 @@
+# Unreleased
+
+- Fix the shell crashing when a monitor is connected or disconnected. After a monitor
+  moved, Station hid and showed its bar again, which rebuilt the bar's window. A widget
+  that attaches an item to that window, such as Reel 0.5.1, then crashed the whole shell.
+  Hyprland 0.57 and later move the bar with its monitor, so Station now does this only
+  on older versions.
+
 # 4.4.0 — Indicator count, q to close, and the Quake console
 
 - Add an Indicator shown setting to the Workspaces tab, 1 to 10, defaulting to three.

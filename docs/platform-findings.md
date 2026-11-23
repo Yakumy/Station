@@ -587,12 +587,25 @@ Five-minute smoke checks (each reversible): (1) `hyprctl eval` of one `o.bind` w
   its monitor. A plugin that still names the host type fails to load: the bar falls
   back to `omarchy.bar` and the service reports `Ui.ScreenMoveRemap is not a type`.
   Station keeps its own copy in `lib/platform/ScreenMoveRemap.qml`, which remaps
-  layer surfaces after output origin changes on any host and Hyprland version. The
+  layer surfaces after output origin changes on Hyprland before 0.57 only. The
   bar and the wallpaper surfaces use it. Wallpaper surfaces have an empty input
   region and no keyboard focus. Their lifetime follows the persistent service.
 - [LIVE] On 2026-11-10, with omarchy-dev 4.0.0.r7647 and Hyprland 0.57.1, the bar,
   the wallpaper surfaces and the service loaded with the local copy on two outputs
   (`HDMI-A-1`, `DP-5`). No monitor move was exercised.
+- [LIVE] On 2026-11-23, with Hyprland 0.57.2, quickshell 0.3.2.r7 and Qt 6.12.0,
+  connecting and disconnecting HDMI killed the shell 14 times in ten minutes. Every
+  core has the same stack: a QML `Timer` writes a property, the window's `visible`
+  binding shows it, quickshell sets the content's parent, and inside Qt's
+  `QQuickItemPrivate::refWindow` a second binding calls `QQuickItem::setParentItem`
+  and dies in `QQuickItemPrivate::dirty`. `Cannot use same item on different windows
+  at the same time` and `closelayer>>omarchy-bar` come just before. The timer was
+  Station's remap guard. The only hosted item bound that way was Reel 0.5.1's
+  `parent: root.QsWindow.window ? root.QsWindow.window.contentItem : root`.
+- [LIVE] An isolated quickshell with one 8 px surface separated the two causes: the
+  Reel binding with the remap segfaults, the same binding with no remap survives, and
+  the remap without the binding survives. Station cannot control a widget's bindings,
+  so it must not rebuild the bar window where the compositor does not need it.
 - [LIVE][SRC] On 2026-10-27, repeated Station Mirror/Single/Extend changes left
   Hyprland reporting both `eDP-1` and `HDMI-A-2` enabled and unmirrored, while
   `hyprctl layers -j` showed no layer at all on `eDP-1` (neither
