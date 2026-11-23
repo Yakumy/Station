@@ -20,6 +20,7 @@ Item {
   property var shell: null
   property var manifest: null
   property var instances: []
+  readonly property var warnedMissingWidgetServices: new Set()
   // The persistent service owns per-monitor policy. Read its detached snapshot
   // directly from this top-level entry point (the same .pragma-library context
   // as Panel.qml and Service.qml) so an open panel can move its bar without
@@ -97,6 +98,12 @@ Item {
     var api = BarBridge.current()
     if (api && typeof api.call === "function")
       api.call("reportMonitorBarMaximumContent", [instance.targetScreenName, instance.maximumContentSize])
+  }
+
+  function warnMissingWidgetService(pluginId) {
+    if (warnedMissingWidgetServices.has(pluginId)) return
+    warnedMissingWidgetServices.add(pluginId)
+    console.warn(pluginId + " is loaded, but its service is unavailable through the current bar. Service-backed controls may be unresponsive.")
   }
 
   function refreshStationBars() {
@@ -236,6 +243,7 @@ Item {
         onBackgroundModeRequested: function(mode) { root.requestMonitorBackground(monitorBar, mode) }
         onMinimumWidthPercentChanged: root.reportMinimumWidth(monitorBar)
         onMaximumContentSizeChanged: root.reportMaximumContent(monitorBar)
+        onWidgetServiceUnavailable: function(pluginId) { root.warnMissingWidgetService(pluginId) }
         Component.onCompleted: {
           root.registerInstance(monitorBar)
           Qt.callLater(function() { root.reportMinimumWidth(monitorBar) })

@@ -10,13 +10,13 @@ const Store = require('../../lib/platform/Store.js');
 const service = runtimeSource();
 const contract = read('lib/panel/ServiceContract.js');
 
-function qmlFunction(source, name, context = {}) {
+function qmlFunction(source, name, context = {}, indent = '  ') {
   context.Tabs = require('../../lib/panel/Tabs.js');
   const moved = ownerFunction(name, context);
   if (moved) return moved;
-  const start = source.indexOf('  function ' + name + '(');
+  const start = source.indexOf(indent + 'function ' + name + '(');
   assert.notEqual(start, -1, name + ' exists');
-  const end = source.indexOf('\n  }', start) + 4;
+  const end = source.indexOf('\n' + indent + '}', start) + indent.length + 2;
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
 
@@ -694,6 +694,52 @@ test('plugin bar api binding skips properties the host api does not declare', ()
   assert.equal(older.centerSectionRevealHeld, true);
   assert.equal(older._centerHoverRevealSuppressed, true);
   assert.deepEqual(older.clickTargets, ['target:third.party']);
+});
+
+test('the full bar warns once per opted-in plugin when the deferred service lookup is null', () => {
+  const warnings = [];
+  const pending = [];
+  const fullBar = read('Bar.qml');
+  const monitorBar = read('lib/bars/omarchy/MonitorBar.qml');
+  const warnedMissingWidgetServices = new Set();
+  const warnMissingWidgetService = qmlFunction(fullBar, 'warnMissingWidgetService', {
+    warnedMissingWidgetServices, console: { warn: message => warnings.push(message) },
+  });
+  const hostWidget = ({ pluginId, settings = {}, service = null, firstParty = false }) => {
+    const context = {
+      activeItem: { bar: null },
+      moduleName: pluginId,
+      moduleSettings: settings,
+      pluginApiId: pluginId,
+      registryMetadata: { pluginId },
+      registered: true,
+      firstParty,
+      slot: {},
+      Qt: { callLater: callback => pending.push(callback) },
+      root: {
+        pluginBarApiFor: () => ({ shell: { serviceFor: id => id === pluginId ? service : null } }),
+        widgetServiceUnavailable: warnMissingWidgetService,
+      },
+    };
+    context.slot.checkRequiredBarService = qmlFunction(monitorBar, 'checkRequiredBarService', context, '    ');
+    qmlFunction(monitorBar, 'injectProps', context, '    ')();
+    return context;
+  };
+
+  const optIn = { stationRequiresBarService: true };
+  hostWidget({ pluginId: 'test.manager', settings: optIn });
+  hostWidget({ pluginId: 'test.manager', settings: optIn });
+  hostWidget({ pluginId: 'test.clock' });
+  hostWidget({ pluginId: 'test.ready', settings: optIn, service: {} });
+  hostWidget({ pluginId: 'test.first-party', settings: optIn, firstParty: true });
+  const removed = hostWidget({ pluginId: 'test.removed', settings: optIn });
+  removed.activeItem = null;
+
+  assert.deepEqual(warnings, []);
+  for (const check of pending) check();
+  assert.deepEqual(warnings, [
+    'test.manager is loaded, but its service is unavailable through the current bar. Service-backed controls may be unresponsive.',
+  ]);
 });
 
 test('the full bar answers Omarchy panel hotkeys from the focused monitor', () => {

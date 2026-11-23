@@ -706,6 +706,13 @@ A widget that needs its service, such as a clone of `omarchy.audio`, shows but
 cannot act. Station cannot reach another plugin's service and does not start a
 second copy of one. The fix has to come from Omarchy.
 
+Set `"stationRequiresBarService": true` on a layout entry in Omarchy's
+`shell.json` to diagnose a third-party widget that needs its companion service.
+For example, use `{"id": "moo.omaplugctl", "stationRequiresBarService": true}`
+in `bar.layout.right`. After injecting the widget's bar facade, Station checks
+its own-service lookup on the next event-loop turn. A null result logs one
+warning per plugin ID for the lifetime of the full bar, shared across monitors.
+
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |

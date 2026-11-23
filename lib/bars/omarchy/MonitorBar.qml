@@ -20,6 +20,7 @@ Item {
   property string targetScreenName: targetScreen ? String(targetScreen.name || "") : ""
   signal popoutRequested()
   signal backgroundModeRequested(string mode)
+  signal widgetServiceUnavailable(string pluginId)
 
   // The omarchy-shell host injects omarchyPath from OMARCHY_PATH.
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
@@ -2533,6 +2534,16 @@ Item {
         ? root : root.pluginBarApiFor(pluginApiId, moduleName, registered)
       if ("moduleName" in target) target.moduleName = moduleName
       if ("settings" in target) target.settings = moduleSettings
+      if (moduleSettings.stationRequiresBarService === true)
+        Qt.callLater(slot.checkRequiredBarService)
+    }
+
+    function checkRequiredBarService() {
+      if (!registered || firstParty || moduleSettings.stationRequiresBarService !== true) return
+      var target = activeItem
+      var api = target && target.bar ? target.bar.shell : null
+      if (api && typeof api.serviceFor === "function" && api.serviceFor(moduleName) === null)
+        root.widgetServiceUnavailable((registryMetadata && registryMetadata.pluginId) || pluginApiId)
     }
 
     Component {
