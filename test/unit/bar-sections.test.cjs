@@ -41,38 +41,39 @@ const normalize = entry => typeof entry === 'string' ? (entry ? { id: entry } : 
 const idsOf = rows => rows.map(entry => BarModel.entryId(normalize(entry)));
 const move = (from, index, id, to, before) => config =>
   BarModel.moveEntry(config, { from: { region: from, index, id }, to: { region: to, index: before } }, normalize);
+const IND = 'yakumy.station.indicator';
 const edit = (config, change) => BarModel.editStationLayout(config, change, normalize);
 
 test('Station draws its widget beside the menu without changing the saved layout', () => {
   const bar = { layout: { ...layout(), left: ['omarchy.menu', { id: 'reel', setting: 3 }] } };
   const before = clone(bar);
-  assert.deepEqual(idsOf(BarModel.stationLayout(bar, normalize).left), ['omarchy.menu', 'yakumy.station', 'reel']);
+  assert.deepEqual(idsOf(BarModel.stationLayout(bar, normalize).left), ['omarchy.menu', 'yakumy.station', IND, 'reel']);
   assert.deepEqual(bar, before);
-  assert.deepEqual(idsOf(BarModel.stationLayout({ layout: { left: [{ id: 'reel' }] } }, normalize).left), ['yakumy.station', 'reel'],
+  assert.deepEqual(idsOf(BarModel.stationLayout({ layout: { left: [{ id: 'reel' }] } }, normalize).left), ['yakumy.station', IND, 'reel'],
     'first without a menu');
-  assert.deepEqual(BarModel.stationLayout(null, normalize), { ...layout(), left: [{ id: 'yakumy.station' }] });
+  assert.deepEqual(BarModel.stationLayout(null, normalize), { ...layout(), left: [{ id: 'yakumy.station' }, { id: IND }] });
 });
 
 test('a saved Station row is drawn once, where it is', () => {
   for (const section of BarModel.sections) {
     const bar = { layout: { ...layout(), [section]: [{ id: 'yakumy.station' }] }, stationWidget: { section: 'left', index: 0 } };
-    assert.deepEqual(BarModel.stationLayout(bar, normalize), { ...layout(), [section]: [{ id: 'yakumy.station' }] });
+    assert.deepEqual(BarModel.stationLayout(bar, normalize), { ...layout(), [section]: [{ id: 'yakumy.station' }, { id: IND }] });
   }
 });
 
 test('a saved place is clamped, and a malformed one is ignored', () => {
   const bar = stationWidget => ({ layout: { ...layout(), left: ['omarchy.menu'], right: ['a', 'b'] }, stationWidget });
   const at = value => BarModel.stationLayout(bar(value), normalize);
-  assert.deepEqual(idsOf(at({ section: 'right', index: 1 }).right), ['a', 'yakumy.station', 'b']);
-  assert.deepEqual(idsOf(at({ section: 'right', index: 99 }).right), ['a', 'b', 'yakumy.station']);
+  assert.deepEqual(idsOf(at({ section: 'right', index: 1 }).right), ['a', 'yakumy.station', IND, 'b']);
+  assert.deepEqual(idsOf(at({ section: 'right', index: 99 }).right), ['a', 'b', 'yakumy.station', IND]);
   for (const bad of [null, 'right', [], {}, { section: 'nowhere', index: 0 }, { section: 'right', index: -1 },
     { section: 'right', index: 1.5 }, { section: 'right' }, { section: '__proto__', index: 0 }])
-    assert.deepEqual(idsOf(at(bad).left), ['omarchy.menu', 'yakumy.station'], JSON.stringify(bad));
+    assert.deepEqual(idsOf(at(bad).left), ['omarchy.menu', 'yakumy.station', IND], JSON.stringify(bad));
 });
 
 test('entries Omarchy does not draw do not shift a place', () => {
   const bar = { layout: { ...layout(), left: [], right: [null, 'a', { setting: 1 }, 'b'] }, stationWidget: { section: 'right', index: 1 } };
-  assert.deepEqual(BarModel.stationLayout(bar, normalize).right, [null, 'a', { setting: 1 }, { id: 'yakumy.station' }, 'b']);
+  assert.deepEqual(BarModel.stationLayout(bar, normalize).right, [null, 'a', { setting: 1 }, { id: 'yakumy.station' }, { id: IND }, 'b']);
 });
 
 test('dragging Station saves its place, never a layout row', () => {
@@ -88,20 +89,20 @@ test('dragging Station saves its place, never a layout row', () => {
 
 test('a widget dragged around Station lands beside it and keeps its settings', () => {
   const config = { bar: { layout: { ...layout(), left: ['omarchy.menu', { id: 'reel', setting: 3 }] } } };
-  // Reel, third as drawn, to before Station.
-  assert.equal(edit(config, move('left', 2, 'reel', 'left', 1)), true);
+  // Reel, fourth as drawn, to before Station.
+  assert.equal(edit(config, move('left', 3, 'reel', 'left', 1)), true);
   assert.deepEqual(config.bar.layout.left, ['omarchy.menu', { id: 'reel', setting: 3 }]);
-  assert.deepEqual(idsOf(BarModel.stationLayout(config.bar, normalize).left), ['omarchy.menu', 'reel', 'yakumy.station']);
+  assert.deepEqual(idsOf(BarModel.stationLayout(config.bar, normalize).left), ['omarchy.menu', 'reel', 'yakumy.station', IND]);
   // And back: an index into the layout as drawn.
   assert.equal(edit(config, move('left', 1, 'reel', 'left', -1)), true);
-  assert.deepEqual(idsOf(BarModel.stationLayout(config.bar, normalize).left), ['omarchy.menu', 'yakumy.station', 'reel']);
+  assert.deepEqual(idsOf(BarModel.stationLayout(config.bar, normalize).left), ['omarchy.menu', 'yakumy.station', IND, 'reel']);
 });
 
 test('moving other widgets does not pin Station, and it follows the menu', () => {
   const config = { bar: { layout: { ...layout(), left: ['omarchy.menu', 'reel'], right: ['a', 'b'] } } };
   assert.equal(edit(config, move('right', 0, 'a', 'right', -1)), true);
   assert.equal('stationWidget' in config.bar, false);
-  assert.equal(edit(config, change => BarModel.removeEntry(change, { region: 'left', index: 2, id: 'reel' }, normalize)), true);
+  assert.equal(edit(config, change => BarModel.removeEntry(change, { region: 'left', index: 3, id: 'reel' }, normalize)), true);
   assert.deepEqual(config.bar.layout.left, ['omarchy.menu']);
   assert.equal('stationWidget' in config.bar, false);
 });
@@ -136,4 +137,67 @@ test('every section takes every kind of widget and gives it back unchanged', () 
     assert.equal(edit(config, move(from, index, 'w', to, -1)), true, `${from} to ${to}`);
     assert.deepEqual(config.bar.layout, { ...layout(), [to]: [{ id: 'w', setting: 7 }] });
   }
+});
+
+const drawnOf = bar => Object.fromEntries(Object.entries(BarModel.stationLayout(bar, normalize)).filter(([, rows]) => rows.length)
+  .map(([section, rows]) => [section, idsOf(rows)]));
+
+test('the indicator moves on its own, and the logo stays', () => {
+  const config = { bar: { layout: { ...layout(), left: ['omarchy.menu', 'reel'], right: ['a', 'b'] } } };
+  assert.equal(edit(config, move('left', 2, IND, 'right', 1)), true);
+  assert.deepEqual(config.bar.stationIndicator, { section: 'right', index: 1 });
+  assert.equal('stationWidget' in config.bar, false, 'the logo still follows the menu');
+  assert.deepEqual(config.bar.layout, { ...layout(), left: ['omarchy.menu', 'reel'], right: ['a', 'b'] }, 'neither is saved in the layout');
+  assert.deepEqual(drawnOf(config.bar), { left: ['omarchy.menu', 'yakumy.station', 'reel'], right: ['a', IND, 'b'] });
+});
+
+test('the logo moves on its own, and the indicator stays', () => {
+  const config = { bar: { layout: { ...layout(), left: ['omarchy.menu', 'reel'], right: ['a', 'b'] } } };
+  assert.equal(edit(config, move('left', 1, 'yakumy.station', 'right', -1)), true);
+  assert.deepEqual(drawnOf(config.bar), { left: ['omarchy.menu', IND, 'reel'], right: ['a', 'b', 'yakumy.station'] });
+});
+
+test('back beside the logo, the indicator follows it again', () => {
+  const config = { bar: { layout: { ...layout(), left: ['omarchy.menu'], right: ['a'] } } };
+  edit(config, move('left', 2, IND, 'right', 0));
+  edit(config, move('left', 1, 'yakumy.station', 'right', 0));
+  assert.deepEqual(drawnOf(config.bar), { left: ['omarchy.menu'], right: ['yakumy.station', IND, 'a'] });
+  assert.equal('stationIndicator' in config.bar, false);
+  config.bar.stationWidget = { section: 'left', index: 1 };
+  assert.deepEqual(drawnOf(config.bar), { left: ['omarchy.menu', 'yakumy.station', IND], right: ['a'] });
+});
+
+test('a widget dropped between them parts them, in either order', () => {
+  const config = { bar: { layout: { ...layout(), left: ['omarchy.menu', 'reel'] } } };
+  edit(config, move('left', 3, 'reel', 'left', 2));
+  assert.deepEqual(drawnOf(config.bar), { left: ['omarchy.menu', 'yakumy.station', 'reel', IND] });
+  // The indicator to before everything, so it stands ahead of the logo.
+  edit(config, move('left', 3, IND, 'left', 0));
+  assert.deepEqual(drawnOf(config.bar), { left: [IND, 'omarchy.menu', 'yakumy.station', 'reel'] });
+  assert.deepEqual(config.bar.layout.left, ['omarchy.menu', 'reel']);
+});
+
+test('the logo and the indicator stand anywhere, together or apart', () => {
+  for (const a of BarModel.sections) for (const b of BarModel.sections) {
+    const bar = { layout: { ...layout(), left: ['x'], right: ['y'] } };
+    const config = { bar };
+    const at = id => Object.entries(drawnOf(config.bar)).flatMap(([s, ids]) => ids.includes(id) ? [[s, ids.indexOf(id)]] : [])[0];
+    let [s, i] = at(IND);
+    edit(config, move(s, i, IND, a, -1));
+    [s, i] = at('yakumy.station');
+    edit(config, move(s, i, 'yakumy.station', b, -1));
+    assert.equal(at(IND)[0], a, `${a} ${b}`);
+    assert.equal(at('yakumy.station')[0], b, `${a} ${b}`);
+    assert.deepEqual(config.bar.layout, { ...layout(), left: ['x'], right: ['y'] });
+    const before = drawnOf(config.bar);
+    edit(config, move('right', before.right.indexOf('y'), 'y', 'left', 0));
+    assert.deepEqual(drawnOf(config.bar)[a].filter(id => id !== 'y').includes(IND), true, 'another widget moving leaves them');
+  }
+});
+
+test('an indicator row someone saved is drawn once, and a malformed place ignored', () => {
+  const bar = { layout: { ...layout(), left: ['omarchy.menu', { id: IND }], right: [IND] } };
+  assert.deepEqual(drawnOf(bar), { left: ['omarchy.menu', 'yakumy.station', IND] });
+  for (const bad of [null, 'left', {}, { section: 'nowhere', index: 1 }, { section: 'left', index: -2 }])
+    assert.deepEqual(drawnOf({ layout: { left: ['omarchy.menu'] }, stationIndicator: bad }), { left: ['omarchy.menu', 'yakumy.station', IND] });
 });

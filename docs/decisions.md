@@ -94,6 +94,13 @@ a drag could not move an icon. Omarchy's bar moves only from its free area, and 
 expect that. The open-hand cursor over the free area stays: it says that the area can be
 dragged.
 
+## The indicator is the bar's widget, not a second plugin widget
+
+A plugin registers one bar widget, so on Omarchy's bar the logo and the indicator stay
+together. On Station's bar the indicator is a widget of the bar itself, fed by the logo
+widget's port. A second registered widget would have needed its own plugin, and a second
+reader of the service its own 50 ms poll on every bar.
+
 ## Station's icon keeps its place outside the layout
 
 A saved layout row for Station keeps the plugin enabled after the user turns it off, so the

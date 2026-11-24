@@ -4,10 +4,12 @@ Update to get it: Station replaces Omarchy's bar, so its fixes reach you only th
 Station update. Run `omarchy plugin update yakumy.station`, then `omarchy restart shell`.
 Your bar settings and widget order stay as they are.
 
-- Drag any bar widget, Station's own icon included, and drop widgets on either side of it.
+- Place Station's logo and its workspace indicator separately. On Station's bar they are two
+  widgets: drag either one anywhere. They stay side by side until you do.
+- Drag any bar widget, Station's logo and indicator included, and drop widgets around them.
   Room opens where a widget would land, it glides into place, and no widget restarts.
 - Pull a widget off the bar to remove it, as on Omarchy's bar. Removing a plugin's widget
-  can turn that plugin off. Station's icon goes back instead.
+  can turn that plugin off. Station's logo and indicator go back instead.
 - Changed: holding a widget drags the widget, not the whole bar. Drag empty bar space to
   move the bar.
 - Changed: double-clicking empty bar space steps that monitor's background through
@@ -20,8 +22,8 @@ Your bar settings and widget order stay as they are.
   on the widget under the pointer.
 - Plugins built for Omarchy's bar now meet the same bar on Station, apart from a listed set
   of differences. Each commit and release is checked against Omarchy's current bar.
-- Save the place of Station's icon as `bar.stationWidget` in `shell.json`. Without it, the
-  icon stays beside the Omarchy menu.
+- Save their places as `bar.stationWidget` and `bar.stationIndicator` in `shell.json`.
+  Without them, the logo stays beside the Omarchy menu and the indicator beside the logo.
 - Needs Omarchy 4.5 or later.
 
 # 4.4.1 — Fix the shell crash on monitor changes

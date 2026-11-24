@@ -10,6 +10,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "BarModel.js" as BarModel
 import "../../platform" as Platform
+import ".." as Bars
 
 // Adapted from Omarchy's shell/plugins/bar/Bar.qml. Every difference is listed in
 // docs/omarchy-bar.md and checked by test/unit/bar-upstream.test.cjs.
@@ -234,7 +235,24 @@ Item {
       // than MonitorBar itself. Content-aware widgets still need the same
       // per-monitor final size as first-party modules.
       property real effectiveContentSize: root.effectiveContentSize
+      readonly property bool separateStationIndicator: root.separateStationIndicator
     }
+  }
+
+  // Station's widget draws its logo alone here, and its indicator is a widget of the
+  // bar's own, fed by the logo's port.
+  readonly property bool separateStationIndicator: true
+  readonly property var stationPort: {
+    for (var i = 0; i < widgetHosts.length; i++) {
+      var host = widgetHosts[i]
+      var item = host && host.moduleName === BarModel.stationId ? host.activeItem : null
+      if (item && "indicator" in item) return item.indicator
+    }
+    return null
+  }
+  Component {
+    id: stationIndicatorComponent
+    Bars.StationIndicator { port: root.stationPort }
   }
 
   Component {
@@ -1483,10 +1501,10 @@ Item {
     roomFader.start()
   }
 
-  // Station's own widget opens the panel that turns its bar off, and has no
-  // layout entry to take out, so pulling it off puts it back.
+  // Station's logo opens the panel that turns its bar off, and neither it nor the
+  // indicator has a layout entry to take out, so pulling one off puts it back.
   function removable(slot) {
-    return !!slot && slot.moduleName !== BarModel.stationId
+    return !!slot && slot.moduleName !== BarModel.stationId && slot.moduleName !== BarModel.indicatorId
   }
 
   // Lets go of a widget pulled off the bar. It vanishes in a poof where it
@@ -2914,13 +2932,14 @@ Item {
     readonly property var moduleSettings: root.entrySettings(entry)
     readonly property string customType: root.customModuleType(entry)
     readonly property var registryMetadata: root.barWidgetRegistry.metadataFor(root.canonicalWidgetId(moduleName))
-    readonly property bool firstParty: registryMetadata && registryMetadata.firstParty === true
+    readonly property bool firstParty: (registryMetadata && registryMetadata.firstParty === true) || moduleName === BarModel.indicatorId
     readonly property string pluginApiId: registered ? root.canonicalWidgetId(moduleName) : "bar-entry:" + moduleName
     // Re-evaluate when the registry mutates (Component reference changes,
     // plugin enabled/disabled, etc.). Reading the `widgets` property creates
     // the binding dependency — the wrapped function call alone wouldn't.
     readonly property var registryComponent: {
       var w = root.barWidgetRegistry.widgets
+      if (moduleName === BarModel.indicatorId) return stationIndicatorComponent
       if (customType) return null
       var registryName = root.canonicalWidgetId(moduleName)
       return w[registryName] ? w[registryName].component : null

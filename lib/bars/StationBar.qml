@@ -67,6 +67,11 @@ Item {
         Hyprland.refreshMonitors()
     }
   }
+  // "both" on Omarchy's bar, where a plugin has one widget. Station's bar draws the
+  // logo and the indicator as two.
+  property string part: "both"
+  readonly property bool showLogo: part !== "indicator"
+  readonly property bool showIndicator: part !== "logo"
   property bool expanded: false
   property bool opened: false
   property alias anchorItem: logoButton
@@ -120,10 +125,11 @@ Item {
   readonly property real collapsedExtent: primarySlot
   readonly property real fullExtent: vertical ? groups.implicitHeight : groups.implicitWidth
   readonly property real revealExtent: collapsedExtent + Math.max(0, fullExtent - collapsedExtent) * revealProgress
-  readonly property real logoExtent: primarySlot
+  readonly property real logoExtent: showLogo ? primarySlot : 0
   readonly property real arrowExtent: primarySlot
   readonly property real leadingInset: 0
-  readonly property real length: leadingInset + logoExtent + mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0)
+  readonly property real indicatorExtent: showIndicator ? mainGap + revealExtent + (showExpander ? mainGap + arrowExtent : 0) : 0
+  readonly property real length: leadingInset + logoExtent + indicatorExtent
   implicitWidth: vertical ? barSize : length
   implicitHeight: vertical ? length : barSize
   onCompactModeChanged: if (compactMode !== "hover") expanded = false
@@ -136,8 +142,16 @@ Item {
   FontMetrics { id: indicatorMetrics; font.family: root.bar ? root.bar.fontFamily : Style.font.family; font.pixelSize: root.contentFontSize }
   TextMetrics { id: arrowMetrics; font.family: indicatorMetrics.font.family; font.pixelSize: root.contentFontSize; text: "\uf054" }
 
+  // Where the menu's glyph is inked in a slot, which both parts line up with.
+  Item {
+    width: root.vertical ? root.barSize : root.primarySlot
+    height: root.vertical ? root.primarySlot : root.barSize
+    Text { id: menuReference; anchors.centerIn: parent; visible: false; text: "\ue900"; font: menuMetrics.font }
+  }
+
   Ui.WidgetButton {
     id: logoButton
+    visible: root.showLogo
     x: root.vertical ? 0 : root.leadingInset
     y: root.vertical ? root.leadingInset : 0
     bar: root.bar
@@ -148,7 +162,6 @@ Item {
     fixedWidth: root.vertical ? root.barSize : root.primarySlot
     fixedHeight: root.vertical ? root.primarySlot : root.barSize
     onPressed: root.pressed()
-    Text { id: menuReference; anchors.centerIn: parent; visible: false; text: "\ue900"; font: menuMetrics.font }
     PanelUi.StationMark {
       width: root.logoSize; height: width
       x: (parent.width - width) / 2
@@ -169,6 +182,7 @@ Item {
   Item {
     id: drawer
     objectName: "stationDrawer"
+    visible: root.showIndicator
     x: root.vertical ? 0 : root.leadingInset + root.logoExtent + root.mainGap
     y: root.vertical ? root.leadingInset + root.logoExtent + root.mainGap : 0
     width: root.vertical ? root.barSize : root.revealExtent + (root.showExpander ? root.mainGap + root.arrowExtent : 0)

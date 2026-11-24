@@ -70,22 +70,32 @@ touches the bar, and before any release.
 `differences.json` is the list. In short: one instance per monitor, with its own side,
 height, width, content zoom, background and Pill style; one widget pool for both
 orientations, so a side change keeps an open panel; panels aligned to the bar's edges;
-Station's own widget, which is not saved in the layout; and no blur, shadow or mixed color
+Station's own logo and indicator, which are not saved in the layout; and no blur, shadow or mixed color
 in the removal animation.
 
-### Station's own widget
+### Station's own widgets
 
-While Station is the bar, its widget has no row in `shell.json`'s layout, so that disabling
-the plugin unloads it. Its place is saved as `bar.stationWidget`:
+Station's bar draws two of its own: the logo (`yakumy.station`), which opens the panel, and
+the indicator (`yakumy.station.indicator`), which shows the numbers and open apps. On
+Omarchy's bar they stay one widget, because a plugin has one there.
+
+While Station is the bar, neither has a row in `shell.json`'s layout, so that disabling the
+plugin unloads it. Their places are saved beside it:
 
 ```json
-{ "section": "right", "index": 1 }
+{ "stationWidget": { "section": "left", "index": 1 },
+  "stationIndicator": { "section": "right", "index": 0 } }
 ```
 
-`index` counts the widgets that section draws. A missing or malformed value means beside
-the Omarchy menu, and an index past the end means the end. Dragging another widget does not
-write it, so an unmoved Station icon keeps following the menu. It cannot be pulled off the
-bar: the panel that turns the bar off opens from it.
+An index counts the widgets that section draws, for the logo without the indicator and for
+the indicator with the logo. A missing or malformed logo place means beside the Omarchy
+menu, and a missing or malformed indicator place means just after the logo. An index past
+the end means the end. Dragging another widget writes neither, so an unmoved logo follows
+the menu and an unmoved indicator follows the logo. Dropping the indicator back beside the
+logo removes its key. Neither can be pulled off the bar.
+
+The indicator reads the service through the logo widget on the same bar
+(`StationPanel.indicator`), so a bar runs one bridge poll. Without that widget it is hidden.
 
 `BarModel.stationLayout` draws this layout and `BarModel.editStationLayout` writes a drag
 back to it. Omarchy's migration of `bar.centerAnchor` skips replacement bars, so both split

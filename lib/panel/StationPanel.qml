@@ -341,19 +341,32 @@ Ui.Panel {
     function closeForPopoutSwitch() { root.closeForPopoutSwitch() }
   }
 
+  // What the indicator shows and does, here or as Station's bar's separate widget.
+  readonly property QtObject indicator: QtObject {
+    readonly property int stationNumber: root.stationNumber
+    readonly property string compactMode: root.service ? root.service.config.compactMode || "hover" : "on"
+    readonly property bool showOpenApps: !!root.service && root.service.config.showOpenApps !== false
+    readonly property var stationApps: root.service ? root.service.openApps : ({})
+    readonly property var workspaceMap: root.service ? root.service.workspaceMap : null
+    readonly property var workspaceApps: root.service ? root.service.workspaceApps : ({})
+    readonly property string indicatorStyle: root.service ? root.service.config.indicatorStyle || "prefixed" : "prefixed"
+    function select(number, screenName) {
+      if (root.service) root.service.showWorkspace(String(number), screenName)
+    }
+  }
+
   Bars.StationBar {
     id: barControls
     bar: root.bar
-    stationNumber: root.stationNumber
-    compactMode: root.service ? root.service.config.compactMode || "hover" : "on"
-    showOpenApps: !!root.service && root.service.config.showOpenApps !== false
-    stationApps: root.service ? root.service.openApps : ({})
-    workspaceMap: root.service ? root.service.workspaceMap : null
-    workspaceApps: root.service ? root.service.workspaceApps : ({})
-    indicatorStyle: root.service ? root.service.config.indicatorStyle || "prefixed" : "prefixed"
-    onStationSelected: function(number) {
-      if (root.service) root.service.showWorkspace(String(number), barControls.screenName)
-    }
+    part: root.bar && "separateStationIndicator" in root.bar && root.bar.separateStationIndicator ? "logo" : "both"
+    stationNumber: root.indicator.stationNumber
+    compactMode: root.indicator.compactMode
+    showOpenApps: root.indicator.showOpenApps
+    stationApps: root.indicator.stationApps
+    workspaceMap: root.indicator.workspaceMap
+    workspaceApps: root.indicator.workspaceApps
+    indicatorStyle: root.indicator.indicatorStyle
+    onStationSelected: function(number) { root.indicator.select(number, barControls.screenName) }
     opened: root.opened
     onPressed: root.toggle()
   }

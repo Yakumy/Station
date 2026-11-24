@@ -111,7 +111,7 @@ session, so check them on every related change.
   so `WorkspaceAuthority` must stay armed in Sync and Non-repetitive. Repetitive uses
   Omarchy's blocks and releases it. See [Workspace authority](docs/contracts.md#workspace-authority).
 - **Restart versus removal.** A shell restart must not trigger removal cleanup.
-- **Bar layout.** The layout the bar draws is not the saved one: Station's widget and an old
+- **Bar layout.** The layout the bar draws is not the saved one: Station's logo and indicator and an old
   `centerAnchor` are applied on top. Edit it only through `BarModel.editStationLayout`.
 - **Delegates.** A Repeater delegate can be destroyed during its own handler. Keep
   follow-up actions in a surviving object.

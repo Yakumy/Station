@@ -24,6 +24,7 @@ ShellRoot {
   property var steps: []
   property int step: 0
   property int clicks: 0
+  property var selected: null
 
   function check(condition, message) {
     if (!condition) failures = failures.concat([current + ": " + String(message)])
@@ -41,10 +42,11 @@ ShellRoot {
     return (host.config.bar.layout[region] || []).map(function(entry) { return typeof entry === "string" ? entry : entry.id })
   }
   // What the bar draws in a section, left to right or top to bottom.
-  function drawn(region) {
+  // The indicator has its own scenarios, and stands beside the logo in the others.
+  function drawn(region, withIndicator) {
     var slots = bar.moduleSlots.filter(function(slot) { return slot && slot.region === region && slot.moduleName })
     slots.sort(function(a, b) { return root.along(a) - root.along(b) })
-    return slots.map(function(slot) { return slot.moduleName })
+    return slots.map(function(slot) { return slot.moduleName }).filter(function(name) { return withIndicator || name !== "yakumy.station.indicator" })
   }
   function slotsOf(name) {
     var found = bar.moduleSlots.filter(function(slot) { return slot && slot.moduleName === name })
@@ -128,6 +130,7 @@ ShellRoot {
     bar.layout = Object.assign({ left: [], centerBegin: [], center: [], centerEnd: [], right: [], tray: [] }, next)
     delete bar.centerAnchor
     delete bar.stationWidget
+    delete bar.stationIndicator
   }
 
   // Moves the compositor's own pointer, so what it finds under it is decided by the
@@ -191,6 +194,27 @@ ShellRoot {
       color: "seagreen"
     }
   }
+  // Station's logo widget, with the port the bar's indicator reads.
+  Component {
+    id: testStation
+    Widget {
+      id: logo
+      property bool opened: false
+      function open() { opened = true; if (bar) bar.requestPopout(this) }
+      function close() { opened = false; if (bar) bar.releasePopout(this) }
+      color: "olive"
+      readonly property QtObject indicator: QtObject {
+        property int stationNumber: 2
+        property string compactMode: "off"
+        property bool showOpenApps: false
+        property var stationApps: ({ 1: [], 2: [], 3: [] })
+        property var workspaceMap: null
+        property var workspaceApps: ({})
+        property string indicatorStyle: "prefixed"
+        function select(number, screenName) { root.selected = [number, screenName] }
+      }
+    }
+  }
   Component {
     id: testTray
     Item {
@@ -225,7 +249,7 @@ ShellRoot {
     property var widgets: ({
       "omarchy.menu": { component: testWidget },
       "omarchy.clock": { component: testWidget },
-      "yakumy.station": { component: testPanel },
+      "yakumy.station": { component: testStation },
       "test.reel": { component: testPanel },
       "test.a": { component: testWidget },
       "test.b": { component: testWidget },
@@ -324,6 +348,37 @@ ShellRoot {
         [function() { root.same(root.drawn("right"), ["yakumy.station", "test.b", "test.a"], "a widget moves past it") }, 10]
       ], drag("yakumy.station", "right", "omarchy.menu", "left", 0.2), [
         [function() { root.same(root.drawn("left"), ["yakumy.station", "omarchy.menu", "test.reel"], "before the menu") }, 10]
+      ])),
+
+      scenario("the indicator is its own widget, beside the logo until either is moved", [
+        configure(function(bar) { root.layout(bar, { left: [{ id: "omarchy.menu" }, { id: "test.reel" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }, { id: "test.b" }] }) }),
+        [function() {
+          root.same(root.drawn("left", true), ["omarchy.menu", "yakumy.station", "yakumy.station.indicator", "test.reel"], "together")
+          root.kept = { logo: root.instanceOf("yakumy.station"), indicator: root.instanceOf("yakumy.station.indicator") }
+          root.check(root.kept.indicator.width > 0 && root.kept.indicator.stationNumber === 2, "fed by the logo")
+        }, 10]
+      ].concat(drag("yakumy.station.indicator", "left", "test.a", "right", 0.8), [
+        [function() {
+          root.same([root.drawn("left", true), root.drawn("right", true)], [["omarchy.menu", "yakumy.station", "test.reel"], ["test.a", "yakumy.station.indicator", "test.b"]], "the indicator alone")
+          root.same([host.config.bar.stationIndicator, host.config.bar.stationWidget], [{ section: "right", index: 1 }, undefined], "saved")
+          root.check(root.instanceOf("yakumy.station.indicator") === root.kept.indicator, "it arrives as itself")
+        }, 10]
+      ], drag("yakumy.station", "left", "test.reel", "left", 0.8), [
+        [function() {
+          root.same([root.drawn("left", true), root.drawn("right", true)], [["omarchy.menu", "test.reel", "yakumy.station"], ["test.a", "yakumy.station.indicator", "test.b"]], "the logo alone")
+          root.check(root.instanceOf("yakumy.station") === root.kept.logo && root.instanceOf("yakumy.station.indicator") === root.kept.indicator, "both as themselves")
+          var label = tc.findChild(root.kept.indicator, "stationLabel-3")
+          var at = label.mapToItem(root.slotOf("yakumy.station.indicator"), label.width / 2, label.height / 2)
+          tc.mouseClick(root.slotOf("yakumy.station.indicator"), at.x, at.y)
+        }, 150],
+        [function() { root.same(root.selected, [3, root.bar.targetScreenName], "its numbers still work"); root.lift(root.slotOf("yakumy.station.indicator")) }, 160],
+        [function() { tc.mouseMove(root.held, 10, 400, -1, Qt.LeftButton) }, 220],
+        [function() { root.check(root.bar.barDragRemoveArmed === false, "not removable"); tc.mouseRelease(root.held, 10, 400) }, 700]
+      ], drag("yakumy.station.indicator", "right", "yakumy.station", "left", 0.8), [
+        [function() {
+          root.same(root.drawn("left", true), ["omarchy.menu", "test.reel", "yakumy.station", "yakumy.station.indicator"], "together again")
+          root.check(host.config.bar.stationIndicator === undefined, "and following the logo")
+        }, 10]
       ])),
 
       scenario("a held widget drags itself, not the bar", [

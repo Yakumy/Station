@@ -681,13 +681,15 @@ Dragging follows Omarchy's bar. A widget dragged past a small threshold lifts ou
 long it was held first, and room opens where it would land. Over the center box or the
 tray's drawer it lands among the widgets there, or in them when empty; at the box's edges
 it lands in the flanking section. A tray does not go into its own drawer. Pulled
-well off the bar and let go, a widget is removed, except Station's own, which goes back.
+well off the bar and let go, a widget is removed, except Station's own two, which go back.
 Every widget keeps its instance through a drag and a side change. While a drag runs, the
 whole surface takes input, so the pointer is never handed to a window below.
 
-Station's own widget has no layout row while Station is the bar. Its place is
-`bar.stationWidget`, and an old `bar.centerAnchor` still keeps its widget in the middle
-([rules](omarchy-bar.md#stations-own-widget)).
+Station's logo and indicator are two widgets on Station's bar, and one on Omarchy's. They
+have no layout row while Station is the bar. Their places are `bar.stationWidget` and
+`bar.stationIndicator`, the indicator follows the logo until it is moved, and an old
+`bar.centerAnchor` still keeps its widget in the middle
+([rules](omarchy-bar.md#stations-own-widgets)).
 
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 The full bar answers Omarchy's `panelWidgetIdAt(section, index)` from the focused
