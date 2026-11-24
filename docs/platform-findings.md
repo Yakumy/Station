@@ -1563,3 +1563,20 @@ lcms2, and judged on screen by the maintainer.
   compositor's pointer, `bar-drag` fails on exactly the four opposite-edge moves of the
   default style, and Pill passes because its inset moves `barContent` itself. Omarchy's
   region follows the strip, a direct child of the surface. Station's now binds the sum.
+
+## Bar positions that went back (2026-11-24)
+
+- **[LIVE]** A bar released at one edge went to another, and `shell.json` and Station's
+  `config.json` once disagreed about a monitor's edge.
+- **[QTTEST]** Traced in the real shell at `94a8c3c33` on two nested outputs, moving the bars
+  every 0.4 to 1 s. Omarchy's shell holds `shell.json` in memory, writes it and reloads it
+  from a file watch. About 200 ms after a write its memory showed the file before that write.
+  Station took the older position for a menu request, wrote it, and adopted the next reload,
+  so the two traded `left` and `right` and settled on the wrong one. 4.4.1 ended the same run
+  with the two files disagreeing.
+- **[QTTEST]** With replaced values ignored for 1.5 s and corrected after, six runs at 0.15 to
+  1 s ended on the last position asked for, with the files agreeing and no flip. Echoes were
+  seen up to 0.7 s after a write. `bar-echo.test.cjs` replays the sequence. In `bar-drag` the
+  gesture itself asks for the edge it is released at, from every edge to every other.
+- **[INFER]** Choosing the edge a bar had less than 1.5 s before, from Omarchy's menu, looks
+  the same as an echo and is not applied.

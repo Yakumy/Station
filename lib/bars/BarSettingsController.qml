@@ -42,6 +42,55 @@ Item {
     onTriggered: { root.flushPendingMonitorBars(); root.syncFocusedBarMenu() }
   }
   function panelClosed() { publishDelay.restart() }
+
+  // Omarchy's shell re-reads shell.json after each write, and can show the file as it
+  // was before the newest one for a moment. A value Station has just replaced is then
+  // its own echo, not a request from elsewhere: adopting it moves the bar back, and
+  // writing that starts the two echoing each other. Per connector, and "" for the menu's
+  // position: the values Station replaced lately, oldest first, then the one it wrote.
+  property var ownWrites: ({})
+  readonly property int echoWindow: 1500
+  Timer {
+    id: echoSettle
+    interval: root.echoWindow + 100
+    onTriggered: root.settleOwnWrites()
+  }
+  function rowText(name, row) {
+    var input = ({})
+    input[name] = row
+    return JSON.stringify(Store.loadConfig({ bars: input }).bars[name] || null)
+  }
+  function recordOwnWrite(name, before, after, now) {
+    var writes = Object.assign({}, ownWrites)
+    var log = writes[name] && now - writes[name].at <= echoWindow ? writes[name].values.slice() : [before]
+    if (log[log.length - 1] !== after) log.push(after)
+    writes[name] = { at: now, values: log.slice(-8) }
+    ownWrites = writes
+    echoSettle.restart()
+  }
+  function ownEcho(name, value, now) {
+    var log = ownWrites[name]
+    return !!log && now - log.at <= echoWindow && log.values[log.values.length - 1] !== value
+      && log.values.indexOf(value) !== -1
+  }
+  // An edit made while the old file was showing can have saved an echo. Once nothing is
+  // on its way any more, what Station last wrote stands.
+  function settleOwnWrites() {
+    var rows = parseJson(hostBarsSignature, {})
+    var changes = ({})
+    Object.keys(ownWrites).forEach(function(name) {
+      var log = ownWrites[name].values
+      if (!name || !preferences || !preferences[name] || pendingMonitorBars[name]) return
+      var shown = rowText(name, rows[name])
+      if (shown !== log[log.length - 1] && log.indexOf(shown) !== -1) changes[name] = monitorBar(name)
+    })
+    var menu = ownWrites[""] ? ownWrites[""].values : []
+    var wrote = menu[menu.length - 1]
+    var menuEcho = wrote !== undefined && globalBarPosition !== wrote && menu.indexOf(globalBarPosition) !== -1
+    ownWrites = ({})
+    if (activeStationBar() && (menuEcho || Object.keys(changes).length))
+      publishMonitorBars(changes, menuEcho ? wrote : "")
+  }
   function parseJson(raw, fallback) {
     try { return JSON.parse(String(raw || "")) } catch (error) { return fallback }
   }
@@ -51,7 +100,7 @@ Item {
 
   function adoptHostBars() {
     if (!configLoaded || !hostConfig || !activeStationBar()) return
-    var rows = parseJson(hostBarsSignature, {})
+    var rows = parseJson(hostBarsSignature, {}), now = Date.now()
     var bars = Object.assign({}, preferences || {}), pending = Object.assign({}, pendingMonitorBars), changed = false
     Object.keys(Object.assign({}, observedHostBars, rows)).forEach(function(name) {
       if (!validConnector(name) || JSON.stringify(rows[name]) === JSON.stringify(observedHostBars[name])) return
@@ -60,6 +109,7 @@ Item {
       }
       var input = {}; input[name] = rows[name]
       var clean = Store.loadConfig({ bars: input }).bars[name]
+      if (ownEcho(name, JSON.stringify(clean), now)) return
       if (JSON.stringify(bars[name]) !== JSON.stringify(clean)) { bars[name] = clean; changed = true }
       delete pending[name]
     })
@@ -174,6 +224,12 @@ Item {
 
   function publishMonitorBars(changes, menuPosition) {
     if (typeof publishHost !== "function") return false
+    var rows = parseJson(hostBarsSignature, {}), now = Date.now()
+    Object.keys(changes || {}).forEach(function(name) {
+      recordOwnWrite(name, rowText(name, rows[name]), rowText(name, changes[name]), now)
+    })
+    if (["top", "bottom", "left", "right"].indexOf(menuPosition) !== -1)
+      recordOwnWrite("", globalBarPosition, menuPosition, now)
     return publishHost(function(scoped) {
       if (!scoped.bar || typeof scoped.bar !== "object") scoped.bar = {}
       scoped.bar.id = "yakumy.station"
@@ -247,6 +303,7 @@ Item {
   function syncGlobalBarPosition() {
     var next = globalBarPosition
     if (!next) return
+    if (ownEcho("", next, Date.now())) return
     var previous = lastGlobalBarPosition
     lastGlobalBarPosition = next
     // Initial attachment must preserve independently saved monitor positions.

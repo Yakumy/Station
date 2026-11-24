@@ -447,6 +447,42 @@ ShellRoot {
       all = all.concat(scenario("the pointer reaches the bar after every move between edges, " + style, rows))
     })
 
+    // Drag the free bar from every edge to every edge, released at three places along
+    // it, on both bars: the edge asked for is the one under the pointer.
+    var pairs = []
+    var edgeNames = ["top", "right", "bottom", "left"]
+    edgeNames.forEach(function(from) { edgeNames.forEach(function(to) { if (from !== to) pairs.push([from, to]) }) })
+    ;["default", "pill"].forEach(function(style) {
+      var rows = [configure(function(bar) { root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] }) }, 250)]
+      pairs.forEach(function(pair) {
+        rows.push(configure(function(bar) { root.fullBar.instances.forEach(function(one) {
+          bar.monitors[one.targetScreenName] = { enabled: true, position: pair[0], style: style, height: 40, contentSize: 0, width: 100, background: "solid" } }) }, 260))
+        ;[0.25, 0.5, 0.75].forEach(function(where) {
+          rows.push([function() {
+            root.fullBar.instances.forEach(function(one) {
+              var content = one.slotWindow(one.moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.clock" })[0]).contentItem
+              var w = content.width, h = content.height, depth = one.panelThickness - one.barSize / 2 - (one.contentOffset === 0 ? one.pillEdgeInset : 0)
+              var start = { top: [w * 0.35, depth], bottom: [w * 0.35, h - depth], left: [depth, h * 0.35], right: [w - depth, h * 0.35] }[pair[0]]
+              var end = { top: [w * where, 30], bottom: [w * where, h - 30], left: [30, h * where], right: [w - 30, h * where] }[pair[1]]
+              var asked = ""
+              function note(position) { asked = position }
+              one.positionRequested.connect(note)
+              tc.mousePress(content, start[0], start[1])
+              tc.mouseMove(content, start[0] + 12, start[1] + 12, -1, Qt.LeftButton)
+              tc.mouseMove(content, (start[0] + end[0]) / 2, (start[1] + end[1]) / 2, -1, Qt.LeftButton)
+              tc.mouseMove(content, end[0], end[1], -1, Qt.LeftButton)
+              var shown = one.barMoveCandidate
+              tc.mouseRelease(content, end[0], end[1])
+              one.positionRequested.disconnect(note)
+              root.same([shown, asked], [pair[1], pair[1]], one.targetScreenName + " " + pair.join(" to ") + " at " + where)
+              root.check(!one.barMoveActive, "the move ends")
+            })
+          }, 30])
+        })
+      })
+      all = all.concat(scenario("the bar is asked to go to the edge it is released at, " + style, rows))
+    })
+
     all = all.concat(scenario("a side change keeps every widget and its open panel", [
       configure(function(bar) {
         root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }, { id: "yakumy.station" }, { id: "test.reel" }, { id: "test.tray" }], tray: [{ id: "test.inner" }] })

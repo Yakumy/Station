@@ -14,6 +14,8 @@ Your bar settings and widget order stay as they are.
   transparent, blur and solid.
 - Fix drags that ended once the pointer left the bar on an empty workspace.
 - Fix clicks caught by the bar over a fullscreen window.
+- Fix a moved bar going back, or to another edge, when several moves follow each other.
+  Omarchy's shell briefly showed the previous settings and Station took them for a request.
 - Follow a camera cutout's height, keep tooltips quick from icon to icon, and show a press
   on the widget under the pointer.
 - Plugins built for Omarchy's bar now meet the same bar on Station, apart from a listed set

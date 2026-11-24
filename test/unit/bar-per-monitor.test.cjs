@@ -611,6 +611,7 @@ test('Omarchy position menu only moves the focused monitor and pins inherited pe
   context.globalBarPosition = host.bar.position;
   context.syncGlobalBarPosition();
   assert.equal(context.config.bars['DP-2'].position, 'bottom', 'focus mirror does not move peers');
+  context.ownWrites = {}; // a moment later, when no echo of the mirror can still arrive
   host.bar.position = context.globalBarPosition = 'bottom';
   context.syncGlobalBarPosition();
   assert.equal(context.config.bars['DP-1'].position, 'bottom', 'same menu choice on a second monitor still applies');

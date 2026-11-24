@@ -715,7 +715,7 @@ second copy of one. The fix has to come from Omarchy.
 | Control | Rule |
 | --- | --- |
 | Presence | At least one enabled output keeps a bar. A disabled output's remembered bar does not count. |
-| Position | Four side arrows per monitor. Omarchy's Bar → Position menu and bar dragging change only their own monitor. Other monitors keep their edges. |
+| Position | Four side arrows per monitor. Omarchy's Bar → Position menu and bar dragging change only their own monitor. Other monitors keep their edges. For 1.5 s after Station writes a bar setting or the menu's position, a value it has just replaced is its own echo and is not adopted ([why](platform-findings.md#bar-positions-that-went-back-2026-11-24)). A new value is adopted at once. When the writes settle, Station's last one stands. |
 | Content size | From `Style.font.body` to the live maximum. Above the default, each module zooms uniformly. |
 | Height | From the theme's thickness to 5% of the mode's shorter native side. A live minimum can clamp it. |
 | Width | 1 to 100%. Requests below the measured non-overlap minimum stay visible and the bar clamps. |
