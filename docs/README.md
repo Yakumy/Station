@@ -16,6 +16,7 @@ Users start with the [README](../README.md). Coding agents start with
 | Run checks, add a test, or qualify a change on real hardware | [Testing](testing.md) |
 | Install an update on this machine, publish, or submit to the marketplace | [Releasing](releasing.md) |
 | Learn how Hyprland, Omarchy and Quickshell actually behave | [Platform findings](platform-findings.md) |
+| Change the bar, or close a gap with Omarchy's | [Omarchy's bar](omarchy-bar.md) |
 | Build or change panel UI | [Design system](design-system.md) |
 | Create a video, banner, screenshot or theme | [Branding](branding.md) |
 | Learn why a design choice exists, or see what is still undecided | [Decisions](decisions.md) |

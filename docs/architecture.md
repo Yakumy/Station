@@ -50,7 +50,7 @@ owner and its tab, so one change stays in one place.
 | `lib/stations/` | Workspace numbering and modes, migrations, switching, window actions, open-app rows, Workspaces tab. |
 | `lib/displays/` | Display identity and geometry, monitor Lua, previews, Keep, screen recovery, Displays tab. |
 | `lib/bars/` | Per-monitor bar settings, layer rule, stock widget leases, Station's bar controls, Bar tab. |
-| `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar. |
+| `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar, kept in step with it ([Omarchy's bar](omarchy-bar.md)). |
 | `lib/windows/` | Window setting limits, Lua generation, save and read-back, Windows tab. |
 | `lib/color/` | Color Match: ICC profile generation, the toggle file, Color Match tab. |
 | `lib/wallpaper/` | Crop geometry, profiles, staging helper, theme listing, surfaces, Wallpaper tab and theme carousel. |

@@ -5,13 +5,15 @@ Everything lives under `test/`, and `test/run.py` is the single entry point.
 ## Run the checks
 
 ```sh
-python3 test/run.py        # portable: Node tests, theme tokens, whitespace
+python3 test/run.py        # portable: Node tests, theme tokens, Omarchy bar gap, whitespace
 python3 test/run.py qml    # portable, then every QML harness
 python3 test/run.py all    # qml, then the QML compile and plugin validation
 ```
 
 Run `all` before a commit that changes runtime code. It needs a Wayland session. It
-does not change monitors, Station's configuration or the installed plugin.
+does not change monitors, Station's configuration or the installed plugin. `bar-drag`
+starts a nested Hyprland silently on `special:station-test`, with its own runtime directory
+and headless outputs, and removes it. It skips without a Hyprland session.
 
 A harness that nothing runs goes stale. `test/run.py` discovers `test/qml/*.py` and
 `test/unit/*.test.*` by file name, so a new file joins the run automatically.
@@ -22,7 +24,7 @@ A harness that nothing runs goes stale. `test/run.py` discovers `test/qml/*.py` 
 | --- | --- | --- | --- |
 | `test/unit/` | Node, Lua and Perl | Policy, production function bodies, fixed shell programs with fake commands | QML signal order, rendering, hardware |
 | `test/qml/` | Qt, offscreen or isolated Wayland | Production components with doubled effects, bindings, timers, pointer events | Physical input, compositor effects |
-| `test/lint/` | Node and Quickshell | Theme tokens, and that all runtime QML compiles against the installed host | Runtime behavior |
+| `test/lint/` | Node, Python and Quickshell | Theme tokens, that all runtime QML compiles against the installed host, and that Omarchy's bar has not moved on | Runtime behavior |
 | `test/live/` | The live session | M0 and cold-login platform experiments | Not routine. See [Live runners](#live-runners). |
 | `test/helpers/`, `test/fixtures/` | | Shared test code and fixtures | |
 
@@ -37,8 +39,7 @@ QML harnesses cover that part.
 | --- | --- |
 | `bar-icons`, `bar-rendering`, `open-apps` | Bar glyphs, content zoom, and the app drawer in each compact mode with apps on and off |
 | `bar-settings`, `bar-tab` | Bar owner and tab, with fake effects |
-| `bar-sections` | Production center geometry and tray hosting with widget doubles: horizontal and vertical, content zoom, empty center and delegate removal |
-| `bar-tray-reserve` | Production tray-length bindings against an Omarchy 4.0 tray that reserves its hidden drawer and a 4.5 tray that does not, collapsed to fully revealed |
+| `bar-drag` | Station's real `Bar.qml` with the installed host's Ui and Commons, on two headless outputs: drags within and between sections, around and of Station's own icon, into and out of the tray's drawer, after a hold, off the strip and off the bar; every edge, both styles, zoomed and not; instances kept through drags and side changes; geometry, panels, an old `centerAnchor`, what Omarchy's shell calls, and the space each bar reserves. Pointer events are Qt's, not a mouse's. `STATION_BAR_ENTRY` runs it on another checkout's bar, `OMARCHY_PATH` on another host |
 | `binding-picker` | Key capture |
 | `display-owner`, `display-fileview` | Preview and Keep with fake effects, then real `FileView` objects on temporary files |
 | `workspace-owner`, `workspace-fileview` | Journal with fake effects, then real `FileView` objects on temporary files |
@@ -59,7 +60,9 @@ contributor pull requests on a runner attached to your desktop.
 
 Installed-host tests skip without Omarchy. Passing CI does not prove QML compilation,
 rendering or monitor behavior, so run `test/run.py all` locally before a release.
-GitHub requires this check on `main`.
+GitHub requires this check on `main`. A second job, `Omarchy bar gap`, compares the pinned
+bar with Omarchy's development branch. It is not required, but a failure must be closed
+before a release ([Omarchy's bar](omarchy-bar.md#rules)).
 
 ## Evidence levels
 

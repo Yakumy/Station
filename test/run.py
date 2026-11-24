@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run Station's checks. See docs/testing.md.
 
-    test/run.py            portable checks: Node tests, theme tokens, whitespace
+    test/run.py            portable checks: Node tests, theme tokens, Omarchy bar gap, whitespace
     test/run.py qml        portable checks, then the QML harnesses
     test/run.py all        qml, plus the compile check and plugin validation
 
@@ -32,6 +32,7 @@ def portable():
     tests = sorted(glob.glob("test/unit/*.test.*", root_dir=ROOT))
     return [run("node unit tests", ["node", "--test", *tests]),
             run("theme tokens", ["node", "test/lint/theme-tokens.mjs"]),
+            run("omarchy bar gap", [sys.executable, "test/lint/bar-upstream.py"]),
             run("whitespace", ["git", "diff", "--check"])]
 
 

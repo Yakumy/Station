@@ -134,7 +134,9 @@ direction. It works in Station mode.
 
 Every monitor gets its own bar. Select a monitor to show or hide its bar, move it to
 any edge with the arrows, and set its content size, height, width, background and
-style. You can also drag a bar's free area toward another edge.
+style. You can also drag a bar's free area toward another
+edge, drag any widget (Station's icon too) to a new place, and pull one off the bar to
+remove it.
 
 **Background:** Solid color, Transparent or Blur. **Style:** Omarchy's default bar or
 separate Pills.

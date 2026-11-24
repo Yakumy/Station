@@ -196,6 +196,30 @@ Item {
     return instance ? instance.panelWidgetIdAt(region, index) : ""
   }
 
+  // The rest of what Omarchy's shell asks of its bar.
+  function cycleBackground() {
+    var instance = preferredInstance()
+    if (instance) instance.cycleBackground()
+  }
+
+  function debugBarGeometry() {
+    var out = []
+    for (var i = 0; i < instances.length; i++) out = out.concat(instances[i].debugBarGeometry())
+    return out
+  }
+
+  // Each screen's reserved thickness. Toasts and other plugins clear the bar by it.
+  readonly property var screenBarSizes: {
+    var sizes = ({})
+    for (var i = 0; i < instances.length; i++)
+      if (instances[i]) Object.assign(sizes, instances[i].screenBarSizes)
+    return sizes
+  }
+
+  function barSizeFor(screenName) {
+    return BarModel.barSizeFor(screenBarSizes, screenName, barSize)
+  }
+
   function hideBarWidget(pluginId) {
     var hidden = false
     for (var i = 0; i < instances.length; i++)

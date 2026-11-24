@@ -1,3 +1,18 @@
+# Unreleased
+
+- Bring Station's bar up to Omarchy's current one. Dragging works as it does there: room
+  opens where a widget would land, it glides into place, a widget pulled off the bar is
+  removed, and no widget is rebuilt by a drag. The bar also gains camera-cutout height, warm
+  tooltips, press feedback, panels that morph into each other, and no stray clicks over
+  fullscreen windows.
+- Drag Station's own icon, and drop other widgets on either side of it. Its place is saved
+  as `bar.stationWidget` in `shell.json`.
+- Holding a widget drags the widget, not the whole bar. Drag empty bar space to move the bar.
+- Double-clicking empty bar space steps that monitor's background through transparent, blur
+  and solid, as Omarchy's bar does.
+- Check on every commit and release that Station's bar matches Omarchy's apart from a listed
+  set of differences, and test drags on the real bar.
+
 # 4.4.1 — Fix the shell crash on monitor changes
 
 - Fix the shell crashing when a monitor is connected or disconnected. After a monitor

@@ -76,12 +76,31 @@ appears only under the real loader, so `test/run.py all` includes the compile ch
 
 ## Keep the adapted bar whole
 
-`MonitorBar.qml` is about 2,450 lines, but it is an attributed adaptation of Omarchy's
-bar. Staying close to upstream is what makes later upgrades reviewable. A review of
-its zoom and rescan hooks found no defect and no reduction in caller knowledge from
-extracting them. Do not split it for size alone. Reopen this with a concrete upstream
-update problem or a teardown defect. Station also does not inherit from the host's
-private bar type, because that type has no stable extension API.
+Omarchy's bar holds one position, hidden state and background for every monitor, and is a
+private type with no stable extension API. Per-monitor bars therefore need a replacement
+bar, and Station's is an attributed adaptation of Omarchy's `Bar.qml`. Do not split
+`MonitorBar.qml` for size alone: staying member for member like upstream is what makes the
+two comparable.
+
+Until 4.4.1 that comparison was done by hand and Station's bar stayed near Omarchy 4.0.6.
+It missed the reworked dragging, kept a surface only as deep as the bar, and ran a monitor
+remap three weeks after Omarchy dropped it. Since then every difference is listed and
+checked on each commit ([Omarchy's bar](omarchy-bar.md)).
+
+## Holding a widget drags the widget
+
+From 4.0.0 to 4.4.1, holding a widget for 200 ms moved the whole bar, so a press, a pause and
+a drag could not move an icon. Omarchy's bar moves only from its free area, and plugins
+expect that. The open-hand cursor over the free area stays: it says that the area can be
+dragged.
+
+## Station's icon keeps its place outside the layout
+
+A saved layout row for Station keeps the plugin enabled after the user turns it off, so the
+row is retired while Station is the bar. That also made the icon impossible to drag. Its
+place is a separate optional key in `shell.json`, `bar.stationWidget`, rather than in
+Station's own config: the layout it counts into lives in the same file, and one write keeps
+them in step.
 
 ## Keep the plain geometry copy
 

@@ -1538,3 +1538,20 @@ lcms2, and judged on screen by the maintainer.
 - **[INFER]** The tests missed it because every display harness doubles Hyprland and
   models only Station's own block. None loads Omarchy's config, so none could see a
   rule applied after it.
+
+## Dragging bar widgets (2026-11-24)
+
+- **[SRC]** Station's bar was Omarchy 4.0.6's with changes. Omarchy reworked dragging in
+  `b7e900ced` (2026-10-14), and made the bar's surface span its screen in `e2d618ac2`
+  (2026-10-19): on an empty workspace Hyprland picks a pointer target again on a surface
+  commit, and a pointer past the strip was taken off the bar mid-drag.
+- **[QTTEST]** `bar-drag` on 4.4.1's bar: Station's icon never moved, because its slot has
+  no layout row to look up. A widget dropped before it went to the section's end. Holding a
+  widget for 200 ms moved the bar. The surface was 26 px deep. On the bar ported to
+  `94a8c3c33`, all scenarios pass, with the Ui and Commons of that revision and of v4.5.0.
+- **[SRC]** Migration `1791969355.sh` splits the center section at `bar.centerAnchor` only
+  where `bar.id` is empty or `omarchy.bar`, so a Station config keeps the key.
+- **[QTTEST]** The real shell at `94a8c3c33`, with a copy of a real `shell.json`, Reel and
+  Station in a scratch home on two nested outputs, drew a blurred Pill bar and a
+  transparent one. Blur stayed within the pills. Physical pointer dragging, hotplug and the
+  live session were not exercised.

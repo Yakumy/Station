@@ -1,8 +1,10 @@
 # Third-party notices
 
-`lib/bars/omarchy/MonitorBar.qml` and `lib/bars/omarchy/BarModel.js` are adapted from the Omarchy 4.0.6
-stock bar, distributed by the Omarchy project under the MIT License. Station
-keeps these files local so it can create one independently positioned bar per
+`lib/bars/omarchy/MonitorBar.qml` and `lib/bars/omarchy/BarModel.js` are adapted from Omarchy's
+stock bar, and `test/fixtures/omarchy-bar/` holds unmodified copies of it at the revision
+`pin.json` names. `test/helpers/headless.py` and `test/fixtures/bar-drag/` follow Omarchy's
+`test/headless` and `bar-drag` fixture. All are distributed by the Omarchy project under the MIT License. Station
+keeps the bar local so it can create one independently positioned bar per
 monitor without modifying `/usr/share/omarchy`.
 
 `lib/platform/ScreenMoveRemap.qml` is adapted from the `shell/Ui/ScreenMoveRemap.qml`

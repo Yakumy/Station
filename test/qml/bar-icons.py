@@ -33,7 +33,7 @@ Item {
  }
  StationMark { tint: "#aabbdd"; x: 200; y: 20; width: 48; height: 48 }
  Item {
-   id: slot
+   id: host
    property var activeItem: corrected
    property real contentZoom: 3
    property var imageContentRoot: null
@@ -45,7 +45,7 @@ Item {
  TestCase {
    name: "IconVisual"; when: windowShown
    function test_render() {
-     slot.applyContentImageZoom()
+     host.applyContentImageZoom()
      wait(500)
      var image = grabImage(root)
      image.save("/tmp/station-icon-rendering.png")

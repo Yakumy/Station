@@ -36,3 +36,16 @@ jobs:
         run: python3 test/run.py
       - name: Check committed whitespace
         run: git show --format= --check HEAD
+  bar-gap:
+    name: Omarchy bar gap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      # Not a required check. Omarchy's bar moving on is closed before a release
+      # (docs/omarchy-bar.md), not by an unrelated pull request.
+      - name: Compare with Omarchy's development branch
+        run: python3 test/lint/bar-upstream.py --latest

@@ -53,13 +53,15 @@ Never delete or reclone the checkout, and never push from it.
 GitHub requires the `Station portable checks` status on `main`.
 
 1. Check the worktree, fetch `origin` and inspect divergence.
-2. Commit the reviewed work on `dev`.
-3. Fast-forward local `main` from `dev`, then return to `dev`.
-4. Run `git push origin dev`.
-5. Wait for the `Station checks` run on that exact commit to succeed.
-6. Run `git push origin main`. An atomic push of both refs before CI completes is
+2. Run `python3 test/lint/bar-upstream.py --latest`. If it reports a gap, close it first
+   ([how](omarchy-bar.md#close-a-gap)). A release never ships with one.
+3. Commit the reviewed work on `dev`.
+4. Fast-forward local `main` from `dev`, then return to `dev`.
+5. Run `git push origin dev`.
+6. Wait for the `Station checks` run on that exact commit to succeed.
+7. Run `git push origin main`. An atomic push of both refs before CI completes is
    rejected. Never force push.
-7. Check the remote branch commits and the default-branch `HEAD`.
+8. Check the remote branch commits and the default-branch `HEAD`.
 
 ## Submit to the marketplace
 

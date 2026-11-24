@@ -664,7 +664,8 @@ still removes the monitor's adjustment through the normal apply path.
 
 ## Bars
 
-`Bar.qml` hosts one Omarchy-derived bar per connected output. Activating it removes
+Station's bar behaves as Omarchy's does, apart from a listed set of differences
+([Omarchy's bar](omarchy-bar.md)). `Bar.qml` hosts one Omarchy-derived bar per connected output. Activating it removes
 Station's persisted widget row atomically and injects a virtual Station slot. Plugin
 disable therefore removes the last enable reference and unloads the service. Never edit
 packaged Omarchy files for per-monitor behavior.
@@ -672,16 +673,22 @@ packaged Omarchy files for per-monitor behavior.
 Station preserves the host's six layout sections: `left`, `centerBegin`, `center`,
 `centerEnd`, `right`, and `tray`. The flanking center sections grow away from the
 center box without moving its anchor, horizontally or vertically. Their extents
-count toward Pill backgrounds, minimum width, and maximum content size. Older
-three-section layouts continue to work. Widgets in `tray` render inside a tray
-widget that provides a `sectionHost`; older tray widgets without that port keep
-their previous behavior. A Pill follows the tray's painted length: Station subtracts
-the collapsed drawer only from a tray that reserves it in its size (Omarchy 4.0,
-without `fixedAtStart`).
+count toward Pill backgrounds, minimum width, and maximum content size. Widgets in `tray`
+render inside a tray widget that provides a `sectionHost`. Station needs Omarchy 4.5 or
+later.
 
-Inline settings updates and widget placement lookup cover every section. Dragging
-to the outer edges of the center box inserts into the corresponding flanking
-section. The tray drawer accepts widgets and cannot contain its own hosting tray.
+Dragging follows Omarchy's bar. A widget dragged past a small threshold lifts out, however
+long it was held first, and room opens where it would land. Over the center box or the
+tray's drawer it lands among the widgets there, or in them when empty; at the box's edges
+it lands in the flanking section. A tray does not go into its own drawer. Pulled
+well off the bar and let go, a widget is removed, except Station's own, which goes back.
+Every widget keeps its instance through a drag and a side change. While a drag runs, the
+whole surface takes input, so the pointer is never handed to a window below.
+
+Station's own widget has no layout row while Station is the bar. Its place is
+`bar.stationWidget`, and an old `bar.centerAnchor` still keeps its widget in the middle
+([rules](omarchy-bar.md#stations-own-widget)).
+
 One full-bar IPC handler refreshes the hidden-state probe on every monitor.
 The full bar answers Omarchy's `panelWidgetIdAt(section, index)` from the focused
 monitor's bar, so Omarchy's Bar panel hotkeys (SUPER + CTRL + 1 to 9) open the Nth
@@ -693,10 +700,9 @@ ancestor visible, opaque and enabled, and every clipping ancestor containing the
 point. The slot's overlay takes the left button only and has no wheel handler, so
 the wheel reaches the widget directly. Station never forwards it.
 
-A widget slot clips only while it is dragged or holds the old tray's reserved drawer,
-as Omarchy's bar clips only while dragging or removing. Omarchy's Indicators widget
-hovers from past its own edges to reveal its inactive icons, and a clipping slot would
-never deliver that hover.
+A widget slot clips only while it is dragged or being removed, as on Omarchy's bar. Its
+Indicators widget hovers from past its own edges, and a clipping slot would never deliver
+that hover.
 
 A third-party widget gets its `bar.shell` from Omarchy's `pluginShellForBarEntry()`.
 That facade has no service lookup, so `bar.shell.serviceFor()` returns null under
@@ -738,10 +744,13 @@ file or to `state.json`.
   `config.bars` is authoritative and the shell config write waits for close.
 - The panel follows the current bar edge and configured thickness. The host positions
   it using logical thickness, independent of transient layer-window dimensions.
-- Drag empty bar space to move the bar, or hold a widget for 200 ms before dragging.
-  A short widget drag still reorders widgets; releasing a held move does not click it.
-- Partial-length bars sit centered in a full-length, input-masked surface, because
-  Omarchy's keyboard panels need the surface to match the screen.
+- Drag empty bar space to move the bar. A widget drags itself, not the bar.
+- Double-click empty bar space to step that monitor's background: transparent, blur, solid.
+- The surface spans its screen, as Omarchy's does. Only the drawn bar takes input, nothing
+  does under a fullscreen window, and only the strip is reserved. Partial-length bars sit
+  centered in it.
+- `Bar.qml` answers everything Omarchy's shell asks of its bar, including `screenBarSizes`
+  and `cycleBackground`, for the focused monitor or all of them.
 - Content zoom scales the subtree, re-rasterizes text and decodes images at the matched
   physical size.
 

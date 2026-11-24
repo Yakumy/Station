@@ -9,6 +9,7 @@ this file before you change anything. [docs/README.md](docs/README.md) indexes t
 | --- | --- |
 | Any change | [Architecture](docs/architecture.md) to find the owner |
 | Behavior | [Contracts](docs/contracts.md) section for that feature |
+| The bar | [Omarchy's bar](docs/omarchy-bar.md) |
 | Platform behavior | [Platform findings](docs/platform-findings.md) §0, §11 and §13 |
 | UI | [Design system](docs/design-system.md) |
 | Videos, banners, screenshots, GIFs, themes | [Branding](docs/branding.md) |
@@ -24,10 +25,12 @@ python3 test/run.py qml            # portable checks and all QML harnesses
 python3 test/run.py all            # everything: needs a Wayland session
 node --test test/unit/grid.test.cjs     # one test file
 python3 test/qml/panel-session.py       # one harness
+python3 test/lint/bar-upstream.py --latest   # has Omarchy's bar moved on?
 omarchy-shell yakumy.station status     # running service state
 ```
 
-`test/run.py all` changes no monitor, configuration or installed file. It passing does
+`test/run.py all` changes no monitor, configuration or installed file. It opens one hidden
+nested compositor on a special workspace for `bar-drag`. It passing does
 not prove a live monitor transaction or final rendering. See [Testing](docs/testing.md).
 
 ## Boundaries
@@ -39,6 +42,11 @@ not prove a live monitor transaction or final rendering. See [Testing](docs/test
 - Run the focused tests, then `python3 test/run.py all`, before a commit that changes
   runtime code.
 - Change documents in the same commit as the behavior.
+- When a bar test fails, or something works on Omarchy's bar and not on Station's, check
+  Omarchy's original bar first and bring Station's up to it.
+- On each commit and each release, compare Station's bar with Omarchy's and close any gap
+  before you continue. Other plugins are built for Omarchy's bar. See
+  [Omarchy's bar](docs/omarchy-bar.md#rules).
 - Report what you tested versus what you inferred. Use the evidence tags in
   [Testing](docs/testing.md#evidence-levels).
 - Before a requested commit, inspect the complete diff, stage only the task's files and
@@ -103,6 +111,8 @@ session, so check them on every related change.
   so `WorkspaceAuthority` must stay armed in Sync and Non-repetitive. Repetitive uses
   Omarchy's blocks and releases it. See [Workspace authority](docs/contracts.md#workspace-authority).
 - **Restart versus removal.** A shell restart must not trigger removal cleanup.
+- **Bar layout.** The layout the bar draws is not the saved one: Station's widget and an old
+  `centerAnchor` are applied on top. Edit it only through `BarModel.editStationLayout`.
 - **Delegates.** A Repeater delegate can be destroyed during its own handler. Keep
   follow-up actions in a surviving object.
 - **Layout.** `Style.space()` scales with the theme. Compiling does not prove that a panel
