@@ -1,4 +1,4 @@
-# Unreleased
+# 4.4.1 — Fix the shell crash on monitor changes
 
 - Fix the shell crashing when a monitor is connected or disconnected. After a monitor
   moved, Station hid and showed its bar again, which rebuilt the bar's window. A widget
