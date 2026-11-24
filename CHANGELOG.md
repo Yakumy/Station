@@ -14,6 +14,9 @@ Your bar settings and widget order stay as they are.
   move the bar.
 - Changed: double-clicking empty bar space steps that monitor's background through
   transparent, blur and solid.
+- Changed: a Solid or Blur bar in the Omarchy default style keeps a small space from the
+  monitor's edge and ends, as a Pill bar does, and reserves it. A Transparent one still
+  starts at the edge.
 - Fix drags that ended once the pointer left the bar on an empty workspace.
 - Fix clicks caught by the bar over a fullscreen window.
 - Fix a moved bar going back, or to another edge, when several moves follow each other.

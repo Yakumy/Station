@@ -145,10 +145,11 @@ between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
 Span keeps exact edge-to-edge cards because its image crop is continuous. A non-Span
 Wallpaper card keeps its monitor's exact shape, so it previews the desktop's crop.
 
-**Bar edge geometry:** The Omarchy default bar is edge-aligned in every background.
-A Pill bar floats `Style.space(8)` from the monitor edge and from the ends of its span, so
-it never touches the monitor. The surface reserves that space with the bar thickness,
-and the islands keep their internal padding. Window gaps do not move the bar.
+**Bar edge geometry:** A bar with a visible surface (Pill in every background, and Omarchy
+default in Solid or Blur) floats `Style.space(8)` from the monitor edge and from the ends
+of its span, so it never touches the monitor. A Transparent Omarchy default bar is
+edge-aligned. The surface reserves that space with the bar thickness, and Pill's islands
+keep their internal padding. Window gaps do not move the bar.
 
 ## 8. Do-not list
 

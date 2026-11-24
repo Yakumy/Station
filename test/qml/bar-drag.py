@@ -31,6 +31,8 @@ with tempfile.TemporaryDirectory(prefix="station-bar-drag-") as folder, headless
     shutil.copy(repo / "test/fixtures/bar-drag/shell.qml", config)
     for name in ("Ui", "Commons"):
         (config / name).symlink_to(omarchy / "shell" / name)
+    # Omarchy's own indicators, read from the installed host.
+    (config / "plugins").symlink_to(omarchy / "shell/plugins")
     # Nothing the bar starts may reach the session.
     for name in ("omarchy-bar", "omarchy-bar-text-color"):
         (tools / name).write_text("#!/bin/bash\nexit 0\n")

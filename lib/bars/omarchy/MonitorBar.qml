@@ -815,11 +815,15 @@ Item {
     targetScreen.devicePixelRatio, panelModeFor(targetScreen), Style.bar.notchHeight)
   readonly property int barSize: Math.max(defaultBarSize, cutoutFloor, Math.min(maximumBarSize,
     requestedHeight > 0 ? requestedHeight : defaultBarSize))
-  // The default bar starts at the physical edge. Pill floats a safe distance from
-  // the monitor edge and its ends, and the surface reserves that distance too.
-  readonly property real pillEdgeInset: barStyle === "pill" ? Math.round(Style.space(8)) : 0
-  readonly property real contentOffset: position === "top" || position === "left" ? pillEdgeInset : 0
-  readonly property real panelThickness: barSize + pillEdgeInset
+  // A bar with a visible surface (Pill, Solid or Blur) floats a safe distance from the
+  // monitor edge and its ends, and reserves that distance too. A Transparent default
+  // bar starts at the physical edge.
+  readonly property real edgeInset: barStyle === "pill" || backgroundMode !== "transparent"
+    ? Math.round(Style.space(8)) : 0
+  // Pill's islands keep the space at the ends themselves, inside the full length.
+  readonly property real endInset: barStyle === "pill" ? 0 : edgeInset
+  readonly property real contentOffset: position === "top" || position === "left" ? edgeInset : 0
+  readonly property real panelThickness: barSize + edgeInset
   readonly property int defaultContentSize: Math.max(1, Math.ceil(Style.font.body))
   readonly property int contentInset: Math.ceil(Style.spacing.sm)
   property int measuredMaximumContentSize: defaultContentSize
@@ -832,8 +836,8 @@ Item {
   readonly property int minimumWidthPercent: Math.max(1, Math.min(100,
     Math.ceil(measuredMinimumLength * 100 / Math.max(1, screenLength))))
   readonly property int effectiveWidthPercent: Math.max(requestedWidthPercent, minimumWidthPercent)
-  readonly property int effectiveBarLength: Math.max(1,
-    Math.round(screenLength * effectiveWidthPercent / 100))
+  readonly property int effectiveBarLength: Math.max(1, Math.min(screenLength - endInset * 2,
+    Math.round(screenLength * effectiveWidthPercent / 100)))
 
   // Where the bar strip starts across its surface, which spans the screen.
   function stripOffset(surface) {
@@ -883,7 +887,7 @@ Item {
     }) : null
   }
 
-  // How thick the bar is on a screen, with the space a Pill bar keeps from the
+  // How thick the bar is on a screen, with the space a floating bar keeps from the
   // edge. Every instance draws one screen, whose cutout barSize already clears.
   function thicknessFor(screen) {
     return root.panelThickness
@@ -1975,6 +1979,7 @@ Item {
       // survives the flip and re-anchors with it.
       Item {
         id: barContent
+        objectName: "barContent"
         width: root.vertical ? root.barSize : root.effectiveBarLength
         height: root.vertical ? root.effectiveBarLength : root.barSize
         x: root.vertical
@@ -1986,7 +1991,7 @@ Item {
         readonly property real regionGap: Style.spacing.sm
         readonly property real pillPadding: root.barStyle === "pill" ? Style.space(6) : 0
         readonly property real pillInset: 0
-        readonly property real pillOuterMargin: root.pillEdgeInset
+        readonly property real pillOuterMargin: root.edgeInset
         readonly property real edgeMargin: root.barStyle === "pill"
           ? pillOuterMargin + pillPadding : Style.space(8)
         readonly property real leadingLength: (root.vertical ? leftModules.height : leftModules.width)
@@ -2006,7 +2011,7 @@ Item {
           var rightPadding = root.barStyle === "pill" && rightModules.baseFlowLength > 0
             ? pillPadding * 2 : 0
           return BarModel.maximumContentSize(root.defaultContentSize, root.barSize,
-            root.contentInset, root.screenLength, leftModules.baseFlowLength,
+            root.contentInset, root.screenLength - root.endInset * 2, leftModules.baseFlowLength,
             centerModules.baseLeadingExtent, centerModules.baseTrailingExtent,
             rightModules.baseFlowLength, edgeMargin, regionGap, leftPadding,
             centerPadding, rightPadding)

@@ -296,12 +296,12 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /backgroundMode === "blur" \? Util\.alpha\(Commons\.Color\.bar\.background, 0\.01\)/);
   assert.match(monitorBar, /barStyle === "pill"/);
   assert.match(monitorBar, /radius: Math\.min\(width, height\) \/ 2/);
-  assert.match(monitorBar, /panelThickness: barSize \+ pillEdgeInset/);
-  assert.match(monitorBar, /pillEdgeInset: barStyle === "pill" \? Math\.round\(Style\.space\(8\)\) : 0/);
+  assert.match(monitorBar, /panelThickness: barSize \+ edgeInset/);
+  assert.match(monitorBar, /edgeInset: barStyle === "pill" \|\| backgroundMode !== "transparent"\s+\? Math\.round\(Style\.space\(8\)\) : 0/);
   assert.doesNotMatch(monitorBar, /edgeCenterOffset|insetPresentation/);
   assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore : ExclusionMode\.Normal\s+exclusiveZone: thickness/);
   assert.match(monitorBar, /function thicknessFor\(screen\) \{\s+return root\.panelThickness/);
-  assert.match(monitorBar, /pillOuterMargin: root\.pillEdgeInset/);
+  assert.match(monitorBar, /pillOuterMargin: root\.edgeInset/);
   assert.match(monitorBar, /pillInset: 0/);
   assert.match(monitorBar, /pillOuterMargin \+ pillPadding : Style\.space\(8\)/);
   assert.match(monitorBar, /parent\.width - width - barContent\.edgeMargin/);

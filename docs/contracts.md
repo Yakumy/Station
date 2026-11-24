@@ -722,7 +722,7 @@ second copy of one. The fix has to come from Omarchy.
 | Height | From the theme's thickness to 5% of the mode's shorter native side. A live minimum can clamp it. |
 | Width | 1 to 100%. Requests below the measured non-overlap minimum stay visible and the bar clamps. |
 | Enabled | The switch moves at once, and `BarLayout` applies the change after the throw, because building a bar blocks the shell's thread. While the panel is open the host write is deferred like every other bar control, because it would rebuild all widgets and the panel with them. Closing the panel in that gap still applies it. A refused change moves the switch back. Refusing the last enabled bar also shows a red message: "At least one bar must stay on. Turn on another bar first." A successful on/off edit clears it. |
-| Background | Solid, Transparent or Blur. See [below](#bar-background-blur). A monitor with no saved row shows the host bar's `bar.background`: `none` (or the older `transparent: true`) is Transparent, `glassy` is Blur, and `opaque` or no value is Solid. Installing Station must not change how the bar looks. |
+| Background | Solid, Transparent or Blur. See [below](#bar-background-blur). A monitor with no saved row shows the host bar's `bar.background`: `none` (or the older `transparent: true`) is Transparent, `glassy` is Blur, and `opaque` or no value is Solid. Installing Station must not change how the bar looks, except for the [space Solid and Blur keep from the monitor](#bar-background-blur). |
 | Style | Omarchy default, or Pill with separate left, center and right islands. |
 
 ### Bar background blur
@@ -739,8 +739,9 @@ When no bar wants Blur, Station disables the layer rule and returns what it chan
 reload clears the override, and the next sync applies it again. Nothing is written to a
 file or to `state.json`.
 
-- The Omarchy default bar begins at the physical monitor edge. A Pill bar keeps a safe
-  space of `Style.space(8)` from that edge and from the ends of its span. Auto exclusion
+- A bar with a visible surface (Pill in every background, and Omarchy default in Solid or
+  Blur) keeps a safe space of `Style.space(8)` from the monitor edge and from the ends of
+  its span, at any width. A Transparent default bar begins at the physical edge. The bar
   reserves the configured thickness plus that space. Window gaps never move the bar.
 - A side change reflows in place, so an open panel survives. While the panel is open,
   `config.bars` is authoritative and the shell config write waits for close.

@@ -117,7 +117,7 @@ ShellRoot {
     rects.forEach(function(r) {
       var low = { top: r.y, left: r.x, bottom: surface.height - r.y - r.h, right: surface.width - r.x - r.w }[position]
       var high = low + (v ? r.w : r.h)
-      check(low >= bar.pillEdgeInset - 0.5 && high <= bar.panelThickness + 0.5, r.name + " is outside the strip: " + low + " to " + high)
+      check(low >= bar.edgeInset - 0.5 && high <= bar.panelThickness + 0.5, r.name + " is outside the strip: " + low + " to " + high)
     })
     var clock = slotOf("omarchy.clock")
     var middle = clock.mapToItem(null, clock.width / 2, clock.height / 2)
@@ -164,6 +164,36 @@ ShellRoot {
         var one = root.fullBar.instances[n]
         var slot = one.moduleSlots.filter(function(s) { return s && s.moduleName === "test.reel" })[0]
         root.check(slot.hovered, "the pointer reaches a widget on " + one.targetScreenName + " at the " + position + " (" + style + ")")
+      }, 10])
+    })(n)
+    return rows
+  }
+
+  // Omarchy's indicators hide until the pointer is where they would show: just before
+  // the center widget here, as Omarchy's default layout has them.
+  function revealScenario(position, style) {
+    var rows = [configure(function(bar) {
+      root.layout(bar, { left: [{ id: "omarchy.menu" }], centerBegin: [{ id: "omarchy.indicators" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] })
+      var monitors = {}
+      root.fullBar.instances.forEach(function(one) {
+        monitors[one.targetScreenName] = { enabled: true, position: position, style: style, height: 40, contentSize: 0, width: 100, background: "solid" }
+      })
+      bar.monitors = monitors
+    }, 500)]
+    function found(one, name) { return one.moduleSlots.filter(function(s) { return s && s.moduleName === name })[0] }
+    function length(slot) { return root.bar.vertical ? slot.height : slot.width }
+    for (var n = 0; n < 2; n++) (function(n) {
+      rows.push([function() { var one = root.fullBar.instances[n]; root.pointer(one.targetScreen.x + one.targetScreen.width / 2, one.targetScreen.y + one.targetScreen.height / 2) }, 400])
+      rows.push([function() {
+        var one = root.fullBar.instances[n]
+        root.same(length(found(one, "omarchy.indicators")), 0, "hidden from the middle of the screen")
+        var clock = found(one, "omarchy.clock")
+        var p = clock.mapToItem(null, clock.width / 2, clock.height / 2)
+        root.pointer(one.targetScreen.x + p.x - (root.bar.vertical ? 0 : clock.width / 2 + 20), one.targetScreen.y + p.y - (root.bar.vertical ? clock.height / 2 + 20 : 0))
+      }, 400])
+      rows.push([function() {
+        var one = root.fullBar.instances[n]
+        root.check(length(found(one, "omarchy.indicators")) > 40, "shown on " + one.targetScreenName + " at the " + position + " (" + style + "): " + length(found(one, "omarchy.indicators")))
       }, 10])
     })(n)
     return rows
@@ -251,6 +281,7 @@ ShellRoot {
       "omarchy.clock": { component: testWidget },
       "yakumy.station": { component: testStation },
       "test.reel": { component: testPanel },
+      "omarchy.indicators": { component: indicators },
       "test.a": { component: testWidget },
       "test.b": { component: testWidget },
       "test.c": { component: testWidget },
@@ -258,6 +289,7 @@ ShellRoot {
       "test.inner": { component: testWidget },
       "test.tray": { component: testTray }
     })
+    readonly property Component indicators: Qt.createComponent("plugins/bar/widgets/Indicators.qml")
     function metadataFor(id) { return widgets[id] ? { firstParty: true } : null }
   }
 
@@ -272,6 +304,7 @@ ShellRoot {
         right: [{ id: "test.twin" }, { id: "test.b" }, { id: "test.twin" }, { id: "test.c" }]
       }
     } })
+    function firstPartyServiceFor(id) { return null }
     function mutateShellConfig(mutator) {
       var copy = JSON.parse(JSON.stringify(config))
       mutator(copy)
@@ -502,6 +535,47 @@ ShellRoot {
       all = all.concat(scenario("the pointer reaches the bar after every move between edges, " + style, rows))
     })
 
+    // Solid and Blur keep the Pill's space from the monitor's edge and ends. Nothing of a
+    // Transparent default bar is drawn, so it starts at the edge.
+    ;["solid", "blur", "transparent"].forEach(function(background) {
+      ;[100, 97].forEach(function(width) {
+        var rows = []
+        ;["top", "right", "bottom", "left"].forEach(function(edge) {
+          rows.push(configure(function(bar) {
+            root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] })
+            bar.monitors = {}
+            root.fullBar.instances.forEach(function(one) {
+              bar.monitors[one.targetScreenName] = { enabled: true, position: edge, style: "default", height: 40, contentSize: 0, width: width, background: background }
+            })
+          }, 400), [function() {
+            root.fullBar.instances.forEach(function(one) {
+              var item = one.slotWindow(one.moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.clock" })[0]).contentItem
+              var content = tc.findChild(item, "barContent")
+              var at = content.mapToItem(null, 0, 0)
+              var gaps = { top: at.y, left: at.x, bottom: item.height - at.y - content.height, right: item.width - at.x - content.width }
+              var gap = background === "transparent" ? 0 : 8
+              var length = one.vertical ? item.height : item.width
+              var end = Math.max(gap, (length - Math.round(length * width / 100)) / 2)
+              root.same(gaps[edge], gap, edge + " edge")
+              root.same(one.panelThickness - one.barSize, gap, "reserved beside the bar")
+              ;(one.vertical ? ["top", "bottom"] : ["left", "right"]).forEach(function(side) {
+                root.check(Math.abs(gaps[side] - end) <= 0.5, side + " end of a " + edge + " bar: " + gaps[side] + " is not " + end)
+              })
+            })
+            root.bar = root.fullBar.instances[0]
+            root.geometry(edge)
+          }, 10])
+        })
+        all = all.concat(scenario("a " + background + " default bar's space from its monitor, width " + width, rows))
+      })
+    })
+
+    ;["default", "pill"].forEach(function(style) {
+      var rows = []
+      ;["top", "right", "bottom", "left"].forEach(function(edge) { rows = rows.concat(root.revealScenario(edge, style)) })
+      all = all.concat(scenario("Omarchy's indicators show under the pointer on every edge, " + style, rows))
+    })
+
     // Drag the free bar from every edge to every edge, released at three places along
     // it, on both bars: the edge asked for is the one under the pointer.
     var pairs = []
@@ -516,7 +590,7 @@ ShellRoot {
           rows.push([function() {
             root.fullBar.instances.forEach(function(one) {
               var content = one.slotWindow(one.moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.clock" })[0]).contentItem
-              var w = content.width, h = content.height, depth = one.panelThickness - one.barSize / 2 - (one.contentOffset === 0 ? one.pillEdgeInset : 0)
+              var w = content.width, h = content.height, depth = one.panelThickness - one.barSize / 2 - (one.contentOffset === 0 ? one.edgeInset : 0)
               var start = { top: [w * 0.35, depth], bottom: [w * 0.35, h - depth], left: [depth, h * 0.35], right: [w - depth, h * 0.35] }[pair[0]]
               var end = { top: [w * where, 30], bottom: [w * where, h - 30], left: [30, h * where], right: [w - 30, h * where] }[pair[1]]
               var asked = ""

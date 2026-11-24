@@ -70,6 +70,7 @@ touches the bar, and before any release.
 `differences.json` is the list. In short: one instance per monitor, with its own side,
 height, width, content zoom, background and Pill style; one widget pool for both
 orientations, so a side change keeps an open panel; panels aligned to the bar's edges;
+a space between the monitor and a Pill, Solid or Blur bar;
 Station's own logo and indicator, which are not saved in the layout; and no blur, shadow or mixed color
 in the removal animation.
 
