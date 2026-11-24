@@ -1,17 +1,26 @@
-# Unreleased
+# 4.5.0 — The bar works like Omarchy's again
 
-- Bring Station's bar up to Omarchy's current one. Dragging works as it does there: room
-  opens where a widget would land, it glides into place, a widget pulled off the bar is
-  removed, and no widget is rebuilt by a drag. The bar also gains camera-cutout height, warm
-  tooltips, press feedback, panels that morph into each other, and no stray clicks over
-  fullscreen windows.
-- Drag Station's own icon, and drop other widgets on either side of it. Its place is saved
-  as `bar.stationWidget` in `shell.json`.
-- Holding a widget drags the widget, not the whole bar. Drag empty bar space to move the bar.
-- Double-clicking empty bar space steps that monitor's background through transparent, blur
-  and solid, as Omarchy's bar does.
-- Check on every commit and release that Station's bar matches Omarchy's apart from a listed
-  set of differences, and test drags on the real bar.
+Update to get it: Station replaces Omarchy's bar, so its fixes reach you only through a
+Station update. Run `omarchy plugin update yakumy.station`, then `omarchy restart shell`.
+Your bar settings and widget order stay as they are.
+
+- Drag any bar widget, Station's own icon included, and drop widgets on either side of it.
+  Room opens where a widget would land, it glides into place, and no widget restarts.
+- Pull a widget off the bar to remove it, as on Omarchy's bar. Removing a plugin's widget
+  can turn that plugin off. Station's icon goes back instead.
+- Changed: holding a widget drags the widget, not the whole bar. Drag empty bar space to
+  move the bar.
+- Changed: double-clicking empty bar space steps that monitor's background through
+  transparent, blur and solid.
+- Fix drags that ended once the pointer left the bar on an empty workspace.
+- Fix clicks caught by the bar over a fullscreen window.
+- Follow a camera cutout's height, keep tooltips quick from icon to icon, and show a press
+  on the widget under the pointer.
+- Plugins built for Omarchy's bar now meet the same bar on Station, apart from a listed set
+  of differences. Each commit and release is checked against Omarchy's current bar.
+- Save the place of Station's icon as `bar.stationWidget` in `shell.json`. Without it, the
+  icon stays beside the Omarchy menu.
+- Needs Omarchy 4.5 or later.
 
 # 4.4.1 — Fix the shell crash on monitor changes
 
