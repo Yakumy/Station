@@ -130,6 +130,42 @@ ShellRoot {
     delete bar.stationWidget
   }
 
+  // Moves the compositor's own pointer, so what it finds under it is decided by the
+  // bar's input region, not by Qt. Integers only reach the command.
+  function pointer(x, y) {
+    mover.command = ["hyprctl", "dispatch", "hl.dsp.cursor.move({ x = " + Math.round(x) + ", y = " + Math.round(y) + " })"]
+    mover.running = true
+  }
+  Process { id: mover }
+  function pointerOn(slot, instance) {
+    var p = slot.mapToItem(null, slot.width / 2, slot.height / 2)
+    pointer(instance.targetScreen.x + p.x, instance.targetScreen.y + p.y)
+  }
+  function hoverScenario(position, style, wait) {
+    var rows = [configure(function(bar) {
+      var monitors = bar.monitors || {}
+      root.fullBar.instances.forEach(function(one) {
+        monitors[one.targetScreenName] = { enabled: true, position: position, style: style, height: 40, contentSize: 0, width: 100, background: "solid" }
+      })
+      bar.monitors = monitors
+    }, 450)]
+    for (var n = 0; n < 2; n++) (function(n) {
+      rows.push([function() { var one = root.fullBar.instances[n]; root.pointer(one.targetScreen.x + one.targetScreen.width / 2, one.targetScreen.y + one.targetScreen.height / 2) }, 130])
+      rows.push([function() {
+        var one = root.fullBar.instances[n]
+        var slot = one.moduleSlots.filter(function(s) { return s && s.moduleName === "test.reel" })[0]
+        root.check(!slot.hovered, "nothing is hovered from the middle of the screen")
+        root.pointerOn(slot, one)
+      }, 130])
+      rows.push([function() {
+        var one = root.fullBar.instances[n]
+        var slot = one.moduleSlots.filter(function(s) { return s && s.moduleName === "test.reel" })[0]
+        root.check(slot.hovered, "the pointer reaches a widget on " + one.targetScreenName + " at the " + position + " (" + style + ")")
+      }, 10])
+    })(n)
+    return rows
+  }
+
   component Widget: Rectangle {
     property var bar: null
     property string moduleName: ""
@@ -402,7 +438,20 @@ ShellRoot {
       ])))
     })
 
+    // Every ordered pair of edges: an input region left behind on the old edge shows
+    // only after particular moves.
+    var tour = ["top", "right", "left", "bottom", "top", "left", "right", "bottom", "right", "top", "bottom", "left", "top"]
+    ;["default", "pill"].forEach(function(style) {
+      var rows = [configure(function(bar) { root.layout(bar, { left: [{ id: "omarchy.menu" }, { id: "test.reel" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] }) }, 250)]
+      tour.forEach(function(edge) { rows = rows.concat(root.hoverScenario(edge, style)) })
+      all = all.concat(scenario("the pointer reaches the bar after every move between edges, " + style, rows))
+    })
+
     all = all.concat(scenario("a side change keeps every widget and its open panel", [
+      configure(function(bar) {
+        root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }, { id: "yakumy.station" }, { id: "test.reel" }, { id: "test.tray" }], tray: [{ id: "test.inner" }] })
+        root.fullBar.instances.forEach(function(one) { bar.monitors[one.targetScreenName].position = "right" })
+      }, 500),
       [function() {
         root.kept = { reel: root.instanceOf("test.reel"), station: root.instanceOf("yakumy.station") }
         root.counts = root.countsNow()

@@ -39,5 +39,6 @@ test('MonitorBar draws one arrangement for both orientations from one pool', () 
   assert.match(source, /slot\.activeItem\.data[\s\S]*?objects\[j\] === owner/,
     'Station uses a dedicated popout owner nested inside its slot root');
   assert.match(source, /panel\.anchorItem = slot\.popoutAnchor/);
-  assert.match(source, /id: stripInputRegion\s+item: barContent/, 'only the drawn bar takes input');
+  assert.match(source, /id: stripInputRegion\s+x: barStrip\.x \+ barContent\.x\s+y: barStrip\.y \+ barContent\.y\s+width: barContent\.width/,
+    'only the drawn bar takes input, wherever the strip moves');
 });

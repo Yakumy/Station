@@ -1555,3 +1555,11 @@ lcms2, and judged on screen by the maintainer.
   Station in a scratch home on two nested outputs, drew a blurred Pill bar and a
   transparent one. Blur stayed within the pills. Physical pointer dragging, hotplug and the
   live session were not exercised.
+- **[LIVE]** On 4.5.0's first build, after several position changes, the bar on eDP-1 drew
+  and reserved the left edge but took no pointer input at all.
+- **[QTTEST]** Cause: its input region was `Region { item: barContent }`. A Quickshell
+  `Region` follows its item's own x, y and size. A move between opposite edges changes none
+  of them, only the parent strip's position, so the input stayed on the old edge. With the
+  compositor's pointer, `bar-drag` fails on exactly the four opposite-edge moves of the
+  default style, and Pill passes because its inset moves `barContent` itself. Omarchy's
+  region follows the strip, a direct child of the surface. Station's now binds the sum.

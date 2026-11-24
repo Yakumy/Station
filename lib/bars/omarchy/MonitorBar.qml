@@ -1923,9 +1923,15 @@ Item {
     // would then take the clicks meant for the top of the fullscreen window.
     mask: dragActive ? null : (underFullscreen ? noInputRegion : stripInputRegion)
 
+    // Not `item: barContent`: a Region follows its item's own x, y and size, and a
+    // move between opposite edges shifts only the strip around it, which left the
+    // input behind on the old edge.
     Region {
       id: stripInputRegion
-      item: barContent
+      x: barStrip.x + barContent.x
+      y: barStrip.y + barContent.y
+      width: barContent.width
+      height: barContent.height
     }
 
     Region {

@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory(prefix="station-bar-drag-") as folder, headless
     log = Path(os.environ.get("STATION_BAR_LOG") or root / "log")
     with log.open("w") as out:
         shell = subprocess.Popen(["quickshell", "-p", str(config), "--no-color"], env=env, stdout=out, stderr=subprocess.STDOUT)
-        deadline = time.monotonic() + 90
+        deadline = time.monotonic() + 150
         while time.monotonic() < deadline and shell.poll() is None and not (result.exists() and result.stat().st_size):
             time.sleep(0.1)
         time.sleep(0.2)
