@@ -140,6 +140,23 @@ ShellRoot {
     mover.running = true
   }
   Process { id: mover }
+  // Only the scenarios' own constant dispatchers reach the command.
+  function dispatch(call) {
+    dispatcher.command = ["hyprctl", "dispatch", call]
+    dispatcher.running = true
+  }
+  Process { id: dispatcher }
+  Process { id: flag }
+  FloatingWindow { id: app; visible: false; implicitWidth: 400; implicitHeight: 300; title: "app" }
+  FloatingWindow { id: overlay; visible: false; implicitWidth: 400; implicitHeight: 300; title: "overlay" }
+  function reach(reached, message) {
+    function slot() { return root.bar.moduleSlots.filter(function(s) { return s && s.moduleName === "test.a" })[0] }
+    return [
+      [function() { root.pointer(root.bar.targetScreen.x + root.bar.targetScreen.width / 2, root.bar.targetScreen.y + root.bar.targetScreen.height / 2) }, 200],
+      [function() { root.pointerOn(slot(), root.bar) }, 250],
+      [function() { root.same(slot().hovered, reached, message) }, 10]
+    ]
+  }
   function pointerOn(slot, instance) {
     var p = slot.mapToItem(null, slot.width / 2, slot.height / 2)
     pointer(instance.targetScreen.x + p.x, instance.targetScreen.y + p.y)
@@ -611,6 +628,57 @@ ShellRoot {
       })
       all = all.concat(scenario("the bar is asked to go to the edge it is released at, " + style, rows))
     })
+
+    // Omarchy #19897: only a fullscreen window that covers the screen takes the bar's input.
+    all = all.concat(scenario("the bar takes clicks unless a fullscreen window covers it", [
+      configure(function(bar) {
+        root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] })
+        root.fullBar.instances.forEach(function(one) {
+          bar.monitors[one.targetScreenName] = { enabled: true, position: "top", style: "default", height: 40, contentSize: 0, width: 100, background: "solid" }
+        })
+      }, 500),
+      [function() { root.bar = root.fullBar.instances[0] }, 10]
+    ].concat(reach(true, "with no window"), [
+      [function() { app.visible = true }, 500],
+      [function() { root.dispatch('hl.dsp.window.fullscreen({ mode = "fullscreen" })') }, 600]
+    ], reach(false, "under a fullscreen window"), [
+      [function() { root.dispatch('hl.dsp.workspace.toggle_special("test")') }, 400],
+      [function() { overlay.visible = true }, 600]
+    ], reach(true, "under a special workspace over that window"), [
+      // Hyprland closes a special workspace when its last window closes.
+      [function() { overlay.visible = false }, 600]
+    ], reach(false, "when the special workspace closes"), [
+      [function() { app.visible = false }, 600]
+    ], reach(true, "when the fullscreen window closes"))))
+
+    // Omarchy's shell has one bar for all screens, so a widget's broadcast reaches each.
+    function recordingShown() {
+      return root.fullBar.instances.map(function(one) {
+        var widget = one.moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.indicators" })[0]
+        return !!widget && widget.activeItem.activeIndicatorIds.indexOf("ScreenRecording") !== -1
+      })
+    }
+    function setRecording(on) {
+      flag.command = [on ? "touch" : "rm", Quickshell.env("HOME") + "/recording"]
+      flag.running = true
+    }
+    function broadcastFrom(n) {
+      root.fullBar.instances[n].moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.indicators" })[0].activeItem.broadcast("refresh")
+    }
+    var relay = [configure(function(bar) {
+      root.layout(bar, { left: [{ id: "omarchy.menu" }], centerBegin: [{ id: "omarchy.indicators" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] })
+    }, 600), [function() { root.same(recordingShown(), [false, false], "not recording") }, 10]]
+    ;[0, 1].forEach(function(n) {
+      relay = relay.concat([
+        [function() { setRecording(true) }, 200],
+        [function() { broadcastFrom(n) }, 500],
+        [function() { root.same(recordingShown(), [true, true], "a start relayed by monitor " + n) }, 10],
+        [function() { setRecording(false) }, 200],
+        [function() { broadcastFrom(n) }, 500],
+        [function() { root.same(recordingShown(), [false, false], "a stop relayed by monitor " + n) }, 10]
+      ])
+    })
+    all = all.concat(scenario("a widget's refresh reaches its copies on every monitor", relay))
 
     all = all.concat(scenario("a side change keeps every widget and its open panel", [
       configure(function(bar) {

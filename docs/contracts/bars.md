@@ -100,10 +100,13 @@ file or to `state.json`.
   it using logical thickness, independent of transient layer-window dimensions.
 - Drag empty bar space to move the bar. A widget drags itself, not the bar.
 - Double-click empty bar space to step that monitor's background: transparent, blur, solid.
-- The surface spans its screen, as Omarchy's does. Only the drawn bar takes input, nothing
-  does under a fullscreen window, and only the strip is reserved. Partial-length bars sit
-  centered in it.
+- The surface spans its screen, as Omarchy's does. Only the drawn bar takes input, and only
+  the strip is reserved. Nothing takes input under a fullscreen window that covers the
+  screen, unless a special workspace is open over it. Partial-length bars sit centered in
+  the surface.
 - `Bar.qml` answers everything Omarchy's shell asks of its bar, including `screenBarSizes`
   and `cycleBackground`, for the focused monitor or all of them.
+- A monitor's `moduleWidgets` answers with a widget's copies on every monitor, as
+  Omarchy's one bar does, because only one copy answers an IPC call and relays it.
 - Content zoom scales the subtree, re-rasterizes text and decodes images at the matched
   physical size.

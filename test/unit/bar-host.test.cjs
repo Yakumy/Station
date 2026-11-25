@@ -10,7 +10,7 @@ const contract = read('lib/panel/ServiceContract.js');
 
 test('4.0 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '4.5.1');
+  assert.equal(manifest.version, '4.5.2');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });

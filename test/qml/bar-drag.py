@@ -37,6 +37,9 @@ with tempfile.TemporaryDirectory(prefix="station-bar-drag-") as folder, headless
     for name in ("omarchy-bar", "omarchy-bar-text-color"):
         (tools / name).write_text("#!/bin/bash\nexit 0\n")
         (tools / name).chmod(0o755)
+    # Omarchy's screen recording indicator asks this whether anything records.
+    (tools / "omarchy-capture-screenrecording").write_text('#!/bin/bash\n[[ -e "$HOME/recording" ]]\n')
+    (tools / "omarchy-capture-screenrecording").chmod(0o755)
     result = root / "result.json"
     imports = os.pathsep.join(filter(None, [str(omarchy / "shell"), os.environ.get("QML2_IMPORT_PATH", "")]))
     env = dict(session.env, OMARCHY_PATH=str(omarchy), STATION_BAR_ENTRY=str(entry), STATION_TEST_RESULT=str(result),
@@ -46,7 +49,7 @@ with tempfile.TemporaryDirectory(prefix="station-bar-drag-") as folder, headless
     log = Path(os.environ.get("STATION_BAR_LOG") or root / "log")
     with log.open("w") as out:
         shell = subprocess.Popen(["quickshell", "-p", str(config), "--no-color"], env=env, stdout=out, stderr=subprocess.STDOUT)
-        deadline = time.monotonic() + 150
+        deadline = time.monotonic() + 180
         while time.monotonic() < deadline and shell.poll() is None and not (result.exists() and result.stat().st_size):
             time.sleep(0.1)
         time.sleep(0.2)

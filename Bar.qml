@@ -170,7 +170,7 @@ Item {
   function moduleWidgets(pluginId) {
     var result = []
     for (var i = 0; i < instances.length; i++)
-      result = result.concat(instances[i].moduleWidgets(pluginId))
+      if (instances[i]) result = result.concat(instances[i].ownWidgets(pluginId))
     return result
   }
 
@@ -255,6 +255,7 @@ Item {
         shell: root.shell
         manifest: root.manifest
         barConfig: root.configFor(modelData)
+        joinedWidgets: function(pluginId) { return root.moduleWidgets(pluginId) }
         onPositionRequested: function(position) { root.requestMonitorPosition(monitorBar, position) }
         onPopoutRequested: root.closePeerPopouts(monitorBar)
         onBackgroundModeRequested: function(mode) { root.requestMonitorBackground(monitorBar, mode) }

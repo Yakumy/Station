@@ -42,3 +42,23 @@ test('MonitorBar draws one arrangement for both orientations from one pool', () 
   assert.match(source, /id: stripInputRegion\s+x: barStrip\.x \+ barContent\.x\s+y: barStrip\.y \+ barContent\.y\s+width: barContent\.width/,
     'only the drawn bar takes input, wherever the strip moves');
 });
+
+// Omarchy's own cases, from its test/shell.d/bar-test.sh.
+test('the bar drops its input only under a fullscreen window that covers its output', () => {
+  const output = { x: 0, y: 0, width: 1280, height: 800 };
+  const toplevel = (id, fullscreen, name = String(id), x = 0, size = [1280, 800]) => ({ workspace: { id, name },
+    lastIpcObject: { fullscreen, at: [x, 0], size } });
+  const covered = (windows, hasFullscreen = true, special = '', screen = output) =>
+    BarModel.fullscreenOn(windows, 4, hasFullscreen, special, screen);
+  assert.equal(covered([toplevel(4, 0), toplevel(4, 2)]), true);
+  assert.equal(covered([toplevel(4, 1)]), false, 'maximized');
+  assert.equal(covered([toplevel(9, 2)]), false, 'another workspace');
+  assert.equal(covered([{ workspace: null, lastIpcObject: null }]), false);
+  assert.equal(covered([toplevel(4, 2)], false), false, 'a fullscreen column out of view');
+  assert.equal(covered([toplevel(4, 2, '4', -1887), toplevel(4, 1)]), false, 'a maximized column beside one out of view');
+  assert.equal(covered([toplevel(4, 2), toplevel(4, 1)], true, 'special:qconsole'), false, 'a special workspace over it');
+  assert.equal(covered([toplevel(4, 2), toplevel(-1, 2, 'special:qconsole')], false, 'special:qconsole'), true);
+  assert.equal(covered([toplevel(-1, 2, 'special:other')], true, 'special:qconsole'), false, 'another special workspace');
+  assert.equal(covered([toplevel(4, 2, '4', -1280)], true, '', { ...output, x: -1280 }), true, 'a monitor left of the origin');
+  assert.equal(covered([toplevel(4, 2, '4', 0, [1279, 799])]), true, 'rounded geometry at a fractional scale');
+});

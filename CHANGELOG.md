@@ -1,3 +1,15 @@
+# 4.5.2 — The right state on every monitor
+
+Saved settings stay as they are.
+
+- Fix app icons shown on the wrong monitor's bar in Non-repetitive mode, when a monitor's
+  workspace numbers are not consecutive, for example after dragging one to another monitor.
+- Fix Omarchy's screen recording, update, workspace and clock widgets showing an old state on
+  one monitor, such as a recording that has already stopped.
+- Follow Omarchy's newest bar: it takes clicks again under a special workspace opened over a
+  fullscreen window, and beside fullscreen columns scrolled out of view.
+- Simplify the code that places monitors, reads window settings and loads saved settings.
+
 # 4.5.1 — A cleaner codebase
 
 Nothing changes in how Station works or looks, and saved settings stay as they are.

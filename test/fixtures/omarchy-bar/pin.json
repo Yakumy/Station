@@ -1,17 +1,21 @@
 {
   "source": "https://github.com/omacom/omarchy",
   "branch": "quattro",
-  "commit": "94a8c3c3321129fae87a329947711355897e69fd",
-  "describe": "v4.5.0-rc1-1079-g94a8c3c33",
-  "reviewed": "2026-11-24",
+  "commit": "e27997133d51f36aa00b7c3b8cbbd0d52e7d2a1e",
+  "describe": "v4.5.0-rc1-1130-ge2799713",
+  "reviewed": "2026-11-25",
   "files": {
-    "Bar.qml": "730e8cba2b12c3df237f8fffe6b0ec6aa7bde4b5f0275442e59585a14074d554",
-    "BarModel.js": "87479c980c843eaeec3433f6191173e101607d7db52a0ffc26eb124b45d2a2b3"
+    "Bar.qml": "b28872b04ff5fd8866ba00f04c2aea1ed9a5df6e395e506843404fad2b9adce2",
+    "BarModel.js": "c54906d2e6ad196cfd22a8e4b9589d8fb5ed76f898d8b9b5e2a1593e0920236e"
   },
   "older": {
     "v4.5.0": {
       "Bar.qml": "865998cec3114a395e130e1ff16f92486c3fad8da59400035b95c11522c2b235",
       "BarModel.js": "9394b2ca8256518bbe04a8b11f4b740e20c2d9c0859372eda475dc33200471b8"
+    },
+    "v4.5.0-rc1-1079-g94a8c3c33": {
+      "Bar.qml": "730e8cba2b12c3df237f8fffe6b0ec6aa7bde4b5f0275442e59585a14074d554",
+      "BarModel.js": "87479c980c843eaeec3433f6191173e101607d7db52a0ffc26eb124b45d2a2b3"
     }
   }
 }
