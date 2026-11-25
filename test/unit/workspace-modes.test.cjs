@@ -242,6 +242,20 @@ test('per-output app rows group by the bar output and its number', () => {
   assert.deepEqual(outputRows({ outputs: ['A'] }, [win('0x1', 1, 'A')], null, null), {});
 });
 
+test('app rows follow the numbers a monitor owns, as Grid does, when they are not consecutive', () => {
+  const split = map(['A', 'B'], 'nonrepetitive', [[1, 3, 5], [2, 4]]);
+  const rows = outputRows(split, range(1, 7).map(id => win('0x' + id, id, 'A')), null, null);
+  assert.deepEqual(Object.keys(rows.A), ['1', '3', '5']);
+  assert.deepEqual(Object.keys(rows.B), ['2', '4', '6', '7'], 'IDs past the total belong to the last output');
+  for (const id of range(1, 20)) {
+    const placed = outputRows(split, [win('0x1', id, 'A')], null, null);
+    assert.ok(placed[split.outputs[G.owner(id, split)]][id], `workspace ${id}`);
+  }
+  const before = { ...split, owned: undefined };
+  assert.deepEqual(Object.keys(outputRows(before, [win('0x1', 3, 'A'), win('0x2', 4, 'B')], null, null).B), ['4'],
+    'a map saved without owned numbers keeps consecutive blocks');
+});
+
 function switcher(workspaceMap, focused = 'B') {
   const batches = [];
   const c = { Hypr: H, Grid: G, Model, state: 'idle', gen: 0, queuedStation: 0, queuedOutput: '',

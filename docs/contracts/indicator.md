@@ -51,5 +51,6 @@ Omarchy's indicator, which would otherwise refresh it, is usually hidden.
   the panel.
 - Labels and icons switch the whole station. Scratchpads are excluded. A pinned window
   appears once at its home station.
-- The feed uses the saved map, and a pending journal's identities take precedence.
+- The feed uses the saved map, including the numbers each monitor owns in
+  Non-repetitive, and a pending journal's identities take precedence.
 - Icons keep original colors and full opacity, regardless of focus.
