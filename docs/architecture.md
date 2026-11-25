@@ -146,52 +146,6 @@ second library with no publisher.
 Deferred hand-off work captures the bridge API and scalar values, never a proxy. A
 bar rebuild can destroy the proxy first.
 
-### Adapting the bridge for a hosted widget
-
-Omarchy's replacement-bar entry facade may return null from
-`bar.shell.serviceFor(moduleName)`. A plugin with a companion service can keep
-its widget working on either bar. Import a plugin-local `.pragma library` script
-from both top-level QML entry points and keep the host lookup as the first choice.
-Station's [BarBridge.js](../lib/BarBridge.js) shows the publisher and identity
-check. For a widget that toggles a floating editor, its service can register a
-single action:
-
-```qml
-import "BarBridge.js" as Bridge
-
-// Inside the service. toggle() is the existing window action.
-property var widgetPort: null
-Component.onCompleted: widgetPort = Bridge.publish(
-    function() { return { opened: root.opened } },
-    { toggle: function() { root.toggle() } })
-Component.onDestruction: Bridge.clear(widgetPort)
-```
-
-The widget can choose one route when its button is pressed:
-
-```qml
-import "BarBridge.js" as Bridge
-
-// Inside the widget.
-function toggle() {
-    var shell = bar ? bar.shell : null
-    var service = shell && typeof shell.serviceFor === "function"
-        ? shell.serviceFor(moduleName) : null
-    if (service) service.toggle()
-    else {
-        var port = Bridge.current()
-        if (port) port.call("toggle", [])
-    }
-}
-```
-
-Use detached state and named actions for the widget's needs. If opening an
-anchored popout, keep the anchor registration scoped to the plugin and route
-the action through the widget instance that was clicked. Remove that
-registration when the widget is destroyed. Check both bar types with multiple
-outputs, including service startup after the widget and replacement of the
-service while an old widget is still present.
-
 ## Per-monitor bar
 
 `Bar.qml` creates one `MonitorBar` per connected screen. Each receives a detached copy

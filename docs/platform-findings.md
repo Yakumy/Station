@@ -1481,6 +1481,13 @@ lcms2, and judged on screen by the maintainer.
   `pluginShellForBarEntry()` an own-service-only `_serviceLookup`. Upstream `master`
   `shell/shell.qml` (last changed 2026-11-16) still lacks it. Station issue #23 stays
   open until that lands; Station needs no change for it.
+- **[SRC]** 2026-11-25: the installed Omarchy and upstream's default branch `quattro` still
+  lack the lookup, and omacom/omarchy#13194 and #13471 are still open.
+- **[QTTEST]** GitHub PR #29. An offscreen Qt 6.12 probe of the service and widget in
+  [Widget services](widget-services.md) with Station's `BarBridge.js`: the action and the
+  state reached two widgets whose lookup was null, a service that started after its
+  widgets, and one that replaced another. A widget whose lookup worked used it. This was a
+  probe of the pattern, not of a plugin in the live shell.
 
 ## Indicator hover past a clipped slot (2026-11-21)
 

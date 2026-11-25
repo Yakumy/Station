@@ -712,7 +712,8 @@ Station's bar, even for the widget's own id. Omarchy builds it that way for ever
 replacement bar, and only Omarchy's own bar can request a facade with a service.
 A widget that needs its service, such as a clone of `omarchy.audio`, shows but
 cannot act. Station cannot reach another plugin's service and does not start a
-second copy of one. The fix has to come from Omarchy.
+second copy of one. The lookup has to be fixed in Omarchy. Until then, a plugin can
+reach its own service through [its own bridge](widget-services.md).
 
 | Control | Rule |
 | --- | --- |

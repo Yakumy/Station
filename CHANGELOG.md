@@ -1,3 +1,8 @@
+# Unreleased
+
+- Document how another plugin's widget can reach its own service on Station's bar, in
+  [Widget services](docs/widget-services.md). Contributed by @zigmoo in #29.
+
 # 4.5.0 — The bar works like Omarchy's again
 
 Update to get it: Station replaces Omarchy's bar, so its fixes reach you only through a
