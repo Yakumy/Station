@@ -1,20 +1,34 @@
 # Station development guide
 
-Station is the `yakumy.station` Omarchy 4 plugin for Hyprland's Lua configuration. Read
-this file before you change anything. [docs/README.md](docs/README.md) indexes the rest.
+Station is the `yakumy.station` Omarchy 4 plugin for Hyprland's Lua configuration.
 
-## Start here
+## Find what you need
 
-| Task | Read first |
+Never read `docs/` from end to end. It is about 80,000 tokens, and a task needs one to
+three sections. Ask for them:
+
+```sh
+python3 docs/find.py bar blur passes           # ranked sections for some words, with token sizes
+python3 docs/find.py lib/color/ColorMatch.js   # what documents a source file
+python3 docs/find.py contracts/bars            # the outline of one document
+python3 docs/find.py contracts/bars#controls   # print one section
+```
+
+Search first, print the one or two sections that answer, then stop. If the words find
+nothing useful, try the source file.
+
+| Task | Start at |
 | --- | --- |
-| Any change | [Architecture](docs/architecture.md) to find the owner |
-| Behavior | [Contracts](docs/contracts.md) section for that feature |
-| The bar | [Omarchy's bar](docs/omarchy-bar.md) |
-| Platform behavior | [Platform findings](docs/platform-findings.md) §0, §11 and §13 |
-| UI | [Design system](docs/design-system.md) |
-| Videos, banners, screenshots, GIFs, themes | [Branding](docs/branding.md) |
-| Install, publish, marketplace | [Releasing](docs/releasing.md) |
-| A design choice you want to change | [Decisions](docs/decisions.md) |
+| Any change | `find.py <the file you will edit>`, then `architecture#owners` |
+| Behavior | `contracts/<feature>`. Shared rules: `contracts#system-authority` |
+| Platform behavior | `platform/<topic>`, and `platform-findings#known-traps-consolidated` |
+| UI | `design-system`, then `design/tokens`, `design/components` or `design/layouts` |
+| The bar | `omarchy-bar#rules` |
+| Tests | `testing#run-the-checks`. Real hardware: `hardware-testing` |
+| Install, publish, marketplace | `releasing` |
+| A design choice you want to change | `decisions` |
+| Videos, banners, screenshots, GIFs, themes | `branding` |
+| What a version changed | `CHANGELOG`, one version at a time |
 
 ## Commands
 
@@ -38,10 +52,11 @@ not prove a live monitor transaction or final rendering. See [Testing](docs/test
 ### Always
 
 - Work on `dev`. Preserve existing work and desktop state.
-- Find the owner in `lib/` and read its contract and tests before you change it.
+- Find the owner in `lib/` and read its contract section and tests before you change it.
 - Run the focused tests, then `python3 test/run.py all`, before a commit that changes
   runtime code.
-- Change documents in the same commit as the behavior.
+- Change documents in the same commit as the behavior, then run
+  `python3 docs/find.py --index`. See [Keep the documents correct](docs/README.md#keep-the-documents-correct).
 - When a bar test fails, or something works on Omarchy's bar and not on Station's, check
   Omarchy's original bar first and bring Station's up to it.
 - On each commit and each release, compare Station's bar with Omarchy's and close any gap
@@ -76,7 +91,7 @@ not prove a live monitor transaction or final rendering. See [Testing](docs/test
 
 ## Invariants that are easy to break
 
-The [contracts](docs/contracts.md) are authoritative. These fail silently or damage a
+The [contracts](docs/contracts.md) are authoritative (`find.py` prints the section). These fail silently or damage a
 session, so check them on every related change.
 
 - **One service.** Children receive data and finite ports, never the Service object. Do
@@ -109,7 +124,7 @@ session, so check them on every related change.
   the end-to-end path.
 - **Workspace numbering.** Omarchy's per-monitor reconcile renumbers station workspaces,
   so `WorkspaceAuthority` must stay armed in Sync and Non-repetitive. Repetitive uses
-  Omarchy's blocks and releases it. See [Workspace authority](docs/contracts.md#workspace-authority).
+  Omarchy's blocks and releases it. See [Workspace authority](docs/contracts/actions.md#workspace-authority).
 - **Restart versus removal.** A shell restart must not trigger removal cleanup.
 - **Bar layout.** The layout the bar draws is not the saved one: Station's logo and indicator and an old
   `centerAnchor` are applied on top. Edit it only through `BarModel.editStationLayout`.

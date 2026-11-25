@@ -1,3 +1,5 @@
+<!-- summary: How Station's bar is compared with Omarchy's, how to close a gap, what Station adds, its own widgets. -->
+<!-- code: lib/bars/omarchy/** Bar.qml test/lint/bar-upstream.py -->
 # Omarchy's bar and Station's bar
 
 Other plugins are written for Omarchy's bar and tested on it. Station's bar replaces it

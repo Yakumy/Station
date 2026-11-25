@@ -1,3 +1,5 @@
+<!-- summary: How the code fits together: folders, owners, panel lifetime, bridge, files on disk, how to add a feature. -->
+<!-- code: Service.qml Panel.qml Bar.qml lib/BarBridge.js lib/panel/ServiceContract.js lib/platform/** -->
 # Architecture
 
 Station is a Quickshell plugin for Omarchy 4. It has one persistent service, a panel
@@ -58,7 +60,7 @@ owner and its tab, so one change stays in one place.
 | `lib/panel/` | Panel frame and lifecycle, panel intent, bridge contract and proxies, Settings tab, shared controls. `MonitorCanvas` and `MonitorCard` are the monitor arrangement that five tabs draw, and `DotGrid` is the background of all six layouts. |
 | `lib/platform/` | Compositor queues, config and state files, Lua generators, fixed shell templates, event matching. |
 | `test/` | All checks. See [Testing](testing.md). |
-| `assets/`, `docs/` | Artwork and this documentation. |
+| `assets/`, `docs/` | Artwork and this documentation, with `docs/find.py` to look things up in it. |
 
 ### Import rule
 
@@ -180,5 +182,5 @@ reloads the host config and can recreate the bar under an open panel.
 2. Put asynchronous state in one owner. Give it data and finite ports.
 3. Add it to `Service.qml`. Forward only the methods the panel or IPC consumes.
 4. Add panel members to `ServiceContract.js`, the proxies and the bridge tests.
-5. Write the behavior in [Contracts](contracts.md).
+5. Write the behavior in its [contract](contracts.md), and run `python3 docs/find.py --index`.
 6. Run `python3 test/run.py all`.

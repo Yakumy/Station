@@ -1,3 +1,4 @@
+<!-- summary: Why design choices were made, where historical records are, open questions. -->
 # Decisions
 
 Each entry records a choice that a later review might otherwise reopen, with its
@@ -60,7 +61,7 @@ produced no `configreloaded` event.
 Hyprland applies a monitor's ICC profile as a 3D LUT. The profile's `vcgt` curves never
 reached the hardware on the maintainer's i915 output, while white balance written into
 the colorants did ([LIVE], see
-[Platform findings](platform-findings.md#color-match-icc-profiles-2026-11-11)). The
+[Platform findings](platform/color-match.md#color-match-icc-profiles-2026-11-11)). The
 `hyprland-ctm-control-v1` protocol is per output but has one client at a time, and
 Omarchy's night light (hyprsunset) already holds it. It also needs a compiled client,
 and Station ships no binary. Gamma ramps (`wlr-gamma-control`) would need a separate
@@ -143,6 +144,18 @@ would block any intentional change. Their scenarios remain as behavior checks.
 
 Version folders made readers work out which document superseded which. The documents
 now describe current behavior only, and Git keeps the history.
+
+## Small documents and one lookup command
+
+Until 4.5.1 two files held 60% of the documentation. A coding agent spent up to 33,000
+tokens to reach one finding, and the findings were in date order, so no part could be
+skipped. Documents are now one topic each with a size limit that the checks enforce, and
+`docs/find.py` prints single sections. The text was moved, not shortened. Contracts,
+platform findings and the design system keep their old paths as index pages, because
+issues and release notes link to them.
+
+The size and code map live in the documents and are checked, because an index that
+nothing checks goes stale.
 
 ## Features left out of the original specification
 

@@ -8,6 +8,8 @@ Nothing changes in how Station works or looks, and saved settings stay as they a
 - Split the largest panel and wallpaper files, and the largest tests, into smaller ones.
 - Document how another plugin's widget can reach its own service on Station's bar, in
   [Widget services](docs/widget-services.md). Contributed by @zigmoo in #29.
+- Split the documentation into one small page per topic, and add `docs/find.py`, which
+  finds and prints single sections so coding agents read far less.
 
 # 4.5.0 — The bar works like Omarchy's again
 

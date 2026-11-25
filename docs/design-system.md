@@ -1,3 +1,5 @@
+<!-- summary: The UI rules: no private palette, actions and choices, corners, elevation, spacing, do-not list, acceptance. Index of the design pages. -->
+<!-- code: lib/**/*.qml -->
 # Design system
 
 For promotional artwork and the optional Station desktop theme, see the
@@ -6,13 +8,23 @@ the selected Omarchy theme's tokens as specified here.
 
 Tags: **[V]** confirmed in this codebase or in platform testing, **[VERIFY]** confirm the exact token against the installed `qs.Commons` and `qs.Ui`, **[DECISION]** a signed-off choice.
 
-## 0. The rule
+## Find the page
+
+<!-- index design -->
+| Read | For | Tokens |
+| --- | --- | --- |
+| [Components](design/components.md) | Tabs, chips, buttons, toggles, list rows, dropdowns, sliders, monitor cards: which to use and how each looks. | 1600 |
+| [Layouts, frames and control rows](design/layouts.md) | Monitor rectangles and canvas framing, window preview, panel frame, shared control rows, portrait drawers. | 1600 |
+| [Color and typography tokens](design/tokens.md) | Every color, border and type token Station may use, and its role. | 1700 |
+<!-- /index -->
+
+## The rule
 
 **[DECISION] Station owns zero color or radius of its own.** Every value in this document is a token name or a rule, never a literal. A theme change must repaint every pixel with no restart, because the host already does this for every other panel.
 
-**A comment explaining why a private color or radius constant is "necessary" is not an exception to this rule — it's a sign the component is missing from `qs.Ui`/`qs.Commons`.** Find the existing host component or get the author's sign-off to add one; don't derive a private token to paper over the gap. An audit of this codebase found exactly this pattern: a block of Station-owned radii and nine computed colors (`surfaceOne/Two/Three`, `accentMuted`, `accentHover` via `Qt.lighter`, dim-text variants, a halo radius), each justified by its own comment. All of it must be deleted and replaced with aliases to the tokens in §4, with the one exception noted there for dim text.
+**A comment explaining why a private color or radius constant is "necessary" is not an exception to this rule — it's a sign the component is missing from `qs.Ui`/`qs.Commons`.** Find the existing host component or get the author's sign-off to add one; don't derive a private token to paper over the gap. An audit of this codebase found exactly this pattern: a block of Station-owned radii and nine computed colors (`surfaceOne/Two/Three`, `accentMuted`, `accentHover` via `Qt.lighter`, dim-text variants, a halo radius), each justified by its own comment. All of it must be deleted and replaced with aliases to the [tokens](design/tokens.md#color-tokens), with the one exception noted there for dim text.
 
-## 1. Actions and choices
+## Actions and choices
 
 **[DECISION] Actions and choices are two components with two jobs, and they must look different:**
 
@@ -24,7 +36,7 @@ Tags: **[V]** confirmed in this codebase or in platform testing, **[VERIFY]** co
 
 A Choice (either kind) must never use the Action look, and vice versa. The 4 modifier chips use `PanelUi.ChoiceChip`; Keep / Revert / Pick another key / Replace and unbind it / Apply stay `Ui.Button`s with exactly one filled commit action per screen.
 
-## 2. Corners
+## Corners
 
 Joined button groups use square inner corners. Only the first button's left corners
 and the last button's right corners use `Style.cornerRadius`; their shared corners
@@ -34,13 +46,13 @@ are explicitly zero. Workspace and Wallpaper mode selectors use dropdowns.
 
 **Known trap [V]:** a ternary like `selected ? Station.radiusSm : Style.cornerRadius` *looks* compliant because the token appears in the source, but if the first branch is always taken, the token branch is dead code and never executes. The fix must remove the private branch entirely, not just add the token as an unreached fallback next to it.
 
-## 3. No elevation effects
+## No elevation effects
 
 **[DECISION] No `box-shadow`, no glow, no blur, no gradient, anywhere in Station**, including for selection and focus. Depth and emphasis come only from:
-- a border (neutral control outline from `Border.controlSpec("normal", …)` — never `Color.popups.border`, which resolves to the accent, §4 — `Color.accent` for selection/focus, `Color.urgent` for conflicts), and
+- a border (neutral control outline from `Border.controlSpec("normal", …)` — never `Color.popups.border`, which resolves to the accent, see [tokens](design/tokens.md#color-tokens) — `Color.accent` for selection/focus, `Color.urgent` for conflicts), and
 - one step of fill (`Color.popups.background` → `Color.menu.selectedBackground` for a lifted/selected surface).
 
-This matches `Style.cornerRadius`'s own flat language and is already the rule for the rest of the panel [V, STATION-V2-SPEC.md §11].
+This matches `Style.cornerRadius`'s own flat language and is already the rule for the rest of the panel [V].
 
 **App indicator treatment:** All icons display their original artwork in full color and at full opacity, regardless of focus. App slots are 102% of station-label ink height. In the kanji indicator style the guide is 十, so icon size stays steady while the numerals' own ink height changes. Images preserve aspect ratio and render directly, with oversampled physical-pixel decoding and mipmaps; no focus-based grayscale, opacity, scaling, or effect layer is applied. The drawer's shared reveal animation still fades its contents during opening and closing.
 
@@ -51,52 +63,9 @@ white alpha mask. `MultiEffect` preserves source luminance during
 colorization, so a beige or gray source silently darkens the requested theme
 token even when `colorization` is 1.0.
 
-## 4. Color tokens
+## Spacing
 
-No hex literals anywhere in Station. Every color is one of these, confirmed present in the installed `qs.Commons` [V, `platform-findings.md` §8.6]:
-
-In QML, write every token as `Commons.Color.…` with `import qs.Commons as Commons`. The tables below shorten it to `Color.…`. Qt 6.12 adds its own `Color` singleton to `QtQuick`, and a bare `Color` can resolve to it, so every theme color reads as `undefined` [V, issue #24]. `test/unit/qt-color-shadow.test.cjs` rejects a bare `Color.` in Station's QML.
-
-| Token | Role |
-|---|---|
-| `Color.popups.background` | Panel background |
-| `Color.popups.text` | Default text |
-| `Color.popups.border` | **Not a neutral border on the default theme** [V]. Omarchy's generated `shell.toml` maps `[popups] border` to the active-window-border color, i.e. the accent. Using it for a plain row or card border produces an unintended accent-blue box — this is exactly the "every row is bordered blue" bug found in this codebase. Never use it as a neutral border. |
-| **Neutral row separator** | `Ui.PanelSeparator` [V] — the host's own hairline, drawn at a reduced-opacity foreground. This is the only correct way to separate rows with no box. |
-| **Neutral control border** | `Border.controlSpec("normal", …)` [V, RESOLVED] — resolves to foreground at ~40% opacity, 1px. This is already what `Ui.Button { bordered: true }` and `Ui.Dropdown` paint by default, so using it for chip groups, display nodes and secondary actions makes them match controls Omarchy already ships, rather than inventing a fourth border weight. **Scope: this is for actual controls (buttons, dropdowns, chip groups, display nodes) — never for a List row container.** A List row stays fully borderless per §7, even now that a real neutral-border token exists; giving every row this border would recreate "every row is boxed," just in gray instead of blue. Use this, not `Color.popups.border`, anywhere a control needs an outline. |
-| `Color.menu.background` | Dropdown menu background |
-| `Color.menu.text` | Dropdown menu item text |
-| `Color.menu.border` | Dropdown menu border |
-| `Color.menu.selectedBackground` | Lifted fill for a selected Choice chip or a hovered menu row |
-| `Color.menu.selectedText` | Text on a selected Choice chip |
-| `Color.menu.selectedBorder` | Border on a selected Choice chip. **[V] Confirmed to diverge from `Color.accent`** under the probed theme — use `Color.menu.selectedBorder` for chips specifically; reserve `Color.accent` for Action-button fill, focus rings, and the active tab underline. |
-| `Color.menu.scrim` | Backdrop behind an open dropdown, if the host renders one |
-| `Color.accent` | Action-button fill, focus ring, active tab underline |
-| `Color.urgent` | Conflict state (red tab badge, conflict row border, error text). **[V] Known bug:** passing `Color.urgent` as the *fallback* argument of `Border.surfaceSpec` never renders, because `shell.toml` always supplies a primary value (`popups.border`/`menu.border`) and the fallback is only used when the primary is absent. Conflict borders must be set directly, e.g. `Border.flat(Color.urgent, Style.normalBorderWidth)`, not passed as a fallback that will never be reached. |
-| `Color.foreground` | Fallback text only where no `popups`/`menu`/`bar` token applies |
-| `Color.bar.background`, `.text`, `.active` | Bar widget only (`S1`); there is no `Color.bar.foreground` — `Ui.WidgetButton.foreground` already resolves to the injected host's animated `bar.barForeground`, with `Color.bar.text` as the no-host fallback [V] |
-
-**Dim/secondary text [V, host-precedented]:** the only approved way to produce dim or secondary text is `Qt.darker(<base token>, 1.4)`, confirmed as the host's own idiom in three separate components. This is direction-correct on both dark and light themes: it moves a light foreground toward gray on a dark theme, and moves a dark foreground further from a light background on a light theme. **Do not dim text by reducing opacity/alpha** (e.g. `Util.alpha(text, 0.55)`); alpha blending moves text *toward whatever is behind it*, which on a light theme walks a light-ish foreground toward the light background — the same class of white-on-white contrast bug this project already hit once on Catppuccin Latte.
-
-Reject anything that computes color from `colors.toml` directly: Quickshell already resolves the active theme into these singletons and repaints them live. A second, Station-owned parsing and blending pipeline is redundant, untested, and a second place for a theme to render wrong.
-
-## 5. Typography
-
-`Style.font.family` for every piece of text — never a literal font string, even though Omarchy's default is JetBrainsMono Nerd Font; the token is what stays correct if the user changes font with `omarchy font set`. Use `Style.font.*` size tokens for the whole type scale; `Style.font.bodySmall` and `Style.font.caption` are already in use in `Panel.qml` [V]. The full list from the installed `Style.qml` [V]: `caption` (10), `bodySmall` (11), `body` (12), `subtitle` (13), `title` (14), `heading` (16), `display` (24), `displayLarge` (28), plus glyph sizes `iconSmall`, `icon`, `iconLarge`, `iconFont`. There is no weight token in `Style.font` — emphasis is `Font.*` weight on top of a size token (§7 already uses `Font.DemiBold`/`Font.Medium`) [V]. The panel itself needs only `caption`, `body` and `title`, all three already in use [V]; reuse before adding anything.
-
-| Role | Token (confirm name) | Case | Use |
-|---|---|---|---|
-| Eyebrow / section label | `Style.font.caption`, dim | UPPERCASE | `LAYOUT` uses `Ui.PanelSectionHeader`; control row titles use `PanelUi.ControlLabel`. |
-| Body | `Style.font.body` for control content; `Style.font.caption` for row titles, device names and fine print | Sentence | Dropdown values and control content |
-| Body emphasis | `Font.DemiBold` at the same `Style.font.*` size — sizes only from `Style.font`, weight from `Font.*` [V] | Sentence | Values: `100%`, `1920×1080`, `60 Hz` |
-| Caption | `Style.font.caption` | Sentence | Device names, "Lane 2", fine print |
-| Panel title | `Style.font.title` + `Font.DemiBold` [V, in use] | Sentence | `Station` |
-
-**Tabular figures [V]:** neither `Style.font` nor any host component exposes a tabular-figures property (the host never sets one), and the default family is monospace, so figures already align — set nothing. If a future theme ships a proportional family, alignment must come from a host token; do not hand-roll a width hack. [DECISION]
-
-## 6. Spacing
-
-`Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, `platform-findings.md` §8.5] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
+`Style.space(n)` and `Style.spacing.*` only. The full named scale from the installed `Style.qml` [V]: steps `xxs` (2), `xs` (3), `sm` (4), `md` (6), `lg` (8), `xl` (10), `xxl` (12), `xxxl` (14), `huge` (18), plus `hairline` (`Style.space(1)`) and component aliases `controlGap`, `controlPaddingX/Y`, `inputPaddingY`, `controlHeight`, `popupRowHeight`, `dropdownWidth`, `searchableDropdownWidth`, `numberFieldWidth`, `searchablePopupMinHeight`, `rowGap`, `rowPaddingX`, `labelGap`, `panelGap`, `panelPadding`, `popupPadding`. Reuse these before adding new numeric calls. **Caveat from M0:** a requested `Style.space(680) × Style.space(560)` rendered as 567×467 logical pixels under the active theme and scale [V, [Panel findings](platform/panel.md#popout-structure)] — `Style.space(n)` is not 1:1 with logical pixels. Design to *relative* spacing (same step used consistently) rather than calibrating against an assumed pixel target.
 
 Bar thickness is the exception that starts from the dedicated Omarchy tokens
 `Style.bar.sizeHorizontal` and `Style.bar.sizeVertical`; Station's per-monitor
@@ -112,46 +81,7 @@ choices use `ControlDropdown.qml`, Station's themed dropdown, at full row width 
 
 Layout rhythm: section header → `Style.spacing.sm` (or the nearest named step) → control. Feature control panels share this rhythm. Settings and Keybindings use compact list rows.
 
-## 7. Component inventory
-
-Reuse what's already confirmed working before adding anything: `Ui.Panel`, `BarIconButton`, `KeyboardPanel`, `PanelKeyCatcher`, `ScrollView`, `PanelSectionHeader`, `PanelSeparator`, `Ui.Button` [V, `Panel.qml`]. Keybinding entry uses `BindingKeyPicker` (buttons and key events), never an editable text control: native text inputs can retrieve clipboard payloads even while hidden.
-
-**Tabs** (Displays / Bar / Wallpaper / Keybindings / Settings): `Color.popups.text` inactive, `Color.popups.text` at full opacity + `Color.accent` 2px bottom border active. No fill change, no box, no numbered keycap on the label. No shadow or glow. In Bar portrait a hairline separates the Station header from the same rail; a vertical mouse-wheel or touchpad gesture moves it horizontally, its scrollbar stays hidden, and labels never shrink or wrap.
-
-**Choice chip** (the 4 modifier-key toggles): see §1. Displays uses sliders and compact text menus instead.
-
-**Action button** (Keep, Revert, Pick another key, Replace and unbind it): see §1. A destructive or replace-type action may use `Color.urgent` as its fill instead of `Color.accent`, same shape.
-
-**Toggle** (Settings: the two Show rows): use `PanelUi.ToggleSwitch` inside a plain Settings list row. The row has no border, fill, or hover decoration, and uses `Style.space(48)` height and a vertically centered body label. Use the shared 44 × 24 track, 20-unit knob and 2-unit inset, all scaled by `Style.space`. Track and knob radii both bind to `Style.cornerRadius`, which mirrors the Windows roundness slider; the shape is never forced to a capsule. On uses the theme accent; Off uses the dim popup foreground and host neutral chrome. Switching retains the host-style animation, mirroring and busy handling; the row owns clicks and keyboard activation. Do not replace the switch with a chip. Follow focus is always enabled and has no control.
-
-**[DECISION, signed off] Secondary vs. primary Action.** §1 says every Action is filled, but a screen can have more than one Action at once (Keep + Revert; Pick another key + Replace and unbind it), and making both equally heavy loses the sense of which one actually commits. Settled rule: the *one* action that commits a consequential change (Keep; Apply; Replace and unbind it) is filled per §1; a same-row action that only cancels or defers (Revert; Pick another key) is neutral-bordered — `Border.controlSpec("normal", …)` border, `Color.popups.text`, no fill — so the eye finds the committing action first. This is now final: one filled commit Action per screen, its cancel/defer partner neutral.
-
-**List row** (Keybindings action rows, Settings rows): **[DECISION] default = no border, no individual box.** Rows are separated only by `Ui.PanelSeparator` (a hairline), with shared left/right padding, the way `Ui.PanelSectionHeader` already separates sections. A row gets a `Color.urgent` border **only** while it is an unresolved conflict — that is the one state worth decorating, and decorating every row equally erases it. A row never gets an accent border just for existing; accent belongs to the interactive control inside the row (a focused dropdown, an open menu), not the row container.
-
-**Select / dropdown** (Mode, Direction, monitor role): the approved render puts compact borderless triggers in the top tab row and inside the monitor cards. `lib/panel/InlineDropdown.qml` keeps the text and chevron content-sized, uses host menu tokens for the popup, and right-aligns Mode's wider menu so named Single-output choices stay readable within the panel.
-`ControlDropdown.qml` mirrors the host dropdown for the feature rows, but owns its popup so an overflowing menu can carry a thin `Color.accent` thumb, sized from the list's visible area. The Workspaces control frame, whose six rows overflow its five-row height, carries the same thumb. Both use `ScrollThumb.qml`: the thumb travels the middle 80% of the list so its rounded ends stay inside the container's corners, shows only while the pointer is on it or drags it (through a grab strip wider than the line, not while the pointer is anywhere over the menu or frame), and can be held with the left button and dragged. Once per shell session the first overflowing dropdown menu, and the Workspaces control rows, scroll a little and back with the thumb shown, to teach that they scroll; `Style.reduceMotion` skips it. Page lists keep their own scrolling and get no such thumb.
-
-**Slider** (Brightness, Text size, Scale, Resolution, Refresh, Bar content size, Bar width, the five Color Match controls): host-owned `Ui.PanelSlider` paints the track and knob. Color Match tracks stay plain: a warm-to-cool or green-to-magenta track would be a gradient and a private palette, so each row says in dim caption text which way warms, greens or darkens. The display controls after Brightness use discrete index stops (`tickCount`); no slider may interpolate unsupported display modes. Bar content size starts at `Style.font.body`; its maximum preserves `Style.spacing.sm` on both cross-axis edges and prevents overlap among the scaled bar regions along the other axis. It reports when a saved request is clamped after the bar geometry shrinks. Bar width uses integer percentages and reports its measured non-overlap minimum below the track when the request is too small. Changes to display geometry preview on release, not on every drag position. No glow or thumb shadow.
-
-**Display node** (`MonitorCard.qml`, every monitor arrangement): default `Border.controlSpec("normal", Color.popups.text, Color.accent)` at `radius: 0` (never `Color.popups.border`); selected `Color.accent` border (≥2× `Style.normalBorderWidth`) with `Color.menu.selectedBackground` fill — border + one fill step, no glow, confirming the earlier transparency bug stays fixed (no `opacity` reduction on selection; `opacity` is reserved for *disabled*, not *selected*).
-
-**Monitor-canvas framing** (Displays / Bar / Wallpaper): fit the actual monitor
-union proportionally inside the central 80% of the canvas, giving a default 10%
-inset on the constraining width or height. Center the other dimension, whose
-whitespace may therefore be larger. Do not reserve hypothetical disconnected
-arrangements or cap the fit below the available canvas. Inset each painted
-monitor card by half of `Style.spacing.sm`, producing a compact named gap
-between touching monitors in Displays, Bar, and non-Span Wallpaper previews.
-Span keeps exact edge-to-edge cards because its image crop is continuous. A non-Span
-Wallpaper card keeps its monitor's exact shape, so it previews the desktop's crop.
-
-**Bar edge geometry:** A bar with a visible surface (Pill in every background, and Omarchy
-default in Solid or Blur) floats `Style.space(8)` from the monitor edge and from the ends
-of its span, so it never touches the monitor. A Transparent Omarchy default bar is
-edge-aligned. The surface reserves that space with the bar thickness, and Pill's islands
-keep their internal padding. Window gaps do not move the bar.
-
-## 8. Do-not list
+## Do-not list
 
 - No `box-shadow`, glow, blur or gradient, including for selection, focus or conflict states.
 - No hardcoded radius, including `0` — use `Style.cornerRadius`, except the
@@ -161,91 +91,13 @@ keep their internal padding. Window gaps do not move the bar.
 - No pill/`radius-full` shapes outside the explicit per-monitor bar Pill style.
 - No solid accent fill on a Choice chip — that look is reserved for Action buttons.
 - No border or fill decoration on a List row that isn't in a conflict state — this includes the real `Border.controlSpec("normal", …)` token now that one exists; it's for controls, not row containers (§4, §7).
-- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in runtime QML. `test/lint/theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only (§3) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
+- No literal hex, literal font family string, or literal pixel spacing/radius anywhere in runtime QML. `test/lint/theme-tokens.mjs` now enforces all of this [V, implemented]: it fails on a hex literal; a `radius:` not bound to `Style.cornerRadius`; `Qt.rgba(`; `Qt.lighter(`; derived-colour helpers except the approved `Qt.darker(<token>, 1.4)` dim idiom and the exact `Util.alpha(Commons.Color.bar.background, 0.01)` Blur mask; any gradient property; actual `DropShadow`/`Glow`/`Blur` QML effect declarations (semantic strings such as the compositor-owned `"blur"` mode are allowed); any `shadow…` property; and `MultiEffect` **except** an instance whose complete property set is colorization-only ([elevation](#no-elevation-effects)) — colorization alongside `shadowEnabled` fails both the property-set test and the shadow test. Comment lines are stripped before matching, so prose may mention a banned token.
 
-## 9. Acceptance
+## Acceptance
 
 A change passes when, under at least two themes including one light theme (Catppuccin Latte already found a white-on-white contrast bug once — re-check it specifically [V, earlier Latte finding]):
 - Scale, Resolution, and Refresh show valid notched choices; monitor role menus show the enabled role numbers; Keep remains visually heavier than these choices.
 - Keep/Revert/Replace are the only filled, high-emphasis controls on the page — i.e. exactly one filled commit Action per screen (`Keep`, `Apply`, `Replace and unbind it`), no filled Choice anywhere.
 - Keybindings and Settings rows read as a plain hairline list; the only bordered row is one with an active conflict.
 - No rounded corners, shadows or glows appear anywhere, at any theme.
-- Every color, font and spacing value traces to a token in §4–§6, with no literal left in the diff.
-
-### Layout monitor rectangles
-
-The monitor rectangles in all six layout panels (Displays, Workspaces, Bar, Windows, Color Match, Wallpaper)
-use a fixed sharp radius of 0 and never follow the theme rounding.
-
-### Window geometry preview
-
-The simulated windows in WindowsLayout are an exception to the corner token rule: their
-radius is the Border roundness value in preview pixels, unscaled, so it stays visible at
-preview zoom and follows the slider while it drags. Every simulated window is active:
-accent border and the selected fill. All other surrounding chrome continues to use
-`Style.cornerRadius`. Monitor names stay centered above the Windows animation.
-
-### Panel frame
-
-Use one tab-independent request of `Style.space(996)` by `Style.space(620)`
-(content size before the host's border inset), fitted to the current screen.
-The header and tab row stay fixed above a shared vertical overflow viewport.
-Short tabs leave unused space; expanded notices and binding editors scroll
-inside that frame. Scrollbars appear only on overflow. This replaces the earlier
-content-driven height; theme/font and screen changes can still refit the frame.
-
-### Shared control-panel rows
-
-Displays is the reference for all feature controls. `ControlLabel.qml` places a
-plain-text, uppercase caption at `Style.space(8)` from the top and left, using the
-same dim popup foreground as Displays. Values align to the top right; hints align
-to the bottom left with the same horizontal inset and `Style.space(4)` below.
-Five-row control frames divide their height equally.
-
-`ControlFrame.qml` restores the control width multiplier `1.2 * 0.96`, before
-commit `ea956ed` narrowed it on 2026-11-12. The column split stays fixed and the
-frame is centered and capped to the column with a `Style.space(8)` inset on each
-side when the previous formula would overflow. Sliders, dropdowns and row buttons
-share one inset at each end: `Style.space(8)` plus 0.5% of the remaining row width,
-rounded up to a whole pixel. They are placed by `x`, not centered, because centering
-rounds to a pixel and could pull a control up to a pixel left. Call sites never
-re-center them. Sliders retain the host's half-knob track inset, keeping both endpoint
-knobs and their hover enlargement inside the frame and clear of the row title, even at
-a small font size, where the host holds the knob at 14 px while spacing shrinks.
-`ControlButton.qml` provides the neutral row action style.
-
-`ActionButton.qml` keeps the host control height and uses 99% of the original action
-width. Apply, Cancel, Keep and Revert retain their additional 60% width factor.
-Settings and Keybindings retain their compact hairline list
-rows: vertically centered body labels, Settings values at the right, and centered
-semibold binding combinations. They do not use the feature control-panel titles.
-Settings' compact position dropdown is `Style.space(130) * 0.99` wide.
-
-All six layouts show plain-text, dim monitor names centered inside each monitor,
-using `MonitorName.qml`. Displays centers `name | role`, with the role remaining a
-dropdown. Workspaces centers the same identity as read-only text. Bar centers the
-switch below the name. Workspace badges occupy the upper half, Color Match status sits
-below the name, and Windows names render above its animation. Wallpaper tiles
-retain their exact monitor aspect ratio in every mode.
-Bar monitor switches use a `Style.space(32)` by `Style.space(18)` track with a
-`Style.space(14)` knob; Settings keeps the standard switch dimensions. In Bar portrait
-both draw at 70% through `ToggleSwitch.sizeFactor`, rounded to whole units. Both follow
-the live roundness token.
-
-FeatureGeometry owns the feature tabs’ equal 370-unit frame heights. In Bar portrait
-mode the divider has 36 units to each visible frame, and bottom padding is 36 units.
-The control heading occupies part of the lower half of the gap. Portrait action drawers center their buttons and put any message under them in `Style.font.caption`. Screen fitting
-bounds the content viewport and enables scrolling so bottom padding remains reachable.
-
-Portrait action drawers use the full inter-frame gap (72 scaled units, twice the
-36-unit half-gap). `ActionDrawer` centers the buttons horizontally and centers
-the buttons plus an optional caption message (at most two lines, under the
-buttons) vertically. Wide drawers keep the message on the left and the buttons
-on the right. Every confirmation pair reads secondary then primary:
-Revert/Keep, Cancel/Apply.
-
-In Bar portrait, Keybindings rows keep the label on the left (wrapping to two
-lines) and right-align the combo. A long combo may wrap onto a second
-right-aligned line. Resolve is hidden there because the conflict card's Pick
-another key does the same thing; the combo turns `Color.urgent` instead. The
-conflict card's buttons stack centered.
+- Every color, font and spacing value traces to a token in [Tokens](design/tokens.md) or [Spacing](#spacing), with no literal left in the diff.

@@ -1,3 +1,4 @@
+<!-- summary: Colors, themes and media rules for videos, banners, screenshots and GIFs. Not for runtime UI. -->
 # Station branding palette
 
 Approved on 2026-10-25. Use this reference for new Station videos, banners,

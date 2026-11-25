@@ -1,10 +1,11 @@
+<!-- summary: For plugin authors: how a widget reaches its own service on a replacement bar. -->
 # Widgets that need their own service
 
 This page is for authors of other plugins. Station itself needs none of it.
 
 On Omarchy's bar, `bar.shell.serviceFor(moduleName)` gives a widget its plugin's service.
 On a replacement bar, Station's included, it returns null
-([contract](contracts.md#bars)). The widget shows, but its controls do nothing.
+([contract](contracts/bars.md#plugin-widgets)). The widget shows, but its controls do nothing.
 
 Until Omarchy changes that, a plugin can make its widget work on both bars: its service
 publishes a small port through a script that its widget also imports. Station's own panel

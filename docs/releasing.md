@@ -1,3 +1,4 @@
+<!-- summary: Update the installed plugin, publish dev and main, submit to the marketplace. -->
 # Releasing
 
 This page covers the installed plugin on the maintainer's machine, publishing, and
