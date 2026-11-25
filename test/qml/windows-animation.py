@@ -6,7 +6,7 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'lib/windows/WindowsLayout.qml').read_text()
-clock = source[source.index('  property int rotation:'):source.index('  required property var service')]
+clock = source[source.index('  property int rotation:'):source.index('  required service\n')]
 qml = '''import QtQuick
 import QtTest
 Item {

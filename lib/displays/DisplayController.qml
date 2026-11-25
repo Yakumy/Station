@@ -18,7 +18,6 @@ Item {
   property string plainCandidatePath: ""
   property string plainPath: ""
   property string operationState: "idle"
-  property int operationGeneration: 0
   property int configGeneration: 0
   property bool started: false
   property var preferences: ({enabled: [], mode: "extend", singleTarget: "", mirrorSource: ""})

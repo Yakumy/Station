@@ -26,7 +26,7 @@ A harness that nothing runs goes stale. `test/run.py` discovers `test/qml/*.py` 
 | `test/qml/` | Qt, offscreen or isolated Wayland | Production components with doubled effects, bindings, timers, pointer events | Physical input, compositor effects |
 | `test/lint/` | Node, Python and Quickshell | Theme tokens, that all runtime QML compiles against the installed host, and that Omarchy's bar has not moved on | Runtime behavior |
 | `test/live/` | The live session | M0 and cold-login platform experiments | Not routine. See [Live runners](#live-runners). |
-| `test/helpers/`, `test/fixtures/` | | Shared test code and fixtures | |
+| `test/helpers/`, `test/fixtures/` | | Shared test code and fixtures. `wayland.py` is the socket check of the rendered harnesses, `headless.py` the nested compositor. | |
 
 Node tests extract production function bodies from QML and run them against a fake
 namespace. `test/helpers/runtime-source.cjs` loads the owners and adapts their ports.

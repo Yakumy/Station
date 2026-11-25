@@ -2,7 +2,6 @@ const test = require('node:test');
 const { runtimeSource, adaptOwners, qmlFunction } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-const { runInNewContext } = require('node:vm');
 const ScreenHealth = require('../../lib/displays/ScreenHealth.js');
 const Model = require('../../lib/displays/Model.js');
 const MonitorsLua = require('../../lib/displays/MonitorsLua.js');

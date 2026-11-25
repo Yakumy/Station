@@ -1,15 +1,14 @@
 import QtQuick
 import "../panel" as PanelUi
-import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
 import "../displays/Model.js" as Model
 import "WindowPreview.js" as Preview
 
-Ui.BorderSurface {
+PanelUi.MonitorCanvas {
   id: canvas
   objectName: "windowsLayout"
-  required property var tokens
+  required tokens
   property var values: ({})
   property int rotation: 0
   property real timeline: 0
@@ -63,74 +62,15 @@ Ui.BorderSurface {
       }
     }
   }
-  required property var service
-  readonly property var displays: service ? service.displayDraft : []
-  readonly property real horizontalInset: width * 0.1
-  readonly property real verticalInset: Math.max(height * 0.1, Style.spacing.sm)
-  readonly property real monitorGap: Style.spacing.sm
-  clip: true
-  color: Commons.Color.popups.background
-  borderSpec: Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent)
-  radius: Style.cornerRadius
-
-  readonly property var bounds: {
-    if (!displays.length) return { x: 0, y: 0, width: 1, height: 1 }
-    var left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
-    displays.forEach(function(display) {
-      var size = Model.logicalSize(display)
-      left = Math.min(left, display.x); top = Math.min(top, display.y)
-      right = Math.max(right, display.x + size.width); bottom = Math.max(bottom, display.y + size.height)
-    })
-    return { x: left, y: top, width: right - left, height: bottom - top }
-  }
-  readonly property real zoom: Math.max(0.001, Math.min(
-    (width - 2 * horizontalInset) / Math.max(1, bounds.width),
-    (height - 2 * verticalInset) / Math.max(1, bounds.height)))
-  readonly property real originX: (width - bounds.width * zoom) / 2
-  readonly property real originY: (height - bounds.height * zoom) / 2
-
-  Canvas {
-    anchors.fill: parent
-    opacity: 0.22
-    property color dotColor: Commons.Color.popups.text
-    onDotColorChanged: requestPaint()
-    onWidthChanged: requestPaint()
-    onHeightChanged: requestPaint()
-    onPaint: {
-      var context = getContext("2d")
-      context.clearRect(0, 0, width, height)
-      context.fillStyle = dotColor
-      var gap = Style.space(16), radius = Math.max(Style.space(0.7), 0.5)
-      for (var x = gap; x < width; x += gap) for (var y = gap; y < height; y += gap) {
-        context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill()
-      }
-    }
-  }
+  required service
+  verticalInset: Math.max(height * 0.1, Style.spacing.sm)
 
   Repeater {
     model: canvas.displays
-    delegate: Ui.BorderSurface {
-      id: monitorCard
-      required property var modelData
-      readonly property var logicalSize: Model.logicalSize(modelData)
-      readonly property bool isSelected: false
-      readonly property bool outputEnabled: canvas.service
+    delegate: PanelUi.MonitorCard {
+      layout: canvas
+      outputEnabled: canvas.service
         ? canvas.service.displayEnabled(modelData.name) : modelData.enabled
-      x: canvas.originX + (Number(modelData.x) - canvas.bounds.x) * canvas.zoom
-        + canvas.monitorGap / 2
-      y: canvas.originY + (Number(modelData.y) - canvas.bounds.y) * canvas.zoom
-        + canvas.monitorGap / 2
-      width: Math.max(1, logicalSize.width * canvas.zoom - canvas.monitorGap)
-      height: Math.max(1, logicalSize.height * canvas.zoom - canvas.monitorGap)
-      z: isSelected ? 1 : 0
-      color: isSelected ? Commons.Color.menu.selectedBackground : Commons.Color.popups.background
-      borderSpec: Border.flat(isSelected
-        ? Commons.Color.accent
-        : Border.controlSpec("normal", Commons.Color.popups.text, Commons.Color.accent).color,
-        isSelected ? Math.max(2, Style.normalBorderWidth) : Math.max(1, Style.normalBorderWidth))
-      radius: 0
-      opacity: outputEnabled ? 1 : canvas.tokens.disabledOpacity
-
     }
   }
   function workArea(monitorIndex) {

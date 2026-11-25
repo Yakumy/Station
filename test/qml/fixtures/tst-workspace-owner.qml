@@ -32,7 +32,6 @@ Item {
     Stations.WorkspaceController {
       stateDir: "/isolated"
       operationState: host.operation
-      operationGeneration: host.generation
       removalGraceRunning: host.grace
       clients: host.clients
       lanes: ({A:1,B:2,C:3})

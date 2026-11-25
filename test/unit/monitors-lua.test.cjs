@@ -206,11 +206,6 @@ test('managed geometry ignores malformed blocks and conflicting duplicate rules'
   assert.deepEqual(L.managedGeometry(conflict), {});
 });
 
-test('rules for managed outputs outside the block are reported', () => {
-  const source = 'hl.monitor({ output = "eDP-1", scale = 2 })\n';
-  assert.deepEqual(L.externalRuleConflicts(source, ['eDP-1', 'HDMI-A-2']), ['eDP-1']);
-});
-
 test('a 10-bit output keeps bitdepth in every rule that carries its geometry', () => {
   const Model = require('../../lib/displays/Model.js');
   assert.equal(Model.bitDepth({ currentFormat: 'XRGB2101010' }), 10);

@@ -266,7 +266,6 @@ Item {
     id: workspace
     stateDir: root.stateDir
     operationState: root.state
-    operationGeneration: root.gen
     removalGraceRunning: removalGrace.running
     clients: root.clients
     lanes: root.lanes
@@ -308,7 +307,6 @@ Item {
     plainCandidatePath: root.stateDir + "/monitors-block.plain.lua.candidate"
     plainPath: root.stateDir + "/monitors-block.plain.lua"
     operationState: root.state
-    operationGeneration: root.gen
     configGeneration: root.configGeneration
     started: root.started
     preferences: ({ enabled: root.config.enabled, mode: root.config.mode,
@@ -762,7 +760,6 @@ Item {
   function setMonitorBarBackground(name, background) { return barSettings.setMonitorBarBackground(name, background) }
   function setMonitorBarStyle(name, style) { return barSettings.setMonitorBarStyle(name, style) }
   function setMonitorBarContentSize(name, contentSize) { return barSettings.setMonitorBarContentSize(name, contentSize) }
-  function setDisplayValue(name, key, value) { return displayController.setDisplayValue(name, key, value) }
   function setDisplayTransform(name, value) { return displayController.setDisplayTransform(name, value) }
   function applyDisplaySetting(name, key, value) { return displayController.applyDisplaySetting(name, key, value) }
   function setDisplayEnabled(name, enabled) { return displayController.setDisplayEnabled(name, enabled) }

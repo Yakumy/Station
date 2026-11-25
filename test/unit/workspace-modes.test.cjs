@@ -128,7 +128,6 @@ test('repetitive uses Omarchy blocks, and non-repetitive owns the numbers each m
   assert.equal(G.ceiling(wide), 20);
   assert.equal(G.ceiling(rep), 10);
   assert.deepEqual(G.existing([win('0x9', 18, 'B')], [], 3, wide, 'A').slice(-3), [18, 19, 20]);
-  assert.deepEqual(H.workspaceRules(G.assignments({ outputs: ['A', 'B'] })), H.compactRules(['A', 'B']));
   // Dragged sets: A owns 1 and 3, B owns 2 and 4, and B takes everything past 4.
   const mixed = map(['A', 'B'], 'nonrepetitive', [[1, 3], [2, 4]]);
   assert.deepEqual([1, 2, 3, 4, 5, 20].map(id => mixed.outputs[G.slot(id, mixed)]), ['A', 'B', 'A', 'B', 'B', 'B']);

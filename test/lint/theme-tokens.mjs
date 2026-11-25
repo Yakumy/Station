@@ -8,7 +8,7 @@ const root = resolve(explicitRoot || '.');
 const repositoryMode = !explicitRoot;
 const textExtensions = new Set(['.qml', '.js', '.mjs', '.json', '.svg', '.css', '.html', '.lua']);
 const runtimeDirectories = new Set(['lib', 'assets']);
-// Approved branding artwork (docs/BRANDING.md), not theme-driven UI palettes.
+// Approved branding artwork (docs/branding.md), not theme-driven UI palettes.
 // This is an exact-file exception, never an exemption for new files in assets/.
 const brandingArtwork = new Set([
   'assets/station-main-logo.svg', 'assets/station-main-logo-mask.svg', 'assets/station-wordmark.svg'
@@ -39,7 +39,7 @@ function checkLine(path, line, code) {
   if (radius && !code.slice(code.indexOf(radius[0]) + radius[0].length).trimStart().startsWith('Style.cornerRadius')
       && !APPROVED_PILL_RADIUS.test(code)
       && !(path.endsWith("/WindowsLayout.qml") && code.trim() === "radius: canvas.values.rounding")
-      && !(/\/(Display|Bar|Windows|Wallpaper|Workspaces|Color)Layout\.qml$/.test(path) && code.trim() === "radius: 0")) {
+      && !(/\/(MonitorCard|WallpaperLayout)\.qml$/.test(path) && code.trim() === "radius: 0")) {
     report(path, line, 'radius not bound to Style.cornerRadius');
   }
   if (code.includes('Qt.rgba(')) report(path, line, 'Qt.rgba() literal colour mixing');

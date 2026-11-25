@@ -126,7 +126,7 @@ class Process:
         seen.append(targets)
     def communicate(self, **kwargs): return (outputs.pop(0), None)
     def poll(self): return 0
-with patch.object(m.socket, 'socket'), patch.object(m.subprocess, 'Popen', Process), patch.dict(m.os.environ, {'WAYLAND_DISPLAY': '/fake/socket'}):
+with patch.object(m.wayland.socket, 'socket'), patch.object(m.subprocess, 'Popen', Process), patch.dict(m.os.environ, {'WAYLAND_DISPLAY': '/fake/socket'}):
     m.compile_components(root, names)
     for _ in range(2):
         try: m.compile_components(root, names)

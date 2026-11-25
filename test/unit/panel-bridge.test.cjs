@@ -173,7 +173,7 @@ test('deferred popout settlement works after the proxy has been destroyed', () =
 // Catch newly added UI members that would otherwise work only under the stock bar.
 test('the proxies cover every service and wallpaper member consumed by the panel', () => {
   const consumers = ['StationPanel', 'PanelSession', 'DisplaysTab', 'DisplayLayout', 'BarTab', 'SettingsTab',
-    'KeybindingsTab', 'WindowsTab', 'WindowsLayout', 'WallpaperTab'].map(name => read(libPath(name + '.qml'))).join('\n');
+    'KeybindingsTab', 'WindowsTab', 'WindowsLayout', 'MonitorCanvas', 'WallpaperTab'].map(name => read(libPath(name + '.qml'))).join('\n');
   const members = new Set([...consumers.matchAll(/\bservice\.(\w+)/g)].map(m => m[1]));
   const declared = new Set([...proxy.matchAll(/(?:property \w+|function) (\w+)/g)].map(m => m[1]));
   for (const member of members) assert.ok(declared.has(member), 'service proxy: ' + member);

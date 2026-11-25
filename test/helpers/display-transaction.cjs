@@ -1,7 +1,6 @@
 // Reusable production display/Service scenario driver with fake external effects.
 const assert = require('node:assert/strict');
 const { runtimeSource, adaptOwners, owners, ownerSource, libPath } = require('./runtime-source.cjs');
-const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { join } = require('node:path');
 const { monitorRules } = require('./monitor-lua.cjs');

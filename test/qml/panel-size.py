@@ -5,7 +5,6 @@ Requires Wayland access; opens only an isolated preview window.
 """
 from pathlib import Path
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -15,16 +14,8 @@ with tempfile.TemporaryDirectory(prefix="station-panel-size-") as directory:
     root = Path(directory)
     for name in ("Commons", "Ui"):
         (root / name).symlink_to(Path("/usr/share/omarchy/shell") / name, target_is_directory=True)
-    # The bare Color name resolves ambiguously in this isolated context. Keep
-    # production geometry/behavior, qualifying only host theme references.
     shutil.copytree(repo / "lib", root / "Station")
     (root / "assets").symlink_to(repo / "assets", target_is_directory=True)
-    for path in (root / "Station").rglob("*.qml"):
-        source = path.read_text()
-        if re.search(r"(?<![\w.])Color\.", source):
-            if "import qs.Commons as Commons" not in source:
-                source = "import qs.Commons as Commons\n" + source
-            path.write_text(re.sub(r"(?<![\w.])Color\.", "Commons.Color.", source))
     (root / "shell.qml").write_text(r'''import QtQuick
 import Quickshell
 import qs.Commons

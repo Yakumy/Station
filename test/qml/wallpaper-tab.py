@@ -5,7 +5,6 @@ wallpaper or monitor setting is changed. Pass a directory to retain screenshots.
 """
 from pathlib import Path
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -18,15 +17,7 @@ with tempfile.TemporaryDirectory(prefix="station-wallpaper-tab-probe-") as direc
     root = Path(directory)
     for name in ("Commons", "Ui"):
         (root / name).symlink_to(Path("/usr/share/omarchy/shell") / name, target_is_directory=True)
-    # Like panel-size, qualify Color in the isolated file context, where its
-    # bare name resolves ambiguously. Production components and behavior stay.
     shutil.copytree(repo / "lib", root / "Station")
-    for path in (root / "Station").rglob("*.qml"):
-        source = path.read_text()
-        if re.search(r"(?<![\w.])Color\.", source):
-            if "import qs.Commons as Commons" not in source:
-                source = "import qs.Commons as Commons\n" + source
-            path.write_text(re.sub(r"(?<![\w.])Color\.", "Commons.Color.", source))
     (root / "fixture.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><rect width="1920" height="1080" fill="gray"/></svg>')
     qml = r'''import QtQuick
 import Quickshell

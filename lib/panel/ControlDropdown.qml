@@ -26,7 +26,6 @@ Item {
   property bool showLabel: true
   property bool hasCursor: false
 
-  readonly property bool popupOpen: popup.opened
   function open() { popup.open() }
   function close() { popup.close() }
   function toggle() { popup.opened ? popup.close() : popup.open() }

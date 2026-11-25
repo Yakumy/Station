@@ -10,7 +10,6 @@ Item {
   id: root
   property string stateDir: ""
   property string operationState: "idle"
-  property int operationGeneration: 0
   property bool removalGraceRunning: false
   property var clients: []
   property var lanes: ({})

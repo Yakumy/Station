@@ -67,10 +67,8 @@ QtObject {
   function showWorkspace(value, output) { return call("showWorkspace", [value, output]) }
   function setSetting(name, value) { return call("setSetting", [name, value]) }
   function setModeValue(mode, target) { return call("setModeValue", [mode, target]) }
-  function setDirectionValue(value) { return call("setDirectionValue", [value]) }
   function setBinding(id, combo) { return call("setBinding", [id, combo]) }
   function approveBinding(combo) { return call("approveBinding", [combo]) }
-  function setDisplayValue(name, key, value) { return call("setDisplayValue", [name, key, value]) }
   function setDisplayTransform(name, value) { return call("setDisplayTransform", [name, value]) }
   function setDisplayPosition(name, x, y) { return call("setDisplayPosition", [name, x, y]) }
   function setDisplayEnabled(name, enabled) { return call("setDisplayEnabled", [name, enabled]) }

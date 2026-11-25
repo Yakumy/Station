@@ -1,5 +1,11 @@
-# Unreleased
+# 4.5.1 — A cleaner codebase
 
+Nothing changes in how Station works or looks, and saved settings stay as they are.
+
+- Draw the monitor arrangement of five tabs, and the dotted background of all six, from one
+  shared component instead of a copy in each.
+- Remove code that nothing used, including three panel actions that no control called.
+- Split the largest panel and wallpaper files, and the largest tests, into smaller ones.
 - Document how another plugin's widget can reach its own service on Station's bar, in
   [Widget services](docs/widget-services.md). Contributed by @zigmoo in #29.
 

@@ -1,8 +1,6 @@
 const test = require('node:test');
 const { runtimeSource } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const R = require('../../lib/platform/Recovery.js');
 

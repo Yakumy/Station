@@ -92,11 +92,6 @@ Ui.BorderSurface {
     var tile = selectedTile()
     if (tile) tile.zoomBy(factor, tile.modelData.width / 2, tile.modelData.height / 2)
   }
-  function resetSelected() {
-    var tile = selectedTile()
-    if (tile) setFrame(tile.modelData, {})
-    commitFrame()
-  }
   function nudge(dx, dy) {
     controller.frame(Object.assign({}, scene.framing,
       { x: scene.framing.x + dx, y: scene.framing.y + dy }))
@@ -114,26 +109,7 @@ Ui.BorderSurface {
   }
   Timer { id: frameCommit; interval: 150; onTriggered: root.commitFrame() }
   Timer { id: frameRelease; interval: 1000; onTriggered: root.releaseFrame() }
-  Canvas {
-    anchors.fill: parent
-    opacity: 0.22
-    property color dotColor: Commons.Color.popups.text
-    onDotColorChanged: requestPaint()
-    onWidthChanged: requestPaint()
-    onHeightChanged: requestPaint()
-    onPaint: {
-      var context = getContext("2d")
-      context.clearRect(0, 0, width, height)
-      context.fillStyle = dotColor
-      var radius = Math.max(Style.space(0.7), 0.5)
-      for (var x = root.gridStep; x < width; x += root.gridStep)
-        for (var y = root.gridStep; y < height; y += root.gridStep) {
-          context.beginPath()
-          context.arc(x, y, radius, 0, Math.PI * 2)
-          context.fill()
-        }
-    }
-  }
+  PanelUi.DotGrid { gap: root.gridStep }
   Image {
     id: background
     source: root.scene.safe ? Util.fileUrl(root.scene.source)

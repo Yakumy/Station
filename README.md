@@ -3,7 +3,7 @@
   <h1>All Displays, One flow.</h1>
   <p>
     <a href="https://omarchy.org"><img src="https://img.shields.io/badge/Omarchy-4.5-A6B465?style=flat-square" alt="Omarchy 4.5"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-4.5.0-A6B465?style=flat-square" alt="Station 4.5.0"></a>
+    <a href="manifest.json"><img src="https://img.shields.io/badge/Station-4.5.1-A6B465?style=flat-square" alt="Station 4.5.1"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-A6B465?style=flat-square" alt="Apache 2.0 license"></a>
     <a href="https://github.com/Yakumy/Station/stargazers"><img src="https://img.shields.io/github/stars/Yakumy/Station?style=flat-square&color=A6B465" alt="GitHub stars"></a>
   </p>

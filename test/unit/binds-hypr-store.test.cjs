@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const B = require('../../lib/keybindings/Binds.js');
 const H = require('../../lib/platform/Hypr.js');
 const S = require('../../lib/platform/Store.js');
+const G = require('../../lib/stations/Grid.js');
 const { existsSync, readFileSync: readInstalled } = require('node:fs');
 const tilingLua = (process.env.OMARCHY_PATH || '/usr/share/omarchy') + '/default/hypr/bindings/tiling.lua';
 
@@ -83,7 +84,7 @@ test('hypr generators validate every external value', () => {
   assert.equal(H.workspace(100), 100);
   assert.throws(() => H.workspace(101), /invalid workspace/);
   assert.equal(H.moveWindow('0xabc', 4, false), 'hl.dispatch(hl.dsp.window.move({ window = "address:0xabc", workspace = 4, follow = false }))');
-  const rules = H.compactRules(['A', 'C']);
+  const rules = H.workspaceRules(G.assignments({ outputs: ['A', 'C'] }));
   assert.equal(rules.length, 20);
   assert.match(rules[3], /workspace = "4", monitor = "C"/);
   const blur = H.barBlur(true, { enabled: true, size: 8, passes: 3 });

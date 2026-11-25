@@ -39,7 +39,7 @@ function ownerFunction(name, context) {
   context.echoSettle ||= { restart() {} };
   if (!context.echoHelpers) {
     context.echoHelpers = true;
-    for (const helper of ['rowText', 'recordOwnWrite', 'ownEcho'])
+    for (const helper of ['rowText', 'recordOwnWrite', 'ownEcho', 'commitMonitorBar'])
       context[helper] ||= ownerFunction(helper, context);
   }
   context.requestLayerSync ||= () => { context.syncBarBlur(); if (context.syncBarGaps) context.syncBarGaps(); };
@@ -47,4 +47,15 @@ function ownerFunction(name, context) {
   const end = source.slice(start, lineEnd).trimEnd().endsWith('}') ? lineEnd : source.indexOf('\n  }', start) + 4;
   return runInNewContext('(' + source.slice(start, end) + ')', context);
 }
-module.exports = { ownerFunction, source };
+
+// The owner's function when it has one, otherwise the named one in another QML source.
+function qmlFunction(source, name, context = {}) {
+  context.Tabs = require('../../lib/panel/Tabs.js');
+  const moved = ownerFunction(name, context);
+  if (moved) return moved;
+  const start = source.indexOf('  function ' + name + '(');
+  if (start < 0) throw new Error('missing function ' + name);
+  const end = source.indexOf('\n  }', start) + 4;
+  return runInNewContext('(' + source.slice(start, end) + ')', context);
+}
+module.exports = { ownerFunction, qmlFunction, source };

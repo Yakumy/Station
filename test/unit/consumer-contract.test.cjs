@@ -35,7 +35,7 @@ function proxy(api) {
   return context;
 }
 function tabOrder() {
-  assert.match(panel, /model: Tabs\.labels\(\)/);
+  assert.match(read('lib/panel/TabRail.qml'), /model: Tabs\.labels\(\)/);
   return Tabs.labels();
 }
 function chooseHandler() {
@@ -67,7 +67,7 @@ test('all existing common wallpaper commands preserve direct/proxy arguments and
   const controller = {};
   const args = { choose: [''], change: ['followTheme', false], frame: [{ zoom: 2, x: 0.2, y: -0.1 }],
     frameDisplay: ['identity', { zoom: 2, x: 0.2, y: 0.1 }],
-    reset: [], useTheme: [], loadThemes: [], previewTheme: ['nord'],
+    reset: [], loadThemes: [], previewTheme: ['nord'],
     previewBackground: ['/usr/share/omarchy/themes/nord/backgrounds/a.jpg', 'identity'], apply: [] };
   for (const name of Object.keys(args)) controller[name] = (...values) => {
     calls.push([name, copy(values)]);

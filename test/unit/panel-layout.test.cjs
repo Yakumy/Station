@@ -19,8 +19,8 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
   assert.match(panel, /ScrollView \{\s*id: tabScroll/);
   assert.match(panel, /height: Math\.max\(0, content\.height - y - \(previewStrip\.visible \? previewStrip\.height : 0\)\)/);
   assert.match(panel, /ScrollBar\.horizontal\.policy: ScrollBar\.AlwaysOff/);
-  assert.match(panel, /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
-  assert.match(panel, /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
+  assert.match(read('lib/panel/TabRail.qml'), /Flickable \{\s*id: tabRail[\s\S]*?interactive: contentWidth > width/);
+  assert.match(read('lib/panel/TabRail.qml'), /WheelHandler \{[\s\S]*?tabRail\.contentX = Math\.max/);
   assert.match(panel, /onTextKey: function\(text, modifiers\)[\s\S]*?text === "q"[\s\S]*?root\.close\(\)/);
   assert.doesNotMatch(panel, /component TabKey: Rectangle/);
   assert.doesNotMatch(panel, /Tabs\.validIndex\(index\)/);
@@ -72,7 +72,7 @@ test('panel keeps the reference layout inside a fixed viewport', () => {
 
 test('display notices, labels, zoom buttons and settings switches share the intended alignment and size', () => {
   const displays = read('lib/displays/DisplaysTab.qml');
-  const layout = read('lib/displays/DisplayLayout.qml');
+  const layout = read('lib/panel/MonitorCanvas.qml');
   const settings = read('lib/panel/SettingsTab.qml');
 
   assert.match(displays, /component ControlMessage: Text \{[\s\S]*?anchors\.left: parent\.left[\s\S]*?horizontalAlignment: Text\.AlignLeft/);
@@ -85,12 +85,16 @@ test('display notices, labels, zoom buttons and settings switches share the inte
 });
 
 test('monitor canvases use the compact spacing token except for continuous Span crops', () => {
-  const display = read('lib/displays/DisplayLayout.qml');
-  const bar = read('lib/bars/BarLayout.qml');
+  const canvas = read('lib/panel/MonitorCanvas.qml');
   const wallpaper = read('lib/wallpaper/WallpaperLayout.qml');
 
-  assert.match(display, /monitorGap: Style\.spacing\.sm/);
-  assert.match(bar, /monitorGap: Style\.spacing\.sm/);
+  assert.match(canvas, /monitorGap: Style\.spacing\.sm/);
+  for (const path of ['displays/DisplayLayout', 'bars/BarLayout', 'windows/WindowsLayout', 'stations/WorkspacesLayout', 'color/ColorLayout']) {
+    const layout = read(`lib/${path}.qml`);
+    assert.match(layout, /^PanelUi\.MonitorCanvas \{/m, path);
+    assert.match(layout, /delegate: PanelUi\.MonitorCard \{/, path);
+    assert.doesNotMatch(layout, /monitorGap:|property var bounds/, path);
+  }
   assert.match(wallpaper, /monitorGap: spanning \? 0 : Style\.spacing\.sm/);
 });
 

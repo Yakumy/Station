@@ -17,7 +17,6 @@ function functionFrom(text, name, context) {
 function adapt(context) {
   for (const [key, read] of Object.entries({
     operationState: () => context.state,
-    operationGeneration: () => context.gen,
     removalGraceRunning: () => context.removalGrace.running,
     legacyWorkspaceGrid: () => context.persisted.legacyWorkspaceGrid,
   })) {

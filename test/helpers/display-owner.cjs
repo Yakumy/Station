@@ -10,7 +10,6 @@ const privateHelpers = ['detached','validConnector','reloadPreviewToken','restor
 function adapt(c) {
   for (const [key, read] of Object.entries({
     operationState: () => c.state,
-    operationGeneration: () => c.gen,
     preferences: () => c.config,
     migrationPending: () => !!(c.workspaceData && c.workspaceData.pending),
   })) if (!Object.hasOwn(c,key)) Object.defineProperty(c,key,{get:read,configurable:true});

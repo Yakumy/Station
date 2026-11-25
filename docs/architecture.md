@@ -53,9 +53,9 @@ owner and its tab, so one change stays in one place.
 | `lib/bars/omarchy/` | `MonitorBar.qml` and `BarModel.js`: attributed adaptations of Omarchy's bar, kept in step with it ([Omarchy's bar](omarchy-bar.md)). |
 | `lib/windows/` | Window setting limits, Lua generation, save and read-back, Windows tab. |
 | `lib/color/` | Color Match: ICC profile generation, the toggle file, Color Match tab. |
-| `lib/wallpaper/` | Crop geometry, profiles, staging helper, theme listing, surfaces, Wallpaper tab and theme carousel. |
+| `lib/wallpaper/` | Crop geometry, profiles, staging helper, theme listing, Wallpaper tab and theme carousel. `WallpaperSurfaces` draws what the owner has applied. |
 | `lib/keybindings/` | Bind table, conflict check, key picker, Keybindings tab. |
-| `lib/panel/` | Panel frame and lifecycle, panel intent, bridge contract and proxies, Settings tab, shared controls. |
+| `lib/panel/` | Panel frame and lifecycle, panel intent, bridge contract and proxies, Settings tab, shared controls. `MonitorCanvas` and `MonitorCard` are the monitor arrangement that five tabs draw, and `DotGrid` is the background of all six layouts. |
 | `lib/platform/` | Compositor queues, config and state files, Lua generators, fixed shell templates, event matching. |
 | `test/` | All checks. See [Testing](testing.md). |
 | `assets/`, `docs/` | Artwork and this documentation. |
@@ -89,7 +89,7 @@ Service object. Only that owner writes its private state.
 | `KeybindingsController` | Conflict check and bind application, once per generation | `appliedBinds` in `state.json` |
 | `WindowSettingsController` | Explicit window edits, read-back, busy state | `looknfeel.lua` |
 | `ColorMatchController` | Per-monitor color settings, ICC profiles, live apply, busy state | `config.colorMatch`, `toggles/hypr/station-color.lua`, `color/*.icc` |
-| `WallpaperController` | Draft, staging, profiles, desktop surfaces | `config.wallpaper`, private copies |
+| `WallpaperController` | Draft, staging, profiles, theme watch | `config.wallpaper`, private copies |
 | `OpenAppsController` | Read-only client feed for the bar | none |
 
 Service is deliberately not empty. Coordination between owners has to live

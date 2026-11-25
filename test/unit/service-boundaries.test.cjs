@@ -2,9 +2,8 @@
 // These tests never instantiate Station, call hyprctl or write desktop state.
 // They do not establish QML signal ordering or actual Wayland unmapping.
 const test = require('node:test');
-const { runtimeSource, adaptOwners, qmlFunction } = require('../helpers/runtime-source.cjs');
+const { runtimeSource } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const source = runtimeSource();
 const copy = value => JSON.parse(JSON.stringify(value));

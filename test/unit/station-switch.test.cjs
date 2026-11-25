@@ -1,8 +1,6 @@
 const test = require('node:test');
 const { runtimeSource, adaptOwners, qmlFunction } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { runInNewContext } = require('node:vm');
 const Hypr = require('../../lib/platform/Hypr.js');
 const Grid = require('../../lib/stations/Grid.js');
 const Model = require('../../lib/displays/Model.js');

@@ -1,10 +1,8 @@
 import QtQuick
 import QtQuick.Controls
-import Quickshell
 import qs.Ui as Ui
 import qs.Commons
 import qs.Commons as Commons
-import "../displays/Model.js" as Model
 import "Tabs.js" as Tabs
 import "PanelPosition.js" as PanelPosition
 import "../bars" as Bars
@@ -54,7 +52,7 @@ Ui.Panel {
     || (root.selectedTab === Tabs.index("workspaces") && workspacesTab.dirty)
     || (root.selectedTab === Tabs.index("wallpaper") && wallpaperTab.controller && wallpaperTab.controller.dirty))
 
-  // Station design tokens (docs/v2/DESIGN-SYSTEM.md). Component code reads
+  // Station design tokens (docs/design-system.md). Component code reads
   // these; nothing below this block hardcodes a colour, radius or step.
   //
   // 4px grid. Only these steps exist; pick the smallest that reads clearly.
@@ -67,9 +65,8 @@ Ui.Panel {
     readonly property real space5: Style.space(20)
     readonly property real space6: Style.space(24)
 
-    // Regions share one outer rhythm: 24px horizontal, 20px vertical.
+    // Regions share one outer rhythm: 24px horizontal.
     readonly property real regionPadH: space6
-    readonly property real regionPadV: space5
 
     readonly property color textPrimary: Commons.Color.popups.text
     readonly property color textDim: Qt.darker(Commons.Color.popups.text, 1.4)
@@ -297,12 +294,6 @@ Ui.Panel {
     session.handlePanelEvacuation()
   }
 
-  function roleName(display) {
-    if (!display || !display.enabled || !service) return "Off"
-    var role = service.roleOf(display.name)
-    return ["Primary", "Secondary", "Third", "Fourth"][role] || "Lane " + display.lane
-  }
-
   function selectDisplay(name) {
     if (!service || !service.displayDraft.some(function(display) { return display.name === name })) return
     service.setRememberedDisplayName(name)
@@ -453,94 +444,12 @@ Ui.Panel {
           foreground: Commons.Color.popups.text
         }
 
-        Flickable {
-          id: tabRail
+        PanelUi.TabRail {
           width: parent.width
-          height: panelTokens.controlHeight + panelTokens.space1
-          contentWidth: tabs.width + panelTokens.regionPadH * 2
-          contentHeight: height
-          clip: true
-          interactive: contentWidth > width
-          boundsBehavior: Flickable.StopAtBounds
-          WheelHandler {
-            target: null
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-            onWheel: function(event) {
-              var delta = event.pixelDelta.y || event.pixelDelta.x
-                || event.angleDelta.y / 120 * panelTokens.controlHeight * 2
-                || event.angleDelta.x / 120 * panelTokens.controlHeight * 2
-              var limit = Math.max(0, tabRail.contentWidth - tabRail.width)
-              tabRail.contentX = Math.max(0, Math.min(limit, tabRail.contentX - delta))
-              event.accepted = true
-            }
-          }
-          Row {
-            id: tabs
-            anchors.left: parent.left
-            anchors.leftMargin: panelTokens.regionPadH
-            anchors.bottom: parent.bottom
-            height: parent.height
-            Repeater {
-              model: Tabs.labels()
-              delegate: Item {
-                id: tab
-                required property int index
-                required property string modelData
-                readonly property bool conflicted: index === Tabs.index("keybindings") && root.conflictCount > 0
-                height: tabs.height
-                // 28px between tabs; the row's left margin carries the 24px
-                // region inset so the first tab still aligns with the logo.
-                width: tabLabel.implicitWidth + panelTokens.space4 + panelTokens.space3
-                  + (conflicted ? badge.width + panelTokens.space1 : 0)
-                Text {
-                  id: tabLabel
-                  anchors.centerIn: parent
-                  anchors.horizontalCenterOffset: tab.conflicted
-                    ? -(badge.width + panelTokens.space1) / 2 : 0
-                  text: tab.modelData
-                  // Selection is carried by the accent rule underneath, so the
-                  // label only steps between the dim and full text panelTokens.
-                  color: tab.conflicted ? Commons.Color.urgent
-                    : (root.selectedTab === tab.index ? panelTokens.textPrimary : panelTokens.textDim)
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.body
-                }
-                Rectangle {
-                  id: badge
-                  visible: tab.conflicted
-                  anchors.left: tabLabel.right
-                  anchors.leftMargin: panelTokens.space1
-                  anchors.verticalCenter: tabLabel.verticalCenter
-                  width: Math.max(panelTokens.space4, badgeText.implicitWidth + panelTokens.space2)
-                  height: panelTokens.space4
-                  color: Commons.Color.urgent
-                  radius: Style.cornerRadius
-                  Text {
-                    id: badgeText
-                    anchors.centerIn: parent
-                    text: root.conflictCount
-                    color: Commons.Color.popups.background
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    font.weight: Font.DemiBold
-                  }
-                }
-                Rectangle {
-                  anchors.left: parent.left
-                  anchors.right: parent.right
-                  anchors.bottom: parent.bottom
-                  height: panelTokens.tabUnderline
-                  color: tab.conflicted ? Commons.Color.urgent : Commons.Color.accent
-                  visible: root.selectedTab === tab.index
-                }
-                MouseArea {
-                  anchors.fill: parent
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.selectedTab = tab.index
-                }
-              }
-            }
-          }
+          tokens: panelTokens
+          selectedTab: root.selectedTab
+          conflictCount: root.conflictCount
+          onTabSelected: function(index) { root.selectedTab = index }
         }
 
         Ui.PanelSeparator { width: parent.width; foreground: Commons.Color.popups.text }

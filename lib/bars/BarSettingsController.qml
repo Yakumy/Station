@@ -340,29 +340,34 @@ Item {
     return "ok"
   }
 
-  function setMonitorBarPosition(name, position) {
-    if (!validConnector(name) || ["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
-    if (!displays.some(function(display) { return display.name === name })) return "invalid"
-    var next = monitorBar(name)
-    next.position = position
-    if (panelWanted) {
-      retainPanel("bar")
-    }
+  // Every setter ends here: save the row, then publish it to the host or defer that.
+  function commitMonitorBar(name, next, syncLayers) {
+    if (panelWanted) retainPanel("bar")
     var bars = Object.assign({}, preferences || {})
     bars[name] = next
     persistPreferences(bars)
+    if (syncLayers) requestLayerSync()
     // Once Station's full bar is active, Bar.qml consumes the detached config
-    // snapshot above. Do not feed the same click through shell.json while the
-    // panel is open: the host can recreate the full bar and the panel with it.
-    // Keep shell.json as a durable mirror, but update it after an ordinary
-    // close. The first edit still publishes immediately because it must select
-    // Station's full-bar entry and retire the old widget row atomically.
+    // snapshot above. Do not feed the same edit through shell.json while the
+    // panel is open: the write rebuilds every widget on every monitor, and can
+    // recreate the full bar and the panel with it. Keep shell.json as a durable
+    // mirror, but update it after an ordinary close. The first edit still
+    // publishes immediately because it must select Station's full-bar entry and
+    // retire the old widget row atomically.
     if (activeStationBar() && panelWanted) {
       if (typeof publishHost !== "function") return "unsupported"
       deferMonitorBarPublish(name, next)
       return "ok"
     }
     return publishMonitorBar(name, next) ? "ok" : "unsupported"
+  }
+
+  function setMonitorBarPosition(name, position) {
+    if (!validConnector(name) || ["top", "bottom", "left", "right"].indexOf(position) === -1) return "invalid"
+    if (!displays.some(function(display) { return display.name === name })) return "invalid"
+    var next = monitorBar(name)
+    next.position = position
+    return commitMonitorBar(name, next, false)
   }
 
   function setMonitorBarEnabled(name, enabled) {
@@ -377,21 +382,7 @@ Item {
     }
     var next = monitorBar(name)
     next.enabled = enabled
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    requestLayerSync()
-    // A shell.json write rebuilds every widget on every monitor, the open panel and
-    // this switch included. Bar.qml already follows the live preferences.
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, true)
   }
 
   function setMonitorBarWidth(name, width) {
@@ -400,18 +391,7 @@ Item {
     if (!isFinite(number) || number < 1 || number > 100) return "invalid"
     var next = monitorBar(name)
     next.width = Math.round(number)
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, false)
   }
 
   function setMonitorBarHeight(name, height) {
@@ -420,18 +400,7 @@ Item {
     if (!isFinite(number) || number < 1 || number > monitorBarMaximumHeight(name)) return "invalid"
     var next = monitorBar(name)
     next.height = Math.round(number)
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, false)
   }
 
   function setMonitorBarBackground(name, background) {
@@ -439,19 +408,7 @@ Item {
     if (["solid", "transparent", "blur"].indexOf(background) === -1) return "invalid"
     var next = monitorBar(name)
     next.background = background
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    requestLayerSync()
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, true)
   }
 
   function setMonitorBarStyle(name, style) {
@@ -459,18 +416,7 @@ Item {
     if (["default", "pill"].indexOf(style) === -1) return "invalid"
     var next = monitorBar(name)
     next.style = style
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, false)
   }
 
   function setMonitorBarContentSize(name, contentSize) {
@@ -480,18 +426,6 @@ Item {
     if (!isFinite(number) || number < minimum || number > monitorBarMaximumContent(name)) return "invalid"
     var next = monitorBar(name)
     next.contentSize = Math.round(number)
-    if (panelWanted) {
-      retainPanel("bar")
-    }
-    var bars = Object.assign({}, preferences || {})
-    bars[name] = next
-    persistPreferences(bars)
-    if (activeStationBar() && panelWanted) {
-      if (typeof publishHost !== "function") return "unsupported"
-      deferMonitorBarPublish(name, next)
-      return "ok"
-    }
-    return publishMonitorBar(name, next) ? "ok" : "unsupported"
+    return commitMonitorBar(name, next, false)
   }
-
 }

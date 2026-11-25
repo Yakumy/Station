@@ -1,7 +1,6 @@
 const test = require('node:test');
 const { runtimeSource } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const Model = require('../../lib/displays/Model.js');
 const MonitorsLua = require('../../lib/displays/MonitorsLua.js');

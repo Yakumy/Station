@@ -16,11 +16,6 @@ with tempfile.TemporaryDirectory(prefix="station-panel-session-") as directory:
     probe = root / "Probe"
     probe.mkdir()
     shutil.copytree(repo / "lib", probe, dirs_exist_ok=True)
-    for path in probe.rglob("*.qml"):
-        source = path.read_text()
-        if re.search(r"(?<![\w.])Color\.", source):
-            source = "import qs.Commons as Commons\n" + source
-            path.write_text(re.sub(r"(?<![\w.])Color\.", "Commons.Color.", source))
     shell = root / "Quickshell"
     shell.mkdir()
     (shell / "qmldir").write_text("module Quickshell\nsingleton Quickshell 1.0 Quickshell.qml\n")

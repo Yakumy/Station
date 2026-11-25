@@ -127,7 +127,7 @@ test('active mapping uses dense slots independently of preferred lane numbers', 
 });
 
 test('workspace rules cover exactly the new compact range', () => {
-  const rules = H.compactRules(['A', 'B']);
+  const rules = H.workspaceRules(G.assignments({ outputs: ['A', 'B'] }));
   assert.equal(rules.length, 20);
   assert.match(rules[4], /workspace = "5", monitor = "A"/);
   assert.match(rules[19], /workspace = "20", monitor = "B"/);

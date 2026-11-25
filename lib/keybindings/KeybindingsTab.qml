@@ -64,10 +64,6 @@ Column {
     return result
   }
 
-  function statusLabel(status) {
-    return status === "replacement" ? "REPLACES DEFAULT" : String(status || "unverified").toUpperCase()
-  }
-
   function beginBindingEdit(binding) {
     var normalized = Binds.normalize(binding.combo).split("+")
     editingModifiers = {

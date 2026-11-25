@@ -17,13 +17,6 @@ with tempfile.TemporaryDirectory(prefix="station-panel-composition-") as folder:
         (root / name).symlink_to(Path("/usr/share/omarchy/shell") / name, target_is_directory=True)
     shutil.copytree(repo / "lib", root / "Station")
     (root / "assets").symlink_to(repo / "assets", target_is_directory=True)
-    for path in (root / "Station").rglob("*.qml"):
-        source = path.read_text()
-        if re.search(r"(?<![\w.])Color\.", source):
-            if "import qs.Commons as Commons" not in source:
-                source = "import qs.Commons as Commons\n" + source
-            source = re.sub(r"(?<![\w.])Color\.", "Commons.Color.", source)
-        path.write_text(source)
     fake = root / "FakeIo"
     fake.mkdir()
     (fake / "Process.qml").write_text('''import QtQuick

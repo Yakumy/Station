@@ -87,6 +87,20 @@ It missed the reworked dragging, kept a surface only as deep as the bar, and ran
 remap three weeks after Omarchy dropped it. Since then every difference is listed and
 checked on each commit ([Omarchy's bar](omarchy-bar.md)).
 
+## Files over 500 lines
+
+Split a file where a part already has its own inputs, as `WallpaperSurfaces` and `TabRail`
+did. Size alone is not a reason. In runtime code these stay whole:
+
+- `MonitorBar.qml` and `BarModel.js`, to stay comparable with Omarchy's
+  ([above](#keep-the-adapted-bar-whole)).
+- `DisplayController.qml`. Draft, preview, Keep and Revert are one transaction over the same
+  private state, and it can turn monitors off. Splitting it would spread that state over
+  ports without making it simpler, and its hardware cases have no recorded pass on the
+  current layout ([Coverage gaps](testing.md#coverage-gaps)). Run them before a split.
+- `Service.qml`. Most of it is the wiring between the owners, and one place to read that
+  coupling is its purpose ([Owners](architecture.md#owners)).
+
 ## Holding a widget drags the widget
 
 From 4.0.0 to 4.4.1, holding a widget for 200 ms moved the whole bar, so a press, a pause and

@@ -202,7 +202,7 @@ Item {
       tryVerify(function() { return canvas.liveFrame === null }, 2000)
       compare(canvas.frameOf({identity: "A"}).zoom, 1)
     }
-    function test_keyboard_frames_the_selected_monitor_and_reset_clears_it() {
+    function test_keyboard_frames_the_selected_monitor() {
       modeTile("individual", "A")
       canvas.selectedName = "B"
       canvas.forceActiveFocus()
@@ -214,8 +214,6 @@ Item {
       verify(frame.zoom > 1.2)
       verify(frame.x < 0.5)
       compare(controller.draft.frames.individual.A, undefined)
-      canvas.resetSelected()
-      compare(controller.draft.frames.individual.B, undefined)
       canvas.selectedName = ""
     }
     function test_busy_blocks_framing() {

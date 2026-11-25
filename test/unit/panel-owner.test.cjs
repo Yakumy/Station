@@ -7,24 +7,22 @@ const read = name => readFileSync(name, 'utf8');
 const panel = read('lib/panel/StationPanel.qml');
 const session = read('lib/panel/PanelSession.qml');
 const controls = read('lib/displays/DisplayControls.qml');
-const keys = read('lib/keybindings/KeybindingsTab.qml');
 const Tabs = require('../../lib/panel/Tabs.js');
 const Binds = require('../../lib/keybindings/Binds.js');
-const copy = value => JSON.parse(JSON.stringify(value));
 test('panel session and local editors stay widget-local', () => {
   assert.match(panel, /PanelUi\.PanelSession/); assert.match(panel, /Displays\.DisplayControls/);
   assert.doesNotMatch(runtimeSource(), /PanelSession|DisplayControls/);
   assert.doesNotMatch(panel, /function (?:tryRestorePanel|setBrightness|beginBindingEdit)\(/);
   for (const name of ['DisplaysTab','WorkspacesTab','BarTab','WindowsTab','WallpaperTab','KeybindingsTab','SettingsTab',
-    'DisplayLayout','WorkspacesLayout','BarLayout','WindowsLayout']) assert.doesNotMatch(read(libPath(name+'.qml')), /panelRoot/);
+    'DisplayLayout','WorkspacesLayout','BarLayout','WindowsLayout','MonitorCanvas','MonitorCard']) assert.doesNotMatch(read(libPath(name+'.qml')), /panelRoot/);
   const tokens = panel.match(/QtObject \{\n    id: panelTokens[\s\S]*?\n  \}/)[0];
   assert.doesNotMatch(tokens, /service|session|function|\bbar\b/);
   assert.doesNotMatch(session+controls, /import .*BarBridge|execDetached|hyprctl|Transactions/);
   for (const [port, consumers] of [
-    ['displaysTabPort', ['DisplaysTab', 'DisplayLayout']], ['barTabPort', ['BarTab', 'BarLayout']],
-    ['windowsTabPort', ['WindowsTab', 'WindowsLayout']], ['keybindingsTabPort', ['KeybindingsTab']],
+    ['displaysTabPort', ['DisplaysTab', 'DisplayLayout', 'MonitorCanvas']], ['barTabPort', ['BarTab', 'BarLayout', 'MonitorCanvas']],
+    ['windowsTabPort', ['WindowsTab', 'WindowsLayout', 'MonitorCanvas']], ['keybindingsTabPort', ['KeybindingsTab']],
     ['settingsTabPort', ['SettingsTab']], ['panelIntent', ['PanelSession']],
-    ['workspacesTabPort', ['WorkspacesTab', 'WorkspacesLayout']],
+    ['workspacesTabPort', ['WorkspacesTab', 'WorkspacesLayout', 'MonitorCanvas']],
   ]) {
     const source = consumers.map(name => read(libPath(name+'.qml'))).join('\n');
     const consumed = new Set([...source.matchAll(/\bservice\.(\w+)/g)].map(m => m[1]));

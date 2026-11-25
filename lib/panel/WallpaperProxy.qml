@@ -30,6 +30,5 @@ QtObject {
   function frame(value) { return call("wallpaperFrame", [value]) }
   function frameDisplay(identity, value) { return call("wallpaperFrameDisplay", [identity, value]) }
   function reset() { return call("wallpaperReset", []) }
-  function useTheme() { return call("wallpaperUseTheme", []) }
   function apply() { return call("wallpaperApply", []) }
 }

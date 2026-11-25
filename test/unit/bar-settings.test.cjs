@@ -1,7 +1,6 @@
 const test = require('node:test');
 const { runtimeSource } = require('../helpers/runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
 const { ownerFunction, source } = require('../helpers/bar-settings.cjs');
 const service = runtimeSource();
 const copy = value => JSON.parse(JSON.stringify(value));

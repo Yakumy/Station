@@ -28,7 +28,7 @@ test('no surface depends on the host for ScreenMoveRemap', () => {
 
 test('the bar and the wallpaper surfaces use the guard after a monitor move', () => {
   const bar = read('lib/bars/omarchy/MonitorBar.qml');
-  const wallpaper = read('lib/wallpaper/WallpaperController.qml');
+  const wallpaper = read('lib/wallpaper/WallpaperSurfaces.qml');
   assert.match(bar, /Platform\.ScreenMoveRemap \{\s*id: remapGuard\s*window: barWindow\s*\}/);
   assert.match(bar, /visible: !remapGuard\.remapping/);
   assert.match(wallpaper, /Platform\.ScreenMoveRemap \{ id: remap; window: surface \}/);

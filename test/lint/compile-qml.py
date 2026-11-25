@@ -7,9 +7,12 @@ from pathlib import Path, PurePosixPath
 import argparse
 import json
 import os
-import socket
 import subprocess
+import sys
 import tempfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "helpers"))
+import wayland  # noqa: E402
 
 
 def entry_path(root, value):
@@ -81,19 +84,7 @@ def discover_components(root):
 
 def compile_components(fixture, component_names):
     label = "STATION" if json.loads((fixture / "manifest.json").read_text()).get("id") == "yakumy.station" else "M0"
-    display = os.environ.get("WAYLAND_DISPLAY", "")
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "")
-    address = Path(display) if display else None
-    if address and not address.is_absolute():
-        address = Path(runtime) / address if runtime else None
-    try:
-        if address is None:
-            raise OSError("WAYLAND_DISPLAY or XDG_RUNTIME_DIR is unset")
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-            connection.settimeout(1)
-            connection.connect(str(address))
-    except OSError as error:
-        raise SystemExit(f"QML check needs access to the Wayland socket ({error}); run it with session access.")
+    wayland.require("QML check")
     print(f"QML compile targets ({len(component_names)}): " + ", ".join(component_names), flush=True)
     with tempfile.TemporaryDirectory(prefix="station-qml-") as directory:
         root = Path(directory)
@@ -138,7 +129,7 @@ ShellRoot {
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("fixture", nargs="?", type=Path,
-                        default=Path(__file__).resolve().parent / "m0-plugin")
+                        default=Path(__file__).resolve().parents[2])
     parser.add_argument("--list", action="store_true", help="List discovered QML as JSON without Wayland or compilation")
     args = parser.parse_args()
     fixture = args.fixture.resolve()

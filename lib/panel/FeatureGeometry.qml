@@ -1,7 +1,7 @@
 import QtQuick
 import qs.Commons
 
-// Shared visible frame sizes and spacing for the six feature tabs.
+// Shared visible frame sizes and spacing for the feature tabs.
 QtObject {
   readonly property real frameHeight: Style.space(370)
   readonly property real headingHeight: Style.space(28)
