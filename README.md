@@ -26,7 +26,7 @@
 
 ## Meet Station
 
-https://github.com/user-attachments/assets/a0665778-d3c9-4f88-9e0e-94720ac0794d
+https://github.com/user-attachments/assets/04108926-8700-49e7-bef5-c98495b69125
 
 Station is a multi-monitor manager for Omarchy. It helps you arrange your monitor
 layout, manage how workspaces are assigned, place and customize each monitor's bar,
