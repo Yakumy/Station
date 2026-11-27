@@ -125,7 +125,42 @@ Item {
     onTriggered: root.refreshStationBars()
   }
 
-  Component.onCompleted: refreshStationBars()
+  Component.onCompleted: {
+    refreshStationBars()
+    compileStationWidget()
+  }
+
+  // Omarchy 4.6 compiles a plugin's bar widget only while the saved layout
+  // holds it, and registers an unplaced one with no component. Station's logo
+  // is never saved there (BarModel.stationLayout), so the bar compiles it from
+  // the same Panel.qml the shell would load. The shell's own component wins
+  // whenever it has one, as on older Omarchy.
+  readonly property bool stationWidgetUncompiled: {
+    var widgets = barWidgetRegistry ? barWidgetRegistry.widgets : null
+    var entry = widgets ? widgets[BarModel.stationId] : null
+    return !!entry && !entry.component
+  }
+  property var stationWidgetComponent: null
+  property bool stationWidgetCompiling: false
+  onStationWidgetUncompiledChanged: compileStationWidget()
+
+  function compileStationWidget() {
+    if (!stationWidgetUncompiled || stationWidgetComponent || stationWidgetCompiling) return
+    stationWidgetCompiling = true
+    var component = Qt.createComponent(Qt.resolvedUrl("Panel.qml"), Component.Asynchronous)
+    function finish() {
+      if (component.status === Component.Loading) return
+      root.stationWidgetCompiling = false
+      if (component.status === Component.Ready) {
+        root.stationWidgetComponent = component
+      } else {
+        console.warn("Station's bar widget failed: " + component.errorString())
+        component.destroy()
+      }
+    }
+    if (component.status === Component.Loading) component.statusChanged.connect(finish)
+    else finish()
+  }
 
   function registerInstance(instance) {
     if (!instance || instances.indexOf(instance) !== -1) return
@@ -251,6 +286,7 @@ Item {
         targetScreen: root.enabledFor(modelData) ? modelData : null
         omarchyPath: root.omarchyPath
         barWidgetRegistry: root.barWidgetRegistry
+        stationWidgetComponent: root.stationWidgetComponent
         pluginRegistry: root.pluginRegistry
         shell: root.shell
         manifest: root.manifest

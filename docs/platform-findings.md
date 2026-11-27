@@ -10,7 +10,7 @@ This page records how Hyprland, Omarchy and Quickshell actually behave, so nobod
 | --- | --- | --- |
 | [Bar blur and thickness](platform/bar-blur.md) | Layer-rule blur with global blur off, pass count, measured thickness against the stock bar. | 600 |
 | [Hosting plugin widgets on a replacement bar](platform/bar-hosting.md) | What the host gives plugin widgets: bar api, tray sizing, service lookup, clipping and hover, panel hotkeys. | 1600 |
-| [Bar geometry, dragging and position](platform/bar-layout.md) | Reserved space, spacing, edges, host sections, widget dragging, positions reverting, on/off stutter. | 2700 |
+| [Bar geometry, dragging and position](platform/bar-layout.md) | Reserved space, spacing, edges, host sections, widget dragging, positions reverting, on/off stutter. | 3100 |
 | [Bar text, image and logo rendering](platform/bar-rendering.md) | Content zoom, blurry text and images, the Station mark's tint, size and alignment. | 3000 |
 | [Color Match ICC behavior](platform/color-match.md) | How Hyprland applies an ICC profile, what is ignored, how to clear one. | 800 |
 | [Rotation, scale, snapping and the Off flag](platform/display-changes.md) | Investigations of rotation and scale geometry, edge snapping, the internal-monitor Off flag, Omarchy's own display panel. | 1900 |

@@ -10,7 +10,7 @@ const contract = read('lib/panel/ServiceContract.js');
 
 test('4.0 manifest exposes the full bar alongside the widget and service', () => {
   const manifest = JSON.parse(read('manifest.json'));
-  assert.equal(manifest.version, '4.5.2');
+  assert.equal(manifest.version, '4.5.3');
   assert.deepEqual(manifest.kinds, ['bar', 'bar-widget', 'service']);
   assert.equal(manifest.entryPoints.bar, 'Bar.qml');
 });
@@ -95,7 +95,7 @@ test('bar tab is read-only for display geometry and exposes all requested contro
   assert.match(monitorBar, /panelThickness: barSize \+ edgeInset/);
   assert.match(monitorBar, /edgeInset: barStyle === "pill" \|\| backgroundMode !== "transparent"\s+\? Math\.round\(Style\.space\(8\)\) : 0/);
   assert.doesNotMatch(monitorBar, /edgeCenterOffset|insetPresentation/);
-  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore : ExclusionMode\.Normal\s+exclusiveZone: thickness/);
+  assert.match(monitorBar, /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore : ExclusionMode\.Normal\s+exclusiveZone: surfaceThickness/);
   assert.match(monitorBar, /function thicknessFor\(screen\) \{\s+return root\.panelThickness/);
   assert.match(monitorBar, /pillOuterMargin: root\.edgeInset/);
   assert.match(monitorBar, /pillInset: 0/);

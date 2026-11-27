@@ -1,3 +1,15 @@
+# 4.5.3 — Ready for Omarchy's newest bar
+
+Saved settings stay as they are.
+
+- Follow Omarchy's newest bar: its surface is only as large as the bar, so it uses far less
+  graphics memory, and a move to another edge or a new height no longer flashes a stretched
+  bar.
+- Keep Station's logo on the bar with Omarchy 4.6, which loads only the widgets saved in
+  the bar layout.
+- Resize the bar's surface only between frames, so a move between a top or bottom edge
+  and a side edge cannot crash the whole shell, as it could with the new bar.
+
 # 4.5.2 — The right state on every monitor
 
 Saved settings stay as they are.

@@ -100,10 +100,17 @@ file or to `state.json`.
   it using logical thickness, independent of transient layer-window dimensions.
 - Drag empty bar space to move the bar. A widget drags itself, not the bar.
 - Double-click empty bar space to step that monitor's background: transparent, blur, solid.
-- The surface spans its screen, as Omarchy's does. Only the drawn bar takes input, and only
+- The surface is only the strip, as Omarchy's is. Only the drawn bar takes input, and only
   the strip is reserved. Nothing takes input under a fullscreen window that covers the
   screen, unless a special workspace is open over it. Partial-length bars sit centered in
-  the surface.
+  the strip.
+- A move between a horizontal and a vertical edge, or a new thickness, settles as
+  Omarchy's does: the strip turns clear, the surface resizes, and the strip returns once a
+  frame at the new size is up. Station moves the surface only once no frame has swapped for
+  32 ms ([why](../platform/bar-layout.md#the-strip-sized-surface-2026-11-28)).
+- Station's logo shows on Omarchy 4.6, which compiles only the widgets in the saved
+  layout. `Bar.qml` compiles `Panel.qml` itself when the shell registers the logo without a
+  component, and the shell's own component wins whenever there is one.
 - `Bar.qml` answers everything Omarchy's shell asks of its bar, including `screenBarSizes`
   and `cycleBackground`, for the focused monitor or all of them.
 - A monitor's `moduleWidgets` answers with a widget's copies on every monitor, as

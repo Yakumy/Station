@@ -68,8 +68,7 @@ with tempfile.TemporaryDirectory(prefix="station-bar-drag-") as folder, headless
     if not report:
         print(text[-6000:])
         raise SystemExit("The fixture wrote no result.")
-    # The compositor's own view: each bar reserves its strip on its own edge, though
-    # its surface spans the screen.
+    # The compositor's own view: each bar reserves its strip on its own edge.
     for name, position in report["positions"]:
         left, top, right, bottom = reserved.get(name, (0, 0, 0, 0))
         edges = {"left": left, "top": top, "right": right, "bottom": bottom}

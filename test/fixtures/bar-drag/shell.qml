@@ -21,6 +21,9 @@ ShellRoot {
   property var held: null
   property var kept: ({})
   property string counts: ""
+  property int thicker: 0
+  property var settles: []
+  function recordSettle() { settles = settles.concat([[surface.settle, surface.surfaceThickness, surface.thickness]]) }
   property var steps: []
   property int step: 0
   property int clicks: 0
@@ -157,9 +160,15 @@ ShellRoot {
       [function() { root.same(slot().hovered, reached, message) }, 10]
     ]
   }
+  // A point in a slot, on the screen. The surface is only the strip, so on the
+  // bottom or right edge it does not start at the screen's corner.
+  function screenPointIn(slot, instance, x, y) {
+    var p = instance.windowScreenPoint(slot.mapToItem(null, x, y), instance.slotWindow(slot))
+    return { x: instance.targetScreen.x + p.x, y: instance.targetScreen.y + p.y }
+  }
   function pointerOn(slot, instance) {
-    var p = slot.mapToItem(null, slot.width / 2, slot.height / 2)
-    pointer(instance.targetScreen.x + p.x, instance.targetScreen.y + p.y)
+    var p = screenPointIn(slot, instance, slot.width / 2, slot.height / 2)
+    pointer(p.x, p.y)
   }
   function hoverScenario(position, style, wait) {
     var rows = [configure(function(bar) {
@@ -205,8 +214,8 @@ ShellRoot {
         var one = root.fullBar.instances[n]
         root.same(length(found(one, "omarchy.indicators")), 0, "hidden from the middle of the screen")
         var clock = found(one, "omarchy.clock")
-        var p = clock.mapToItem(null, clock.width / 2, clock.height / 2)
-        root.pointer(one.targetScreen.x + p.x - (root.bar.vertical ? 0 : clock.width / 2 + 20), one.targetScreen.y + p.y - (root.bar.vertical ? clock.height / 2 + 20 : 0))
+        var p = root.screenPointIn(clock, one, clock.width / 2, clock.height / 2)
+        root.pointer(p.x - (root.bar.vertical ? 0 : clock.width / 2 + 20), p.y - (root.bar.vertical ? clock.height / 2 + 20 : 0))
       }, 400])
       rows.push([function() {
         var one = root.fullBar.instances[n]
@@ -461,11 +470,15 @@ ShellRoot {
       scenario("a drag that leaves the strip keeps the pointer until release", [
         configure(function(bar) { root.layout(bar, { left: [{ id: "omarchy.menu" }, { id: "test.reel" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] }) }),
         [function() {
-          root.check(root.surface.height >= root.surface.screen.height - 1, "the surface spans its screen: " + root.surface.height)
+          root.check(root.surface.implicitHeight === root.surface.thickness, "the surface is only as tall as its strip: " + root.surface.implicitHeight + " against " + root.surface.thickness)
           root.lift(root.slotOf("test.reel"))
         }, 160],
         [function() { tc.mouseMove(root.held, 60, 40, -1, Qt.LeftButton) }, 120],
-        [function() { root.check(root.bar.barDragSource !== null, "still dragging off the strip"); root.pointAt(root.slotOf("test.a"), 0.2) }, 180],
+        [function() {
+          root.check(root.bar.barDragSource !== null, "still dragging off the strip")
+          root.check(root.surface.implicitHeight === root.surface.thickness, "a drag leaves the surface the size of its strip: " + root.surface.implicitHeight)
+          root.pointAt(root.slotOf("test.a"), 0.2)
+        }, 180],
         [function() { root.letGo(root.slotOf("test.a"), 0.2) }, 420],
         [function() { root.same(root.ids("right"), ["test.reel", "test.a"], "right") }, 10]
       ]),
@@ -608,8 +621,13 @@ ShellRoot {
             root.fullBar.instances.forEach(function(one) {
               var content = one.slotWindow(one.moduleSlots.filter(function(s) { return s && s.moduleName === "omarchy.clock" })[0]).contentItem
               var w = content.width, h = content.height, depth = one.panelThickness - one.barSize / 2 - (one.contentOffset === 0 ? one.edgeInset : 0)
+              // The surface is only the strip, so the release point is the screen's,
+              // moved into the surface's own coordinates.
+              var sw = one.targetScreen.width, sh = one.targetScreen.height
+              var ox = pair[0] === "right" ? sw - w : 0, oy = pair[0] === "bottom" ? sh - h : 0
               var start = { top: [w * 0.35, depth], bottom: [w * 0.35, h - depth], left: [depth, h * 0.35], right: [w - depth, h * 0.35] }[pair[0]]
-              var end = { top: [w * where, 30], bottom: [w * where, h - 30], left: [30, h * where], right: [w - 30, h * where] }[pair[1]]
+              var end = { top: [sw * where, 30], bottom: [sw * where, sh - 30], left: [30, sh * where], right: [sw - 30, sh * where] }[pair[1]]
+              end = [end[0] - ox, end[1] - oy]
               var asked = ""
               function note(position) { asked = position }
               one.positionRequested.connect(note)
@@ -724,6 +742,63 @@ ShellRoot {
       [function() { root.lift(root.slotOf("test.reel")) }, 160],
       configure(function(bar) { for (var s in bar.layout) bar.layout[s] = bar.layout[s].filter(function(e) { return e.id !== "test.reel" }) }, 300),
       [function() { root.check(root.bar.barDragSource === null, "no drag"); tc.mouseRelease(root.surface.contentItem, 5, 300) }, 60]
+    ]), scenario("the bar's surface is its strip, and settles into a new edge or thickness", [
+      configure(function(bar) {
+        root.layout(bar, { left: [{ id: "omarchy.menu" }], center: [{ id: "omarchy.clock" }], right: [{ id: "test.a" }] })
+        root.fullBar.instances.forEach(function(one) {
+          bar.monitors[one.targetScreenName] = { enabled: true, position: "top", style: "default", height: 40, contentSize: 0, width: 100, background: "solid" }
+        })
+      }, 600),
+      [function() {
+        root.bar = root.fullBar.instances[0]
+        root.surface = root.bar.slotWindow(root.slotOf("test.a"))
+        root.check(root.surface.implicitHeight === root.surface.thickness && root.surface.height === root.surface.thickness, "a top bar's surface is only as tall as its strip: " + root.surface.height + " against " + root.surface.thickness)
+        // Moving to a side edge resizes the surface, so the strip turns clear
+        // before the surface moves.
+        host.mutateShellConfig(function(config) { config.bar.monitors[root.bar.targetScreenName].position = "left" })
+        root.check(root.surface.resizeDue && root.surface.surfaceEdge === "top", "a strip moving to a side edge clears before its surface moves: " + root.surface.resizeDue + " " + root.surface.surfaceEdge)
+      }, 1200],
+      [function() {
+        root.check(root.surface.settle === "" && root.surface.surfaceEdge === "left", "the surface settles on the left edge: " + root.surface.settle + " " + root.surface.surfaceEdge)
+        root.check(root.surface.implicitWidth === root.surface.thickness && root.surface.width === root.surface.thickness, "a side bar's surface is only as wide as its strip: " + root.surface.width + " against " + root.surface.thickness)
+        root.check(root.fullBar.instances[1].position === "top", "the other monitor's bar stays")
+        // A thinner bar on the same edge resizes the surface too: Transparent
+        // keeps no space from the monitor's edge.
+        // The height reaches the bar a moment later, so record each settle state.
+        root.thicker = root.surface.surfaceThickness
+        root.settles = []
+        root.surface.settleChanged.connect(root.recordSettle)
+        host.mutateShellConfig(function(config) { config.bar.monitors[root.bar.targetScreenName].background = "transparent" })
+      }, 1200],
+      [function() {
+        root.surface.settleChanged.disconnect(root.recordSettle)
+        root.check(root.surface.thickness < root.thicker, "the bar thins: " + root.surface.thickness)
+        root.check(root.settles.some(function(one) { return one[0] === "clearing" && one[1] === root.thicker && one[2] < root.thicker }), "a thinner strip clears before its surface shrinks: " + JSON.stringify(root.settles))
+        root.check(root.surface.settle === "" && root.surface.surfaceThickness === root.surface.thickness && root.surface.width === root.surface.thickness, "the surface settles at the new thickness: " + root.surface.width + " against " + root.surface.thickness)
+        root.check(!root.surface.resizeDue, "the strip shows again")
+      }, 100]
+    ]), scenario("Station's logo shows though the shell leaves it uncompiled", [
+      // Omarchy 4.6 registers a widget its saved layout lacks with no component,
+      // and Station's logo is never in the saved layout.
+      [function() {
+        root.check(!!root.instanceOf("yakumy.station") && !("bridgeCurrent" in root.instanceOf("yakumy.station")), "drawn from the shell's component")
+        var next = Object.assign({}, registry.widgets)
+        next["yakumy.station"] = { component: null }
+        registry.widgets = next
+        registry.revision++
+      }, 3000],
+      [function() {
+        root.check(!!root.fullBar.stationWidgetComponent, "the bar compiles Panel.qml itself")
+        root.fullBar.instances.forEach(function(one) {
+          var slot = one.moduleSlots.filter(function(s) { return s && s.moduleName === "yakumy.station" })[0]
+          root.check(!!slot && !!slot.activeItem && ("bridgeCurrent" in slot.activeItem), one.targetScreenName + " draws Station's own logo")
+        })
+        var next = Object.assign({}, registry.widgets)
+        next["yakumy.station"] = { component: testStation }
+        registry.widgets = next
+        registry.revision++
+      }, 300],
+      [function() { root.check(!!root.instanceOf("yakumy.station") && !("bridgeCurrent" in root.instanceOf("yakumy.station")), "the shell's component wins once it has one") }, 10]
     ]))
 
     steps = all

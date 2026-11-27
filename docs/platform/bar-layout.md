@@ -156,3 +156,23 @@ Dated sections are investigations, oldest first. A later one can supersede an ea
   gesture itself asks for the edge it is released at, from every edge to every other.
 - **[INFER]** Choosing the edge a bar had less than 1.5 s before, from Omarchy's menu, looks
   the same as an echo and is not applied.
+
+## The strip-sized surface (2026-11-28)
+
+- **[SRC]** Omarchy `e33c5a8f` (2026-11-26) sized the bar's surface to its strip. A drag that
+  strays off the strip keeps the pointer only because Omarchy's Hyprland carries
+  `held-pointer-without-keyboard-focus.patch`; stock Hyprland drops it on an empty
+  workspace. A resize settles: clear strip, resize, then a frame at the new size.
+- **[SRC]** Omarchy `4a2de629` (2026-11-27) compiles a plugin's bar widget only while
+  `shell.json`'s `bar.layout` holds it, and registers the rest with a null component.
+  Station's logo has no saved row, so on that shell it would never draw.
+- **[QTTEST]** `bar-drag`, with the merged bar, ended about one run in three with
+  `y == 0 but anchor doesn't have top and bottom` (or the `x` twin), a fatal Wayland error
+  that ends the shell, during the moves between every pair of edges. `WAYLAND_DEBUG` showed
+  Quickshell sending `set_size(0, 35)` and then `set_anchor(13)` from the GUI thread, with
+  the render thread's `wl_surface.commit` between them. The settle asks for a frame after
+  every swap, so one is usually in flight when the surface moves. Omarchy's bar has the
+  same race. A 0 length is sent for any axis anchored on both sides, whatever the implicit
+  size, so no order of anchors and sizes avoids it.
+- **[QTTEST]** Moving the surface only once 32 ms pass with no swap: eight clean runs in a row
+  (40 scenarios each). Not tested on a live session or real hardware.

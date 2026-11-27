@@ -11,7 +11,7 @@ behavior. If the code disagrees, one of them has a bug, so find out which. The
 | Read | For | Tokens |
 | --- | --- | --- |
 | [Station actions and events](contracts/actions.md) | Switching, sending and moving windows, direction, starting station, Omarchy renumbering (workspace authority), follow focus, compositor events. | 1500 |
-| [Bars](contracts/bars.md) | Per-monitor bars: sections, dragging, click targets, plugin widgets, presence, position, size, style, background and blur. | 2000 |
+| [Bars](contracts/bars.md) | Per-monitor bars: sections, dragging, click targets, plugin widgets, presence, position, size, style, background and blur. | 2100 |
 | [Color Match](contracts/color-match.md) | ICC profile controls, what each one changes in the profile, storage, live apply and rollback. | 1100 |
 | [Display edits](contracts/displays.md) | Modes, geometry, the marked block in monitors.lua, preview, evacuation, Keep and Revert, the internal Off flag, enabling outputs, screen recovery. | 2400 |
 | [Station indicator and open apps](contracts/indicator.md) | How fresh the bar's station number is, indicator styles, Compact mode, app icons, drawer. | 1000 |
